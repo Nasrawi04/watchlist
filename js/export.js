@@ -35,13 +35,18 @@
 ══════════════════════════════════════════════════════════════ */
 const MSSPdf = (() => {
   const POSTER_MAX = 100;   // ~15–25 KB a poster → a 100-title PDF stays around 2–3 MB, fine on phones
-  // the site's colour tokens (style.css), as RGB; "edge" = --border-olive over the card
+  // the site's colour tokens (css/theme.css), as RGB: page = --bg-app, card = --surface-card, track = --fill-subtle, text = --text-body /
+  // --text-supporting / --text-muted, accent = --text-link (Forest), brass = --action-primary-bg (the wordmark's line), edge = --border-brand,
+  // line = --border-default. Scores take their tier's colour (MSS_TIERS), never these.
   const PALETTE = {
-    dark:  { page: [10, 10, 14], card: [24, 24, 29], track: [33, 33, 38], text: [237, 237, 237], text2: [168, 168, 168], text3: [128, 128, 128],
-             accent: [126, 184, 108], low: [248, 113, 113], edge: [46, 59, 45], line: [42, 42, 48] },
-    light: { page: [226, 218, 208], card: [243, 237, 228], track: [216, 208, 197], text: [26, 26, 26], text2: [74, 74, 74], text3: [106, 106, 106],
-             accent: [30, 92, 38], low: [192, 57, 43], edge: [145, 161, 140], line: [206, 197, 184] },
+    dark:  { dark: true, page: [4, 19, 10], card: [26, 46, 32], track: [38, 54, 43], text: [233, 228, 210], text2: [199, 196, 183], text3: [174, 171, 159],
+             accent: [166, 204, 177], brass: [197, 161, 91], low: [230, 133, 126], edge: [72, 105, 82], line: [54, 71, 56] },
+    light: { dark: false, page: [243, 238, 220], card: [254, 252, 243], track: [230, 224, 202], text: [30, 42, 34], text2: [58, 69, 62], text3: [82, 94, 86],
+             accent: [36, 88, 58], brass: [122, 90, 34], low: [162, 52, 42], edge: [165, 182, 166], line: [224, 223, 211] },
   };
+  const rgbOf = h => { const n = parseInt(String(h).slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; };
+  // gold / silver / bronze for 1–3 (the site's rank badges, .cg-rank-*), then the muted text
+  const RANK_RGB = [[201, 162, 39], [125, 137, 147], [168, 98, 47]];
   const FONTS = [['Oswald-500.ttf', 'Oswald', 'normal'], ['Oswald-600.ttf', 'Oswald', 'bold'], ['Manrope-400.ttf', 'Manrope', 'normal'],
     ['Manrope-600.ttf', 'Manrope', 'bold'], ['BebasNeue-400.ttf', 'Bebas', 'normal']];
   const EP_MIN = { tv: 42, anime: 24, cartoons: 22 };
@@ -103,7 +108,7 @@ const MSSPdf = (() => {
   // a show's episode ratings (ep: { count, avg, best: { s, e, score }, bestSeason: { n, avg } })
   function epStats(ep) {
     return [{ value: ep.count, label: 'Episodes rated' }, { value: ep.avg != null ? ep.avg.toFixed(2) : '—', label: 'Average score' },
-      { value: ep.best ? `S${ep.best.s} · E${ep.best.e}` : '—', label: ep.best ? `Best episode · ${ep.best.score.toFixed(1)}` : 'Best episode', word: true },
+      { value: ep.best ? `S${ep.best.s} · E${ep.best.e}` : '—', label: ep.best ? `Best episode · ${mssR1(ep.best.score)}` : 'Best episode', word: true },
       { value: ep.bestSeason ? `Season ${ep.bestSeason.n}` : '—', label: ep.bestSeason ? `Best season · ${ep.bestSeason.avg.toFixed(2)}` : 'Best season', word: true }];
   }
   // the taste profile's own tiles
@@ -168,14 +173,61 @@ const MSSPdf = (() => {
           } else { c.width = 200; c.height = 300; g.drawImage(img, 0, 0, 200, 300); res(c.toDataURL('image/jpeg', .82)); }
         } catch { res(null); }
       };
-      img.onerror = () => { clearTimeout(t); res(null); };
+      // a copy the browser cached without CORS fails at once: ask once more past the cache (as Create Card does)
+      img.onerror = () => { if (img.dataset.retry) { clearTimeout(t); return res(null); } img.dataset.retry = '1'; img.src = img.src + (img.src.includes('?') ? '&' : '?') + '_cb=' + Date.now(); };
       img.src = round ? url : String(url).replace(/\/(w\d+|original)\//, '/w185/');
     });
   }
   const tick = () => new Promise(r => setTimeout(r, 0));
+  // an <img> for the canvas (CORS, once more past the cache when a cached copy fails)
+  function loadEl(url) {
+    return new Promise(res => {
+      if (!url) return res(null);
+      const im = new Image(); im.crossOrigin = 'anonymous';
+      const t = setTimeout(() => res(null), 9000);
+      im.onload = () => { clearTimeout(t); res(im); };
+      im.onerror = () => { if (im.dataset.retry) { clearTimeout(t); return res(null); } im.dataset.retry = '1'; im.src = url + (url.includes('?') ? '&' : '?') + '_cb=' + Date.now(); };
+      im.src = url;
+    });
+  }
+  /* The cover band: the hero title's backdrop (its owner's choice and framing — MSSBackdrop, like the profile's Top Favorites #1),
+     under the dark shade of .pf-fav, as one JPEG. No backdrop → its poster, blurred; nothing → the Forest gradient of the Studio's desk. */
+  async function heroBand(e, wMM, hMM) {
+    const cw = 1654, ch = Math.round(cw * hMM / wMM), cv = document.createElement('canvas'); cv.width = cw; cv.height = ch;
+    const g = cv.getContext('2d');
+    const bg = g.createRadialGradient(cw * 0.8, 0, 0, cw * 0.8, 0, cw);
+    bg.addColorStop(0, '#2E6B45'); bg.addColorStop(0.45, '#1F4D33'); bg.addColorStop(1, '#0A2615');
+    g.fillStyle = bg; g.fillRect(0, 0, cw, ch);
+    let im = null, blur = false;
+    if (e) {
+      const bd = typeof MSSBackdrop !== 'undefined' ? await MSSBackdrop.url(e, 'w1280').catch(() => null) : null;
+      im = await loadEl(bd);
+      if (!im && e.poster_url) { im = await loadEl(String(safeURL(e.poster_url) || '').replace(/\/(w\d+|original)\//, '/w500/')); blur = !!im; }
+    }
+    if (im) {
+      const p = (!blur && typeof MSSBackdrop !== 'undefined' && MSSBackdrop.pos(e, 'desk')) || { x: 50, y: 25, z: 1 };
+      const s = Math.max(cw / im.naturalWidth, ch / im.naturalHeight) * (blur ? 1.25 : p.z || 1), iw = im.naturalWidth * s, ih = im.naturalHeight * s;
+      g.save(); if (blur) g.filter = 'blur(28px) saturate(1.1)';
+      g.drawImage(im, (cw - iw) * (blur ? 0.5 : p.x / 100), (ch - ih) * (blur ? 0.3 : p.y / 100), iw, ih); g.restore();
+    }
+    const v = g.createLinearGradient(0, ch, 0, 0);
+    v.addColorStop(0, 'rgba(4,19,10,.96)'); v.addColorStop(0.42, 'rgba(4,19,10,.62)'); v.addColorStop(0.78, 'rgba(4,19,10,.28)'); v.addColorStop(1, 'rgba(4,19,10,.5)');
+    g.fillStyle = v; g.fillRect(0, 0, cw, ch);
+    const h = g.createLinearGradient(0, 0, cw * 0.75, 0); h.addColorStop(0, 'rgba(4,19,10,.7)'); h.addColorStop(1, 'rgba(4,19,10,0)');
+    g.fillStyle = h; g.fillRect(0, 0, cw, ch);
+    return cv.toDataURL('image/jpeg', 0.86);
+  }
+  // the site's rank badges (.cg-rank-1 / -2 / -3 / -other): fill, number
+  const RANK_TAB = [[[214, 171, 74], [58, 40, 0]], [[214, 218, 220], [29, 40, 48]], [[196, 128, 74], [255, 248, 240]]];
+  const RANK_OTHER = [[46, 107, 69], [255, 255, 255]];
 
   async function build(job, onProgress = () => {}) {
     const P = PALETTE[job.theme === 'light' ? 'light' : 'dark'], inc = job.include || {}, priv = job.privacy || {};
+    // the 9-tier scale (config.js mssScoreTier): a score's number (tInk) and its bar / fill (tFill); the dark page gets the dark values
+    const tier = v => v == null || isNaN(v) || typeof mssScoreTier !== 'function' ? null : mssScoreTier(Number(v), { dark: P.dark });
+    const tInk = (v, fb = P.accent) => { const t = tier(v); if (!t) return fb; const c = rgbOf(t.ink); return P.dark && (t.key === 'garbage' || t.key === 'bad') ? c.map(x => Math.round(x + (255 - x) * 0.4)) : c; };
+    const tFill = (v, fb = P.accent) => { const t = tier(v); return t ? rgbOf(t.gold ? '#C9A227' : t.bg) : fb; };
+    const rankInk = k => RANK_RGB[k] || P.text3;
     const list = job.entries || [], withPosters = posters(list.length);
     onProgress(0.02, 'Getting the fonts…');
     const fonts = await loadFonts();
@@ -184,11 +236,51 @@ const MSSPdf = (() => {
     FONTS.forEach(([file, fam, style]) => { pdf.addFileToVFS(file, fonts[file]); pdf.addFont(file, fam, style); });
     const W = pdf.internal.pageSize.getWidth(), H = pdf.internal.pageSize.getHeight(), M = 14, CW = W - M * 2, BOTTOM = H - 17;
     const fill = c => pdf.setFillColor(...c), ink = c => pdf.setTextColor(...c), stroke = (c, w) => { pdf.setDrawColor(...c); pdf.setLineWidth(w); };
+    // the site's score ring (MSSViews.ring): a track, the arc to score / 10 in its tier's colour, the number in Bebas
+    const ringAt = (cx, cy, r, v, fs) => {
+      const f = Math.max(0, Math.min(1, v / 10)), lw = r * 0.2;
+      stroke(P.track, lw); pdf.circle(cx, cy, r, 'S');
+      if (f > 0) {
+        const n = Math.max(6, Math.round(64 * f)), a0 = -Math.PI / 2, pts = [];
+        for (let k = 0; k <= n; k++) { const a = a0 + Math.PI * 2 * f * k / n; pts.push([cx + r * Math.cos(a), cy + r * Math.sin(a)]); }
+        stroke(tFill(v), lw); pdf.setLineCap('round');
+        pdf.lines(pts.slice(1).map((p, k) => [p[0] - pts[k][0], p[1] - pts[k][1]]), pts[0][0], pts[0][1], [1, 1], 'S', false);
+        pdf.setLineCap('butt');
+      }
+      font('Bebas', fs); ink(tInk(v)); pdf.text(Number(v).toFixed(2), cx, cy + fs * 0.125, { align: 'center' });
+    };
     const font = (fam, size, style = 'normal') => { pdf.setFont(fam, style); pdf.setFontSize(size); };
     const lh = size => size * 0.3528 * 1.32;
     const spaced = (s, x, yy, sp, opt) => { pdf.setCharSpace(sp); pdf.text(s, x, yy, opt); pdf.setCharSpace(0); };
     const clip = (s, w) => { s = safe(s); if (pdf.getTextWidth(s) <= w) return s; while (s.length > 1 && pdf.getTextWidth(s + '…') > w) s = s.slice(0, -1); return s.trimEnd() + '…'; };
-    const page = () => { fill(P.page); pdf.rect(0, 0, W, H, 'F'); };
+    // the wordmark: MY SCREEN FOLIO, SCREEN in Forest with the Brass line under it
+    const wordmark = (x, yy, size, c1, c2) => {
+      font('Oswald', size, 'bold');
+      [['MY', c1], ['SCREEN', c2], ['FOLIO', c1]].forEach(([t, c]) => {
+        ink(c); spaced(t, x, yy, size * 0.048); const w = pdf.getTextWidth(t) + size * 0.048 * t.length;
+        if (t === 'SCREEN') { stroke(P.brass, size * 0.055); pdf.line(x, yy + size * 0.15, x + w - size * 0.048, yy + size * 0.15); }
+        x += w;
+      });
+      return x;
+    };
+    // every page: the page colour; from page 2 a running header (the wordmark · the title)
+    const TOP = 22;
+    const page = (first) => {
+      fill(P.page); pdf.rect(0, 0, W, H, 'F');
+      if (first) return;
+      wordmark(M, 11, 7.6, P.text2, P.accent);
+      font('Oswald', 7.6, 'bold'); ink(P.text3); spaced(clip(safe(job.title).toUpperCase(), CW - 50), W - M, 11, 0.4, { align: 'right' });
+      stroke(P.line, 0.25); pdf.line(M, 14.2, W - M, 14.2);
+    };
+    // a section's heading: the Brass dot, the label in Oswald caps
+    const dotLabel = (label, x, yy, size = 9) => { fill(P.brass); pdf.circle(x + 1, yy - size * 0.13, 0.95, 'F'); font('Oswald', size, 'bold'); ink(P.accent); spaced(label, x + 3.6, yy, 0.8); return 3.6 + pdf.getTextWidth(label) + 0.8 * label.length; };
+    // the rank badge on a poster's top-left corner (only its bottom-right corner rounded, like the site's)
+    const rankTab = (px, py, n, s) => {
+      const [bgc, fg] = RANK_TAB[n - 1] || RANK_OTHER;
+      font('Bebas', s * 2.6); const w = Math.max(s, pdf.getTextWidth(String(n)) + s * 0.55);
+      fill(bgc); pdf.roundedRect(px, py, w, s, s * 0.32, s * 0.32, 'F'); pdf.rect(px, py, w, s / 2, 'F'); pdf.rect(px, py, w / 2, s, 'F');
+      ink(fg); pdf.text(String(n), px + w / 2, py + s * 0.78, { align: 'center' });
+    };
     let y;
 
     const img = {};
@@ -204,64 +296,75 @@ const MSSPdf = (() => {
     /* ── cover block ── (a show's episode ratings: page 1 is its chart, the same picture as the
        Episodes page's export, then the episodes start on a fresh page under a small heading) */
     if (job.epChart) {
-      page();
+      page(true);
       pdf.addImage(job.epChart, 'JPEG', 0, 0, W, H);
       pdf.addPage(); page();
-      font('Oswald', 8.5, 'bold'); ink(P.accent); spaced(safe(job.kicker).toUpperCase(), M, 18, 0.8);
-      font('Oswald', 18, 'bold'); ink(P.text); pdf.text(clip(safe(job.title), CW), M, 27);
-      font('Manrope', 8.5); ink(P.text3); pdf.text(`Every episode you rated · ${job.ep.count} in all`, M, 33);
-      y = 40;
+      y = TOP + 6;
+      dotLabel(safe(job.kicker).toUpperCase(), M, y, 8.5);
+      font('Oswald', 20, 'bold'); ink(P.text); pdf.text(clip(safe(job.title), CW), M, y + 10);
+      font('Manrope', 8.5); ink(P.text3); pdf.text(`Every episode you rated · ${job.ep.count} in all`, M, y + 16.5);
+      y += 24;
     } else {
-      page();
-      font('Oswald', 10.5, 'bold');
-      let x = M;
-      [['MY', P.text], ['SCREEN', P.accent], ['FOLIO', P.text]].forEach(([t, c]) => {
-        ink(c); spaced(t, x, 16, 0.5); const w = pdf.getTextWidth(t) + 0.5 * t.length;
-        if (t === 'SCREEN') { stroke(c, 0.5); pdf.line(x, 17.6, x + w - 0.5, 17.6); }
-        x += w;
-      });
-      font('Manrope', 8); ink(P.text3); pdf.text(fmtDate(new Date().toISOString()), W - M, 16, { align: 'right' });
-      font('Oswald', 8.5, 'bold'); ink(P.accent); spaced(safe(job.kicker).toUpperCase(), M, 32, 0.8);
-      font('Oswald', 26, 'bold'); ink(P.text);
-      const tl = pdf.splitTextToSize(safe(job.title) || 'My export', CW).slice(0, 2);
-      pdf.text(tl, M, 43); y = 43 + (tl.length - 1) * lh(26);
+      /* the cover: a full-bleed band with the hero title's backdrop (your #1, the title itself, your taste's / year's best, the show),
+         the wordmark and date on it, the kicker, title and byline along its bottom; the stat tiles sit across its lower edge */
+      page(true);
+      const heroE = job.ep ? job.ep.show : job.taste ? job.taste.top?.[0]?.e : job.year ? job.year.top?.[0]?.e
+        : job.ranked || job.detail ? list[0] : list.slice().sort((a, b) => (score(b) ?? -1) - (score(a) ?? -1))[0];
       const by = job.byline || (!priv.anon && job.who && (job.who.name || job.who.username)
         ? `by ${job.who.name || job.who.username}${job.who.username && job.who.name && job.who.name !== job.who.username ? ` (@${job.who.username})` : ''}` : '');
-      if (by) { font('Manrope', 10); ink(P.text2); pdf.text(safe(by), M, y + 8); y += 8; }
-      if (job.desc) {
-        font('Manrope', 9.5); ink(P.text2);
-        const dl = pdf.splitTextToSize(safe(job.desc), CW).slice(0, 3);
-        pdf.text(dl, M, y + 7); y += 7 + (dl.length - 1) * lh(9.5);
-      }
-      y += 8;
+      font('Oswald', 30, 'bold');
+      const tl = pdf.splitTextToSize(safe(job.title) || 'My export', CW).slice(0, 2);
+      const HB = 92 + (tl.length - 1) * lh(30);
+      onProgress(0.03, 'Setting the cover…');
+      try { pdf.addImage(await heroBand(heroE, W, HB), 'JPEG', 0, 0, W, HB); } catch (err) { fill([10, 38, 21]); pdf.rect(0, 0, W, HB, 'F'); }
+      const IV = [243, 238, 220], IV2 = [214, 210, 196], MINT = [199, 227, 207];
+      wordmark(M, 15, 10.5, IV, MINT);
+      font('Manrope', 8); ink(IV2); pdf.text(fmtDate(new Date().toISOString()), W - M, 15, { align: 'right' });
+      if (heroE && !job.detail && !job.ep) { font('Manrope', 7, 'bold'); ink(IV2); pdf.text(clip(`Cover: ${safe(heroE.title)}`, 70), W - M, 20, { align: 'right' }); }
+      let ty = HB - 23 - (by ? 6 : 0) - (tl.length - 1) * lh(30);
+      fill(P.brass); pdf.circle(M + 1, ty - 9.4, 0.95, 'F');
+      font('Oswald', 8.5, 'bold'); ink(MINT); spaced(safe(job.kicker).toUpperCase(), M + 3.6, ty - 8.3, 0.9);
+      font('Oswald', 30, 'bold'); ink(IV); pdf.text(tl, M, ty + 2);
+      ty += 2 + (tl.length - 1) * lh(30);
+      if (by) { font('Manrope', 10, 'bold'); ink(IV2); pdf.text(safe(by), M, ty + 7); }
+      y = HB - 11;
       const epN = (job.episodes || []).filter(r => Number(r.episode_number) > 0 && r.score != null).length;
       const st = job.ep ? epStats(job.ep) : job.year ? yearStats(job.year) : job.taste ? tasteStats(job.taste) : job.detail && list[0] ? detailStats(list[0], epN) : stats(job.kind, list), tw = (CW - 3 * 4) / 4;
       st.forEach((s, i) => {
         const tx = M + i * (tw + 4);
         fill(P.card); stroke(P.edge, 0.3); pdf.roundedRect(tx, y, tw, 21, 2.5, 2.5, 'FD');
+        fill(i ? P.track : P.brass); pdf.rect(tx + 4, y + 2.6, 6, 0.7, 'F');   // a short rule on top: Brass on the first, then quiet
         if (s.word) { font('Oswald', 13, 'bold'); ink(P.accent); pdf.text(clip(s.value, tw - 8), tx + 4, y + 10.4); }
-        else { font('Bebas', 22); ink(P.accent); pdf.text(clip(s.value, tw - 8), tx + 4, y + 11.2); }
+        else { font('Bebas', 22); ink(/score/i.test(s.label) && !isNaN(parseFloat(s.value)) ? tInk(parseFloat(s.value)) : P.accent); pdf.text(clip(s.value, tw - 8), tx + 4, y + 11.2); }
         font('Oswald', 6.8, 'bold'); ink(P.text3); spaced(s.label.toUpperCase(), tx + 4, y + 17, 0.45);
       });
       y += 29;
+      if (job.desc) {   // a list's description, the year's comparison: under the tiles
+        font('Manrope', 9.5); ink(P.text2);
+        const dl = pdf.splitTextToSize(safe(job.desc), CW).slice(0, 3);
+        pdf.text(dl, M, y - 1); y += (dl.length) * lh(9.5) + 3;
+      }
     }
 
     /* ── one card per title: measure (draw = null), then draw at the measured height ── */
-    const PAD = 5, RANK = job.ranked ? 10 : 0, PW = withPosters ? 17 : 0, PH = 25.5, BOXH = 19;
+    const PAD = 5, RANK = job.ranked && !withPosters ? 10 : 0, PW = withPosters ? (inc.breakdown || inc.highlights ? 22 : 17) : 0, PH = PW * 1.5, BOXH = 19;   // with posters the rank is a badge on the poster
     function card(e, rank, draw) {
       const ek = job.kind === 'mixed' ? kindOf(e) : job.kind, BOX = ek === 'watched' ? 20 : 0;
-      const x0 = M, tx = x0 + PAD + RANK + (PW ? PW + 4 : 0), right = x0 + CW - PAD - (BOX ? BOX + 4 : 0), w = right - tx;
+      const x0 = M, tx = x0 + PAD + RANK + (PW ? PW + 6 : 0), right = x0 + CW - PAD - (BOX ? BOX + 4 : 0), w = right - tx;
       let cy = y + PAD;
       font('Oswald', 13, 'bold');
       const tLines = pdf.splitTextToSize(safe(e.title) || 'Untitled', w).slice(0, 2);
       if (draw) {
         const mid = y + draw.h / 2;
         fill(P.card); stroke(P.edge, 0.3); pdf.roundedRect(x0, y, CW, draw.h, 3, 3, 'FD');
-        if (RANK) { font('Bebas', rank < 3 ? 20 : 16); ink(rank < 3 ? P.accent : P.text3); pdf.text(String(rank + 1), x0 + PAD + (RANK - 2) / 2, mid + (rank < 3 ? 2.6 : 2.1), { align: 'center' }); }
+        const sv = ek === 'watched' ? score(e) : null;
+        if (sv != null) { fill(tFill(sv)); pdf.roundedRect(x0 + 0.15, y + 4, 1.3, draw.h - 8, 0.65, 0.65, 'F'); }   // the tier's colour along the card's edge
+        if (RANK) { font('Bebas', rank < 3 ? 20 : 16); ink(rankInk(rank)); pdf.text(String(rank + 1), x0 + PAD + (RANK - 2) / 2, mid + (rank < 3 ? 2.6 : 2.1), { align: 'center' }); }
         if (PW) {   // the poster sits in the middle of the card, on the left
-          const px = x0 + PAD + RANK, py = mid - PH / 2;
-          if (img[e.id]) pdf.addImage(img[e.id], 'JPEG', px, py, PW, PH);
+          const px = x0 + PAD + RANK + 1, py = draw.h > PH + PAD * 2 + 3 ? y + PAD : mid - PH / 2;   // a tall card: the poster at the top, beside the title
+          if (img[e.id]) { pdf.addImage(img[e.id], 'JPEG', px, py, PW, PH); stroke(P.edge, 0.2); pdf.rect(px, py, PW, PH, 'S'); }
           else { fill(P.track); pdf.roundedRect(px, py, PW, PH, 1.5, 1.5, 'F'); font('Oswald', 14, 'bold'); ink(P.text3); pdf.text(safe(e.title || '?')[0] || '?', px + PW / 2, py + PH / 2 + 2.4, { align: 'center' }); }
+          if (job.ranked) rankTab(px, py, rank + 1, 5.6);
         }
         font('Oswald', 13, 'bold'); ink(P.text); pdf.text(tLines, tx, cy + 4.6);
       }
@@ -280,14 +383,11 @@ const MSSPdf = (() => {
           cy += 9;
         }
       }
-      // the score: an outlined box, like Create Card's
+      // the score: the site's ring, in its tier's colour
       if (BOX && draw) {
         const s = score(e), bx = x0 + CW - PAD - BOX, by = y + PAD;
-        stroke(P.edge, 0.35); pdf.roundedRect(bx, by, BOX, BOXH, 2.2, 2.2, 'S');
-        font('Oswald', 5.6, 'bold'); ink(P.text3); spaced('SCORE', bx + BOX / 2, by + 4.6, 0.4, { align: 'center' });
-        if (s == null) { font('Manrope', 7.5, 'bold'); ink(P.text3); pdf.text('Unrated', bx + BOX / 2, by + 11.4, { align: 'center' }); }
-        else { font('Bebas', 21); ink(P.accent); pdf.text(s.toFixed(2), bx + BOX / 2, by + 12.6, { align: 'center' }); }
-        font('Oswald', 5.2, 'bold'); ink(P.text3); spaced('OUT OF 10', bx + BOX / 2, by + 16.6, 0.3, { align: 'center' });
+        if (s == null) { stroke(P.track, 1.7); pdf.circle(bx + BOX / 2, by + BOXH / 2, 8, 'S'); font('Manrope', 6.8, 'bold'); ink(P.text3); pdf.text('Unrated', bx + BOX / 2, by + BOXH / 2 + 1.1, { align: 'center' }); }
+        else ringAt(bx + BOX / 2, by + BOXH / 2, 8, s, 17);
       }
       // rating bars, highlights and the note: in the text column, under the score box
       const bx0 = tx, bw = x0 + CW - PAD - bx0, n0 = inc.notes ? text(e) : { note: '' };
@@ -306,7 +406,7 @@ const MSSPdf = (() => {
             const gn = safe(g.name).toUpperCase();
             font('Oswald', 6.2, 'bold'); ink(P.text); spaced(gn, bx0, cy + 3, 0.3);
             const gw = pdf.getTextWidth(gn) + 0.3 * gn.length;
-            font('Bebas', 10); ink(P.accent); pdf.text(avgTxt(g.avg), bx0 + gw + 2.2, cy + 3.3);
+            font('Bebas', 10); ink(tInk(g.avg)); pdf.text(avgTxt(g.avg), bx0 + gw + 2.2, cy + 3.3);
           }
           cy += 4.4;
           if (draw) g.items.forEach((r, k) => {
@@ -314,7 +414,7 @@ const MSSPdf = (() => {
             font('Manrope', 6.4); ink(P.text2); pdf.text(clip(r.label, colW - 8), cx, ry + 2.3);
             font('Bebas', 9); ink(P.text); pdf.text(num(r.v), cx + colW, ry + 2.5, { align: 'right' });
             fill(P.track); pdf.roundedRect(cx, ry + 3.5, colW, 1.2, 0.6, 0.6, 'F');
-            fill(P.accent); pdf.roundedRect(cx, ry + 3.5, Math.max(1.2, colW * Math.min(1, r.v / 10)), 1.2, 0.6, 0.6, 'F');
+            fill(tFill(r.v)); pdf.roundedRect(cx, ry + 3.5, Math.max(1.2, colW * Math.min(1, r.v / 10)), 1.2, 0.6, 0.6, 'F');
           });
           cy += Math.ceil(g.items.length / cols) * rowH + 1.2;
         });
@@ -355,7 +455,7 @@ const MSSPdf = (() => {
       }
       return Math.max(cy + PAD - y, BOX ? BOXH + PAD * 2 : 0, PW ? PH + PAD * 2 : 0);
     }
-    const pageBreak = h => { if (y + h > BOTTOM) { pdf.addPage(); page(); y = M; } };
+    const pageBreak = h => { if (y + h > BOTTOM) { pdf.addPage(); page(); y = TOP; } };
     let lastCat = null, rank = 0;   // grouped: each category ranks from 1
     for (let i = 0; i < (job.taste || job.year ? 0 : list.length); i++) {
       const e = list[i];
@@ -363,8 +463,7 @@ const MSSPdf = (() => {
         lastCat = e.cat; rank = 0;
         pageBreak(12 + 30);
         const label = (CAT_META?.[e.cat]?.label || 'Other').toUpperCase();
-        font('Oswald', 9, 'bold'); ink(P.accent); spaced(label, M, y + 5, 0.8);
-        const lw = pdf.getTextWidth(label) + 0.8 * label.length;
+        const lw = dotLabel(label, M, y + 5);
         font('Bebas', 11); ink(P.text3); pdf.text(String(list.filter(x => x.cat === e.cat).length), M + lw + 3, y + 5.3);
         stroke(P.line, 0.25); pdf.line(M, y + 8, M + CW, y + 8);
         y += 12;
@@ -380,8 +479,8 @@ const MSSPdf = (() => {
     // section heading + bar rows — shared by the taste profile and the year in review
     const head = (label, sub, need = 20) => {   // need: room for the heading and what follows it, so it never sits alone
       pageBreak(need);
-      font('Oswald', 9, 'bold'); ink(P.accent); spaced(label, M, y + 5, 0.8);
-      if (sub) { const lw = pdf.getTextWidth(label) + 0.8 * label.length; font('Manrope', 7.6); ink(P.text3); pdf.text(sub, M + lw + 3, y + 5); }
+      const lw = dotLabel(label, M, y + 5);
+      if (sub) { font('Manrope', 7.6); ink(P.text3); pdf.text(sub, M + lw + 3, y + 5); }
       stroke(P.line, 0.25); pdf.line(M, y + 8, M + CW, y + 8);
       y += 12;
     };
@@ -395,8 +494,8 @@ const MSSPdf = (() => {
       const lx = M, bx = M + lw, bw = CW - lw - 58, f = counts ? r2.n / mx : r2.avg / 10;
       font('Manrope', 8.4, 'bold'); ink(P.text); pdf.text(clip(r2.label || r2.name, lw - 2), lx, y + 4.2);
       fill(P.track); pdf.roundedRect(bx, y + 1.6, bw, 3.2, 1.6, 1.6, 'F');
-      fill(P.accent); pdf.roundedRect(bx, y + 1.6, Math.max(3.2, bw * Math.min(1, f)), 3.2, 1.6, 1.6, 'F');
-      font('Bebas', 12); ink(P.accent); pdf.text(counts ? String(r2.n) : r2.avg.toFixed(2), bx + bw + 3, y + 4.6);
+      fill(counts ? P.accent : tFill(r2.avg)); pdf.roundedRect(bx, y + 1.6, Math.max(3.2, bw * Math.min(1, f)), 3.2, 1.6, 1.6, 'F');
+      font('Bebas', 12); ink(counts ? P.accent : tInk(r2.avg)); pdf.text(counts ? String(r2.n) : r2.avg.toFixed(2), bx + bw + 3, y + 4.6);
       if (!counts) { font('Manrope', 7); ink(P.text3); pdf.text(`${r2.n} ${r2.n === 1 ? unit : unit + 's'}`, bx + bw + 16, y + 4.4); }
       const tg = tag && tag(r2, k);
       if (tg) { font('Oswald', 5.8, 'bold'); const tw2 = pdf.getTextWidth(tg) + 0.3 * tg.length + 4;
@@ -405,20 +504,21 @@ const MSSPdf = (() => {
     }); };
     // a numbered top 5: rank · title + details · score
     const top5 = list5 => list5.forEach((x, k) => {
-      pageBreak(11);
-      font('Bebas', 14); ink(k < 3 ? P.accent : P.text3); pdf.text(String(k + 1), M + 2, y + 5.4);
+      pageBreak(13);
+      font('Bebas', 14); ink(rankInk(k)); pdf.text(String(k + 1), M + 2, y + 5.4);
       font('Oswald', 10.5, 'bold'); ink(P.text); pdf.text(clip(x.e.title || 'Untitled', CW - 40), M + 10, y + 5);
       font('Manrope', 7.4); ink(P.text3); pdf.text(safe([CAT_META?.[x.e.cat]?.singular, x.e.year ? String(x.e.year).slice(0, 4) : ''].filter(Boolean).join(' · ')), M + 10, y + 9.2);
-      font('Bebas', 14); ink(P.accent); pdf.text(x.s.toFixed(2), M + CW, y + 5.4, { align: 'right' });
-      y += 11;
+      ringAt(M + CW - 5.2, y + 5, 4.4, x.s, 9.5);
+      if (k < list5.length - 1) { stroke(P.line, 0.2); pdf.line(M + 10, y + 11.6, M + CW - 14, y + 11.6); }
+      y += 13;
     });
     // 12 / 10 columns: a little bar chart with labels under it
-    const columns = (vals, labels, chH = 26) => {
+    const columns = (vals, labels, chH = 26, scored = false) => {   // scored: column k is the score k + 1, in its tier's colour
       const mx = Math.max(...vals, 1), n = vals.length, colW = (CW - (n - 1) * 3) / n;
       vals.forEach((c, k) => {
         const cx = M + k * (colW + 3), h = c ? Math.max(3, chH * c / mx) : 0;   // never thinner than its rounded corners
         fill(P.track); pdf.roundedRect(cx, y, colW, chH, 1.5, 1.5, 'F');
-        if (h) { fill(P.accent); pdf.roundedRect(cx, y + chH - h, colW, h, 1.5, 1.5, 'F'); }
+        if (h) { fill(scored ? tFill(k + 1) : P.accent); pdf.roundedRect(cx, y + chH - h, colW, h, 1.5, 1.5, 'F'); }
         const above = y + chH - h - 1.5 > y + 3;   // no room above a full bar → the count goes inside it, in the page colour
         font('Bebas', 10); ink(!c ? P.text3 : above ? P.text : P.page); pdf.text(String(c), cx + colW / 2, above ? y + chH - h - 1.5 : y + 4.5, { align: 'center' });
         if (labels[k].length > 2) font('Oswald', 7, 'bold'); else font('Bebas', 12); ink(P.text2); pdf.text(labels[k], cx + colW / 2, y + chH + 5.5, { align: 'center' });
@@ -436,7 +536,7 @@ const MSSPdf = (() => {
       if (t.values.length) { head('WHAT YOU VALUE MOST', 'bonus ratings, from the titles where you rated them', 28); barRows(t.values); y += 4; }
       // the score spread: one column per score, 1 → 10
       head('SCORE SPREAD', `${t.rated} titles · you’re a ${t.generous} scorer`, 58);
-      columns(t.spread, t.spread.map((_, k) => String(k + 1)));
+      columns(t.spread, t.spread.map((_, k) => String(k + 1)), 26, true);
       if (t.decades.length) { head('DECADES', 'your average by release decade', 28); barRows(t.decades, d => t.favDecade && d.name === t.favDecade.name ? 'FAVOURITE' : ''); y += 4; }
       // movies vs shows, then the top 5
       if (t.movies.n && t.shows.n) {
@@ -444,7 +544,7 @@ const MSSPdf = (() => {
         [['Movies', t.movies], ['Shows', t.shows]].forEach(([l, v], k) => {
           const tx2 = M + k * (CW / 2 + 2), tw2 = CW / 2 - 2;
           fill(P.card); stroke(P.edge, 0.3); pdf.roundedRect(tx2, y, tw2, 18, 2.5, 2.5, 'FD');
-          font('Bebas', 22); ink(P.accent); pdf.text(v.avg.toFixed(2), tx2 + 5, y + 11.5);
+          font('Bebas', 22); ink(tInk(v.avg)); pdf.text(v.avg.toFixed(2), tx2 + 5, y + 11.5);
           font('Oswald', 6.8, 'bold'); ink(P.text3); spaced(`${l.toUpperCase()} · ${v.n} RATED`, tx2 + 5, y + 15.4, 0.45);
         });
         y += 24;
@@ -480,7 +580,7 @@ const MSSPdf = (() => {
       if (yr.topEp) {
         head('BEST EPISODE YOU RATED', '', 24);
         font('Oswald', 12, 'bold'); ink(P.text); pdf.text(clip(`${yr.topEp.title}  ·  S${yr.topEp.season} E${yr.topEp.episode}`, CW - 20), M, y + 5);
-        font('Bebas', 16); ink(P.accent); pdf.text(num(yr.topEp.score), M + CW, y + 5.4, { align: 'right' });
+        font('Bebas', 16); ink(tInk(yr.topEp.score)); pdf.text(num(yr.topEp.score), M + CW, y + 5.4, { align: 'right' });
         y += 12;
       }
     }
@@ -503,7 +603,7 @@ const MSSPdf = (() => {
           let ty = y + 5.2;
           if (tags) { ty += 3.6; font('Manrope', 6.8); ink(P.accent); pdf.text(clip(safe(tags), CW - 46), M + 13, ty); }
           if (nl.length) { ty += 3.6; font('Manrope', 7.6); ink(P.text2); pdf.text(nl, M + 13, ty); }
-          font('Bebas', 15); ink(P.accent); pdf.text(r.score >= 10 ? '10' : r.score.toFixed(1), M + CW, y + 5.8, { align: 'right' });
+          font('Bebas', 15); ink(tInk(r.score)); pdf.text(r.score >= 10 ? '10' : mssR1(r.score), M + CW, y + 5.8, { align: 'right' });
           if (r.band) { font('Oswald', 5.6, 'bold'); ink(P.text3); spaced(r.band.toUpperCase(), M + CW - 22 - 0.3 * r.band.length - pdf.getTextWidth(r.band.toUpperCase()), y + 5.4, 0.3); }
           y += h;
           stroke(P.line, 0.2); pdf.line(M + 13, y, M + CW, y);
@@ -520,7 +620,7 @@ const MSSPdf = (() => {
       const bySeason = {};
       eps.forEach(r => { (bySeason[r.season_number] ||= []).push(r); });
       pageBreak(24);
-      font('Oswald', 9, 'bold'); ink(P.accent); spaced('EPISODE RATINGS', M, y + 5, 0.8);
+      dotLabel('EPISODE RATINGS', M, y + 5);
       stroke(P.line, 0.25); pdf.line(M, y + 8, M + CW, y + 8);
       y += 13;
       const cw = 15, ch = 11, gap = 2, per = Math.floor((CW + gap) / (cw + gap));
@@ -531,14 +631,15 @@ const MSSPdf = (() => {
         font('Oswald', 8, 'bold'); ink(P.text); spaced(`SEASON ${sn}`, M, y + 3.5, 0.5);
         font('Manrope', 7.4); ink(P.text3); const lbl = `${rows.length} rated  ·  average`; pdf.text(lbl, M + 26, y + 3.5);
         const lw2 = pdf.getTextWidth(lbl);
-        font('Bebas', 11); ink(P.accent); pdf.text(avg.toFixed(1), M + 26 + lw2 + 1.6, y + 3.8);
+        font('Bebas', 11); ink(tInk(avg)); pdf.text(mssR1(avg), M + 26 + lw2 + 1.6, y + 3.8);
         y += 6;
         rows.forEach((r, k) => {
           if (k && k % per === 0) { y += ch + gap; pageBreak(ch + 4); }
           const cx = M + (k % per) * (cw + gap);
           stroke(P.edge, 0.3); pdf.roundedRect(cx, y, cw, ch, 1.6, 1.6, 'S');
           font('Oswald', 5.6, 'bold'); ink(P.text3); pdf.text(`E${r.episode_number}`, cx + cw / 2, y + 3.6, { align: 'center' });
-          font('Bebas', 11); ink(P.accent); pdf.text(num(Number(r.score)), cx + cw / 2, y + 9, { align: 'center' });
+          font('Bebas', 11); ink(tInk(r.score)); pdf.text(num(Number(r.score)), cx + cw / 2, y + 9, { align: 'center' });
+          fill(tFill(r.score)); pdf.roundedRect(cx + 3, y + ch - 1.4, cw - 6, 0.7, 0.35, 0.35, 'F');
         });
         y += ch + 6;
       });
@@ -557,10 +658,11 @@ const MSSPdf = (() => {
         font('Manrope', 7.4, 'bold'); ink(P.text2); pdf.text('@' + user, fx, H - 5.9); fx += pdf.getTextWidth('@' + user) + 2.2;
         font('Manrope', 7.4); ink(P.text3); pdf.text('·', fx, H - 5.9); fx += 2.6;
       }
-      font('Oswald', 7.4, 'bold'); ink(P.text3); spaced('MYSCREENFOLIO', fx, H - 5.9, 0.35);
-      font('Bebas', 9.5); ink(P.text2); pdf.text(`${p} / ${pages}`, W - M, H - 5.75, { align: 'right' });
-      const nw = pdf.getTextWidth(`${p} / ${pages}`);
-      font('Oswald', 7, 'bold'); ink(P.text3); pdf.text('PAGE', W - M - nw - 1.8, H - 5.9, { align: 'right' });
+      wordmark(fx, H - 5.9, 7.4, P.text3, P.accent);
+      const pn = `${String(p).padStart(2, '0')} / ${String(pages).padStart(2, '0')}`;
+      font('Bebas', 11); ink(P.text2); pdf.text(pn, W - M, H - 5.6, { align: 'right' });
+      const nw = pdf.getTextWidth(pn);
+      font('Oswald', 6.6, 'bold'); ink(P.text3); spaced('PAGE', W - M - nw - 2, H - 5.9, 0.4, { align: 'right' });
     }
     onProgress(1, 'Saving…');
     await tick();

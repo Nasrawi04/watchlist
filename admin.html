@@ -8,6 +8,7 @@
 <title>Admin — MyScreenFolio</title>
 <meta name="robots" content="noindex">
 <link rel="stylesheet" href="css/fonts.css">
+<link rel="stylesheet" href="css/theme.css">
 <link rel="stylesheet" href="css/style.css">
 <style>
 /* ── Admin (site owners only — app_admins, migrations 036 / 037).
@@ -20,7 +21,7 @@
 .adm-tabs { margin-bottom:1.5rem; max-width:100%; overflow-x:auto; scrollbar-width:none; }
 .adm-tabs::-webkit-scrollbar { display:none; }
 .adm-tabs .pn-toggle-btn { padding:9px clamp(12px, 2.4vw, 22px); white-space:nowrap; display:flex; align-items:center; gap:7px; }
-.adm-tab-count { font-size:11px; font-weight:700; min-width:18px; padding:1px 6px; border-radius:20px; background:var(--olive); color:#fff; }
+.adm-tab-count { font-size:11px; font-weight:700; min-width:18px; padding:1px 6px; border-radius:20px; background:var(--olive); color:var(--text-on-brand); }
 :focus-visible.adm-row, .adm-btn:focus-visible, .adm-refresh:focus-visible, .adm-link:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
 
 /* Overview */
@@ -76,8 +77,8 @@ button.adm-row:hover { border-color:var(--border-olive); }
 .adm-actions { display:flex; gap:6px; flex-shrink:0; }
 .adm-btn { padding:7px 12px; border-radius:var(--radius-sm); cursor:pointer; font:600 12.5px 'Manrope',var(--sans); background:transparent; border:1px solid var(--border-2); color:var(--text-2); transition:all .15s; }
 .adm-btn:hover { border-color:var(--border-olive); color:var(--text); }
-.adm-btn.on { background:var(--olive); border-color:var(--olive); color:#fff; }
-.adm-btn.danger:hover { border-color:#dc2626; color:#dc2626; }
+.adm-btn.on { background:var(--olive); border-color:var(--olive); color:var(--text-on-brand); }
+.adm-btn.danger:hover { border-color:var(--error-fg); color:var(--error-fg); }
 .adm-status { padding:2px 8px; border-radius:20px; font-size:11.5px; font-weight:600; background:var(--bg-3); color:var(--text-2); }
 .adm-status.added { background:var(--olive-faint); color:var(--olive-light); }
 .adm-av { width:40px; height:40px; border-radius:50%; overflow:hidden; flex-shrink:0; background:var(--bg-3); display:flex; align-items:center; justify-content:center; font-weight:700; color:var(--olive-light); }
@@ -90,6 +91,11 @@ button.adm-row:hover { border-color:var(--border-olive); }
 .adm-kind { font-size:11px; font-weight:700; padding:2px 8px; border-radius:20px; background:var(--bg-3); color:var(--text-2); white-space:nowrap; }
 .adm-quote { font-size:13.5px; color:var(--text); line-height:1.5; white-space:pre-line; word-break:break-word; }
 .adm-row.top { align-items:flex-start; }
+.adm-ch-medal { display:flex; flex-shrink:0; }
+.adm-ch-n { display:flex; flex-direction:column; align-items:center; min-width:56px; } .adm-ch-n small { font-size:11px; color:var(--text-3); }
+a.adm-btn { text-decoration:none; }
+.adm-more { margin:14px auto 0; display:block; }
+@media(max-width:640px) { .adm-ch-row { flex-wrap:wrap; } .adm-ch-row .adm-main { flex-basis:calc(100% - 64px); } .adm-ch-n { min-width:0; flex-direction:row; gap:5px; align-items:baseline; } }
 /* Word filter */
 .adm-filter { margin-bottom:1.5rem; }
 .adm-filter-row { display:flex; align-items:center; justify-content:space-between; gap:10px 16px; flex-wrap:wrap; padding:10px 0; border-top:0.5px solid var(--border); }
@@ -101,27 +107,27 @@ button.adm-row:hover { border-color:var(--border-olive); }
 .adm-flag input { width:170px; max-width:100%; padding:7px 10px; font-size:13px; }
 .adm-word { display:inline-flex; align-items:center; gap:4px; padding:4px 4px 4px 10px; border-radius:20px; background:var(--bg-3); border:0.5px solid var(--border-2); font-size:12.5px; font-weight:600; }
 .adm-word button { width:22px; height:22px; border-radius:50%; border:none; background:none; color:var(--text-3); cursor:pointer; display:flex; align-items:center; justify-content:center; }
-.adm-word button:hover { background:var(--bg-2); color:#dc2626; }
+.adm-word button:hover { background:var(--bg-2); color:var(--error-fg); }
 .adm-word button:focus-visible { outline:2px solid var(--olive-light); }
 .adm-addword { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
 .adm-addword input { flex:1; min-width:150px; padding:8px 12px; font-size:13.5px; }
 .adm-addword .pn-toggle { margin:0; }
 .adm-addword .pn-toggle-btn { padding:7px 12px; font-size:12.5px; }
 /* Flags, bans, pictures */
-.adm-tab-count.warn { background:#b91c1c; }
-.adm-kind.warn { background:rgba(220,38,38,.14); color:#dc2626; }
+.adm-tab-count.warn { background:var(--error-bg); }
+.adm-kind.warn { background:color-mix(in srgb, var(--error-fg) 14%, transparent); color:var(--error-fg); }
 .adm-flagged { border-top:0.5px solid var(--border); }
 .adm-flagged:first-of-type { border-top:none; }
 .adm-flagged summary { display:flex; align-items:center; gap:12px; padding:10px 0; cursor:pointer; list-style:none; }
 .adm-flagged summary::-webkit-details-marker { display:none; }
 .adm-flagged summary:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; border-radius:6px; }
 .adm-strikes { min-width:28px; height:28px; padding:0 8px; box-sizing:border-box; border-radius:14px; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px; background:var(--bg-3); color:var(--text-2); }
-.adm-flagged.hot .adm-strikes { background:#b91c1c; color:#fff; }
+.adm-flagged.hot .adm-strikes { background:var(--error-solid); color:#fff; }
 .adm-flagbody { padding:0 0 12px 52px; display:flex; flex-direction:column; gap:8px; }
 .adm-flagline { display:flex; flex-wrap:wrap; align-items:center; gap:4px 10px; }
 .adm-flagline.done { opacity:.6; }
 .adm-excerpt { flex-basis:100%; padding:6px 10px; border-radius:var(--radius-sm); background:var(--bg-3); font-size:13px; }
-.adm-modcard.banned { border-color:rgba(220,38,38,.5); }
+.adm-modcard.banned { border-color:color-mix(in srgb, var(--error-fg) 50%, transparent); }
 .adm-pics { display:grid; grid-template-columns:repeat(auto-fill, minmax(118px, 1fr)); gap:12px; }
 .adm-pic { margin:0; display:flex; flex-direction:column; gap:6px; min-width:0; }
 .adm-pic img { width:100%; aspect-ratio:2/3; object-fit:cover; border-radius:8px; background:var(--bg-3); display:block; }
@@ -135,7 +141,7 @@ button.adm-row:hover { border-color:var(--border-olive); }
 .adm-rep-top .adm-main { display:flex; flex-direction:column; gap:4px; flex:1; min-width:0; }
 .adm-rep-pic { width:48px; height:72px; object-fit:cover; border-radius:6px; flex-shrink:0; background:var(--bg-3); }
 .adm-rep-pic.round { width:52px; height:52px; border-radius:50%; }
-.adm-rep-reason { padding:1px 7px; border-radius:4px; background:rgba(229,115,115,.14); color:#e57373; font-weight:600; }
+.adm-rep-reason { padding:1px 7px; border-radius:4px; background:rgba(229,115,115,.14); color:var(--error-fg); font-weight:600; }
 .adm-rep-note { font-size:12.5px; color:var(--text-2); padding-inline-start:10px; border-inline-start:2px solid var(--border-olive); }
 .adm-rep-by { font-size:11.5px; color:var(--text-3); }
 .adm-rep-link { color:var(--olive-light); }
@@ -147,10 +153,10 @@ button.adm-row:hover { border-color:var(--border-olive); }
 .adm-pic figcaption small { font-weight:500; color:var(--text-3); }
 @media(max-width:640px) { .adm-flagbody { padding-inline-start:0; } .adm-pics { grid-template-columns:repeat(3, minmax(0, 1fr)); } }
 /* Safety: matched words, checker, picture queue */
-.adm-hit { background:rgba(220,38,38,.18); color:inherit; border-radius:3px; padding:0 2px; font-weight:600; }
+.adm-hit { background:color-mix(in srgb, var(--error-fg) 18%, transparent); color:inherit; border-radius:3px; padding:0 2px; font-weight:600; }
 .adm-hitwords { flex-basis:100%; display:flex; flex-wrap:wrap; align-items:center; gap:6px; font-size:12px; color:var(--text-3); }
 .adm-hitword { display:inline-flex; align-items:baseline; gap:5px; padding:2px 9px; border-radius:20px; background:var(--bg-3); color:var(--text); font-weight:700; font-size:12.5px; }
-.adm-hitword.warn { background:rgba(220,38,38,.14); color:#dc2626; }
+.adm-hitword.warn { background:color-mix(in srgb, var(--error-fg) 14%, transparent); color:var(--error-fg); }
 .adm-hitword small, .adm-word small { font-weight:500; color:var(--text-3); font-size:11px; }
 .adm-unstarred { display:flex; flex-direction:column; gap:4px; padding:4px 0 10px; }
 .adm-unstarred .adm-flagline { padding:8px 0; border-top:0.5px solid var(--border); }
@@ -168,7 +174,7 @@ button.adm-row:hover { border-color:var(--border-olive); }
 .adm-person { display:flex; align-items:center; gap:16px; margin-bottom:1rem; flex-wrap:wrap; }
 .adm-person .adm-av { width:64px; height:64px; font-size:24px; }
 .adm-person-name { font-family:var(--serif); font-size:clamp(22px, 4vw, 28px); font-weight:500; }
-.adm-badge { font-size:11px; font-weight:700; padding:2px 8px; border-radius:20px; background:var(--olive); color:#fff; margin-inline-start:6px; vertical-align:middle; }
+.adm-badge { font-size:11px; font-weight:700; padding:2px 8px; border-radius:20px; background:var(--olive); color:var(--text-on-brand); margin-inline-start:6px; vertical-align:middle; }
 .adm-facts { display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:10px 16px; font-size:13px; margin-bottom:1.25rem; }
 .adm-facts dt { color:var(--text-3); font-size:12px; }
 .adm-facts dd { margin:2px 0 0; font-weight:600; word-break:break-all; }
@@ -195,7 +201,6 @@ button.adm-row:hover { border-color:var(--border-olive); }
 .adm-wsave { position:sticky; bottom:calc(12px + env(safe-area-inset-bottom)); z-index:5; display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:6px;
   padding:10px 12px 10px 16px; margin-right:56px; border-radius:var(--radius); background:var(--card-solid); border:1px solid var(--border-2); font-size:13px; color:var(--text-3); }
 .adm-wsave.dirty { border-color:var(--olive-light); color:var(--text); font-weight:600; }
-.adm-pick { max-width:620px; height:min(760px, calc(100dvh - 32px)); }
 .adm-wpick { display:grid; grid-template-columns:repeat(auto-fill, minmax(96px, 1fr)); gap:10px; padding-bottom:16px; }
 .adm-wpick button { aspect-ratio:2/3; padding:0; border-radius:8px; overflow:hidden; cursor:pointer; background:var(--bg-3); border:1px solid var(--border-2); }
 .adm-wpick button:hover, .adm-wpick button:focus-visible { border-color:var(--olive-light); outline:2px solid var(--olive-light); outline-offset:1px; }
@@ -219,18 +224,48 @@ button.adm-row:hover { border-color:var(--border-olive); }
   .adm-actions .adm-btn { flex:1; }
   .adm-bars { height:96px; }
 }
+/* ── Guest showcase (admShowcase) ── */
+.adm-sc-grid { display:grid; grid-template-columns:minmax(0, 1fr) minmax(300px, 400px); gap:16px; align-items:start; margin:14px 0; }
+@media (max-width:1000px) { .adm-sc-grid { grid-template-columns:1fr; } }
+.adm-sc-edit { display:flex; flex-direction:column; gap:14px; min-width:0; }
+.adm-sc-src { display:flex; gap:6px; flex-wrap:wrap; }
+.adm-sc-src .adm-btn { min-height:36px; }
+.adm-sc-fields { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:10px 12px; }
+.adm-sc-wide { grid-column:1 / -1; }
+.adm-sc-f { display:flex; flex-direction:column; gap:5px; font-size:12.5px; font-weight:700; color:var(--text-2); margin-bottom:10px; }
+.adm-sc-fields .adm-sc-f { margin-bottom:0; }
+.adm-sc-f .field-input { min-height:42px; }
+.adm-sc-title { display:flex; align-items:center; gap:12px; width:100%; padding:8px; border-radius:var(--radius-sm); border:1px dashed var(--border-olive); background:none; color:var(--text); font:inherit; text-align:start; cursor:pointer; }
+.adm-sc-title:hover { border-style:solid; }
+.adm-sc-title:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
+.adm-sc-bars { display:flex; flex-direction:column; gap:8px; margin-top:12px; align-items:flex-start; }
+.adm-sc-bar { display:grid; grid-template-columns:minmax(0, 1fr) 90px auto; gap:8px; width:100%; align-items:center; }
+.adm-sc-bar .field-input { min-height:40px; }
+.adm-sc-promo { grid-template-columns:repeat(10, minmax(0, 1fr)); margin-bottom:12px; }
+@media (max-width:760px) { .adm-sc-promo { grid-template-columns:repeat(5, minmax(0, 1fr)); } }
+.adm-sc-prev { position:sticky; top:calc(var(--nav-h) + 16px); display:flex; flex-direction:column; gap:12px; padding:20px 16px; border-radius:var(--radius); border:1px solid var(--border-2); background:#080C09; }   /* the splash's dark wall */
+.adm-sc-prev .adm-sc-prev-h { color:var(--p-forest-300); }
+.adm-sc-prev .adm-card-s { color:#B5B5B5; }
+.adm-sc-prev-h { font-size:10.5px; font-weight:800; letter-spacing:1.6px; text-transform:uppercase; color:var(--olive-light); }
+.adm-sc-cards { display:flex; flex-direction:column; gap:12px; }
+.adm-sc-promo-prev { display:flex; flex-direction:column; gap:10px; }
+.adm-sc-promo-prev .shp-posters { margin-top:6px; }
+.adm-sc-promo-prev .shp-poster { width:52px; }
+.adm-sc-promo-prev .shp-poster:nth-child(even) { transform:none; }
+#admWallBox { margin-top:8px; }
 </style>
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#1E5C26">
+  <meta name="theme-color" content="#F3EEDC">
+  <meta name="color-scheme" content="light dark">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="MyScreenFolio">
-  <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
-  <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <link rel="icon" type="image/svg+xml" sizes="any" href="icons/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
 </head>
-<body>
+<body data-own-actions>
 <div class="page-wrap">
   <div class="adm-head fade-up">
     <div>
@@ -247,10 +282,11 @@ button.adm-row:hover { border-color:var(--border-olive); }
 <script src="js/config.js"></script>
 <script src="js/db.js"></script>
 <script src="js/nav.js"></script>
+<script src="js/folio-cards.js"></script>
 <script>
 const esc = s => escHTML(s == null ? '' : String(s));
 const ADM_STATUS = [['watching', 'Watching'], ['up_next', 'Up Next'], ['paused', 'Taking a Break'], ['ongoing', 'To Be Continued'], ['completed', 'Watched'], ['queue', 'Watchlist'], ['dropped', 'Dropped']];
-const ADM_TABS = [['overview', 'Overview'], ['members', 'Members'], ['titles', 'Titles'], ['safety', 'Safety'], ['activity', 'Activity'], ['langs', 'Languages'], ['wall', 'Sign-in posters']];
+const ADM_TABS = [['overview', 'Overview'], ['members', 'Members'], ['titles', 'Titles'], ['safety', 'Safety'], ['activity', 'Activity'], ['langs', 'Languages'], ['showcase', 'Guest showcase'], ['challenges', 'Official challenges']];
 const ADM_KIND = { comment: 'Comment', note_reply: 'Note reply', list_reply: 'List reply' };
 const _admNum = n => Number(n || 0).toLocaleString(MSSI18n.locale);
 const _admFmt = d => d ? new Date(d).toLocaleDateString(MSSI18n.locale, { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
@@ -275,12 +311,44 @@ function admTab(key, refresh) {
   history.replaceState(null, '', '#' + _admTab);
   _admPaintTabs();
   document.getElementById('admPanel').setAttribute('aria-labelledby', 'admTab-' + _admTab);
-  ({ overview: admOverview, members: admMembers, titles: admTitlesView, safety: admSafety, activity: admActivity, langs: admLoadLanguages, wall: admWall })[_admTab](refresh);
+  ({ overview: admOverview, members: admMembers, titles: admTitlesView, safety: admSafety, activity: admActivity, langs: admLoadLanguages, showcase: admShowcase, challenges: admChallenges })[_admTab](refresh);
 }
 function admError(err) {
   console.error(err);
   if (err?.code === '42501') { mssErrorPage('private', { eyebrow: 'Owners only', title: 'This page is for the site’s owners', text: 'You need an owner account to open the admin tools.', actions: ['home'] }); return; }
   document.getElementById('admPanel').innerHTML = `<div class="adm-empty">Couldn’t load that. Check that migrations 036 and 037 have been run, then refresh.</div>`;
+}
+
+/* ── Official challenges: every one ever made (sql/129). The public page drops them 14 days after they
+   end; this archive keeps them all — it doesn't change what the public page shows. ── */
+let _admCh = [], _admChMore = false;
+async function admChallenges(more) {
+  const panel = document.getElementById('admPanel');
+  if (!more) { _admCh = []; panel.innerHTML = _admSpin(); }
+  try {
+    await mssLoadScript('js/medals.js');
+    const { data, error } = await sb.rpc('admin_official_challenges', { p_offset: more ? _admCh.length : 0 });
+    if (error) throw error;
+    _admCh = _admCh.concat(data || []); _admChMore = (data || []).length === 30;
+  } catch (err) {
+    if (err?.code === 'PGRST202') { panel.innerHTML = `<div class="adm-empty">Run sql/129_social_redesign.sql to see the archive of official challenges.</div>`; return; }
+    return admError(err);
+  }
+  const today = new Date().toISOString().slice(0, 10);
+  const until = c => { const d = new Date(c.ends_on + 'T12:00:00'); d.setDate(d.getDate() + 14); return d.toISOString().slice(0, 10); };
+  const state = c => c.state === 'ended' ? (until(c) >= today ? ['Ended · on the page until ' + _admFmt(until(c)), ''] : ['Archived — off the public page', '']) : c.state === 'live' ? ['Live', 'added'] : c.state === 'soon' ? ['Coming soon', 'added'] : ['Hidden', ''];
+  panel.innerHTML = `<div class="adm-card-h"><span class="adm-card-t">Official MSF challenges</span><span class="adm-card-s">${_admCh.length}${_admChMore ? '+' : ''} made · friends’ challenges aren’t listed</span></div>
+    ${_admCh.length ? `<div class="adm-list">${_admCh.map(c => { const st = state(c);
+      return `<div class="adm-row adm-ch-row">
+        <span class="adm-ch-medal">${MSSMedal.official(c.medal, { size: 52, label: c.title + ' medal' })}</span>
+        <div class="adm-main"><span class="adm-name" translate="no">${esc(c.title)}</span>
+          <span class="adm-meta"><span>${_admFmt(c.starts_on)} – ${_admFmt(c.ends_on)}</span><span class="adm-status ${st[1]}">${st[0]}</span>
+            <span>${(n => `${n} ${n === 1 ? 'title' : 'titles'}`)(c.count_mode === 'list' ? (c.titles || []).length : c.goal)}</span></span></div>
+        <div class="adm-ch-n"><b class="adm-count">${_admNum(c.joined)}</b><small>joined</small></div>
+        <div class="adm-ch-n"><b class="adm-count">${_admNum(c.finished)}</b><small>finished</small></div>
+        ${until(c) >= today ? `<a class="adm-btn" href="challenges.html?ch=${encodeURIComponent(c.id)}">Open</a>` : ''}
+      </div>`; }).join('')}</div>` : `<div class="adm-empty">No official challenges yet.</div>`}
+    ${_admChMore ? `<button type="button" class="adm-btn adm-more" onclick="admChallenges(true)">Show more</button>` : ''}`;
 }
 
 /* ── Overview ── */
@@ -566,23 +634,11 @@ async function admReportWarn(id) {
   if (await admReportDone(id, 'actioned', true, 'warned')) { showToast(`@${o.username} has been warned.`); admSafety(); }
 }
 // Suspend: a ban with an end date — 7 days, or longer when asked
-function admSuspendAsk(username) {
-  return new Promise(resolve => {
-    const el = document.createElement('div');
-    el.className = 'confirm-overlay';
-    el.innerHTML = `<div class="confirm-card" role="dialog" aria-modal="true" aria-labelledby="admSusT" aria-describedby="admSusM">
-        <div class="confirm-icon" aria-hidden="true">${icon('lock', 36)}</div>
-        <div class="confirm-title" id="admSusT">Suspend @${esc(username)}?</div>
-        <div class="confirm-msg" id="admSusM">They can’t sign in or post until it ends, and they’re told why. How long?</div>
-        <div class="adm-sus-days" role="group" aria-label="How long">${[7, 30, 90].map(d => `<button type="button" class="adm-btn danger" data-d="${d}">${d} days</button>`).join('')}</div>
-        <div class="confirm-actions"><button type="button" class="confirm-cancel" data-d="0">Cancel</button></div>
-      </div>`;
-    const done = d => { MSSDialog.close(el); setTimeout(() => el.remove(), 300); resolve(d); };
-    MSSDialog.bind(el, () => done(0));
-    el.addEventListener('click', ev => { const b = ev.target.closest('[data-d]'); if (b) done(Number(b.dataset.d)); });
-    document.body.appendChild(el);
-    MSSDialog.open(el, { focus: el.querySelector('[data-d="7"]') });
-  });
+// the shared confirm, with how long as its choices → 7 / 30 / 90, or 0 when cancelled
+async function admSuspendAsk(username) {
+  const d = await showConfirm({ title: `Suspend @${username}?`, message: 'They can’t sign in or post until it ends, and they’re told why. How long?',
+    choices: [7, 30, 90].map(n => [String(n), `${n} days`]), confirmText: 'Suspend', iconName: 'lock' });
+  return Number(d) || 0;
 }
 async function admReportSuspend(id) {
   const r = _admReports.find(x => x.id === id), o = r?.owner; if (!o?.id) return;
@@ -648,27 +704,22 @@ async function admSuspend(id, username) {
   admUser(id);
 }
 // A warning from the member page: pick what it's about, add a note if you like
-function admWarn(id, username) {
-  const el = document.createElement('div');
-  el.className = 'confirm-overlay';
-  el.innerHTML = `<form class="confirm-card" role="dialog" aria-modal="true" aria-labelledby="admWarnT" novalidate>
-      <div class="confirm-icon" aria-hidden="true">${icon('info', 36)}</div>
-      <div class="confirm-title" id="admWarnT">Warn @${esc(username)}</div>
-      <select class="field-input" id="admWarnWhy" aria-label="What it's about">${Object.entries(ADM_REP_REASON).map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select>
-      <textarea class="field-input" id="admWarnNote" rows="3" maxlength="300" placeholder="A note for them (optional)" aria-label="A note for them (optional)" style="width:100%;box-sizing:border-box;resize:vertical"></textarea>
-      <div class="confirm-actions"><button type="button" class="confirm-cancel">Cancel</button><button type="submit" class="confirm-ok is-safe">Send warning</button></div>
-    </form>`;
-  const close = () => { MSSDialog.close(el); setTimeout(() => el.remove(), 300); };
-  MSSDialog.bind(el, close);
-  el.querySelector('.confirm-cancel').addEventListener('click', close);
-  el.querySelector('form').addEventListener('submit', async ev => {
-    ev.preventDefault();
-    const { error } = await sb.rpc('admin_warn_user', { p_user: id, p_reason: el.querySelector('#admWarnWhy').value, p_note: el.querySelector('#admWarnNote').value });
+// Warn: a side panel S (full page on phones) — what it's about, a note, Send warning
+async function admWarn(id, username) {
+  await mssLoadScript('js/panel.js');
+  let h = null;
+  const send = async () => {
+    const { error } = await sb.rpc('admin_warn_user', { p_user: id, p_reason: h.body.querySelector('#admWarnWhy').value, p_note: h.body.querySelector('#admWarnNote').value });
     if (error) { console.error(error); showToast('Couldn’t send that. Run migration 089 if you haven’t.', 'err'); return; }
-    close(); showToast(`@${username} has been warned.`);
-  });
-  document.body.appendChild(el);
-  MSSDialog.open(el, { focus: el.querySelector('select') });
+    h.closeNow(); showToast(`@${username} has been warned.`);
+  };
+  h = MSSPanel.open({ size: 'S', kind: 'generic', title: `Warn @${username}`,
+    body: `<div class="lyr-sec"><label class="lyr-sec-h" for="admWarnWhy">What it's about</label>
+        <select class="lyr-field" id="admWarnWhy">${Object.entries(ADM_REP_REASON).map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select></div>
+      <div class="lyr-sec"><label class="lyr-sec-h" for="admWarnNote">A note for them <small>optional</small></label>
+        <textarea class="lyr-field adm-warn-note" id="admWarnNote" rows="3" maxlength="300"></textarea></div>`,
+    footer: { secondary: [{ label: 'Cancel', only: 'side', onClick: x => x.close() }], primary: { label: 'Send warning', onClick: send } } });
+  if (!h.isPage) h.body.querySelector('select').focus();
 }
 async function admUnban(id, username) {
   const { error } = await sb.rpc('admin_unban_user', { p_user: id });
@@ -773,7 +824,7 @@ async function admAddWord() {
   admCheckWord();
 }
 async function admRemoveWord(w) {
-  if (!(await showConfirm({ title: 'Unblock this word?', message: 'New posts and usernames with it won’t be caught anymore.', confirmText: 'Unblock', iconName: 'unlock' }))) return;
+  if (!(await showConfirm({ title: 'Unblock this word?', message: 'New posts and usernames with it won’t be caught anymore.', confirmText: 'Unblock', iconName: 'unlock', danger: false }))) return;
   const { error } = await sb.rpc('admin_remove_word', { p_word: w });
   if (error) { console.error(error); showToast('Couldn’t unblock it. Try again.', 'err'); return; }
   showToast('Word unblocked.');
@@ -787,7 +838,7 @@ async function admSetAdmin(id, on) {
   admUser(id);
 }
 async function admOfficial(id, on) {
-  if (!(await showConfirm({ title: on ? 'Make this an official account?' : 'Turn off official?', message: on ? 'It can make official challenges for everyone.' : 'It can’t make official challenges anymore. Its challenges stay.', confirmText: on ? 'Make official' : 'Turn off', iconName: 'crown', danger: !on }))) return;
+  if (!(await showConfirm({ title: on ? 'Make this an official account?' : 'Turn off official?', message: on ? 'It can make official challenges for everyone.' : 'It can’t make official challenges anymore. Its challenges stay.', confirmText: on ? 'Make official' : 'Turn off', iconName: 'crown', danger: false }))) return;
   const { error } = await sb.rpc('admin_set_official', { p_user: id, p_on: on });
   if (error) { console.error(error); showToast('Couldn’t change it. Try again.', 'err'); return; }
   showToast(on ? 'Now an official account.' : 'Official turned off.');
@@ -805,7 +856,7 @@ async function admRename(id) {
   admSafety();
 }
 async function admCleanUp() {
-  if (!(await showConfirm({ title: 'Star out blocked words?', message: 'Every saved name, bio, note, reply and list with a blocked word gets it replaced with stars. This can’t be undone.', confirmText: 'Star them out', iconName: 'eyeOff' }))) return;
+  if (!(await showConfirm({ title: 'Star out blocked words?', message: 'Every saved name, bio, note, reply and list with a blocked word gets it replaced with stars. This can’t be undone.', confirmText: 'Star them out', iconName: 'eyeOff', danger: false }))) return;
   const { data, error } = await sb.rpc('admin_censor_existing');
   if (error) { console.error(error); showToast('Couldn’t clean up. Try again.', 'err'); return; }
   showToast(`Cleaned ${data} ${data === 1 ? 'post' : 'posts'}.`);
@@ -904,6 +955,216 @@ async function admAudience(i) {
     }).join('') || '<div class="adm-empty">No one has this title anymore.</div>'}`;
 }
 
+/* ── Guest showcase (117_site_config.sql): what signed-out visitors see ──
+   "A folio in action" on the guest splash (3 cards), the posters on the locked Library / Social / You
+   promos, and (below) the poster wall. Each card is typed in, or copied from YOUR OWN account when you
+   save — values only, never anyone else's data. The preview uses the splash's own cards (folio-cards.js).
+   Saved for everyone at once; visitors' devices pick it up on their next visit. */
+const ADM_SC_PROMO = [['lib', 'Library'], ['social', 'Social'], ['you', 'You']], ADM_SC_MAX = 10;
+const ADM_SC_CATS = [['movies', 'Movie'], ['tv', 'TV Show'], ['anime', 'Anime'], ['cartoons', 'Cartoon']];
+let _admSc = null, _admScAt = null, _admScDirty = false, _admScMine = null;
+/* ── Secret medals (128): how many exist — the Achievement Cabinet shows the unfound ones as "?" ── */
+async function _admSecrets() {
+  const box = document.getElementById('admSecretBox'); if (!box) return;
+  const { data, error } = await sb.from('site_config').select('secret_total').eq('id', 1).maybeSingle();
+  box.innerHTML = `<div class="adm-card" style="margin-top:14px"><div class="adm-card-h"><span class="adm-card-t">Secret medals</span><span class="adm-card-s">how many exist · found ones show in the Cabinet, the rest as “?”</span></div>
+    ${error ? '<div class="adm-empty">Run migration 128 to set this.</div>' : `<div class="adm-actions"><label class="adm-filter-txt" for="admSecretN">Secret medals in total</label>
+      <input class="field-input adm-sc-num" id="admSecretN" type="number" inputmode="numeric" min="0" max="500" step="1" value="${data?.secret_total ?? 1}" style="max-width:100px">
+      <button type="button" class="adm-btn" onclick="_admSecretSave()">Save</button></div>`}</div>`;
+}
+async function _admSecretSave() {
+  const n = Math.max(0, Math.min(500, parseInt(document.getElementById('admSecretN').value, 10) || 0));
+  const { error } = await sb.from('site_config').update({ secret_total: n }).eq('id', 1);
+  showToast(error ? 'Couldn’t save — try again.' : `Saved — ${n} secret medal${n === 1 ? '' : 's'} in total.`, error ? 'err' : 'ok');
+}
+async function admShowcase(refresh) {
+  const panel = document.getElementById('admPanel');
+  if (refresh && (_admScDirty || _admWallDirty) && !(await showConfirm({ title: 'Discard your changes?', message: 'Your showcase changes aren’t saved yet.', confirmText: 'Discard', danger: false }))) return;
+  panel.innerHTML = `<div id="admScBox">${_admSpin()}</div><div id="admWallBox"></div><div id="admSecretBox"></div>`;
+  _admSecrets();
+  if (!_admSc || refresh) {
+    const { data, error } = await sb.from('site_config').select('showcase, updated_at').eq('id', 1).maybeSingle();
+    if (_admTab !== 'showcase') return;
+    if (error) { console.error(error); document.getElementById('admScBox').innerHTML = '<div class="adm-empty">Couldn’t load the guest showcase. Check that migration 117 has been run, then refresh.</div>'; }
+    else {
+      const d = MSSFolio.DEFAULTS, v = data?.showcase || {};
+      _admSc = JSON.parse(JSON.stringify({ watching: v.watching || d.watching, rating: v.rating || d.rating, match: v.match || d.match,
+        promo: Object.fromEntries(ADM_SC_PROMO.map(([k]) => [k, (v.promo?.[k] || []).length ? v.promo[k] : d.promo[k]])) }));
+      _admScAt = data?.updated_at || null; _admScDirty = false;
+    }
+  }
+  if (_admSc) _admScDraw();
+  admWall(refresh);
+}
+const _admScNum = (id, v, min, max, step = 1) => `<input class="field-input adm-sc-num" id="${id}" type="number" inputmode="decimal" min="${min}" max="${max}" step="${step}" value="${esc(v ?? '')}">`;
+const _admScSrc = (k, src) => `<div class="adm-sc-src" role="radiogroup" aria-label="Where this card comes from">${[['custom', 'Type it in'], ['own', 'From my account']].map(([v, l]) =>
+  `<button type="button" role="radio" class="adm-btn${src === v ? ' on' : ''}" aria-checked="${src === v}" onclick="admScSource('${k}', '${v}')">${l}</button>`).join('')}</div>`;
+const _admScTitle = (k, t) => `<button type="button" class="adm-sc-title" onclick="admScPickTitle('${k}')">${_admPoster(t?.poster ? ADM_POSTER + t.poster : '')}
+    <span class="adm-main"><span class="adm-name" translate="no">${esc(t?.title || 'Pick a title')}</span><span class="adm-meta"><span>${t?.title ? 'Change title' : 'Search TMDB'}</span></span></span></button>`;
+function _admScDraw() {
+  const box = document.getElementById('admScBox'); if (!box) return;
+  const { watching: w, rating: r, match: m, promo } = _admSc;
+  const keys = getRatings(r.cat || 'movies').core.concat(getRatings(r.cat || 'movies').bonus);
+  const own = _admScMine;
+  const ownPick = (k, list, cur, label) => `<label class="adm-sc-f adm-sc-wide"><span>${label}</span><select class="field-input" onchange="admScOwn('${k}', this.value)">
+      <option value="">${own ? (list.length ? 'Choose one…' : 'Nothing to choose yet') : 'Loading your titles…'}</option>${list.map(e => `<option value="${esc(e.id)}"${cur === e.id ? ' selected' : ''}>${esc(e.title)}</option>`).join('')}</select></label>`;
+  box.innerHTML = `<div class="adm-card adm-sc-intro">
+      <div class="adm-card-h"><span class="adm-card-t">Guest showcase</span><span class="adm-card-s">${_admScAt ? `Saved ${_admAgo(_admScAt)}` : 'Not saved yet — guests see the defaults'}</span></div>
+      <div class="adm-filter-txt">What signed-out visitors see: <b>A folio in action</b> on the first-visit splash (desktop), and the posters on the locked Library, Social and You menus. “From my account” copies <b>your own</b> titles and numbers when you save — nothing of anyone else’s.</div>
+      <div class="adm-actions" style="margin-top:12px"><a class="adm-btn" href="index.html?showcase-preview" target="_blank" rel="noopener">${icon('eye', 13)} Preview the splash (saved version)</a></div>
+    </div>
+    <div class="adm-sc-grid">
+      <div class="adm-sc-edit">
+        <section class="adm-card" aria-labelledby="admScW"><div class="adm-card-h"><span class="adm-card-t" id="admScW">1 · Currently watching</span>${_admScSrc('watching', w.source)}</div>
+          ${w.source === 'own' ? ownPick('watching', (own || []).filter(e => e.status === 'watching' && e.tmdb_type === 'tv'), w._from, 'One of your shows you’re watching') : ''}
+          <div class="adm-sc-fields">${w.source === 'own' ? '' : `<div class="adm-sc-wide">${_admScTitle('watching', w)}</div>`}
+            <label class="adm-sc-f"><span>Season</span>${_admScNum('scWS', w.season, 0, 200)}</label>
+            <label class="adm-sc-f"><span>Next episode</span>${_admScNum('scWE', w.episode, 1, 5000)}</label>
+            <label class="adm-sc-f adm-sc-wide"><span>Episode name</span><input class="field-input" id="scWN" maxlength="200" value="${esc(w.ep_name || '')}"></label>
+            <label class="adm-sc-f"><span>Episodes watched</span>${_admScNum('scWD', w.done, 0, 20000)}</label>
+            <label class="adm-sc-f"><span>Episodes in all</span>${_admScNum('scWT', w.total, 1, 20000)}</label></div></section>
+        <section class="adm-card" aria-labelledby="admScR"><div class="adm-card-h"><span class="adm-card-t" id="admScR">2 · A rating</span>${_admScSrc('rating', r.source)}</div>
+          ${r.source === 'own' ? ownPick('rating', (own || []).filter(e => (e.status === 'completed' || e.status === 'ongoing') && e.tmdb_id && liveScore(e) != null), r._from, 'One of your rated titles') : ''}
+          <div class="adm-sc-fields">${r.source === 'own' ? '' : `<div class="adm-sc-wide">${_admScTitle('rating', r)}</div>
+            <label class="adm-sc-f"><span>Type</span><select class="field-input" id="scRC">${ADM_SC_CATS.map(([v, l]) => `<option value="${v}"${r.cat === v ? ' selected' : ''}>${l}</option>`).join('')}</select></label>
+            <label class="adm-sc-f"><span>MSF score</span>${_admScNum('scRS', r.score, 0, 10, 0.01)}</label>`}</div>
+          <div class="adm-sc-bars">${(r.bars || []).map(([k, v], i) => `<div class="adm-sc-bar">
+              <select class="field-input" aria-label="Rating ${i + 1}" data-bar-k="${i}"${r.source === 'own' ? ' disabled' : ''}>${keys.map(x => `<option value="${x.key}"${x.key === k ? ' selected' : ''}>${esc(x.label)}</option>`).join('')}</select>
+              ${_admScNum('scRB' + i, v, 0, 10, 0.5).replace('class="field-input adm-sc-num"', `class="field-input adm-sc-num" data-bar-v="${i}"${r.source === 'own' ? ' disabled' : ''}`)}
+              ${r.source === 'own' ? '' : `<button type="button" class="adm-btn" onclick="admScBar(${i})" aria-label="Remove this rating">${icon('x', 13)}</button>`}</div>`).join('')}
+            ${r.source === 'own' || (r.bars || []).length >= 5 ? '' : `<button type="button" class="adm-btn" onclick="admScBar(-1)">${icon('plus', 13)} Add a rating</button>`}</div></section>
+        <section class="adm-card" aria-labelledby="admScM"><div class="adm-card-h"><span class="adm-card-t" id="admScM">3 · Taste match</span>${_admScSrc('match', m.source)}</div>
+          ${m.source === 'own' ? `<div class="adm-filter-txt">Shows <b>you</b> and “A friend” (no friend’s name or photo), with your real match against the friend you pick.</div>
+            <label class="adm-sc-f adm-sc-wide"><span>Your match with…</span><select class="field-input" onchange="admScOwnMatch(this.value)"><option value="">Choose a friend…</option>${(_admScFriends || []).map(f => `<option value="${esc(f.id)}">@${esc(f.username)}</option>`).join('')}</select></label>` : ''}
+          <div class="adm-sc-fields">
+            <label class="adm-sc-f"><span>First name</span><input class="field-input" id="scMA" maxlength="40" value="${esc(m.a?.name || '')}"${m.source === 'own' ? ' disabled' : ''}></label>
+            <label class="adm-sc-f"><span>Second name</span><input class="field-input" id="scMB" maxlength="40" value="${esc(m.b?.name || '')}"${m.source === 'own' ? ' disabled' : ''}></label>
+            <label class="adm-sc-f"><span>Match %</span>${_admScNum('scMP', m.pct, 0, 100)}</label></div></section>
+        <section class="adm-card" aria-labelledby="admScP"><div class="adm-card-h"><span class="adm-card-t" id="admScP">Locked menus’ posters</span><span class="adm-card-s">Up to ${ADM_SC_MAX} each</span></div>
+          ${ADM_SC_PROMO.map(([k, l]) => `<div class="adm-wrow-h"><span class="adm-card-s"><b>${l}</b> · ${promo[k].length} / ${ADM_SC_MAX}</span></div>
+            <div class="adm-wgrid adm-sc-promo">${Array.from({ length: Math.min(ADM_SC_MAX, promo[k].length + 1) }, (_, i) => promo[k][i]
+              ? `<div class="adm-wslot"><button type="button" class="adm-wposter" onclick="admScPromo('${k}', ${i})" aria-label="Change ${esc(promo[k][i].title)}"><img src="${ADM_POSTER}${esc(promo[k][i].poster)}" alt="" loading="lazy"></button>
+                  <span class="adm-wacts"><button type="button" onclick="admScPromoX('${k}', ${i})" aria-label="Remove ${esc(promo[k][i].title)}">${icon('x', 13)}</button></span></div>`
+              : `<div class="adm-wslot"><button type="button" class="adm-wposter empty" onclick="admScPromo('${k}', ${i})" aria-label="Add a ${l} poster">${icon('plus', 20)}<span>Add</span></button></div>`).join('')}</div>`).join('')}</section>
+      </div>
+      <aside class="adm-sc-prev" aria-label="Live preview"><div class="adm-sc-prev-h">Live preview</div><div class="adm-sc-cards mf-stage" id="admScPrev"></div></aside>
+    </div>
+    <div class="adm-wsave${_admScDirty ? ' dirty' : ''}"><span>${_admScDirty ? 'Unsaved showcase changes' : 'Showcase saved'}</span>
+      <button type="button" class="adm-btn on" id="admScSave" onclick="admScSave()" ${_admScDirty ? '' : 'disabled'}>Save for everyone</button></div>`;
+  box.oninput = box.onchange = ev => { if (ev.target.matches('input, select') && !ev.target.closest('.adm-sc-src')) { _admScRead(); _admScChanged(false); } };
+  _admScPreview();
+  if (!_admScMine && (w.source === 'own' || r.source === 'own' || m.source === 'own')) _admScLoadMine();
+}
+// fields → the draft
+function _admScRead() {
+  const $v = id => document.getElementById(id), num = id => $v(id) && $v(id).value !== '' ? Number($v(id).value) : null;
+  const { watching: w, rating: r, match: m } = _admSc;
+  Object.assign(w, { season: num('scWS'), episode: num('scWE'), ep_name: $v('scWN')?.value.trim() || '', done: num('scWD'), total: num('scWT') });
+  if (r.source !== 'own') {
+    if ($v('scRC')) r.cat = $v('scRC').value;
+    r.score = num('scRS');
+    r.bars = [...document.querySelectorAll('[data-bar-k]')].map((s, i) => [s.value, Number(document.querySelector(`[data-bar-v="${i}"]`)?.value || 0)]);
+  }
+  if (m.source !== 'own') { m.a = { name: $v('scMA')?.value.trim() || '', avatar: '' }; m.b = { name: $v('scMB')?.value.trim() || '', avatar: '' }; }
+  m.pct = num('scMP');
+}
+function _admScChanged(redraw = true) {
+  _admScDirty = true;
+  if (redraw) _admScDraw(); else { _admScPreview(); const bar = document.querySelector('#admScBox .adm-wsave'); if (bar) { bar.classList.add('dirty'); bar.firstElementChild.textContent = 'Unsaved showcase changes'; document.getElementById('admScSave').disabled = false; } }
+}
+function _admScPreview() {
+  const box = document.getElementById('admScPrev'); if (!box) return;
+  box.innerHTML = MSSFolio.cardsHTML(_admScClean()) + `<div class="adm-sc-prev-h" style="margin-top:8px">Locked menus</div><div class="adm-sc-promo-prev">${ADM_SC_PROMO.map(([k, l]) =>
+    `<div><span class="adm-card-s">${l}</span><div class="shp-posters">${_admSc.promo[k].slice(0, 5).map(p => `<span class="shp-poster"><img src="${ADM_POSTER}${esc(p.poster)}" alt="" loading="lazy"></span>`).join('')}</div></div>`).join('')}</div>`;
+}
+// what's saved: the draft without the editor's own notes (_from)
+function _admScClean() {
+  const strip = o => Object.fromEntries(Object.entries(o).filter(([k]) => !k.startsWith('_')));
+  return { watching: strip(_admSc.watching), rating: strip(_admSc.rating), match: strip(_admSc.match), promo: _admSc.promo };
+}
+function admScSource(k, v) {
+  _admScRead();
+  _admSc[k].source = v;
+  if (v === 'own' && k === 'match') { const p = window._navUserProfile || {}; _admSc.match.a = { name: p.display_name || p.username || 'You', avatar: /^https:\/\/[a-z0-9]+\.supabase\.co\/storage\/v1\/object\/public\/avatars\//.test(p.avatar_url || '') ? p.avatar_url : '' }; _admSc.match.b = { name: 'A friend', avatar: '' }; }
+  _admScChanged();
+}
+function admScPickTitle(k) {
+  _admScRead();
+  const cur = _admSc[k];
+  _admOpenPicker({ kind: k === 'watching' ? 'tv' : 'multi', label: k === 'watching' ? 'shows' : 'titles', title: k === 'watching' ? 'Currently watching · title' : 'Rating · title',
+    cur: { id: cur.tmdb_id, poster: cur.poster },
+    done: it => { Object.assign(_admSc[k], { tmdb_id: it.id, type: it.type, title: it.title, poster: it.poster }); _admScChanged(); } });
+}
+function admScBar(i) {
+  _admScRead();
+  const r = _admSc.rating;
+  if (i < 0) { const used = new Set(r.bars.map(b => b[0])), k = getRatings(r.cat || 'movies').core.find(x => !used.has(x.key)); if (k) r.bars.push([k.key, 10]); }
+  else r.bars.splice(i, 1);
+  _admScChanged();
+}
+function admScPromo(k, i) {
+  _admScRead();
+  _admOpenPicker({ kind: 'multi', label: 'titles', title: `${ADM_SC_PROMO.find(x => x[0] === k)[1]} · poster ${i + 1}`, cur: _admSc.promo[k][i],
+    done: it => { _admSc.promo[k][i] = it; _admScChanged(); } });
+}
+function admScPromoX(k, i) { _admScRead(); _admSc.promo[k].splice(i, 1); _admScChanged(); }
+// From my account: your own titles (and friends, for the match)
+let _admScFriends = null;
+async function _admScLoadMine() {
+  const me = window._navUser?.id; if (!me) return;
+  try {
+    const [mine, fr] = await Promise.all([getEntries(me), getFriendships(me)]);
+    _admScMine = mine || [];
+    _admScFriends = (fr || []).filter(f => f.status === 'accepted').map(f => ({ id: f.friendId, username: f.friendProfile?.username || 'friend' }));
+  } catch (err) { console.error(err); _admScMine = []; _admScFriends = []; }
+  if (_admTab === 'showcase') { _admScRead(); _admScDraw(); }
+}
+function admScOwn(k, id) {
+  const e = (_admScMine || []).find(x => x.id === id); if (!e) return;
+  _admScRead();
+  const poster = (String(e.poster_url || '').match(/\/t\/p\/[a-z0-9]+(\/[A-Za-z0-9_-]{5,64}\.(?:jpg|jpeg|png))$/) || [])[1] || '';
+  if (k === 'watching') {
+    const b = Array.isArray(e.ratings?._season_breakdown) ? e.ratings._season_breakdown.map(Number).filter(n => n > 0) : [];
+    const s = Number(e.season) || 1, ep = Number(e.episode) || 0, last = b.length && ep >= (b[s - 1] || 0);
+    Object.assign(_admSc.watching, { _from: e.id, tmdb_id: e.tmdb_id, type: 'tv', title: e.title, poster, season: last ? s + 1 : s, episode: last ? 1 : ep + 1, ep_name: '',
+      done: Number(e.watched) || 0, total: b.length ? b.reduce((a, c) => a + c, 0) : Math.max(Number(e.total_eps) || 1, Number(e.watched) || 0, 1) });
+    mssEpName(e.tmdb_id, _admSc.watching.season, _admSc.watching.episode).then(n => { if (n && _admSc.watching._from === e.id) { _admSc.watching.ep_name = n.slice(0, 200); _admScChanged(); } });
+  } else {
+    const groups = mssRatedGroups(e.ratings || {}, e.cat, e.cat === 'movies');
+    const bars = groups.flatMap(g => g.items).filter(x => x.v != null).sort((a, b) => b.v - a.v).slice(0, 4).map(x => [x.key, Math.round(Number(x.v) * 2) / 2]);
+    Object.assign(_admSc.rating, { _from: e.id, tmdb_id: e.tmdb_id, type: e.tmdb_type === 'movie' ? 'movie' : 'tv', title: e.title, poster, cat: e.cat,
+      score: Math.round(liveScore(e) * 100) / 100, bars });
+  }
+  _admScChanged();
+}
+async function admScOwnMatch(fid) {
+  if (!fid) return;
+  try {
+    const theirs = await getFriendEntries(fid);
+    const t = mssTasteMatch(_admScMine || [], theirs || []);
+    if (t.pct == null) { showToast('Not enough titles rated by both of you for a match yet.', 'err'); return; }
+    _admScRead(); _admSc.match.pct = Math.round(t.pct); _admScChanged();
+  } catch (err) { console.error(err); showToast('Couldn’t work out that match — try again.', 'err'); }
+}
+async function admScSave() {
+  _admScRead();
+  const b = document.getElementById('admScSave');
+  const data = _admScClean();
+  if (!data.watching.poster) delete data.watching.poster;
+  if (!data.rating.poster) delete data.rating.poster;
+  b.disabled = true; b.textContent = 'Saving…';
+  const { data: row, error } = await sb.from('site_config').update({ showcase: data }).eq('id', 1).select('updated_at').maybeSingle();
+  if (error || !row) {
+    console.error(error);
+    showToast(error?.code === '23514' ? 'Something isn’t filled in right — check the numbers and names.' : 'Couldn’t save — only admins can change this.', 'err');
+    b.disabled = false; b.textContent = 'Save for everyone'; return;
+  }
+  _admScAt = row.updated_at; _admScDirty = false;
+  try { localStorage.setItem('msf_showcase', JSON.stringify({ at: row.updated_at, v: data })); } catch {}
+  _admScDraw();
+  showToast('Saved — guests see this showcase now.');
+}
+
 /* ── Sign-in posters (078): the poster wall on the sign-in page ──
    4 rows × 7 posters; pick a title, then any of its TMDB posters. Saved for everyone at once;
    the sign-in page reloads its copy the next time it's opened after a save. */
@@ -911,12 +1172,12 @@ const ADM_WALL = [['anime', 'Anime', 'Left edge'], ['movies', 'Movies', 'Centre'
 const ADM_WALL_MAX = 7, ADM_POSTER = 'https://image.tmdb.org/t/p/w185';
 let _admWall = null, _admWallAt = null, _admWallDirty = false, _admPick = null;
 async function admWall(refresh) {
-  const panel = document.getElementById('admPanel');
-  if (refresh && _admWallDirty && !(await showConfirm({ title: 'Discard your changes?', message: 'Your poster changes aren’t saved yet.', confirmText: 'Discard' }))) return;
+  const panel = document.getElementById('admWallBox');
+  if (!panel) return;
   if (!_admWall || refresh) {
     panel.innerHTML = _admSpin();
     const { data, error } = await sb.from('sign_in_wall').select('slots, updated_at').eq('id', 1).maybeSingle();
-    if (_admTab !== 'wall') return;
+    if (_admTab !== 'showcase') return;
     if (error) { console.error(error); panel.innerHTML = '<div class="adm-empty">Couldn’t load the sign-in posters. Check that migration 078 has been run, then refresh.</div>'; return; }
     _admWall = {};
     ADM_WALL.forEach(([k]) => { _admWall[k] = Array.isArray(data?.slots?.[k]) ? data.slots[k].slice(0, ADM_WALL_MAX) : []; });
@@ -925,7 +1186,8 @@ async function admWall(refresh) {
   _admWallDraw();
 }
 function _admWallDraw() {
-  const panel = document.getElementById('admPanel');
+  const panel = document.getElementById('admWallBox');
+  if (!panel) return;
   const slot = (k, p, i) => p
     ? `<div class="adm-wslot">
         <button type="button" class="adm-wposter" onclick="admWallPick('${k}', ${i})" aria-label="Change ${esc(p.title)}"><img src="${ADM_POSTER}${esc(p.poster)}" alt="" loading="lazy"></button>
@@ -938,7 +1200,7 @@ function _admWallDraw() {
       </div>`
     : `<div class="adm-wslot"><button type="button" class="adm-wposter empty" onclick="admWallPick('${k}', ${i})" aria-label="Add a poster">${icon('plus', 20)}<span>Add</span></button></div>`;
   panel.innerHTML = `<div class="adm-card adm-wall-intro">
-      <div class="adm-card-h"><span class="adm-card-t">The sign-in page’s poster wall</span><span class="adm-card-s">${_admWallAt ? `Saved ${_admAgo(_admWallAt)}` : 'Not saved yet — showing this week’s trending'}</span></div>
+      <div class="adm-card-h"><span class="adm-card-t">Splash &amp; sign-in poster wall</span><span class="adm-card-s">${_admWallAt ? `Saved ${_admAgo(_admWallAt)}` : 'Not saved yet — showing this week’s trending'}</span></div>
       <div class="adm-filter-txt">Pick titles people will recognise in a glance — the ones that make them want to sign up and rate. Click a slot, find the title, then choose any of its posters. Movies and TV Shows run down the middle; Anime and Cartoons sit on the edges.</div>
       <div class="adm-actions" style="margin-top:12px"><a class="adm-btn" href="login.html?preview" target="_blank" rel="noopener">${icon('eye', 13)} Preview the sign-in page</a></div>
     </div>
@@ -966,37 +1228,37 @@ async function admWallSave() {
   _admWallAt = data; _admWallDirty = false; _admWallDraw();
   showToast('Saved — the sign-in page shows these now.');
 }
-addEventListener('beforeunload', e => { if (_admWallDirty) { e.preventDefault(); e.returnValue = ''; } });
+addEventListener('beforeunload', e => { if (_admWallDirty || _admScDirty) { e.preventDefault(); e.returnValue = ''; } });
 
 // The picker: find the title (that row's kind of thing), then choose one of its posters
 function admWallPick(k, i) {
-  _admPick = { k, i: Math.min(i, _admWall[k].length) };
-  let ov = document.getElementById('admPickOv');
-  if (!ov) {
-    ov = document.createElement('div');
-    ov.id = 'admPickOv'; ov.className = 'soc-overlay';
-    ov.innerHTML = `<div class="soc-card adm-pick" role="dialog" aria-modal="true" aria-labelledby="admPickT">
-        <div class="sf-header"><div class="sf-title" id="admPickT">Choose a poster</div><button type="button" class="sf-close" onclick="admPickClose()" aria-label="Close">${icon('x', 18)}</button></div>
-        <div class="sf-body" id="admPickBody"></div></div>`;
-    MSSDialog.bind(ov, admPickClose);
-    document.body.appendChild(ov);
-  }
-  const label = ADM_WALL.find(w => w[0] === k)[1];
-  document.getElementById('admPickT').textContent = `${label} · slot ${_admPick.i + 1}`;
-  document.getElementById('admPickBody').innerHTML = `<input class="field-input adm-search" id="admPickQ" type="search" placeholder="Search ${label.toLowerCase()}…" aria-label="Search a title" autocomplete="off" data-1p-ignore data-lpignore="true">
-    <div id="admPickRes" aria-live="polite"><div class="adm-empty">Type a title.</div></div>`;
+  i = Math.min(i, _admWall[k].length);
+  const now = _admWall[k][i];
+  _admOpenPicker({ kind: k === 'movies' ? 'movie' : k === 'tv' ? 'tv' : 'multi', label: ADM_WALL.find(w => w[0] === k)[1], title: `${ADM_WALL.find(w => w[0] === k)[1]} · slot ${i + 1}`, cur: now,
+    done: item => { _admWall[k][i] = item; _admWallChanged(); } });
+}
+// The title + poster picker (search TMDB, then pick any of its posters): o = { kind: 'movie' | 'tv' | 'multi', label, title, cur, done(item) }
+async function _admOpenPicker(o) {
+  _admPick = o;
+  const label = o.label;
+  await mssLoadScript('js/panel.js');
+  const h = MSSPanel.open({ size: 'S', kind: 'generic', title: o.title,
+    body: `<div class="lyr-search"><span class="lyr-search-ic" aria-hidden="true">${icon('search', 16)}</span><input class="lyr-field" id="admPickQ" type="search" placeholder="Search ${label.toLowerCase()}…" aria-label="Search a title" autocomplete="off"></div>
+      <div id="admPickRes" aria-live="polite"><div class="adm-empty">Type a title.</div></div>`,
+    onClose: () => { if (_admPickPanel === h) _admPickPanel = null; } });
+  _admPickPanel = h;
   const q = document.getElementById('admPickQ');
   q.addEventListener('input', () => { clearTimeout(_admTimer); _admTimer = setTimeout(() => _admPickSearch(q.value), MSS_SEARCH_MS); });
-  MSSDialog.open(ov, { focus: '#admPickQ' });
+  if (!h.isPage) q.focus();
 }
-function admPickClose() { MSSDialog.close(document.getElementById('admPickOv')); }
+let _admPickPanel = null;
+function admPickClose() { _admPickPanel?.closeNow(); }
 async function _admPickSearch(q) {
-  const box = document.getElementById('admPickRes'), k = _admPick.k;
+  const box = document.getElementById('admPickRes'), kind = _admPick.kind;
   q = q.trim();
   if (q.length < 2) { box.innerHTML = '<div class="adm-empty">Type a title.</div>'; return; }
   box.innerHTML = _admSpin();
   try {
-    const kind = k === 'movies' ? 'movie' : k === 'tv' ? 'tv' : 'multi';
     const res = await tmdbFetch(`${TMDB_BASE}/search/${kind}?query=${encodeURIComponent(q)}&include_adult=false&language=en-US`);
     if (!res.ok) throw res;
     const hits = ((await res.json()).results || [])
@@ -1018,16 +1280,16 @@ async function _admPickTitle(n) {
     const posters = ((await res.json()).posters || []).sort((a, b) => (b.vote_count || 0) - (a.vote_count || 0) || (b.vote_average || 0) - (a.vote_average || 0)).map(p => p.file_path);
     if (!posters.includes(h.poster)) posters.unshift(h.poster);
     _admPick.title = h; _admPick.posters = posters.slice(0, 60);
-    const now = _admWall[_admPick.k][_admPick.i], cur = now && now.id === h.id ? now.poster : '';
+    const now = _admPick.cur, cur = now && now.id === h.id ? now.poster : '';
     box.innerHTML = `<button type="button" class="adm-back" onclick="_admPickSearch(document.getElementById('admPickQ').value)">${icon('back', 14)} Back to results</button>
       <div class="adm-group" translate="no">${esc(h.title)} · ${_admPick.posters.length} posters</div>
       <div class="adm-wpick">${_admPick.posters.map((p, j) => `<button type="button" onclick="_admPickPoster(${j})" aria-label="Poster ${j + 1}${p === cur ? ' (in use now)' : ''}"${p === cur ? ' class="on"' : ''}><img src="${ADM_POSTER}${esc(p)}" alt="" loading="lazy"></button>`).join('')}</div>`;
   } catch (err) { console.error(err); box.innerHTML = '<div class="adm-empty">Couldn’t load the posters — try again.</div>'; }
 }
 function _admPickPoster(j) {
-  const h = _admPick.title, row = _admWall[_admPick.k];
-  row[_admPick.i] = { id: h.id, type: h.type, title: h.title, poster: _admPick.posters[j] };
-  admPickClose(); _admWallChanged();
+  const h = _admPick.title, done = _admPick.done;
+  admPickClose();
+  done({ id: h.id, type: h.type, title: h.title, poster: _admPick.posters[j] });
 }
 
 document.addEventListener('DOMContentLoaded', () => {

@@ -3,275 +3,47 @@
 <head>
 <meta charset="UTF-8">
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#1E5C26">
+  <meta name="theme-color" content="#F3EEDC">
+  <meta name="color-scheme" content="light dark">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="MyScreenFolio">
-  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script src="js/splash.js"></script>
 <script src="js/i18n.js"></script>
 <title>Profile — MyScreenFolio</title>
 <link rel="stylesheet" href="css/fonts.css">
+<link rel="stylesheet" href="css/theme.css">
 <link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/profile.css">
+<link rel="stylesheet" href="css/showcase.css">
 <style>
-.pv-section { margin-bottom:2.5rem; }
-
-.pv-eyebrow { font-size:10px; letter-spacing:2px; text-transform:uppercase; color:var(--olive-light); margin-bottom:4px; }
-
-.pv-title { font-family:var(--serif); font-size:22px; font-weight:500; margin-bottom:1rem; }
-
-.pv-empty { text-align:center; padding:2rem; color:var(--text-3); font-size:13px; }
-
-/* ══ Profile Header — Instagram style ══ */
-.prof-header {
-  display:flex;
-  flex-direction:column;
-  align-items:stretch;
-  gap:0;
-  padding:1.75rem 0 1.5rem;
-  position:relative;
-  margin-bottom:1.5rem;
-/* Full-width divider line under prof-header */
-.prof-header::after {
-  content:'';
-  position:absolute;
-  bottom:0;
-  inset-inline-start:calc(-50vw + 50%);
-  width:100vw;
-  height:0.5px;
-  background:var(--border);
-}
-}
-.prof-avatar {
-  width:110px; height:110px; border-radius:50%; flex-shrink:0;
-  background:var(--olive-faint); border:2.5px solid var(--olive-light);
-  font-family:var(--serif); font-size:38px; color:var(--olive-light);
-  display:flex; align-items:center; justify-content:center; overflow:hidden;
-  grid-column:1; grid-row:1;
-}
-.prof-avatar img { width:100%; height:100%; object-fit:cover; border-radius:50%; }
-/* Stat boxes sit on the same row as the avatar, filling the right column */
-.prof-stat-boxes {
-  width:100%;
-  display:grid;
-  margin-top:4px;
-  grid-template-columns:repeat(6,1fr);
-  gap:6px; align-self:center;
-}
-.prof-stat-box {
-  background:var(--card); border:0.5px solid var(--border-olive); border-radius:var(--radius);
-  padding:.5rem .85rem; display:flex; flex-direction:column; align-items:center; justify-content:center;
-  transition:border-color var(--trans) var(--ease);
-  grid-column:span 2; min-width:0; overflow:hidden;
-}
-/* Episodes and Runtime — each takes half the full width (3 of 6 cols) */
-.prof-stat-box:hover { border-color:var(--border-olive); }
-.prof-stat-box-num { font-family:var(--serif); font-size:22px; font-weight:500; color:var(--olive-light); line-height:1.15; text-align:center; }
-.prof-stat-box-label { font-size:8px; color:var(--text-3); text-transform:uppercase; letter-spacing:1px; margin-top:3px; white-space:nowrap; text-align:center; }
-/* Info block: username, display name, bio, quote — below avatar in left column, spans both cols */
-.prof-header-top {
-  display:flex; flex-direction:row; align-items:flex-start;
-  gap:1.5rem; margin-bottom:14px;
-}
-.prof-header-info {
-  flex:1; min-width:0;
-  display:flex; flex-direction:column; justify-content:center;
-  padding-top:4px;
-}
-.prof-username { font-family:var(--serif); font-size:30px; font-weight:600; color:var(--text); line-height:1.1; margin-bottom:5px; }
-.prof-displayname { font-size:15px; color:var(--text-2); margin-bottom:10px; font-weight:400; }
-.prof-bio { font-size:14px; color:var(--text); line-height:1.6; margin-bottom:8px; }
-.prof-quote {
-  font-family:var(--sans); font-style:italic;
-  font-size:14px; font-weight:400; color:var(--text-2);
-  padding-inline-start:14px; border-inline-start:3px solid var(--olive-light);
-  margin-bottom:10px; line-height:1.6;
-}
-/* Buttons row */
-.prof-header-actions {
-  display:flex; gap:8px; flex-wrap:wrap; align-items:center;
-  justify-content:center; padding-top:10px; width:100%;
-}
-/* Friend buttons */
-.pv-friend-btn {
-  /* every button here the same size as the taste-match pill */
-  display:inline-flex; align-items:center; justify-content:center; gap:6px; box-sizing:border-box; vertical-align:middle;
-  height:var(--pvb-h, 35px); padding:0 18px; border-radius:var(--radius-sm); border:0.5px solid transparent;
-  font-family:var(--sans); font-size:12px; font-weight:600; line-height:1; text-decoration:none;
-  cursor:pointer; transition:all .15s; white-space:nowrap;
-}
-.pv-friend-btn.add { background:var(--olive); color:#fff; border-color:var(--olive); }
-.pv-friend-btn.add:hover { background:var(--olive-2); }
-.pv-friend-btn.friends { background:var(--olive-faint); color:var(--olive-light); border:0.5px solid var(--border-olive); }
-.pv-friend-btn.friends:hover { background:#f87171; color:#fff; border-color:#f87171; }
-.pv-friend-btn.pending { background:transparent; color:var(--text-3); border:0.5px solid var(--border-2); }
-.pv-friend-btn.pending:hover { background:var(--bg-3); }
-.pv-friend-btn.accept { background:var(--olive); color:#fff; border-color:var(--olive); }
-.pv-friend-btn.accept:hover { background:var(--olive-2); }
-.pv-friend-btn.decline { background:transparent; color:#f87171; border:0.5px solid #f87171; }
-.pv-friend-btn.decline:hover { background:#f87171; color:#fff; }
-.pv-friend-btn.pv-match { margin-inline-start:6px; color:var(--olive-light); background:var(--olive-faint); border-color:var(--border-olive); }
-.pv-friend-btn.pv-match.hi { background:var(--olive); color:#fff; border-color:var(--olive); }
-.pv-friend-btn.pv-match:hover { border-color:var(--olive-light); }
-.pv-friend-btn.pv-notify { background:transparent; color:var(--text-2); border:0.5px solid var(--border-2); margin-inline-start:6px; }
-.pv-friend-btn.pv-notify:hover { border-color:var(--border-olive); color:var(--olive-light); background:var(--olive-faint); }
-.pv-friend-btn.pv-notify.on { background:var(--olive); color:#fff; border-color:var(--olive); }
-.pv-friend-btn.pv-notify.on:hover { background:var(--olive-2); }
-
-/* ══════════════════════════════════════════
-   RESPONSIVE — full scaling for all screens
-   ══════════════════════════════════════════ */
-
-/* ── Large desktop (≥1280px) ── */
-@media(min-width:1280px) {
-  .prof-stat-box-num { font-size:28px; }
-}
-
-/* ── Tablet (≤900px) ── */
-@media(max-width:900px) {
-  .prof-header-top { gap:1.25rem; }
-  .prof-stat-box-num { font-size:24px; }
-  .prof-stat-box { padding:.45rem .6rem; min-width:0; }
-  .prof-bio { font-size:13px; } .prof-quote { font-size:14px; }
-  
-  
-  
-  
-  
-  
-  
-}
-
-/* ── Mobile (≤640px) ── */
+/* phones: the pickers and sort bars these pages open */
 @media(max-width:640px) {
-  .prof-header { padding:1rem 0; }
-  .prof-header-top { gap:1rem; margin-bottom:10px; }
-  .prof-avatar { width:82px; height:82px; font-size:32px; }
-  .prof-username { font-size:25px; }
-  .prof-displayname { font-size:14px; margin-bottom:8px; }
-  .prof-bio { font-size:13px; } .prof-quote { font-size:14px; }
-  .prof-stat-box-num { font-size:18px; }
-  .prof-stat-box { padding:.4rem .5rem; min-width:0; }
-  .prof-avatar { width:72px; height:72px; font-size:28px; }
-  .prof-username { font-size:22px; }
-  .prof-displayname { font-size:13px; margin-bottom:8px; }
-  .prof-stat-boxes { gap:4px; }
-  .prof-stat-box { padding:.3rem .4rem; }
-  .prof-stat-box-num { font-size:18px; }
-  .prof-stat-box-label { font-size:7px; letter-spacing:0.8px; }
-  .prof-bio { font-size:12px; }
-  .prof-quote { font-size:13px; }
-  .prof-edit-btn, .prof-share-btn { font-size:11px; padding:6px 14px; }
-  .pv-friend-btn { --pvb-h:32px; font-size:11px; padding:0 14px; }
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  .note-row { padding:12px 14px; gap:12px; border-radius:var(--radius); }
-  .note-poster { width:64px; height:90px; font-size:20px; }
-  .note-title { font-size:15px; }
-  .note-tags { gap:3px; margin-bottom:3px; }
-  .note-text { font-size:11px; margin-top:4px; }
-  .note-score { font-size:20px; }
-  .note-date { font-size:10px; }
-  .fav-slot { padding:10px 12px; min-height:64px; gap:10px; }
-  .fav-slot-title { font-size:13px; }
-  .fav-slot-num { font-size:20px; }
-  .fav-slot-score { font-size:15px; }
-  .fav-slot-poster { width:40px; height:56px; font-size:16px; }
-  .fav-edit-btn { font-size:11px; padding:6px 12px; }
   .fav-picker-item { padding:11px 16px; gap:12px; }
   .fav-picker-poster { width:44px; height:62px; font-size:17px; }
   .fav-picker-name { font-size:14px; }
   .fav-picker-sub { font-size:11px; }
   .fav-picker-score { font-size:17px; }
   .fav-picker-check { width:24px; height:24px; }
-  #favPickerSheet { max-height:88dvh; }
-  .prof-share-card { padding:18px; }
-  .prof-share-title { font-size:18px; }
   .sort-bar { padding:8px 12px 10px; gap:4px; }
   .sort-btn { font-size:10px; padding:4px 8px; }
-  .cf-btn { font-size:10px; padding:4px 9px; }
   .section-block-title { font-size:12px; }
-  .export-grid { grid-template-columns:repeat(2,1fr); }
-  .export-card { padding:1rem; }
 }
-
-/* ── Small mobile (≤400px) ── */
 @media(max-width:400px) {
-  .prof-header { padding:.85rem 0; }
-  .prof-header-top { flex-direction:column; align-items:center; gap:.5rem; margin-bottom:10px; }
-  .prof-header-info { align-items:center; text-align:center; width:100%; }
-  .prof-avatar { width:78px; height:78px; font-size:30px; }
-  .prof-username { font-size:27px; }
-  .prof-displayname { font-size:13px; }
-  .prof-stat-box-num { font-size:15px; }
-  .prof-stat-box { padding:.3rem .35rem; min-width:0; }
-  .prof-stat-box-label { font-size:7px; letter-spacing:.5px; }
-  .prof-header-top { flex-direction:column; align-items:center; gap:.6rem; }
-  .prof-header-info { align-items:center; text-align:center; }
-  .prof-avatar { width:80px; height:80px; font-size:32px; }
-  .prof-username { font-size:22px; }
-  .prof-displayname { font-size:13px; }
-  .prof-stat-box-num { font-size:14px; }
-  .prof-stat-box { padding:.3rem .35rem; }
-  .prof-stat-box-label { font-size:7px; letter-spacing:.5px; }
-  .prof-header-identity { margin-bottom:8px; }
-  .prof-avatar { width:60px; height:60px; font-size:22px; }
-  .fav-slot { padding:8px 10px; gap:8px; min-height:56px; }
-  .fav-slot-poster { width:36px; height:50px; font-size:14px; }
-  .fav-slot-title { font-size:12px; }
-  .fav-slot-num { font-size:17px; }
   .fav-picker-item { padding:9px 12px; gap:10px; }
   .fav-picker-poster { width:38px; height:54px; font-size:15px; }
   .fav-picker-name { font-size:13px; }
   .fav-picker-sub { font-size:10px; }
   .fav-picker-score { font-size:15px; }
   .fav-picker-check { width:22px; height:22px; }
-  .prof-username { font-size:20px; }
-  .prof-stat-boxes { gap:3px; }
-  .prof-stat-box { padding:.25rem .3rem; }
-  .prof-stat-box-num { font-size:13px; }
-  .prof-stat-box-label { font-size:7px; letter-spacing:0.5px; }
-  .prof-header-actions { gap:6px; }
-  .prof-edit-btn, .prof-share-btn { font-size:10px; padding:5px 11px; }
-  .pv-friend-btn { --pvb-h:28px; font-size:10px; padding:0 11px; }
-  
-  
-  
-  
-  
-  
-  
   .sort-btn { font-size:9px; padding:3px 6px; }
-  .cf-btn { font-size:9px; padding:3px 7px; }
-  .note-row { padding:10px 12px; gap:10px; }
-  .note-poster { width:54px; height:76px; font-size:18px; }
-  .note-title { font-size:13px; }
-  .note-text { font-size:10px; }
-  .note-score { font-size:17px; }
-  .export-grid { grid-template-columns:1fr; }
 }
-
-.prof-ov-grid {
-  display:grid; grid-template-columns:repeat(5,1fr); gap:12px;
-}
-.prof-ov-grid .q-card { width:100% !important; max-width:100% !important; min-width:0 !important; }
-@media(max-width:900px)  { .prof-ov-grid { grid-template-columns:repeat(4,1fr); gap:10px; } }
-@media(max-width:640px)  { .prof-ov-grid { grid-template-columns:repeat(3,1fr); gap:8px; } }
-@media(max-width:400px)  { .prof-ov-grid { grid-template-columns:repeat(2,1fr); gap:6px; } }
-
-
 </style>
 </head>
 <body>
-<div class="page-wrap">
+<div class="page-wrap pf-page">
 
   <div id="pvContent">
     <div class="page-loading" data-skel="pvprofile"></div>
@@ -283,20 +55,22 @@
 <script src="js/config.js"></script>
 <script src="js/db.js"></script>
 <script src="js/nav.js"></script>
-<script src="js/dashboard.js"></script>
 <script src="js/sort-filter.js"></script>
 <script src="js/rating-curve.js"></script>
+<script src="js/profile-stats.js"></script>
+<script src="js/profile-v2.js"></script>
 <script>window.LIB_SCOPE = 'pv'; window.LIB_READONLY = true; window.LIB_ENTRIES = function(){ return _pvEntries; }; window.LIB_PROFILE = function(){ return _pvProfile; };</script>
 <script src="js/library-view.js"></script>
 <script src="js/rewatch.js"></script>
 <script src="js/info-popup.js"></script>
-<script src="js/rating-popup.js"></script>
-<script src="js/comments.js"></script>
+<script src="js/title-view.js"></script>
 <script src="js/easter-egg.js"></script>
 <script src="js/note-popup.js"></script>
 <script src="js/list-popup.js"></script>
+<script src="js/list-actions.js"></script>
 <script src="js/profile-tabs.js"></script>
 <script src="js/episode-ratings.js"></script>
+<script src="js/episodes-home.js"></script>
 <script src="js/medals.js"></script>
 <script src="js/showcase.js"></script>
 <script src="js/follows.js"></script>
@@ -307,7 +81,7 @@ let _pvEntries = [];
 let _pvFollow = null;      // you and them (get_follow_state, 083): who follows who, counts, can you see their things
 let _pvRel = 'none';       // none | follows_you | requested | following | friends
 let _pvNotifyOn = false;   // am I subscribed to this friend's activity? (off by default)
-let _pvMatch = null;       // taste match with a friend (mssTasteMatch, config.js)
+let _pvMatch = null;       // your taste match with them (mssTasteMatch, config.js): the ring in their header
 
 // Returning via browser back/forward can restore this page from the
 // bfcache with stale data (e.g. an entry just added/edited elsewhere
@@ -319,6 +93,11 @@ window.addEventListener('pageshow', (event) => {
 document.addEventListener('DOMContentLoaded', async () => {
   // Get target user — URL params first (survive refresh), then sessionStorage
   var urlParams = new URLSearchParams(window.location.search);
+  // ?panel=…&id=… with no pid: an older panel address wrote the title's id over this page's — that id isn't theirs
+  if (urlParams.get('panel') && !urlParams.get('pid') && urlParams.get('id')) {
+    urlParams.delete('id'); urlParams.delete('panel');
+    history.replaceState(history.state, '', location.pathname + (urlParams.toString() ? '?' + urlParams : '') + location.hash);
+  }
   _pvUserId   = urlParams.get('id')  || sessionStorage.getItem('viewProfileId')  || null;
   _pvUsername = urlParams.get('u')   || sessionStorage.getItem('viewProfileUsername') || null;
 
@@ -336,7 +115,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Start loading the friend's profile + library while the nav is still
   // signing in — these don't depend on who's viewing.
   const profileP = _pvUserId || _pvUsername
-    ? sb.from('profiles').select('*').eq(_pvUserId ? 'id' : 'username', _pvUserId || _pvUsername).maybeSingle()
+    ? sb.from('profiles').select(MSS_PUBLIC_PROFILE).eq(_pvUserId ? 'id' : 'username', _pvUserId || _pvUsername).maybeSingle()
     : Promise.resolve({ data: null });
   const earlyP = _pvUserId ? Promise.all([
     getPublicEntries(_pvUserId),
@@ -352,16 +131,23 @@ document.addEventListener('DOMContentLoaded', async () => {
   const { data: found, error: pErr } = await profileP;
   if (pErr && pErr.code !== '22P02') { mssErrorPage(mssErrorKind(pErr), { error: pErr }); return; }
   _pvProfile = found || null;
+  // asked before sign-in finished (a private account isn't visible signed out): ask again now that we know who you are
+  if (!_pvProfile && _pvMe) {
+    const { data: again } = await sb.from('profiles').select(MSS_PUBLIC_PROFILE).eq(_pvUserId ? 'id' : 'username', _pvUserId || _pvUsername).maybeSingle();
+    _pvProfile = again || null;
+  }
   if (!_pvProfile && _pvUsername && !_pvUserId) {    // an old link: they changed their username in the last 14 days
     const now = await mssUsernameNow(_pvUsername);
     if (now) {
-      const { data: moved } = await sb.from('profiles').select('*').eq('username', now).maybeSingle();
+      const { data: moved } = await sb.from('profiles').select(MSS_PUBLIC_PROFILE).eq('username', now).maybeSingle();
       _pvProfile = moved || null;
       if (moved) { _pvUsername = now; const u = new URL(location.href); u.searchParams.set('u', now); history.replaceState(null, '', u); }
     }
   }
   if (!_pvProfile) { mssErrorPage(_pvUserId || _pvUsername ? 'user' : 'badlink'); return; }
   if (!_pvUserId) _pvUserId = _pvProfile.id;
+  // the address always carries their id (and current username), so Back / refresh find them again
+  { const u = new URL(location.href); if (u.searchParams.get('id') !== _pvUserId || (_pvProfile.username && u.searchParams.get('u') !== _pvProfile.username)) { u.searchParams.set('id', _pvUserId); if (_pvProfile.username) u.searchParams.set('u', _pvProfile.username); history.replaceState(history.state, '', u); } }
 
   document.title = `${_pvProfile.display_name || _pvProfile.username} — MyScreenFolio`;
 
@@ -389,13 +175,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   _pvCmtUser = _pvMe;
   renderProfile();
   var tab = parseInt(new URLSearchParams(location.search).get('tab'), 10);
-  if (tab > 0 && tab <= 5) pvTabSwitch(tab);
+  if (tab > 0 && tab <= 5) pvTab(tab);
   _libResume();
-  // Friends: how your tastes line up — your own titles, quietly, then the pill by the buttons
-  if (_pvRel === 'friends') {
+  // Signed in and able to see their titles: how your tastes line up — your own titles, quietly, then the ring in their header
+  if (_pvMe && _pvCanSeeDrawn) {
     getEntries(_pvMe.id).then(mine => {
       _pvMatch = mssTasteMatch(mine, _pvEntries);
-      const b = document.getElementById('pvBtns'); if (b) b.innerHTML = _friendBtnHTML();
+      MSSProfile.refreshStats({ match: _pvMatchOf() });
     }).catch(() => {});
   }
 });
@@ -407,7 +193,7 @@ async function _pvLoadBlocked() {
   const { data } = await sb.from('user_blocks').select('blocked_id').eq('blocker_id', window._navUser.id).eq('blocked_id', _pvUserId).maybeSingle();
   if (!!data === _pvBlocked) return;
   _pvBlocked = !!data;
-  const b = document.getElementById('pvBtns'); if (b) b.innerHTML = _friendBtnHTML();
+  _pvPaintBtns();
 }
 async function pvBlock() {
   const un = (_pvProfile && _pvProfile.username) || 'them';
@@ -420,45 +206,77 @@ async function pvUnblock() {
   try { await unblockUser(_pvUserId); showToast('Unblocked'); location.reload(); }
   catch (err) { showToast(err?.hint || 'Couldn’t unblock them — try again.', 'err'); }
 }
+/* The actions (Profiles V2): they change with who's looking, the layout doesn't (profile-v2.js).
+   Visitor (signed out): Follow (asks them to sign up first) · Share. Signed in: Follow / Following · Share · ⋯.
+   Friends: Friends ▾ (compare, unfollow, remove follower) · notifications · Message · ⋯ (share, report, block). */
 function _friendBtnHTML() {
-  if (!_pvMe) {
-    return `<button type="button" class="pv-friend-btn add" onclick="mssJoin('follow people')">${icon('plus', 13)} Follow</button>`;
-  }
-  var rel = _pvRel, f = _pvFollow || {};
-  // They asked to follow you (your account is private): let them in, or not
-  var ask = f.follows_me === 'pending'
-    ? '<span class="pv-ask">' + icon('users', 13) + ' Wants to follow you</span><button class="pv-friend-btn accept" onclick="pvRespond(true)">Accept</button><button class="pv-friend-btn decline" onclick="pvRespond(false)">Decline</button>'
-    : '';
-  var main = '<button class="pv-friend-btn ' + (rel === 'friends' ? 'friends' : rel === 'following' ? 'following' : rel === 'requested' ? 'pending' : 'add') + '" onclick="pvFollowTap()"'
-    + (rel === 'friends' ? ' title="You follow each other — tap to unfollow"' : rel === 'following' ? ' title="Tap to unfollow"' : rel === 'requested' ? ' title="Tap to cancel your request"' : '') + '>'
-    + MSSFollow.btnLabel(rel) + (rel === 'requested' ? ' ✕' : '') + '</button>';
-  // They follow you → you can take them off your followers (they aren't told)
-  var rm = f.follows_me === 'accepted'
-    ? '<div class="pv-rm-row"><button type="button" class="pv-rm" onclick="pvRemoveFollower()">' + icon('x', 12) + ' Remove @' + escHTML((_pvProfile && _pvProfile.username) || '') + ' from your followers</button></div>' : '';
-  // Report this person (report.js · 086) — the profile, its photo, name and bio
   var un = (_pvProfile && _pvProfile.username) || '';
-  var rep = '<div class="pv-rm-row pv-report-row"><button type="button" class="pv-rm pv-report" onclick="mssReport(\'user\', _pvUserId, { what: \'@' + escHTML(un).replace(/'/g, '') + '\' })">' + icon('flag', 12) + ' Report @' + escHTML(un) + '</button></div>';
-  var block = '<div class="pv-rm-row pv-report-row"><button type="button" class="pv-rm pv-report" onclick="pvBlock()">' + icon('lock', 12) + ' Block @' + escHTML(un) + '</button></div>';
-  if (_pvBlocked) return '<button type="button" class="pv-friend-btn pending" onclick="pvUnblock()">Unblock</button>' + rep;
-  return ask + main + (_pvCanBell() ? _pvNotifyBtnHTML() : '') + (rel === 'friends' ? _pvMatchHTML() : '') + rm + rep + block;
+  var share = '<button type="button" class="tv-btn" onclick="pvShare()" aria-label="Share this profile">' + icon('share', 15) + '<span class="tv-btn-label">Share</span></button>';
+  var more = '<button type="button" class="tv-btn is-icon" onclick="pvMore(this)" aria-label="More actions" aria-haspopup="menu" data-top-more>' + icon('moreV', 16) + '</button>';
+  if (!_pvMe) return '<button type="button" class="tv-btn is-main" onclick="mssJoin(\x27follow people\x27)">' + icon('plus', 15) + ' Follow</button>' + share;
+  if (_pvBlocked) return '<button type="button" class="tv-btn" onclick="pvUnblock()">Unblock</button>' + more;
+  var rel = _pvRel;
+  if (rel === 'friends') {
+    var bell = _pvCanBell() ? '<button type="button" class="tv-btn is-icon' + (_pvNotifyOn ? ' is-on' : '') + '" onclick="pvToggleNotify()" aria-pressed="' + _pvNotifyOn + '" aria-label="' + (_pvNotifyOn ? 'Notifications on — turn off' : 'Get notified about what they watch') + '" title="' + (_pvNotifyOn ? 'Notifications on' : 'Notify me') + '">' + icon('bell', 16) + '</button>' : '';
+    return '<button type="button" class="tv-btn is-main" onclick="pvFriendMenu(this)" aria-haspopup="menu">' + icon('users', 15) + ' Friends ' + icon('chevdown', 13) + '</button>'
+      + bell + '<a class="tv-btn is-icon" href="messages.html?with=' + encodeURIComponent(_pvUserId) + '" aria-label="Message @' + escHTML(un) + '" title="Message">' + icon('send', 16) + '</a>' + more;
+  }
+  var main = '<button type="button" class="tv-btn' + (rel === 'none' || rel === 'follows_you' ? ' is-main' : '') + '" onclick="pvFollowTap()"'
+    + (rel === 'following' ? ' title="Tap to unfollow"' : rel === 'requested' ? ' title="Tap to cancel your request"' : '') + '>'
+    + (rel === 'none' || rel === 'follows_you' ? icon('plus', 15) + ' ' : '') + MSSFollow.btnLabel(rel) + (rel === 'requested' ? ' ✕' : '') + '</button>';
+  var bell2 = _pvCanBell() ? '<button type="button" class="tv-btn is-icon' + (_pvNotifyOn ? ' is-on' : '') + '" onclick="pvToggleNotify()" aria-pressed="' + _pvNotifyOn + '" aria-label="Notifications for them">' + icon('bell', 16) + '</button>' : '';
+  return main + bell2 + share + more;
+}
+// They asked to follow you (your account is private): let them in, or not — a strip under the banner
+function _pvAskHTML() {
+  if (!_pvMe || !_pvFollow || _pvFollow.follows_me !== 'pending') return '';
+  return '<div class="pf-ask" id="pfAsk" role="region" aria-label="Follow request"><span>' + icon('users', 14) + ' @' + escHTML((_pvProfile && _pvProfile.username) || '') + ' wants to follow you</span>'
+    + '<button type="button" class="tv-btn is-main" onclick="pvRespond(true)">Accept</button><button type="button" class="tv-btn" onclick="pvRespond(false)">Decline</button></div>';
+}
+function _pvPaintBtns() {
+  var b = document.getElementById('pfActs'); if (b) b.innerHTML = _friendBtnHTML();
+  var ask = document.getElementById('pfAsk'), html = _pvAskHTML();
+  if (ask) { if (html) ask.outerHTML = html; else ask.remove(); }
+  else if (html) { var hero = document.getElementById('pfHero'); if (hero) hero.insertAdjacentHTML('afterend', html); }
+}
+function pvShare() {
+  var url = location.href.substring(0, location.href.lastIndexOf('/') + 1) + 'profile-view.html?u=' + encodeURIComponent((_pvProfile && _pvProfile.username) || '');
+  if (navigator.share) { navigator.share({ title: 'MyScreenFolio — @' + ((_pvProfile && _pvProfile.username) || ''), url: url }).catch(function(){}); return; }
+  navigator.clipboard && navigator.clipboard.writeText(url).then(function(){ showToast('Link copied'); });
+}
+// Friends ▾ — the friend menu
+function pvFriendMenu(btn) {
+  var un = (_pvProfile && _pvProfile.username) || '', f = _pvFollow || {};
+  mssLoadScript('js/panel.js').then(function() {
+    var items = [{ label: 'Compare your tastes', icon: 'compare', onSelect: function(){ location.href = 'compare.html?with=' + encodeURIComponent(_pvUserId); } },
+      { label: 'Unfollow @' + un, sub: 'You stop being friends', icon: 'x', onSelect: pvFollowTap }];
+    if (f.follows_me === 'accepted') items.push({ label: 'Remove from your followers', sub: 'They aren’t told', icon: 'users', onSelect: pvRemoveFollower });
+    MSSPopover.open(btn, { title: 'Friends', subtitle: 'You follow each other', label: 'Friend options', align: 'start', items: items });
+  });
+}
+// ⋯ — more actions: share, remove follower, report, block
+function pvMore(btn) {
+  var un = (_pvProfile && _pvProfile.username) || '', f = _pvFollow || {};
+  mssLoadScript('js/panel.js').then(function() {
+    var items = [{ label: 'Share profile', icon: 'share', onSelect: pvShare }];
+    if (f.follows_me === 'accepted' && _pvRel !== 'friends') items.push({ label: 'Remove from your followers', sub: 'They aren’t told', icon: 'users', onSelect: pvRemoveFollower });
+    items.push({ divider: true });
+    items.push({ label: 'Report @' + un, icon: 'flag', danger: true, onSelect: function(){ mssReport('user', _pvUserId, { what: '@' + un }); } });
+    if (!_pvBlocked) items.push({ label: 'Block @' + un, sub: 'Neither of you can follow or message the other', icon: 'ban', danger: true, onSelect: pvBlock });
+    MSSPopover.open(btn, { title: '@' + un, label: 'More actions', items: items });
+  });
 }
 
 /* Friend-activity notifications toggle — OFF by default. When on, you're
    notified the moment this friend starts, watches an episode of or finishes
    something, writes a note or makes a list (022 / 047). */
-function _pvMatchHTML() {
-  const m = _pvMatch && _pvMatch.pct;
-  return m != null ? '<a class="pv-friend-btn pv-match' + (m >= 80 ? ' hi' : '') + '" href="compare.html?with=' + encodeURIComponent(_pvUserId) + '" title="Based on ' + _pvMatch.rated.length + ' titles you have both rated — see the full comparison">'
-    + icon('compare', 12) + ' ' + m + '% taste match</a>' : '';
+// for the header's ring (profile-v2.js): null until it's worked out; pct null = not enough titles you've both rated yet
+function _pvMatchOf() {
+  return _pvMatch ? { pct: _pvMatch.pct, rated: _pvMatch.rated.length, href: 'compare.html?with=' + encodeURIComponent(_pvUserId) } : null;
 }
 // The bell: anyone you follow — when their notification setting includes you (084)
 function _pvCanBell() {
   return (_pvRel === 'following' || _pvRel === 'friends') && !!(_pvFollow && _pvFollow.notify_ok !== false);
-}
-function _pvNotifyBtnHTML() {
-  return _pvNotifyOn
-    ? '<button class="pv-friend-btn pv-notify on" onclick="pvToggleNotify()" title="Turn off notifications for them"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg> Notifications On</button>'
-    : '<button class="pv-friend-btn pv-notify" onclick="pvToggleNotify()" title="Get notified about what they watch"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13.73 21a2 2 0 0 1-3.46 0"/><path d="M18.63 13A17.9 17.9 0 0 1 18 8"/><path d="M6.26 6.26A5.86 5.86 0 0 0 6 8c0 7-3 9-3 9h14"/><path d="M18 8a6 6 0 0 0-9.33-5"/><line x1="1" y1="1" x2="23" y2="23"/></svg> Notify Me</button>';
 }
 async function pvToggleNotify() {
   const next = !_pvNotifyOn;
@@ -466,7 +284,7 @@ async function pvToggleNotify() {
     const { error } = await sb.rpc('set_activity_subscription', { p_target: _pvUserId, p_on: next });
     if (error) throw error;
     _pvNotifyOn = next;
-    document.getElementById('pvBtns').innerHTML = _friendBtnHTML();
+    _pvPaintBtns();
     const name = (_pvProfile && (_pvProfile.display_name || _pvProfile.username)) || 'them';
     showToast(next ? `You'll be notified when ${name} starts, watches or finishes something.` : `Notifications off for ${name}.`);
   } catch (e) { console.error(e); showToast('Could not update notifications — try again.', 'err'); }
@@ -477,161 +295,87 @@ async function pvToggleNotify() {
 
 
 
-// Their title: Info · Ratings · Note in one popup (MSSViews, info-popup.js) — opens on
+// Their title: its panel / page, read-only (MSSViews, title-view.js) — opens on
 // Ratings once it's rated/watched, otherwise on Info. Add to Watchlist · Discover.
 
-
-function pvTabSwitch(n) { var t=document.getElementById("pvTab"+n); if(t) pvTab(n,t); var s=document.getElementById("pvTabsSelect"); if(s) s.value=n; }
 
 // While the profile loads: the same header, tabs and Overview with sample text, masked into placeholders
 mssSkeleton.define('pvprofile', function() {
   var tab = +new URLSearchParams(location.search).get('tab') || 0;
-  var tabs = _pvTabsHTML().replace(/ class="prof-tab active"/, ' class="prof-tab"').replace(new RegExp('(class="prof-tab)(" onclick="pvTab\\(' + tab + ',)'), '$1 active$2')
-    .replace(/class="prof-tab(s|-select)"/g, 'class="prof-tab$1" data-skel-keep');   // tabs stay as they are
-  var btns = '<button class="pv-friend-btn">' + icon('check', 13) + ' Following</button>';
-  return (MSSTabs.headSkel(btns) + tabs + '<div class="prof-panel active">' + (tab ? mssSkeleton('grid') : mssSkeleton('overview')) + '</div>').replace(/ id="[^"]*"/g, '');
+  var tabs = _pvTabsHTML(tab).replace(/class="tv-tab( is-on)?"/g, 'class="tv-tab$1" data-skel-keep');   // tabs stay as they are
+  var btns = '<button class="tv-btn is-main">' + icon('check', 16) + ' Following</button><button class="tv-btn">Share</button>';
+  return ('<div class="tv-page tp-page pf-tp' + (matchMedia('(max-width: 767px)').matches ? ' is-phone' : '') + '">' + MSSProfile.headSkel(btns) + tabs
+    + '<div class="prof-panel active">' + (tab ? mssSkeleton('grid') : mssSkeleton('overview')) + '</div></div>').replace(/ id="[^"]*"/g, '');
 });
 
-// The tab bar + the phone's tab menu (also drawn in the loading skeleton)
-function _pvTabsHTML() {
-  var tabBar = '<div class="prof-tabs">'
-    +'<div class="prof-tab active" onclick="pvTab(0,this)" id="pvTab0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg><span class="prof-tab-label">Overview</span></div>'
-    +'<div class="prof-tab" onclick="pvTab(1,this)" id="pvTab1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg><span class="prof-tab-label">Library</span></div>'
-    +'<div class="prof-tab" onclick="pvTab(2,this)" id="pvTab2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg><span class="prof-tab-label">Lists</span></div>'
-    +'<div class="prof-tab" onclick="pvTab(3,this)" id="pvTab3"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg><span class="prof-tab-label">Notes</span></div>'
-    +'<div class="prof-tab" onclick="pvTab(4,this)" id="pvTab4"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/><path d="M6 8h3"/><path d="M6 11h3"/><path d="M6 14h3"/><path d="M13 9l4 2-4 2z"/></svg><span class="prof-tab-label">Episodes</span></div>'
-    +'<div class="prof-tab" onclick="pvTab(5,this)" id="pvTab5"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0V4Z"/><path d="M17 5h3v2a3 3 0 0 1-3 3"/><path d="M7 5H4v2a3 3 0 0 0 3 3"/></svg><span class="prof-tab-label">Showcase</span></div>'
-    +'</div>';
-
-  var mobileSelect = '<select class="prof-tab-select" id="pvTabsSelect" onchange="pvTabSwitch(parseInt(this.value))">'
-    +'<option value="0">Overview</option>'
-    +'<option value="1">Library</option>'
-    +'<option value="2">Lists</option>'
-    +'<option value="3">Notes</option>'
-    +'<option value="4">Episodes</option>'
-    +'<option value="5">Showcase</option>'
-    +'</select>';
-
-  return mobileSelect + tabBar;
+// The tab bar — the title page's (also drawn in the loading skeleton); counts once their titles are in
+function _pvTabsHTML(active, n) {
+  n = n || {};
+  return MSSProfile.tabsHTML([[0, 'Overview', ''], [1, 'Library', n[1] || ''], [2, 'Lists', n[2] || ''], [3, 'Notes', n[3] || ''], [4, 'Episodes', ''], [5, 'Showcase', '']],
+    active || 0, ((_pvProfile && (_pvProfile.display_name || _pvProfile.username)) || 'Their') + '’s profile');
 }
-
 function renderProfile() {
   var p = _pvProfile;
   if (!p) return;
   var un = p.username || _pvUsername || '';
-  var st = computeStats(_pvEntries);
-  var esc = function(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');};
-
-/* ── Profile stats (5 boxes) ── */
-
-
-  var friendBtnHTML = _friendBtnHTML();
   _pvLoadBlocked().catch(() => {});
   var locked = !!(_pvFollow && !_pvFollow.can_see);
-  var avHTML = safeURL(p.avatar_url)
-    ? '<img src="'+safeURL(p.avatar_url)+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%">'
-    : esc((un[0]||'?').toUpperCase());
-
-  var header = '<div class="prof-header fade-up">'
-    +'<div class="prof-header-top">'
-    +'<div class="prof-avatar" id="pvAvatar">'+avHTML+'</div>'
-    +'<div class="prof-header-info">'
-    +'<div class="prof-username">@'+esc(un)+'</div>'
-    +(p.display_name?'<div class="prof-displayname">'+esc(p.display_name)+'</div>':'')
-    +(p.bio?'<div class="prof-bio">'+esc(p.bio)+'</div>':'')
-    +(p.quote?'<div class="prof-quote">'+esc(p.quote)+'</div>':'')
-    +'</div></div>'
-    +_pvCountsHTML()
-    +(locked ? '' : '<div class="prof-stat-boxes">'+MSSTabs.statsHTML(_pvEntries)+'</div>')
-    +'<div class="prof-header-actions"><div id="pvBtns">'+friendBtnHTML+'</div></div>'
-    +'</div>';
+  var lists = (_pvFavLists || []).filter(function(l){ return l.cat === 'custom'; }).length;
+  // A visitor (signed out): a bar inviting them in, above the profile
+  var join = _pvMe ? '' : '<div class="pf-join"><div class="pf-join-t"><b>Track, rate and rank everything you watch</b><span>Make your own folio on MyScreenFolio — it’s free.</span></div><a href="login.html#signup">Sign up free</a></div>';
+  var notes = _pvEntries.filter(function(e){ return e.notes && String(e.notes).trim(); }).length;
+  var panel = function(n, inner) { return '<div class="prof-panel' + (n ? '' : ' active') + '" id="pfPanel-' + n + '" role="tabpanel" aria-labelledby="pfTab-' + n + '" tabindex="-1">' + inner + '</div>'; };
+  // a title page for a person (profile-v2.js): the header, the title page's tab bar, the tabs
+  document.getElementById('pvContent').innerHTML = join + '<div class="tv-page de-page tp-page pf-tp" id="pfPage"><div class="de-cap" aria-hidden="true"></div><div id="pfHeadBox"></div>'
+    + (locked ? '' : _pvTabsHTML(0, { 1: _pvEntries.length, 2: lists, 3: notes })
+      + panel(0, '<div id="pvOverviewContent"><div class="page-loading"><div class="spinner"></div></div></div>')
+      + panel(1, '<div id="libraryLoading"><div class="page-loading"><div class="spinner"></div></div></div><div id="libraryContent" style="display:none"></div>')
+      + panel(2, '<div id="pvListsContent"></div>')
+      + panel(3, '<div id="pvNotesContent"></div>')
+      + panel(4, '<div id="pvEpisodesContent"></div>')
+      + panel(5, '<div id="pvShowcase"><div class="page-loading"><div class="spinner"></div></div></div>'))
+    + '</div>';
+  // The shared header (profile-v2.js): only the actions and the taste match differ from your own profile
+  MSSProfile.header(document.getElementById('pfHeadBox'), {
+    profile: p, entries: _pvEntries, own: false, locked: locked,
+    actions: _friendBtnHTML(), ask: _pvAskHTML(), counts: _pvCountsHTML(),
+    match: _pvMatchOf(), lists: lists, diary: null,
+  });
+  MSSProfile.page(document.getElementById('pfPage'), { onTab: function(k, byPerson) { pvTab(+k, byPerson); } });
   _pvCanSeeDrawn = !locked;
   // A private account you don't follow: just who they are, and a way in
   if (locked) {
-    document.getElementById('pvContent').innerHTML = header + '<div class="pv-locked fade-up">'
+    document.getElementById('pfHeadBox').insertAdjacentHTML('beforeend', '<div class="pv-locked pf-locked fade-up">'
       + '<span class="pv-locked-ic">' + icon('lock', 26) + '</span>'
       + '<div class="pv-locked-title">This account is private</div>'
-      + '<div class="pv-locked-text">' + (_pvRel === 'requested' ? 'Your request is waiting — once @' + esc(un) + ' accepts, their titles, ratings, lists and notes show here.'
-          : 'Follow @' + esc(un) + ' to see their titles, ratings, lists and notes. They’ll get a request to let you in.') + '</div></div>';
+      + '<div class="pv-locked-text">' + (_pvRel === 'requested' ? 'Your request is waiting — once @' + escHTML(un) + ' accepts, their titles, ratings, lists and notes show here.'
+          : 'Follow @' + escHTML(un) + ' to see their titles, ratings, lists and notes. They’ll get a request to let you in.') + '</div></div>');
     return;
   }
-
-  var panel0 = '<div class="prof-panel active" id="pvPanel0"><div id="pvOverviewContent"><div class="page-loading"><div class="spinner"></div></div></div></div>';
-  var panel1 = '<div class="prof-panel" id="pvPanel1"><div id="libraryLoading"><div class="page-loading"><div class="spinner"></div></div></div><div id="libraryContent" style="display:none"></div></div>';
-
-  var panel2 = '<div class="prof-panel" id="pvPanel2"><div id="pvListsContent"></div></div>';
-  var panel3 = '<div class="prof-panel" id="pvPanel3"><div id="pvNotesContent"></div></div>';
-  var panel4 = '<div class="prof-panel" id="pvPanel4"><div id="pvEpisodesContent"></div></div>';
-  var panel5 = '<div class="prof-panel" id="pvPanel5"><div id="pvShowcase"><div class="page-loading"><div class="spinner"></div></div></div></div>';
-
-  document.getElementById('pvContent').innerHTML = header + _pvTabsHTML() + panel0 + panel1 + panel2 + panel3 + panel4 + panel5;
-
-  window.pvTab = function(n, el) {
-    document.querySelectorAll('.prof-tab').forEach(function(t){t.classList.remove('active');});
-    document.querySelectorAll('.prof-panel').forEach(function(p){p.classList.remove('active');});
-    el.classList.add('active');
-    document.getElementById('pvPanel'+n).classList.add('active');
-    var sel = document.getElementById('pvTabsSelect');
-    if (sel && parseInt(sel.value) !== n) sel.value = n;
-    if (n === 1) { renderLibrary(); }
-    // Keep the tab in the URL — Back / refresh come back to it (not Overview)
-    var u = new URL(location.href);
-    if (n) u.searchParams.set('tab', n); else u.searchParams.delete('tab');
-    history.replaceState(history.state, '', u.toString());
-    // Lists + Notes: the Personal sections of the Notes / Lists pages, read-only (profile-tabs.js)
-    var tabOpts = { userId: _pvUserId, entries: _pvEntries, owner: !!(_pvMe && _pvMe.id === _pvUserId), name: (_pvProfile && (_pvProfile.display_name || _pvProfile.username)) || '' };
-    if (n === 2) MSSTabs.lists(document.getElementById('pvListsContent'), tabOpts);
-    if (n === 3) MSSTabs.notes(document.getElementById('pvNotesContent'), tabOpts);
-    if (n === 4) MSSTabs.episodes(document.getElementById('pvEpisodesContent'), tabOpts);
-    if (n === 5) MSSShowcase.mount(document.getElementById('pvShowcase'), _pvProfile && _pvProfile.id, { own: !!(_pvMe && _pvProfile && _pvMe.id === _pvProfile.id), name: (_pvProfile && (_pvProfile.display_name || _pvProfile.username)) || '' });
-  };
-
+  // Diary watches: only the number (127 get_profile_diary_count), when you can see them
+  sb.rpc('get_profile_diary_count', { p_user: _pvUserId }).then(function(r){ if (r && !r.error && r.data != null) MSSProfile.refreshStats({ diary: r.data }); }, function(){});
   renderPvOverview();
 }
 
-function _pvStatsBoxHTML() {
-  var entries = _pvEntries || [];
-  var profile = _pvProfile;
-  var favLists = _pvFavLists;
-  var watched = function(e){ return e.status==='completed'||e.status==='ongoing'; };
-  var byCat = function(c){ return entries.filter(function(e){return e.cat===c;}); };
-  var tv = byCat('tv'), movies = byCat('movies'), anime = byCat('anime'), cartoons = byCat('cartoons');
-  var watchlist = entries.filter(function(e){return e.status==='queue'||e.status==='up_next';});
-  var reviews = entries.filter(function(e){return e.notes && e.notes.trim();});
-
-  var favIds = {};
-  if (profile) {
-    ['top_picks','fav_tv','fav_movies','fav_anime','fav_cartoons'].forEach(function(k){
-      (Array.isArray(profile[k]) ? profile[k] : []).forEach(function(id){ favIds[id] = true; });
-    });
-  }
-  var favoritesCount = Object.keys(favIds).length;
-  var listsCount = Array.isArray(favLists) ? favLists.length : 0;
-
-  var rows = [
-    { label:'All Items',        value:entries.length },
-    { label:'TV Shows',         value:tv.length },
-    { label:'TV Shows Watched', value:tv.filter(watched).length },
-    { label:'Movies',           value:movies.length },
-    { label:'Movies Watched',   value:movies.filter(watched).length },
-    { label:'Animes',           value:anime.length },
-    { label:'Animes Watched',   value:anime.filter(watched).length },
-    { label:'Cartoons',         value:cartoons.length },
-    { label:'Cartoons Watched', value:cartoons.filter(watched).length },
-    { label:'Watchlist',        value:watchlist.length },
-    { label:'Lists',            value:listsCount },
-    { label:'Reviews',          value:reviews.length },
-  ];
-
-  var chevronSvg = '<span class="stats-chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span>';
-  return '<div class="stats-box fade-up" id="statsBoxPv">' + rows.map(function(r,i){
-    return '<div class="stats-row"' + (i===0 ? ' onclick="MSSTabs.toggleStats(\'statsBoxPv\')"' : '') + '>'
-      + '<span class="stats-label">' + r.label + '</span>'
-      + '<span class="stats-value">' + r.value.toLocaleString() + (i===0 ? chevronSvg : '') + '</span>'
-      + '</div>';
-  }).join('') + '</div>';
+// A tab (the title page's tab bar): its panel, its content, the address remembers it
+function pvTab(n, byPerson) {
+  var panel = document.getElementById('pfPanel-' + n); if (!panel) return;
+  document.querySelectorAll('#pfPage .prof-panel').forEach(function(p){ p.classList.toggle('active', p === panel); });
+  MSSProfile.setTab(n, byPerson);
+  if (n === 1) { renderLibrary(); }
+  // Keep the tab in the URL — Back / refresh come back to it (not Overview)
+  var u = new URL(location.href);
+  if (n) u.searchParams.set('tab', n); else u.searchParams.delete('tab');
+  history.replaceState(history.state, '', u.toString());
+  // Lists + Notes: the Personal sections of the Notes / Lists pages, read-only (profile-tabs.js)
+  var tabOpts = { userId: _pvUserId, entries: _pvEntries, owner: !!(_pvMe && _pvMe.id === _pvUserId), name: (_pvProfile && (_pvProfile.display_name || _pvProfile.username)) || '' };
+  if (n === 2) MSSTabs.lists(document.getElementById('pvListsContent'), tabOpts);
+  if (n === 3) MSSTabs.notes(document.getElementById('pvNotesContent'), tabOpts);
+  if (n === 4) MSSTabs.episodes(document.getElementById('pvEpisodesContent'), tabOpts);
+  if (n === 5) MSSShowcase.mount(document.getElementById('pvShowcase'), _pvProfile && _pvProfile.id, { own: !!(_pvMe && _pvProfile && _pvMe.id === _pvProfile.id), name: (_pvProfile && (_pvProfile.display_name || _pvProfile.username)) || '' });
 }
 
+// Overview: their Top Favorites, Top 5 by category and the side column, read-only (profile-v2.js)
 function renderPvOverview() {
   var el = document.getElementById('pvOverviewContent');
   if (!el) return;
@@ -639,11 +383,8 @@ function renderPvOverview() {
     el.innerHTML = mssEmpty({ art: 'person', title: 'Nothing here yet', text: 'Their folio is still a blank page. Give it time.' });
     return;
   }
-  var _statsHTML = _pvStatsBoxHTML();
-  el.innerHTML = '<div class="overview-layout"><div class="overview-side">'+_statsHTML+MSSCurve.html(_pvEntries, { user: _pvUserId })+'</div><div class="overview-main" id="pvDashMain"></div></div>';
-  // Their picks: Top Favorites, Would Recommend, Top 5 per type (read-only)
-  MSSDash.render(document.getElementById('pvDashMain'), {
-    entries: _pvEntries, profile: _pvProfile || {}, editable: false,
+  MSSProfile.overview(el, {
+    entries: _pvEntries, profile: _pvProfile || {}, editable: false, user: _pvUserId,
     openEntry: _libOpen,
     save: function(){ return Promise.resolve(); }
   });
@@ -682,11 +423,11 @@ async function pvRefreshFollow() {
   _pvFollow = await getFollowState(_pvUserId).catch(function(){ return _pvFollow; });
   _pvRel = followRelation(_pvFollow);
   _pvNotifyOn = !!(_pvCanBell() && _pvFollow && _pvFollow.notify_on);
-  var b = document.getElementById('pvBtns'); if (b) b.innerHTML = _friendBtnHTML();
-  var c = document.getElementById('pvCounts'); if (c) c.outerHTML = _pvCountsHTML();
+  _pvPaintBtns();
+  var c = document.getElementById('pfCounts'); if (c) c.innerHTML = _pvCountsHTML();
 }
 function _pvCountsHTML() {
-  return '<div id="pvCounts">' + MSSFollow.countsHTML(_pvFollow, _pvUserId, (_pvProfile && _pvProfile.username) || '', false) + '</div>';
+  return MSSFollow.countsHTML(_pvFollow, _pvUserId, (_pvProfile && _pvProfile.username) || '', false);
 }
 
 var _pvFavLists = [];

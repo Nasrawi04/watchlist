@@ -427,25 +427,20 @@ const MSSImport = (() => {
   }
 
   /* ── Editing one record ── */
-  function edit(i) {
+  // Check this title: a side panel L (full page on phones) — the search, the match, its rating
+  async function edit(i) {
     const r = S.rows[i];
-    let ov = $('impEdit');
-    if (!ov) {
-      ov = document.createElement('div');
-      ov.id = 'impEdit'; ov.className = 'confirm-overlay';
-      document.body.appendChild(ov);
-      MSSDialog.bind(ov, () => MSSDialog.close(ov));
-    }
-    ov.innerHTML = `<div class="confirm-card imp-edit" role="dialog" aria-modal="true" aria-labelledby="impEditT">
-      <div class="confirm-title" id="impEditT">Check this title</div>
+    await mssLoadScript('js/panel.js');
+    const h = MSSPanel.open({ size: 'L', kind: 'generic', title: 'Check this title', body: `<div class="imp-edit">
       <p class="imp-was" translate="no">Your file said: ${escHTML(r.name)}${r.year ? ` (${escHTML(r.year)})` : ''}${original(r) ? ` · ${escHTML(original(r))}` : ''}</p>
       <label class="field-label" for="impQ">Title</label>
       <div class="imp-q"><input class="field-input" id="impQ" type="search" value="${escHTML(r.match?.title || r.name)}" autocomplete="off" spellcheck="false"><button type="button" class="set-btn" id="impQGo">Search</button></div>
       <ul class="imp-hits" id="impHits"></ul>
       <div class="imp-cur" id="impCur"></div>
       <div id="impFields"></div>
-      <div class="confirm-actions"><button type="button" class="confirm-cancel" id="impCancel">Cancel</button><button type="button" class="confirm-ok is-safe" id="impSave">Save</button></div>
-    </div>`;
+    </div>`,
+      footer: { secondary: [{ label: 'Cancel', only: 'side', onClick: x => x.close() }], primary: { label: 'Save', onClick: () => save() } } });
+    const ov = h.body;
     const D = { match: r.match || null, cat: r.cat, status: r.status, date: r.date, overall: r.criteria ? null : r.score, ratings: { ...(r.criteria || {}) }, detail: !!r.criteria };
     if (D.ratings.animation != null) D.ratings._animEnabled = true;
     const isMovie = () => D.match?.type === 'movie';
@@ -494,8 +489,9 @@ const MSSImport = (() => {
         return;
       }
       if (t.id === 'impQGo') hits();
-      if (t.id === 'impCancel') MSSDialog.close(ov);
-      if (t.id === 'impSave') {
+    };
+    const save = () => {
+      {
         gather();
         if (D.match && S.have?.has(`${D.match.type}:${D.match.id}`)) { showToast('That title is already in your library.', 'err'); return; }
         const final = D.detail ? liveFinal() : null;
@@ -503,7 +499,7 @@ const MSSImport = (() => {
         const watched = D.status !== 'queue';
         Object.assign(r, { match: D.match, cat: D.cat, status: D.status, date: D.status === 'completed' ? D.date : '', score: !watched ? null : detailed ? final : D.overall ?? null, criteria: watched && detailed ? { ...D.ratings } : null });
         if (D.match) { r.state = 'ok'; r.why = ''; r.on = true; }
-        MSSDialog.close(ov);
+        h.closeNow();
         draw();
       }
     };
@@ -512,7 +508,7 @@ const MSSImport = (() => {
       if (t.id === 'impStatus' || t.id === 'impCat') { gather(); paint(); }
     };
     $('impQ').onkeydown = ev => { if (ev.key === 'Enter') { ev.preventDefault(); hits(); } };
-    MSSDialog.open(ov, { focus: '#impQ' });
+    if (!h.isPage) $('impQ').focus();
   }
 
   /* ── Saving: nothing happens until here ── */
@@ -619,7 +615,7 @@ const MSSImport = (() => {
   const paintScore = (el, v) => {
     const wrap = el.closest('.imp-rate-in'), txt = wrap.querySelector('.imp-score'), sl = wrap.querySelector('.imp-slide');
     if (txt !== document.activeElement) txt.value = v != null ? Number(v).toFixed(1) : '';
-    sl.value = v ?? 0; sl.classList.toggle('is-empty', v == null); sl.setAttribute('aria-valuetext', v != null ? Number(v).toFixed(1) : 'Not rated');
+    sl.value = v ?? 0; sl.classList.toggle('is-empty', v == null); sl.setAttribute('aria-valuetext', v != null ? mssR1(Number(v)) : 'Not rated');
   };
 
   /* ── Tapping things ── */

@@ -7,144 +7,280 @@
 <script src="js/i18n.js"></script>
 <title>MyScreenFolio</title>
 <link rel="stylesheet" href="css/fonts.css">
+<link rel="stylesheet" href="css/theme.css">
 <link rel="stylesheet" href="css/style.css">
 <style>
-.pp-wrap { max-width:none; }
-.pp-back {
-  display:inline-flex; align-items:center; gap:6px;
-  font-size:13px; color:var(--text-3); text-decoration:none;
-  margin-bottom:1.5rem; transition:color .15s;
-}
-.pp-back:hover { color:var(--olive-light); }
+/* ═══════════════════════════════════════════════════════════════
+   The person page (person page redesign, 14 Nov 2026) — one page for actors, directors, writers and crew.
+   The hero pages' hero, slim bar, tabs and phone bar (.tp-*, style.css) over the title view (.tv-*).
+   Logic: js/person-page.js.
+═══════════════════════════════════════════════════════════════ */
+.pp-wrap { max-width:none; position:relative; }
+.pp-back-loading { display:inline-flex; align-items:center; gap:6px; font-size:13px; color:var(--text-3); text-decoration:none; margin-bottom:1rem; }
+.pp-back-loading:hover { color:var(--olive-light); }
+.pp-wrap:has(> #ppLoading.has-skel:not([style*="none"])) > .pp-back-loading { position:absolute; z-index:4; top:22px; inset-inline-start:26px; margin:0; color:#fff; }
+#ppLoading .tp-top { visibility:hidden; }
 
-.pp-layout {
-  display:grid; grid-template-columns:280px 1fr; gap:clamp(1.25rem, 3vw, 2.5rem);
-  align-items:start;
+/* ── the hero ── */
+.pp-hero .tv-poster { border-radius:var(--radius); }
+.pp-hero.pp-blur .tv-hero-bg { filter:blur(18px) saturate(.8); transform:scale(1.15); }
+.pp-badge { letter-spacing:.12em; text-transform:uppercase; font-size:10.5px; font-weight:800; }
+.pp-born { margin:0; font:600 14px/1.45 'Manrope',var(--sans); color:rgba(255,255,255,.86); }
+.pp-hbio-w { width:100%; display:flex; flex-direction:column; align-items:flex-start; gap:2px; }
+.pp-hbio { margin:0; font:500 14px/1.6 'Manrope',var(--sans); color:rgba(255,255,255,.82); display:-webkit-box; -webkit-line-clamp:3; line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
+.pp-more-link { padding:0; border:none; background:none; font:700 13px 'Manrope',var(--sans); color:var(--olive-light); cursor:pointer; }
+.pp-more-link:hover { text-decoration:underline; text-underline-offset:3px; }
+.pp-more-link:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; border-radius:3px; }
+.pp-hero .pp-more-link { color:var(--tv-green); }
+.pp-scores { flex:none; align-self:flex-end; }
+.pp-from { display:inline-flex; align-items:center; gap:6px; max-width:min(320px, 45vw); min-height:32px; padding:0 12px; border-radius:999px; background:rgba(0,0,0,.5);
+  border:1px solid rgba(255,255,255,.2); -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); color:rgba(255,255,255,.85); font:600 12px 'Manrope',var(--sans); text-decoration:none; }
+.pp-from span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.pp-from:hover { color:#fff; border-color:rgba(255,255,255,.4); }
+.pp-from:focus-visible { outline:2px solid var(--tv-green); outline-offset:2px; }
+.pp-page.is-phone .pp-scores { display:none; }
+.pp-page.is-phone .pp-hero .tp-acts { display:flex; }   /* Share stays in the hero on phones (no action bar on this page) */
+/* the hero's box: You & [name] (signed in) or the career numbers (guests) */
+.pp-you-ph { display:none; }
+.pp-page.is-phone .pp-you-ph { display:block; margin-top:14px; }
+.pp-page.is-phone .pp-you-ph .tp-tiles { grid-template-columns:repeat(3, minmax(0, 1fr)); }
+.pp-you { width:300px; padding:14px 16px; border-radius:var(--radius); border:1px solid rgba(255,255,255,.2); background:rgba(0,0,0,.6); -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); color:#fff; }
+.pp-you h3 { margin:0; font:800 10px/1.2 'Manrope',var(--sans); letter-spacing:.16em; text-transform:uppercase; color:var(--tv-green); }
+.pp-you-big { display:flex; align-items:baseline; gap:8px; margin:6px 0 8px; }
+.pp-you-big b { font:400 40px/1 var(--bebas); letter-spacing:.02em; color:#fff; white-space:nowrap; }
+.pp-you-big span { font:600 12.5px/1.3 'Manrope',var(--sans); color:rgba(255,255,255,.8); }
+.pp-you-bar { display:block; height:5px; margin:-2px 0 12px; border-radius:3px; background:rgba(255,255,255,.18); overflow:hidden; }
+.pp-you-bar i { display:block; height:100%; border-radius:inherit; background:var(--tv-gold); }
+.pp-you-tiles { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:6px; }
+.pp-you-tiles .tp-tile { min-height:56px; background:rgba(255,255,255,.06); }
+.pp-you-tiles .tp-tile b { font-size:23px; }
+.pp-you-foot { display:flex; flex-wrap:wrap; justify-content:space-between; gap:4px 12px; margin:10px 0 0; font:500 11.5px 'Manrope',var(--sans); color:rgba(255,255,255,.72); }
+.pp-you-foot b { color:#fff; font-weight:700; }
+.pp-page.is-phone .pp-you, .pp-page:not(.is-phone) .pp-you-ph .pp-you { width:100%; }
+@media (max-width:1100px) { .pp-page:not(.is-phone) .pp-you-ph .pp-you { width:min(420px, 100%); } }
+.pp-hero .tv-title { overflow-wrap:normal; word-break:normal; }
+/* tablets: the career tiles go under the hero so the name keeps its room */
+@media (max-width:1100px) {
+  .pp-page:not(.is-phone) .pp-scores { display:none; }
+  .pp-page:not(.is-phone) .pp-you-ph { display:flex; justify-content:flex-end; margin-top:18px; }
+  .pp-page:not(.is-phone) .pp-hero .tv-poster { width:clamp(150px, 18vw, 200px); }
+  .pp-page:not(.is-phone) .pp-hero .tv-title { font-size:clamp(34px, 5vw, 52px); }
 }
-/* Left column runs the full height of the page; the photo + Personal Info
-   scroll away normally and only the Acting / Directing / Writing box stays pinned, so
-   nothing floats over the credits. */
-.pp-sticky-col { align-self:stretch; }
-/* Jump-to box under Personal Info — same card style */
-.pp-nav-card { margin-top:1rem; position:sticky; top:calc(var(--page-pt, 80px) + 16px); z-index:2; }
-.pp-nav-btn {
-  /* same look as the Personal Info rows: label + value, no boxes */
-  display:flex; align-items:baseline; justify-content:space-between; gap:10px; width:100%;
-  padding:8px 0; margin:0; cursor:pointer; text-align:start;
-  background:none; border:none; border-top:0.5px solid var(--border); color:var(--text);
-  font-family:'Manrope',var(--sans); font-size:clamp(12.5px, 3vw, 13.5px); font-weight:500; transition:color .15s;
-}
-.pp-nav-btn:first-of-type { border-top:none; padding-top:0; }
-.pp-nav-btn span { display:inline-flex; align-items:center; gap:6px; }
-.pp-nav-btn span::after { content:'›'; color:var(--text-3); font-size:15px; line-height:1; transition:transform .15s, color .15s; }
-.pp-nav-btn:hover { color:var(--olive-light); }
-.pp-nav-btn:hover span::after { color:var(--olive-light); transform:translateX(2px); }
-.pp-nav-btn b { font-family:var(--bebas); font-weight:400; font-size:clamp(17px, 4vw, 20px); color:var(--text); letter-spacing:.5px; line-height:1.2; }
-.pp-nav-btn:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
-.pp-from { font-weight:600; }
-.pp-section-title { scroll-margin-top:calc(var(--page-pt, 80px) + 24px); }
+.pp-page.is-phone .pp-hero .tv-hero-main { margin-top:96px; }
+.pp-page.is-phone .pp-born { font-size:12.5px; }
+.pp-page.is-phone .pp-hbio { font-size:13px; -webkit-line-clamp:2; line-clamp:2; }
+.pp-page.is-phone .pp-from { max-width:52vw; min-height:30px; font-size:11px; }
+.pp-page.is-phone .pp-hero .tv-hero-main { flex-wrap:wrap; }
+.pp-page.is-phone .pp-hero .tv-hero-txt { flex:1 1 180px; }
+.pp-page.is-phone .pp-hbio-w { flex-basis:100%; }
 
-/* ── Left column: photo + personal info ── */
-.pp-photo {
-  width:100%; aspect-ratio:2/3; border-radius:var(--radius-lg); overflow:hidden;
-  background:var(--bg-3); border:0.5px solid var(--border);
-  display:flex; align-items:center; justify-content:center;
-  font-family:var(--serif); font-size:clamp(36px, 8vw, 56px); color:var(--olive-light);
-  margin-bottom:1.5rem;
-}
-.pp-photo img { width:100%; height:100%; object-fit:cover; }
+/* ── sections ── */
+.pp-note { margin:10px 0 0; font:500 12.5px/1.5 'Manrope',var(--sans); color:var(--text-3); }
+.pp-feat .lyr-seg + .pp-note { margin-top:10px; }
+.pp-feat .lyr-seg, .pp-tools .lyr-seg { display:inline-flex; }
+.pp-feat .lyr-seg-opt, .pp-tools .lyr-seg-opt { flex:none; padding:0 16px; white-space:nowrap; }
+.pp-page.is-phone .pp-feat .lyr-seg, .pp-page.is-phone .pp-tools .lyr-seg { display:flex; }
+.pp-page.is-phone .pp-feat .lyr-seg-opt, .pp-page.is-phone .pp-tools .lyr-seg-opt { flex:1; min-height:32px; padding:0 6px; font-size:12px; }
+.pp-none { margin:0; font:500 13.5px 'Manrope',var(--sans); color:var(--text-3); }
+.pp-span { font:600 12px 'Manrope',var(--sans); color:var(--text-3); }
+.pp-foot { display:flex; justify-content:center; margin-top:16px; }
+.pp-foot .tv-btn { min-height:40px; gap:8px; }
+.pp-bio { margin:0; font:500 14px/1.7 'Manrope',var(--sans); color:var(--text-2); white-space:pre-line; display:-webkit-box; -webkit-line-clamp:7; line-clamp:7; -webkit-box-orient:vertical; overflow:hidden; }
+.pp-bio.is-full { display:block; -webkit-line-clamp:unset; line-clamp:unset; overflow:visible; font-size:15px; line-height:1.8; max-width:none; }
 
-.pp-info-card {
-  background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius-lg);
-  padding:clamp(1rem, 3vw, 1.25rem);
-}
-.pp-info-title {
-  font-size:11px; letter-spacing:2px; text-transform:uppercase; color:var(--olive-light);
-  margin-bottom:1rem; padding-bottom:.6rem; border-bottom:0.5px solid var(--border);
-}
-.pp-info-row { margin-bottom:1rem; }
-.pp-info-row:last-child { margin-bottom:0; }
-.pp-info-label { font-size:10.5px; letter-spacing:1px; text-transform:uppercase; color:var(--text-3); margin-bottom:3px; }
-.pp-info-value { font-size:clamp(12.5px, 3vw, 13.5px); color:var(--text); line-height:1.5; }
-.pp-info-value.muted { color:var(--text-2); }
-.pp-info-num { font-family:var(--bebas); font-size:clamp(17px, 4vw, 20px); letter-spacing:.5px; line-height:1.2; }
+/* ── rows: year · poster · title + roles · ✓ · TMDB on the far right ── */
+.pp-rows { display:flex; flex-direction:column; margin-top:10px; }
+.pp-row { position:relative; display:flex; align-items:center; gap:14px; padding:10px 6px; border-top:1px solid var(--border); border-radius:var(--radius-sm); }
+.pp-rows > .pp-row:first-child { border-top:none; }
+.pp-row:hover { background:var(--olive-faint); }
+.pp-row-link { position:absolute; inset:0; z-index:0; border-radius:inherit; }
+.pp-row-link:focus-visible { outline:2px solid var(--olive-light); outline-offset:-2px; }
+.pp-row:hover .pp-row-b b { text-decoration:underline; text-underline-offset:3px; }
+.pp-row-y { flex:none; width:44px; font:400 19px/1 var(--bebas); letter-spacing:.03em; color:var(--text-3); }
+.pp-row-y.is-rank { width:30px; text-align:center; font-size:26px; color:var(--olive-light); }
+.pp-row-p { flex:none; width:52px; aspect-ratio:2/3; border-radius:6px; overflow:hidden; background:var(--raised); border:1px solid var(--border); display:grid; place-items:center; }
+.pp-row-p img { width:100%; height:100%; object-fit:cover; display:block; }
+.pp-row-p i { font:600 18px var(--serif); font-style:normal; color:var(--text-3); }
+.pp-row-b { flex:1; min-width:0; display:flex; flex-direction:column; gap:3px; }
+.pp-row-b b { font:600 17px/1.25 var(--serif); color:var(--text-heading); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.pp-row-b small { font:500 12.5px/1.35 'Manrope',var(--sans); color:var(--text-3); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.pp-row-o { font:500 13.5px/1.6 'Manrope',var(--sans); color:var(--text-2); white-space:normal; max-width:72ch; }
+.pp-seen { position:relative; z-index:1; flex:none; display:grid; place-items:center; width:26px; height:26px; border-radius:50%; color:var(--olive-light); background:var(--olive-faint); border:1px solid var(--border-olive); }
+.pp-chip { position:relative; z-index:1; flex:none; min-width:54px; border:none; }
+.pp-chip.is-dropped { filter:grayscale(1); opacity:.75; }
+.pp-scores-r { position:relative; z-index:1; flex:none; display:flex; align-items:center; gap:6px; }
+.pp-add { background:var(--olive-faint); color:var(--olive-light); box-shadow:inset 0 0 0 1px var(--border-olive); }
+.pp-add:hover { background:var(--olive); color:var(--text-on-brand); }
+/* bars to compare You · MSF · TMDB (wider screens) */
+.pp-cmps { position:relative; z-index:1; flex:none; width:clamp(90px, 12vw, 170px); display:flex; flex-direction:column; justify-content:center; gap:4px; padding:4px 0; border:none; background:none; cursor:pointer; }
+.pp-cmps.is-empty { cursor:default; }
+.pp-cmp { display:block; height:5px; border-radius:3px; background:var(--bg-3); overflow:hidden; }
+.pp-cmp i { display:block; height:100%; border-radius:inherit; }
+.pp-cmp.is-you i { background:var(--score-mine); }
+.pp-cmp.is-msf i { background:var(--olive-light); }
+.pp-cmp.is-tmdb i { background:var(--text-3); }
+.pp-page.is-phone .pp-cmps { display:none; }
+/* phones: the title gets the full width, the ✓ and the scores go on the line under it */
+.pp-page.is-phone .pp-row { display:grid; grid-template-columns:auto auto minmax(0, 1fr) auto; grid-template-areas:"y p b s" "y p b s"; grid-template-rows:auto auto; column-gap:8px; row-gap:4px; align-items:center; }
+.pp-page.is-phone .pp-row-b { align-self:end; }
+.pp-page.is-phone .pp-row-y { grid-area:y; }
+.pp-page.is-phone .pp-row-p { grid-area:p; }
+.pp-page.is-phone .pp-row-b { grid-area:b; }
+.pp-page.is-phone .pp-scores-r { grid-area:s; justify-self:end; align-self:center; }
+.pp-page.is-phone .pp-scores-r { gap:4px; }
+/* the Overview's featured rows: big posters */
+/* the Overview's featured rows: the Filmography table with bigger posters, two lines of the overview, ⌄ to open */
+.pp-tbl.pp-film { --pp-cols:48px 60px minmax(0, 1fr) 26px clamp(100px, 11vw, 160px) auto; }
+.pp-tbl .pp-row.is-film { grid-template-areas:"y p b k c s"; }
+.pp-tbl .pp-row.is-film .pp-row-sub { display:block; color:var(--olive-light); font-weight:600; }
+.pp-tbl .pp-row.is-film { padding:12px; }
+.pp-tbl .pp-row.is-film .pp-row-p { width:60px; border-radius:8px; }
+.pp-tbl .pp-row.is-film .pp-row-b b { font-size:18px; white-space:normal; }
+.pp-tbl .pp-row.is-film .pp-row-y.is-rank { font-size:26px; }
+.pp-row-d { margin-top:3px; font:500 13px/1.5 'Manrope',var(--sans); color:var(--text-2); display:-webkit-box; -webkit-line-clamp:2; line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.pp-page.is-phone .pp-row-d { display:none; }
+/* the timeline: decades that close */
+.pp-dec { margin-top:12px; }
+.pp-thead + .pp-dec { margin-top:8px; }
+.pp-dec > summary { display:flex; align-items:center; gap:10px; padding:8px 12px; cursor:pointer; list-style:none; border-radius:var(--radius-sm); background:var(--olive-faint); border:1px solid var(--border-olive); }
+.pp-dec > summary:hover { border-color:var(--olive-light); }
+.pp-dec > summary::-webkit-details-marker { display:none; }
+.pp-dec > summary b { font:400 20px/1 var(--bebas); letter-spacing:.05em; color:var(--olive-light); }
+.pp-dec > summary span { font:600 12px 'Manrope',var(--sans); color:var(--text-3); }
+.pp-dec > summary svg { margin-inline-start:auto; color:var(--text-3); transition:transform .15s; }
+.pp-dec:not([open]) > summary svg { transform:rotate(-90deg); }
+.pp-dec > summary:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; border-radius:4px; }
+/* Filmography decades: a quiet band with the count */
 
-/* ── Right column: name + bio + credits ── */
-.pp-eyebrow { font-size:11px; letter-spacing:2px; text-transform:uppercase; color:var(--olive-light); margin-bottom:.5rem; }
-.pp-name { font-family:var(--serif); font-size:clamp(26px, 6vw, 46px); font-weight:500; margin-bottom:1.25rem; line-height:1.1; }
+/* ── credits by role ── */
+.pp-rbar { display:flex; gap:2px; height:10px; border-radius:6px; overflow:hidden; }
+.pp-rbar i { min-width:4px; }
+.pp-r0 { background:var(--olive); } .pp-r1 { background:var(--olive-light); } .pp-r2 { background:var(--band-good); }
+.pp-r3 { background:var(--band-decent); } .pp-r4 { background:var(--band-meh); } .pp-r5 { background:var(--text-3); }
+.pp-rlist { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:4px 12px; margin-top:12px; }
+.pp-rbtn { display:flex; align-items:center; gap:8px; min-height:34px; padding:0 8px; border:1px solid transparent; border-radius:var(--radius-sm); background:none; color:var(--text-2); font:600 13px 'Manrope',var(--sans); cursor:pointer; text-align:start; }
+.pp-rbtn i { flex:none; width:10px; height:10px; border-radius:3px; }
+.pp-rbtn b { margin-inline-start:auto; font:400 18px/1 var(--bebas); color:var(--text); }
+.pp-rbtn:hover { background:var(--raised); border-color:var(--border); color:var(--text); }
+.pp-rbtn:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
 
-.pp-section-title {
-  font-size:11px; letter-spacing:2.5px; text-transform:uppercase; color:var(--olive-light);
-  margin:0 0 1rem; display:flex; align-items:center; gap:12px;
+/* ── people (collaborators): a grid; a row that scrolls sideways on phones ── */
+.pp-people { display:grid; grid-template-columns:repeat(auto-fill, minmax(96px, 1fr)); gap:18px 10px; }
+.pp-person .tv-face { width:min(76px, 100%); }
+.pp-person b { font-size:12.5px; }
+.pp-person small { font-size:11.5px; }
+.pp-person:hover b { text-decoration:underline; text-underline-offset:3px; }
+.pp-person:focus-visible { outline:2px solid var(--olive-light); outline-offset:3px; border-radius:6px; }
+.pp-page.is-phone .pp-people { display:flex; overflow-x:auto; gap:12px; padding-bottom:6px; scroll-snap-type:x proximity; scrollbar-width:none; }
+.pp-page.is-phone .pp-people::-webkit-scrollbar { display:none; }
+.pp-page.is-phone .pp-people > * { flex:none; width:86px; scroll-snap-align:start; }
+
+/* ── Filmography: role, Movies | TV Shows, Sort & Filter ── */
+.pp-tools { display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-bottom:6px; }
+.pp-tools-gap { flex:1; }
+.pp-role { min-height:40px; gap:8px; font-weight:700; }
+.pp-only { display:inline-flex; align-items:center; min-height:40px; padding:0 14px; border-radius:var(--radius-sm); background:var(--bg-3); border:1px solid var(--border); font:700 13px 'Manrope',var(--sans); color:var(--text); }
+#ppMediaSeg { display:contents; }
+.pp-decall { min-height:36px; gap:6px; font-size:12.5px; }
+.pp-decall svg { transition:transform .15s; }
+.pp-decall[aria-expanded="false"] svg { transform:rotate(-90deg); }
+.pp-sum { font:600 12.5px 'Manrope',var(--sans); color:var(--text-3); white-space:nowrap; }
+/* ── Filmography as a table: Year · poster · Title (+ genres) · Role / Character · ✓ · Compare · You · MSF · TMDB ── */
+.pp-film { --pp-cols:48px 46px minmax(0, 1.5fr) minmax(0, 1fr) 26px clamp(100px, 10vw, 150px) auto; }
+.pp-thead { display:grid; grid-template-columns:var(--pp-cols); column-gap:16px; align-items:end; padding:14px 12px 8px; border-bottom:1px solid var(--border);
+  font:800 10px/1 'Manrope',var(--sans); letter-spacing:.14em; text-transform:uppercase; color:var(--text-3); }
+.pp-th-s { display:flex; gap:6px; justify-content:flex-end; }
+.pp-th-s i { width:54px; font-style:normal; text-align:center; }
+.pp-row.is-film { display:grid; grid-template-columns:var(--pp-cols); grid-template-areas:"y p b r k c s"; column-gap:16px; padding:10px 12px; }
+.pp-row.is-film .pp-row-y { grid-area:y; width:auto; font-size:18px; }
+.pp-row.is-film .pp-row-p { grid-area:p; width:46px; box-shadow:0 2px 6px rgba(0,0,0,.12); }
+.pp-row.is-film .pp-row-b { grid-area:b; }
+.pp-row.is-film .pp-row-b b { font-size:16.5px; }
+.pp-row.is-film .pp-row-sub { display:none; }
+.pp-row-g { font:500 12px 'Manrope',var(--sans); color:var(--text-3); }
+.pp-row-r { grid-area:r; position:relative; z-index:0; min-width:0; display:flex; flex-direction:column; gap:3px; font:500 13px/1.4 'Manrope',var(--sans); color:var(--text-2); }
+.pp-row-r > span { display:block; overflow:hidden; text-overflow:ellipsis; }
+.pp-row-r .pp-tag { margin:0 4px 4px 0; }
+.pp-row-r small { font:500 11.5px 'Manrope',var(--sans); color:var(--text-3); }
+.pp-as { font-weight:600; color:var(--text-3); }
+.pp-tag { display:inline-flex; align-items:center; min-height:22px; padding:0 8px; border-radius:999px; background:var(--raised); border:1px solid var(--border); font:600 11.5px 'Manrope',var(--sans); color:var(--text-2); white-space:nowrap; }
+.pp-row.is-film .pp-seen { grid-area:k; }
+.pp-row.is-film .pp-cmps { grid-area:c; width:100%; }
+.pp-row.is-film .pp-scores-r { grid-area:s; justify-self:end; }
+.pp-film .pp-rows { margin-top:0; }
+.pp-film .pp-rows > .pp-row:first-child { border-top:none; }
+@media (max-width:1100px) {
+  .pp-page:not(.is-phone) .pp-film { --pp-cols:44px 46px minmax(0, 1.4fr) minmax(0, 1fr) 26px 0 auto; }
+  .pp-page:not(.is-phone) .pp-row.is-film .pp-cmps, .pp-page:not(.is-phone) .pp-th-c { visibility:hidden; }
+  .pp-page:not(.is-phone) .pp-row.is-film, .pp-page:not(.is-phone) .pp-thead { column-gap:12px; }
+  .pp-page:not(.is-phone) .pp-tbl.pp-film { --pp-cols:44px 56px minmax(0, 1fr) 26px 0 auto; }
 }
-.pp-section-title::after { content:''; flex:1; height:0.5px; background:var(--border); }
-.pp-section-title.pp-mt { margin-top:2.5rem; }
-.pp-mode-toggle-row { margin-top:2.5rem; display:flex; }
-.pp-mode-toggle-row .view-toggle { margin-inline-start:0; }
-.pp-layout > * { min-width:0; }
-.pp-sf-row { display:flex; justify-content:flex-end; margin-top:2rem; }
-.pp-sf-bar .sort-bar { border-bottom:none; padding:0; margin:0; background:transparent; position:relative; backdrop-filter:none; -webkit-backdrop-filter:none; }
+.pp-page.is-phone .pp-thead, .pp-page.is-phone .pp-row.is-film .pp-row-r { display:none; }
+.pp-page.is-phone .pp-row.is-film { grid-template-columns:auto auto minmax(0, 1fr) auto; grid-template-areas:"y p b s" "y p b s"; padding:9px 2px; }
+.pp-page.is-phone .pp-row.is-film .pp-row-sub { display:block; }
+.pp-sf-bar .sort-bar { z-index:auto; border-bottom:none; padding:0; margin:0; background:transparent; position:relative; backdrop-filter:none; -webkit-backdrop-filter:none; }
 .pp-sf-bar .sort-bar::before { content:none; }
-.pp-sf-row + #ppCredits > .pp-section-title.pp-mt:first-child { margin-top:1rem; }
-.pp-mode-toggle-row .vt-btn { width:auto; height:auto; padding:8px 18px; font-size:13px; font-weight:500; font-family:var(--sans); white-space:nowrap; }
+.pp-hidden { text-align:center; margin-top:14px; }
+.pp-page.is-phone .pp-tools .lyr-seg { flex:1 1 100%; order:3; min-width:0; }
+.pp-page.is-phone .pp-row { gap:10px; padding:9px 2px; }
+.pp-page.is-phone .pp-row-y { width:36px; font-size:16px; }
+.pp-page.is-phone .pp-row-y.is-rank { width:22px; font-size:22px; }
+.pp-page.is-phone .pp-row-p { width:46px; }
+.pp-page.is-phone .pp-tbl .pp-row-p { width:60px; }
+.pp-page.is-phone .pp-row-b b { font-size:15px; white-space:normal; display:-webkit-box; -webkit-line-clamp:2; line-clamp:2; -webkit-box-orient:vertical; }
+.pp-page.is-phone .pp-tbl .pp-row-b b { font-size:16px; }
+.pp-page.is-phone .pp-row-b small { font-size:12px; }
+.pp-page.is-phone .pp-chip { min-width:36px; padding:5px 3px; font-size:14.5px; }
+.pp-page.is-phone .pp-scores-r { gap:3px; }
+.pp-page.is-phone .pp-tbl .pp-row.is-film .pp-row-p { width:50px; }
+.pp-page.is-phone .pp-chip small { font-size:7.5px; letter-spacing:.5px; }
+.pp-page.is-phone .pp-seen { display:none; }   /* phones: no watched tick (owner, 14 Nov 2026) — your score chip already says you have it */
 
-.pp-bio { font-size:clamp(13.5px, 3vw, 14.5px); line-height:1.75; color:var(--text-2); white-space:pre-line; }
-.pp-bio.clamped { display:-webkit-box; -webkit-line-clamp:6; line-clamp:6; -webkit-box-orient:vertical; overflow:hidden; }
-.pp-bio-toggle { font-size:12.5px; color:var(--olive-light); cursor:pointer; margin-top:8px; display:inline-block; background:none; border:none; padding:0; font-family:var(--sans); }
+/* ── Photos ── */
+.pp-photos { display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:12px; }
+.pp-ph { padding:0; aspect-ratio:2/3; border-radius:var(--radius-sm); overflow:hidden; border:1px solid var(--border); background:var(--raised); cursor:zoom-in; }
+.pp-ph img { width:100%; height:100%; object-fit:cover; display:block; transition:transform .2s; }
+.pp-ph:hover img { transform:scale(1.03); }
+.pp-ph:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
+.pp-page.is-phone .pp-photos { grid-template-columns:repeat(3, minmax(0, 1fr)); gap:8px; }
+.pp-viewer { position:fixed; inset:0; z-index:1200; display:none; background:rgba(0,0,0,.92); color:#fff; }
+.pp-viewer.open { display:block; }
+.pp-vcard { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; padding:56px 64px; outline:none; touch-action:pan-y; }
+.pp-vimg { max-width:100%; max-height:100%; border-radius:var(--radius-sm); box-shadow:0 10px 40px rgba(0,0,0,.5); -webkit-user-select:none; user-select:none; }
+.pp-vbtn { position:absolute; display:grid; place-items:center; width:46px; height:46px; border-radius:50%; border:1px solid rgba(255,255,255,.25); background:rgba(0,0,0,.55); color:#fff; cursor:pointer; }
+.pp-vbtn:hover { background:rgba(255,255,255,.12); }
+.pp-vbtn:focus-visible { outline:2px solid var(--p-forest-300); outline-offset:2px; }
+.pp-vx { top:14px; inset-inline-end:14px; }
+.pp-vprev { inset-inline-start:12px; top:50%; translate:0 -50%; }
+.pp-vnext { inset-inline-end:12px; top:50%; translate:0 -50%; }
+.pp-vbtn[hidden] { display:none; }
+.pp-vn { position:absolute; bottom:16px; inset-inline:0; text-align:center; font:700 13px 'Manrope',var(--sans); color:rgba(255,255,255,.8); }
+@media (max-width:600px) { .pp-vcard { padding:60px 10px 50px; } .pp-vprev, .pp-vnext { top:auto; bottom:6px; translate:none; } }
 
-/* ── Credits grid — self-contained, no shared-class dependency ── */
-.pp-grid {
-  display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:14px;
-}
-@media(min-width:1024px) {
-  .pp-grid { grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); }
-}
-@media(min-width:1600px) {
-  .pp-grid { grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); }
-}
-@media(max-width:640px) {
-  .pp-grid { grid-template-columns:repeat(2,1fr); }
-}
-.pp-credit-role { margin-top:2px; font-size:clamp(10.5px, 2.6vw, 11.5px); color:var(--text-3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-
-
-@media(max-width:760px) {
-  .pp-layout { grid-template-columns:1fr; gap:1.5rem; }
-  /* Phone: a bigger photo with the Acting / Directing / Writing box under it,
-     Personal Info beside them */
-  .pp-sticky-col { position:static; align-self:start; display:grid; grid-template-columns:clamp(128px, 40vw, 172px) minmax(0, 1fr);
-                   grid-template-areas:"photo info" "nav info"; gap:1rem; align-items:start; }
-  .pp-photo { grid-area:photo; width:100%; margin-bottom:0; }
-  .pp-sticky-col > .pp-info-card:not(.pp-nav-card) { grid-area:info; min-width:0; }
-  .pp-nav-card { grid-area:nav; margin-top:0; position:static; }
-  .pp-info-row { margin-bottom:.7rem; }
-}
-@media(max-width:460px) {
-  .pp-info-card { padding:.85rem; }
-  .pp-info-title { font-size:10px; margin-bottom:.75rem; padding-bottom:.5rem; }
-  .pp-info-row { margin-bottom:.55rem; }
-  .pp-info-label { font-size:9.5px; }
-  .pp-info-value { font-size:12px; }
-}
+/* ── About ── */
+.pp-aka { margin:0; padding:0; list-style:none; display:flex; flex-direction:column; gap:6px; font:600 13.5px 'Manrope',var(--sans); color:var(--text-2); }
+.pp-links { display:flex; flex-wrap:wrap; gap:8px; }
+.pp-links .tv-btn { min-height:38px; text-decoration:none; }
+@media(prefers-reduced-motion:reduce) { .pp-dec > summary svg, .pp-ph img { transition:none; } }
 </style>
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#1E5C26">
+  <meta name="theme-color" content="#F3EEDC">
+  <meta name="color-scheme" content="light dark">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="MyScreenFolio">
-  <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
-  <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <link rel="icon" type="image/svg+xml" sizes="any" href="icons/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
 </head>
 <body>
 <div class="page-wrap">
   <div class="pp-wrap">
-    <a class="pp-back" href="#" onclick="history.length>1?history.back():location.href='index.html';return false;">
+    <a class="pp-back-loading" href="discover.html" onclick="if(history.length>1){history.back();return false;}">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
       Back
     </a>
-
     <div id="ppLoading" class="page-loading" data-skel="pp-page"></div>
     <div id="ppContent" style="display:none"></div>
   </div>
@@ -154,271 +290,14 @@
 <script src="js/config.js"></script>
 <script src="js/db.js"></script>
 <script src="js/nav.js"></script>
+<script src="js/panel.js"></script>
 <script src="js/sort-filter.js"></script>
+<script src="js/episode-ratings.js"></script>
+<script src="js/rating-curve.js"></script>
+<script src="js/note-popup.js"></script>
 <script src="js/info-popup.js"></script>
-<script>
-function esc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-
-const _ppParams = new URLSearchParams(location.search);
-const _ppId = _ppParams.get('id');
-// The credit views. A view only shows when the person has credits in it (_ppModesOf).
-const _PP_MODES = {
-  acting:    { label: 'Acting',    movies: 'Movies',          tv: 'TV Shows' },
-  directing: { label: 'Directing', movies: 'Movies Directed', tv: 'Shows Created' },
-  writing:   { label: 'Writing',   movies: 'Movies Written',  tv: 'Shows Written' },
-};
-let _ppMode = _PP_MODES[_ppParams.get('mode')] ? _ppParams.get('mode') : 'acting';
-let _ppPerson = null;
-let _ppList = [];   // the credits on show (acting, directing or writing), as Sort & Filter items
-const TMDB_GENDER = { 0: '', 1: 'Female', 2: 'Male', 3: 'Non-binary' };
-
-document.addEventListener('DOMContentLoaded', () => {
-  initPageGuest(async () => {
-    if (!_ppId) { mssErrorPage('badlink'); return; }
-    loadPerson();
-  });
-});
-
-async function loadPerson() {
-  let p;
-  try {
-    const res = await tmdbFetch(`${TMDB_BASE}/person/${_ppId}?language=en-US&append_to_response=combined_credits`);
-    if (!res.ok) { mssErrorPage(mssTmdbErrorKind(res, 'person'), { error: res }); return; }
-    p = await res.json();
-  } catch (e) {
-    console.error(e);
-    mssErrorPage(mssTmdbErrorKind(e, 'person'), { error: e });
-    return;
-  }
-  _ppPerson = p;
-  // Writers open on their writing; a link's mode or the first view they have otherwise
-  const modes = _ppModesOf(p);
-  if (!_ppParams.has('mode') && p.known_for_department === 'Writing' && modes.includes('writing')) _ppMode = 'writing';
-  if (modes.length && !modes.includes(_ppMode)) _ppMode = modes[0];
-  renderPerson(p);
-}
-
-function renderPerson(p) {
-  document.getElementById('ppLoading').style.display = 'none';
-  const c = document.getElementById('ppContent');
-  c.style.display = '';
-  document.title = p.name ? `${p.name} — MyScreenFolio` : 'MyScreenFolio';
-
-  const { html, list } = _ppHTML(p);
-  _ppList = list;
-  c.innerHTML = html;
-  if (list.length) _ppDrawCredits();
-  // Only show the "Read more" toggle if the bio actually overflows
-  requestAnimationFrame(() => {
-    const bioEl = document.getElementById('ppBio');
-    const toggle = document.getElementById('ppBioToggle');
-    if (bioEl && toggle && bioEl.scrollHeight <= bioEl.clientHeight + 2) {
-      toggle.style.display = 'none';
-    }
-  });
-}
-
-// A person's raw credits for a view. Writing = TMDB's Writing department (Novel, Screenplay,
-// Story…), minus the jobs around the writing rather than the writing itself.
-function _ppCreditsFor(p, mode) {
-  const crew = p.combined_credits?.crew || [];
-  if (mode === 'directing') return crew.filter(cr => cr.job === 'Director' || cr.job === 'Creator');
-  if (mode === 'writing') return crew.filter(cr => cr.department === 'Writing' && !/assistant|coordinator|researcher/i.test(cr.job || ''));
-  return p.combined_credits?.cast || [];
-}
-const _ppModesOf = p => Object.keys(_PP_MODES).filter(m => _ppCreditsFor(p, m).some(cr => cr.poster_path));
-
-// The page for a person (without the credits, which _ppDrawCredits fills) + their credits as Sort & Filter items
-function _ppHTML(p) {
-  const photo = p.profile_path ? `${TMDB_IMG.replace('w185','w342')}${p.profile_path}` : null;
-  const bio = (p.biography || '').trim();
-  const age = p.birthday ? _ppAge(p.birthday, p.deathday) : null;
-
-  // De-dupe cast credits (a person can appear twice for different roles),
-  // keep only ones with a poster; the site's Sort & Filter (scope 'pp') orders
-  // them — newest first by default — then they split into Movies / TV Shows.
-  // Directing and writing come from crew instead. Writing a title in
-  // several ways (Novel + Screenplay) is one card that lists them all.
-  const seen = new Map();
-  const allCredits = [];
-  _ppCreditsFor(p, _ppMode).filter(cr => cr.poster_path).forEach(cr => {
-    const k = cr.media_type + cr.id, had = seen.get(k);
-    if (!had) { const c = { ...cr }; seen.set(k, c); allCredits.push(c); }
-    else if (_ppMode === 'writing' && cr.job && !had.job?.split(', ').includes(cr.job)) had.job = had.job ? `${had.job}, ${cr.job}` : cr.job;
-  });
-  const movieCount = allCredits.filter(cr => cr.media_type === 'movie').length;
-  const tvCount     = allCredits.length - movieCount;
-
-  // Only worth a toggle when the person genuinely has more than one kind of
-  // credit, and only the kinds they have — no toggle that leads to an empty state.
-  const modes = _ppModesOf(p), view = _PP_MODES[_ppMode];
-
-  const knownCreditsCount = (p.combined_credits?.cast?.length || 0) + (p.combined_credits?.crew?.length || 0);
-  const akaList = (p.also_known_as || []).filter(n => n && n !== p.name).slice(0, 4);
-
-  return { list: allCredits.map(_ppItem), html: `
-    <div class="pp-layout fade-up">
-      <div class="pp-sticky-col">
-        <div class="pp-photo">${photo ? `<img src="${photo}" alt="">` : esc((p.name || '?')[0])}</div>
-        <div class="pp-info-card">
-          <div class="pp-info-title">Personal Info</div>
-          ${p.place_of_birth ? `<div class="pp-info-row"><div class="pp-info-label">From</div><div class="pp-info-value pp-from">${esc(p.place_of_birth.split(',').pop().trim())}</div></div>` : ''}
-          ${p.known_for_department ? `<div class="pp-info-row"><div class="pp-info-label">Known For</div><div class="pp-info-value">${esc(p.known_for_department)}</div></div>` : ''}
-          <div class="pp-info-row"><div class="pp-info-label">Known Credits</div><div class="pp-info-value pp-info-num">${knownCreditsCount}</div></div>
-          ${p.gender != null && TMDB_GENDER[p.gender] ? `<div class="pp-info-row"><div class="pp-info-label">Gender</div><div class="pp-info-value">${TMDB_GENDER[p.gender]}</div></div>` : ''}
-          ${p.birthday ? `<div class="pp-info-row"><div class="pp-info-label">${p.deathday ? 'Birthday' : 'Birthday'}</div><div class="pp-info-value">${esc(p.birthday)}${age != null ? ' (' + age + ' years old)' : ''}</div></div>` : ''}
-          ${p.deathday ? `<div class="pp-info-row"><div class="pp-info-label">Day of Death</div><div class="pp-info-value">${esc(p.deathday)}</div></div>` : ''}
-          ${p.place_of_birth ? `<div class="pp-info-row"><div class="pp-info-label">Place of Birth</div><div class="pp-info-value muted">${esc(p.place_of_birth)}</div></div>` : ''}
-          ${akaList.length ? `<div class="pp-info-row"><div class="pp-info-label">Also Known As</div><div class="pp-info-value muted">${akaList.map(esc).join('<br>')}</div></div>` : ''}
-        </div>
-        ${allCredits.length ? `<div class="pp-info-card pp-nav-card" role="navigation" aria-label="Jump to">
-          <div class="pp-info-title">${view.label}</div>
-          ${movieCount ? `<button type="button" class="pp-nav-btn" onclick="_ppJump('ppMovies')"><span>${view.movies}</span><b>${movieCount}</b></button>` : ''}
-          ${tvCount ? `<button type="button" class="pp-nav-btn" onclick="_ppJump('ppTv')"><span>${view.tv}</span><b>${tvCount}</b></button>` : ''}
-        </div>` : ''}
-      </div>
-
-      <div>
-        ${p.known_for_department ? `<div class="pp-eyebrow">${esc(p.known_for_department)}</div>` : ''}
-        <div class="pp-name" translate="no">${esc(p.name)}</div>
-
-        ${bio ? `
-          <div class="pp-section-title">Biography</div>
-          <div class="pp-bio clamped" id="ppBio" translate="no">${esc(bio)}</div>
-          <button class="pp-bio-toggle" id="ppBioToggle" onclick="_ppToggleBio()">Read more</button>
-        ` : ''}
-
-        ${modes.length > 1 ? `
-          <div class="pp-mode-toggle-row pp-mt">
-            <div class="view-toggle">
-              ${modes.map(m => `<button class="vt-btn ${_ppMode === m ? 'active' : ''}" onclick="_ppSetMode('${m}')">${_PP_MODES[m].label}</button>`).join('')}
-            </div>
-          </div>
-        ` : ''}
-
-        ${allCredits.length ? `
-          <div class="pp-sf-row"><div id="ppSfBar" class="pp-sf-bar"></div></div>
-          <div id="ppCredits"></div>
-        ` : mssEmpty({ art: 'person', title: 'No credits yet', text: 'TMDB doesn’t know their work yet. Mysterious.' })}
-      </div>
-    </div>
-  ` };
-}
-
-/* ── Loading skeleton: this page's own layout with a sample person and credits, masked into
-   placeholders (mssSkeleton, config.js) — the section names and buttons stay as they are ── */
-mssSkeleton.define('pp-page', () => {
-  const cr = t => ({ id: 0, media_type: t, title: 'Sample title', name: 'Sample title', character: 'Character name', job: 'Director', department: 'Writing',
-    poster_path: '/x', release_date: '2020-01-01', first_air_date: '2020-01-01', vote_average: 7.5, vote_count: 100 });
-  const credits = [...Array(6).fill('movie'), ...Array(4).fill('tv')].map(cr);
-  const p = { name: 'Sample person name', known_for_department: 'Acting', place_of_birth: 'City, Country', gender: 2, birthday: '1980-01-01',
-    biography: 'A sample biography, long enough to fill the few lines this section shows before Read more — the way a real one does while it loads.',
-    combined_credits: _ppMode === 'acting' ? { cast: credits, crew: [] } : { cast: [], crew: credits } };
-  const grid = list => `<div class="pp-grid">${list.map(c => MSSCard.poster({ cls: 'pp-card', title: 'Sample title', year: '2020', posterHTML: '', type: c.media_type, score: '7.5',
-    below: '<div class="pp-credit-role">Character name</div>' })).join('')}</div>`;
-  const view = _PP_MODES[_ppMode];
-  return _ppHTML(p).html
-    .replace('<div id="ppSfBar" class="pp-sf-bar"></div>', `<div class="pp-sf-bar" data-skel-keep>${SF.bar('pp', 'all')}</div>`)
-    .replace('<div id="ppCredits"></div>', `<div class="pp-section-title pp-mt" data-skel-keep>${view.movies}</div>${grid(credits.slice(0, 6))}
-      <div class="pp-section-title pp-mt" data-skel-keep>${view.tv}</div>${grid(credits.slice(6))}`)
-    .replace(/class="(pp-info-title|pp-info-label|pp-section-title[^"]*|pp-bio-toggle|vt-btn[^"]*)"/g, 'class="$1" data-skel-keep')
-    .replace(/ id="[^"]*"/g, '');
-});
-
-// Same card as Discover: poster + type tag, title + year, role, ★ TMDB score.
-// Tapping opens the info popup (Add to Watchlist · Discover → title page).
-window._ppItems = {};
-function _ppCreditGrid(list, byScore) {
-  return list.map((it, i) => {
-    const cr = it.cr;
-    const isMovie = cr.media_type === 'movie';
-    const title = isMovie ? cr.title : cr.name;
-    const year = ((isMovie ? cr.release_date : cr.first_air_date) || '').split('-')[0];
-    const roleLabel = _ppMode === 'acting' ? (cr.character || '') : (cr.job || '');
-    const key = cr.media_type + ':' + cr.id;
-    window._ppItems[key] = {
-      id: cr.id, media_type: cr.media_type, title, year, overview: cr.overview,
-      poster_url: cr.poster_path ? TMDB_FULL + cr.poster_path : null, genre_ids: cr.genre_ids || [],
-      score: cr.vote_average, origin_country: cr.origin_country, original_language: cr.original_language,
-    };
-    const sc = cr.vote_count && cr.vote_average ? (Math.floor(cr.vote_average * 10) / 10).toFixed(1) : null;
-    return MSSCard.poster({ cls: 'pp-card', onclick: `MSSInfo.fromDiscover(window._ppItems['${key}'])`, title, year, age: [cr.media_type, cr.id],
-      rank: byScore && it.score != null ? i + 1 : 0,   // numbered when sorted by score
-      poster: TMDB_IMG.replace('w185', 'w500') + cr.poster_path, type: isMovie ? 'movie' : 'tv', score: sc,
-      below: roleLabel ? `<div class="pp-credit-role">${esc(roleLabel)}</div>` : '' });
-  }).join('');
-}
-
-/* ── Sort & Filter (the site's own Sort / Filter buttons, js/sort-filter.js) ──
-   Sorts: Release Date (newest first by default) · A–Z · Ratings (TMDB score — titles
-   with under 20 votes go last and aren't numbered) · Popularity. Filters: genre, year, score. */
-function _ppItem(cr) {
-  const date = (cr.media_type === 'movie' ? cr.release_date : cr.first_air_date) || '';
-  return { cr, media_type: cr.media_type, title: (cr.media_type === 'movie' ? cr.title : cr.name) || '', date, year: date.slice(0, 4) || null,
-    genres: mssGenreNames(cr.genre_ids),
-    score: (cr.vote_count || 0) >= 20 && cr.vote_average ? cr.vote_average : null, popularity: cr.popularity || 0 };
-}
-const _ppByDate = dir => (a, b) => (!a.date || !b.date) ? !a.date - !b.date : dir * a.date.localeCompare(b.date);   // undated always last
-SF.register('pp', {
-  base: () => _ppList,
-  render: () => _ppDrawCredits(),
-  defaultSort: 'dateNew',
-  sorts: () => ['date', 'alpha', 'ratings', 'popular'],
-  presets: {
-    date:    { header: 'Release Date', opts: [['dateNew', 'Latest'], ['dateOld', 'Earliest']] },
-    popular: { header: 'Popularity',   opts: [['popular', 'Most Popular'], ['unpopular', 'Least Popular']] },
-  },
-  compare: { dateNew: _ppByDate(-1), dateOld: _ppByDate(1), popular: (a, b) => b.popularity - a.popularity, unpopular: (a, b) => a.popularity - b.popularity },
-  filters: () => ['genre', 'year', 'score'],
-  scoreOf: it => it.score,
-  scoreLabel: 'TMDB Score',
-});
-// Movies, then TV Shows — in the order Sort & Filter gives
-function _ppDrawCredits() {
-  const box = document.getElementById('ppCredits');
-  if (!box) return;
-  document.getElementById('ppSfBar').innerHTML = SF.bar('pp', 'all');
-  const shown = SF.list('pp', 'all'), sort = SF.getSort('pp', 'all'), byScore = sort === 'highest' || sort === 'lowest';
-  const part = t => shown.filter(it => it.media_type === t);
-  const movies = part('movie'), tv = part('tv');
-  const sec = (id, title, list) => list.length ? `<div class="pp-section-title pp-mt" id="${id}">${title}</div><div class="pp-grid">${_ppCreditGrid(list, byScore)}</div>` : '';
-  mssKeepScroll(box, () => {
-    box.innerHTML = shown.length
-      ? sec('ppMovies', _PP_MODES[_ppMode].movies, movies) + sec('ppTv', _PP_MODES[_ppMode].tv, tv)
-      : mssEmpty({ compact: true, art: 'filter', title: 'Nothing matches these filters', text: 'Your filters are a little too picky. Loosen one and try again.',
-      actions: [{ label: 'Clear filters', icon: 'x', onclick: "SF.clearFilters('pp', 'all'); SF.refresh('pp', 'all')", primary: true }] });
-  });
-}
-
-function _ppJump(id) {
-  document.getElementById(id)?.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
-}
-
-function _ppSetMode(mode) {
-  if (mode === _ppMode || !_ppPerson) return;
-  _ppMode = mode;
-  const url = new URL(location.href);
-  url.searchParams.set('mode', mode);
-  history.replaceState(null, '', url);
-  renderPerson(_ppPerson);
-}
-
-function _ppToggleBio() {
-  const bioEl = document.getElementById('ppBio');
-  const toggle = document.getElementById('ppBioToggle');
-  const clamped = bioEl.classList.toggle('clamped');
-  toggle.textContent = clamped ? 'Read more' : 'Show less';
-}
-
-function _ppAge(birthday, deathday) {
-  const end = deathday ? new Date(deathday) : new Date();
-  const start = new Date(birthday);
-  let age = end.getFullYear() - start.getFullYear();
-  const m = end.getMonth() - start.getMonth();
-  if (m < 0 || (m === 0 && end.getDate() < start.getDate())) age--;
-  return age;
-}
-</script>
+<script src="js/title-view.js"></script>
+<script src="js/person-page.js"></script>
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {

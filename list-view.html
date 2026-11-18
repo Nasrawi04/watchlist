@@ -7,100 +7,55 @@
 <script src="js/i18n.js"></script>
 <title>MyScreenFolio</title>
 <link rel="stylesheet" href="css/fonts.css">
+<link rel="stylesheet" href="css/theme.css">
 <link rel="stylesheet" href="css/style.css">
-<style>
-.home-tmdb-poster-fallback {
-  width:100%; height:100%; display:flex; align-items:center; justify-content:center;
-  background:var(--bg-3); font-family:var(--serif); color:var(--olive-light);
-  font-size:clamp(22px, 6vw, 32px);
-}
-.home-tmdb-year { color:var(--text-3); font-size:clamp(11px, 2.6vw, 13px); }
-.home-tmdb-meta-row { display:flex; align-items:center; justify-content:flex-end; gap:8px; margin-top:2px; }
-.home-tmdb-score { color:var(--olive-light); font-size:clamp(11px, 2.6vw, 13px); font-weight:600; white-space:nowrap; }
-/* ── Invite-link popup ── */
-#lvJoinOverlay {
-  position:fixed; inset:0; z-index:1300; display:flex; align-items:center; justify-content:center; padding:16px;
-  background:rgba(0,0,0,.55); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);
-  opacity:0; transition:opacity .2s;
-}
-#lvJoinOverlay.open { opacity:1; }
-.lvj-card {
-  width:100%; max-width:420px; text-align:center; padding:28px 24px 22px;
-  background:var(--bg-2); border:1.5px solid var(--olive-light); border-radius:var(--radius-lg); 
-  transform:translateY(12px) scale(.98); transition:transform .25s cubic-bezier(.2,.8,.2,1);
-}
-#lvJoinOverlay.open .lvj-card { transform:none; }
-.lvj-av {
-  position:relative; width:64px; height:64px; margin:0 auto 14px; border-radius:50%; overflow:visible;
-  background:var(--olive); color:#fff; display:flex; align-items:center; justify-content:center;
-  font-family:var(--serif); font-weight:600; font-size:26px;
-}
-.lvj-av img { width:100%; height:100%; object-fit:cover; border-radius:50%; }
-.lvj-av-ic { position:absolute; inset-inline-end:-2px; bottom:-2px; width:24px; height:24px; border-radius:50%; background:var(--olive-light); color:#fff; border:2px solid var(--bg-2); display:flex; align-items:center; justify-content:center; }
-.lvj-eyebrow { font-family:var(--serif); font-size:11px; font-weight:500; letter-spacing:2.5px; text-transform:uppercase; color:var(--olive-light); margin-bottom:6px; }
-.lvj-title { font-size:14px; color:var(--text-2); line-height:1.5; }
-.lvj-title b { color:var(--text); }
-.lvj-list { font-family:var(--serif); font-size:clamp(21px, 5.5vw, 26px); font-weight:600; line-height:1.2; margin:4px 0 6px; overflow-wrap:anywhere; }
-.lvj-meta { font-size:12.5px; color:var(--text-3); margin-bottom:14px; }
-.lvj-note { font-size:12.5px; color:var(--text-3); line-height:1.5; padding:10px 12px; border-radius:var(--radius-sm); background:var(--olive-faint); margin-bottom:18px; }
-.lvj-actions { display:flex !important; flex-direction:row !important; gap:8px; padding:0 !important; }
-.lvj-actions .popup-action-btn { flex:1; width:auto !important; justify-content:center; padding:11px 14px; font-size:14px; }
-.lvj-actions .popup-action-btn:first-child { flex:2; }
-.lvj-actions .lvj-ghost { background:transparent !important; color:var(--text-2) !important; border-color:var(--border-2) !important; }
-.lvj-actions .lvj-ghost:hover { color:var(--text) !important; border-color:var(--border-olive) !important; background:var(--olive-faint) !important; }
-.lvj-actions .popup-action-btn:disabled { opacity:.6; }
-</style>
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#1E5C26">
+  <meta name="theme-color" content="#F3EEDC">
+  <meta name="color-scheme" content="light dark">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="MyScreenFolio">
-  <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
-  <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <link rel="icon" type="image/svg+xml" sizes="any" href="icons/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
 </head>
 <body>
-<div class="page-wrap">
-  <a class="lv-back" href="lists.html" id="lvBack">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-    Back
-  </a>
-
+<div class="page-wrap lv-wrap">
   <div id="lvLoading" class="page-loading" data-skel="lv-page"></div>
   <div id="lvContent" style="display:none">
-    <div class="lv-owner-row">
-      <div class="lv-owner">
-        <div class="lv-avatar" id="lvAvatar"></div>
-        <span class="lv-username" id="lvUsername" translate="no"></span>
+    <!-- The hero (Lists redesign): a compact title-page header — the list's backdrop, its name and description on
+         the left, the stats panel on the right -->
+    <div class="lh-crumb"><a id="lvBack" href="lists.html">‹ Lists</a><span id="lvOwner"></span></div>
+    <header class="lh" id="lvHero">
+      <img class="lh-bd" id="lvBd" alt="" hidden>
+      <span class="lh-shade" aria-hidden="true"></span>
+      <div class="lh-top">
+        <button type="button" class="lh-bd-btn" id="lvBdBtn" hidden onclick="_lvPickBackdrop()"></button>
       </div>
-    </div>
+      <div class="lh-in">
+        <div class="lh-text">
+          <div class="lh-chips" id="lvChips"></div>
+          <h1 class="lh-title" id="lvTitle" translate="no"></h1>
+          <p class="lh-desc" id="lvDesc" translate="no"></p>
+        </div>
+        <dl class="lh-stats" id="lvStats"></dl>
+      </div>
+    </header>
 
-    <div class="lv-title-row">
-      <h1 class="lv-title" id="lvTitle" translate="no"></h1>
-      <span id="lvRankedBadgeSlot" class="lv-badge-slot"></span>
-    </div>
-    <div class="lv-desc" id="lvDesc"></div>
-
-    <div class="lv-import-row">
-      <span id="lvImportPopupActions" class="lv-import-slot">
-        <button class="popup-action-btn" id="lvImportBtn" onclick="importList()"><span class="lv-import-btn-label">+ Import This List</span></button>
-      </span>
-      <button type="button" class="popup-action-btn" id="lvShareBtn" hidden onclick="_lvShare()"><span class="lv-import-btn-label">Share with Friends</span></button>
-      <button type="button" class="popup-action-btn" id="lvExportBtn" hidden onclick="_lvExport()"><span class="lv-import-btn-label" id="lvExportLabel">Export List</span></button>
-      <button type="button" class="mss-report-link" id="lvReportBtn" hidden onclick="mssReport('list', _lvList?.id)">Report</button>
-    </div>
-
-    <div class="lv-controls">
-      <div class="lv-count"><b id="lvCount"></b> <span id="lvCountLabel">titles</span></div>
-      <div class="lv-controls-right">
+    <!-- Edit list · Share · Export · ⋯ (· likes) on the left; Sort · Filter · Grid / List on the right -->
+    <div class="lv-bar">
+      <div class="lv-bar-l" id="lvActions"></div>
+      <div class="lv-bar-r">
         <div id="lvSfBar" class="lv-sf-bar"></div>
         <div class="view-toggle" id="lvViewToggle"></div>
       </div>
     </div>
 
-    <div class="lv-grid" id="lvGrid"></div>
+    <div id="lvGrid"></div>
   </div>
+  <!-- Edit mode (?edit=1 / ?new=1): the list editor (list-studio.js) -->
+  <div id="lvEditor" hidden></div>
 </div>
 
 <script src="js/vendor/supabase-2.118.0.js"></script>
@@ -108,69 +63,35 @@
 <script src="js/db.js"></script>
 <script src="js/nav.js"></script>
 <script src="js/info-popup.js"></script>
-<script src="js/rating-popup.js"></script>
+<script src="js/title-view.js"></script>
 <script src="js/easter-egg.js"></script>
 <script src="js/note-popup.js"></script>
 <script src="js/sort-filter.js"></script>
-<script src="js/vendor/jspdf-2.5.1.umd.min.js"></script>
+<script src="js/list-popup.js"></script>
+<script src="js/list-actions.js"></script>
 <script src="js/rewatch.js"></script>
-<script src="js/export.js"></script>
-<script src="js/taste-profile.js"></script>
-<script src="js/year-review.js"></script>
-<script src="js/export-formats.js"></script>
-<script src="js/export-image.js"></script>
-<script src="js/export-studio.js"></script>
 <script src="js/create-card.js"></script>
 <script>
-function _lvEsc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 const _lvParams = new URLSearchParams(location.search);
 const _lvListId = _lvParams.get('list');
+const $ = id => document.getElementById(id);
 
 let _lvUser = null;
 let _lvList = null;
 let _lvItems = [];
-let _lvView = localStorage.getItem('disc_listView') || 'grid';
+let _lvShared = false;       // a list shared with you (you collaborate on it)
+let _lvReact = null;         // likes on someone else's list
+// Grid or List: kept per list on this device — a list opens in the view you left it in, any other in Grid (owner)
+const _lvViewKey = 'msf_list_view_' + (_lvListId || '');
+let _lvView = (() => { try { return localStorage.getItem(_lvViewKey) === 'list' ? 'list' : 'grid'; } catch { return 'grid'; } })();
 let _lvRevealObserver = null;
-let _tmdbItemCache = {};
+const _lvOwn = () => !!_lvUser && !!_lvList && _lvList.user_id === _lvUser.id;
+const _lvIsTmdbOnly = e => typeof e.id === 'string' && e.id.startsWith('tmdb:');
+const _lvFmt = d => new Date(d).toLocaleDateString(MSSI18n.locale, { day: 'numeric', month: 'short', year: 'numeric' });
 
-// Same dual-format item resolution used on lists.html — an item id is
-// either a personal entry's UUID, or a bare "tmdb:movie:123" reference
-// for something added straight from Discover with no personal entry
-// behind it at all.
-async function _hydrateTmdbItems(items) {
-  const toFetch = [...new Set(items.filter(id => typeof id === 'string' && id.startsWith('tmdb:') && !_tmdbItemCache[id]))];
-  await Promise.all(toFetch.map(async pseudoId => {
-    const [, type, tmdbId] = pseudoId.split(':');
-    try {
-      const res = await tmdbFetch(`${TMDB_BASE}/${type}/${tmdbId}?language=en-US`);
-      if (!res.ok) return;
-      const d = await res.json();
-      const title = type === 'movie' ? d.title : d.name;
-      const dateStr = type === 'movie' ? d.release_date : d.first_air_date;
-      _tmdbItemCache[pseudoId] = {
-        id: pseudoId,
-        title, poster_url: d.poster_path ? TMDB_FULL + d.poster_path : null,
-        tmdb_id: Number(tmdbId), tmdb_type: type,
-        year: (dateStr || '').split('-')[0],
-      };
-    } catch (e) { console.error('Hydrate TMDB item error:', pseudoId, e); }
-  }));
-}
-
-function _lvRankBadgeHTML(rank) {
-  if (rank == null) return '';
-  const cls = rank === 0 ? 'cg-rank-1' : rank === 1 ? 'cg-rank-2' : rank === 2 ? 'cg-rank-3' : 'cg-rank-other';
-  return `<div class="cg-rank-badge ${cls}">${rank + 1}</div>`;
-}
-
-// Personal ranked lists can genuinely mix movies and shows within the
-// same list (a "Cold Characters" list might have both a film and a
-// series) — unlike Discover's category-based lists where most
-// categories are already single-type by name, there's no such
-// shortcut here, so the type badge always shows when we can determine
-// it. Checks tmdb_type first (TMDB-linked items), falling back to the
-// personal entry's own category/media-type fields.
+// Personal ranked lists can mix movies and shows, so the type badge always shows when it's known:
+// tmdb_type first (TMDB-linked items), then the entry's own category / media type
 function _lvTypeLabel(e) {
   if (e.tmdb_type) return e.tmdb_type === 'movie' ? 'Movie' : 'TV Show';
   if (e.cat === 'movies') return 'Movie';
@@ -179,162 +100,158 @@ function _lvTypeLabel(e) {
   if (mt) return mt === 'movie' ? 'Movie' : 'TV Show';
   return null;
 }
-function _lvTypeCls(e) {
-  const isMovie = e.tmdb_type === 'movie' || e.cat === 'movies' || (e.ratings && e.ratings._media_type === 'movie');
-  return isMovie ? 'type-label' : 'type-label type-label-tv';
-}
+const _lvIsMovie = e => e.tmdb_type === 'movie' || e.cat === 'movies' || (e.ratings && e.ratings._media_type === 'movie');
 
-// Back: to the page that opened this list (Lists, a profile, Friends…) —
-// remembered on arrival, so it still works after list → detail → Back
-// (where the browser's own "back" would just bounce to the detail page).
-(function _lvRememberFrom() {
+// Back: to the page that opened this list (Lists, a profile, Friends…) — remembered on arrival, so it still
+// works after list → title → Back (where the browser's own "back" would bounce to the title)
+const _lvFrom = (() => {
   try {
     const r = document.referrer ? new URL(document.referrer) : null;
-    if (r && r.origin === location.origin && !/\/(detail|list-view|login)\.html$/.test(r.pathname)) {
-      sessionStorage.setItem('lvFrom', r.pathname.split('/').pop() + r.search);
-    }
+    if (r && r.origin === location.origin && !/\/(detail|list-view|login|item)\.html$/.test(r.pathname)) sessionStorage.setItem('lvFrom', r.pathname.split('/').pop() + r.search);
   } catch {}
-  const back = document.getElementById('lvBack');
-  const from = sessionStorage.getItem('lvFrom');
-  if (back && from) back.setAttribute('href', from);
+  return sessionStorage.getItem('lvFrom') || 'lists.html';
 })();
 
-// Tapping a title: Info · Ratings · Note popup, opening on Info (MSSViews, info-popup.js)
+// Tapping a title: its panel / page (MSSViews, title-view.js)
 function _lvOpenInfo(id) {
   const e = _lvItems.find(x => x.id === id);
-  if (!e) return;
-  MSSViews.open(e, { start: 'info' });
+  if (e) MSSViews.open(e, { start: 'info' });
 }
 
+/* ── Grid view: the standard card, 5 a row (phones 3); a ranked list keeps the card's rank badge ── */
 function _lvCardHTML(e, rank) {
-  const scoreStr = _lvOwnScoreHTML(e);
+  const real = !_lvIsTmdbOnly(e), sc = real ? liveScore(e) : null;
   return MSSCard.poster({ cls: 'lv-card', onclick: `_lvOpenInfo(${attrJSON(e.id)})`, title: e.title, year: e.year, poster: e.poster_url, age: [e.tmdb_type || e.media_type, e.tmdb_id],
-    rank: rank == null ? 0 : rank + 1, typeHTML: _lvTypeLabel(e) ? `<span class="${_lvTypeCls(e)} type-label-overlay-bottom">${_lvTypeLabel(e)}</span>` : '',
-    scoreHTML: scoreStr });
+    rank: rank == null ? 0 : rank + 1, type: _lvTypeLabel(e) ? { label: _lvTypeLabel(e), tv: !_lvIsMovie(e) } : null,
+    score: sc != null ? sc : undefined, meta: real ? mssMetaOf(e) : null, rewatch: real ? mssRewatchCount(e) : 0 });
 }
-
-function _lvListRowHTML(e, rank) {
-  const posterInner = safeURL(e.poster_url)
-    ? `<img src="${safeURL(e.poster_url)}" loading="lazy">`
-    : `<div class="home-tmdb-poster-fallback" style="font-size:18px">${_lvEsc((e.title||'?')[0].toUpperCase())}</div>`;
-  const clickAttr = `onclick="_lvOpenInfo(${attrJSON(e.id)})"`;
-  const scoreStr = _lvOwnScoreHTML(e);
-  const typeLabel = _lvTypeLabel(e);
-  return `<div class="lv-list-row" ${clickAttr}>
-    <div class="lv-list-poster" style="position:relative">${posterInner}${_lvRankBadgeHTML(rank)}</div>
-    <div style="min-width:0">
-      <div class="lv-list-title-row">
-        <div class="lv-list-title" translate="no">${_lvEsc(e.title)}</div>
-        ${e.year ? `<span class="title-year-inline">${_lvEsc(e.year)}</span>` : ''}
-      </div>
-      ${typeLabel ? `<div class="lv-list-badges-row"><span class="${_lvTypeCls(e)}">${typeLabel}</span></div>` : ''}
+/* ── List view: the Library's card (backdrop on the right, poster, kicker, title, score), 2 a row, no buttons ── */
+function _lvRowHTML(e, rank) {
+  const real = !_lvIsTmdbOnly(e), sc = real ? liveScore(e) : null, m = real ? mssMetaOf(e) : {};
+  const bd = e.tmdb_id || e.ratings?._backdrop ? MSSBackdrop.key(e) : '', art = safeURL(e.poster_url) ? safeURL(e.poster_url).replace(/\/(w\d+|original)\//, '/w342/') : '';
+  const frame = real ? MSSBackdrop.style(e, false, 'card') : '';
+  const kicker = [_lvTypeLabel(e), e.year ? String(e.year).slice(0, 4) : ''].filter(Boolean).join(' · ');
+  // a ranked list: the Library's rank badge on the poster (gold, silver, bronze, then green), as on the grid's cards
+  const r = rank != null ? rank + 1 : 0, badge = r ? `<span class="cg-rank-badge ${r === 1 ? 'cg-rank-1' : r === 2 ? 'cg-rank-2' : r === 3 ? 'cg-rank-3' : 'cg-rank-other'}" aria-hidden="true">${r}</span>` : '';
+  return `<article class="lp-card lv-lp" role="button" tabindex="0" onclick="_lvOpenInfo(${attrJSON(e.id)})" onkeydown="if(event.key==='Enter'){event.preventDefault();this.click()}" aria-label="${r ? '#' + r + ' ' : ''}${escHTML(e.title)}"${MSSAge.attr(e.tmdb_type || e.media_type, e.tmdb_id, 'soft')}>
+    ${bd || art ? `<span class="msf-row__art lp-art${bd ? ' is-bd' : ''}"${bd ? ` data-bd="${escHTML(bd)}"` : ''}${art ? ` data-poster="${escHTML(art)}"` : ''}${!bd && art ? ` style="background-image:url('${art}')"` : frame ? ` style="${escHTML(frame)}"` : ''} aria-hidden="true"></span>` : ''}
+    <span class="lp-shade" aria-hidden="true"></span>
+    <span class="lp-poster" aria-hidden="true">${posterHTML(e, '', '(max-width:640px) 110px, 150px')}${badge}</span>
+    <div class="lp-body">
+      <div class="lp-kicker"><span>${escHTML(kicker)}</span>${real && mssRewatchCount(e) > 1 ? mssRewatchBadgeHTML(mssRewatchCount(e)) : ''}</div>
+      <h3 class="lp-title" translate="no">${escHTML(e.title)}</h3>
+      <div class="lp-scoreline">${sc != null ? mssScoreHTML(sc, { cls: 'lp-score' }) : ''}${m.long ? `<span class="lp-meta">${escHTML(m.long)}</span>` : ''}</div>
     </div>
-    <div class="lv-list-score-wrap">${scoreStr}</div>
-  </div>`;
+  </article>`;
 }
 
-// Shows the viewer's own MSF score, in the same star/olive style used
-// for ratings everywhere else — but only when it's actually meaningful:
-// this is your own list, it's a ranked list, and this particular item
-// is a real personal entry (not something added straight from
-// Discover, which has no personal score to show).
-function _lvOwnScoreHTML(e) {
-  // Shows the rating whenever the entry actually has one — the site has
-  // no private-account model, so a real score is public data regardless
-  // of who owns the list or whether the list itself is flagged "ranked".
-  const isTmdbOnly = typeof e.id === 'string' && e.id.startsWith('tmdb:');
-  if (isTmdbOnly) return '';
-  const score = liveScore(e);
-  if (score == null) return '';
-  return `<span class="home-tmdb-score">★ ${Number(score).toFixed(2)}</span>`;
-}
-
-function _lvRenderViewToggle() { document.getElementById('lvViewToggle').innerHTML = _lvViewToggleHTML(); }
+function _lvRenderViewToggle() { $('lvViewToggle').innerHTML = _lvViewToggleHTML(); }
 function _lvViewToggleHTML() {
-  return `
-    <button class="vt-btn ${_lvView==='list'?'active':''}" onclick="_lvSetView('list')" title="List view">${icon('list',13)}</button>
-    <button class="vt-btn ${_lvView==='grid'?'active':''}" onclick="_lvSetView('grid')" title="Grid view">${icon('grid',13)}</button>`;
+  return `<button class="vt-btn ${_lvView === 'list' ? 'active' : ''}" onclick="_lvSetView('list')" title="List view" aria-label="List view" aria-pressed="${_lvView === 'list'}">${icon('list', 13)}</button>
+    <button class="vt-btn ${_lvView === 'grid' ? 'active' : ''}" onclick="_lvSetView('grid')" title="Grid view" aria-label="Grid view" aria-pressed="${_lvView === 'grid'}">${icon('grid', 13)}</button>`;
 }
-
-/* ── Loading skeleton: this page's own header, buttons, toolbar and titles (rows or cards, in the
-   view you chose) with sample text masked into placeholders — as many as last time (mssSkeleton) ── */
-mssSkeleton.define('lv-page', () => {
-  const box = document.getElementById('lvContent').cloneNode(true), $ = id => box.querySelector('#' + id);
-  $('lvAvatar').textContent = 'U';
-  $('lvUsername').textContent = '@username';
-  $('lvTitle').textContent = 'Sample list name';
-  $('lvDesc').textContent = 'A sample description for this list.';
-  const n = mssSkeleton.shape('lv')?.n || 8;
-  $('lvCount').textContent = String(n);
-  $('lvSfBar').innerHTML = SF.bar('lv', 'all'); $('lvSfBar').setAttribute('data-skel-keep', '');
-  $('lvViewToggle').innerHTML = _lvViewToggleHTML(); $('lvViewToggle').setAttribute('data-skel-keep', '');
-  const e = { id: '', title: 'Sample title', year: '2024', cat: 'tv', final_score: 8.5 };
-  $('lvGrid').className = _lvView === 'list' ? 'lv-list' : 'lv-grid';
-  $('lvGrid').innerHTML = Array.from({ length: n }, () => _lvView === 'list' ? _lvListRowHTML(e, null) : _lvCardHTML(e, null)).join('').replace(/(lv-card|lv-list-row)"/g, '$1 lv-in-view"');   // shown straight away (no reveal)
-  box.style.display = '';
-  return box.outerHTML.replace(/ (id|onclick)="[^"]*"/g, '');
-});
-
 function _lvSetView(v) {
   if (v === _lvView) return;
   _lvView = v;
-  localStorage.setItem('disc_listView', v);
-  _lvRenderGrid();
-  _lvRenderViewToggle();
+  try { v === 'list' ? localStorage.setItem(_lvViewKey, v) : localStorage.removeItem(_lvViewKey); } catch {}
+  _lvRenderGrid(); _lvRenderViewToggle();
 }
+
+/* ── Loading skeleton: the hero, the bar and the titles (cards or rows, in the view you chose) ── */
+mssSkeleton.define('lv-page', () => {
+  const n = mssSkeleton.shape('lv')?.n || 10;
+  const e = { id: '', title: 'Sample title', year: '2024', cat: 'tv', final_score: 8.5 };
+  return `<div class="lh is-skel"><div class="lh-in"><div class="lh-text"><h1 class="lh-title">Sample list name</h1><p class="lh-desc">A sample description for this list.</p></div></div></div>
+    <div class="lv-bar"><div class="lv-bar-l"></div><div class="lv-bar-r" data-skel-keep><div class="lv-sf-bar">${SF.bar('lv', 'all')}</div><div class="view-toggle">${_lvViewToggleHTML()}</div></div></div>
+    <div class="${_lvView === 'list' ? 'lp-grid lv-rows' : 'lv-grid msf-grid'}">${Array.from({ length: n }, () => _lvView === 'list' ? _lvRowHTML(e, null) : _lvCardHTML(e, null).replace('lv-card"', 'lv-card lv-in-view"')).join('')}</div>`.replace(/ (id|onclick)="[^"]*"/g, '');
+});
+
+/* …and the editor's (?edit=1 / ?new=1): its head with Cancel · Save changes, the Details and Your list panels
+   with sample fields and rows, and Add titles beside them — the real layout, masked */
+mssSkeleton.define('le-page', () => {
+  const field = (l, h = 44) => `<div class="ls-field"><span class="ls-field-l">${l}</span><div class="skel" style="height:${h}px;border-radius:10px"></div></div>`;
+  const row = () => `<div class="la-row"><span class="la-num">0</span><div class="fav-picker-poster la-poster"></div><div class="fav-picker-info"><div class="fav-picker-name">Sample title</div><div class="fav-picker-sub">Movie · 2000</div></div></div>`;
+  const pick = () => `<div class="fav-picker-item ls-pick"><span class="fav-picker-poster"></span><span class="fav-picker-info"><span class="fav-picker-name">Sample title</span><span class="fav-picker-sub">Movie</span></span></div>`;
+  return `<div class="le-page"><header class="le-head"><div class="le-head-l"><div class="lib-kicker" data-skel-keep>Lists · ${_lvParams.get('new') ? 'New list' : 'Editing'}</div><h1 class="le-name">Sample list name</h1></div>
+      <div class="le-bar" data-skel-keep><button type="button" class="le-cancel" disabled>Cancel</button><button type="button" class="le-save" disabled>${icon('check', 15)} Save changes</button></div></header>
+    <div class="le-cols"><div class="le-main">
+      <section class="le-panel"><div class="le-label" data-skel-keep>Details</div>${field('Name', 48)}${field('Description', 96)}${field('Type', 64)}${field('Who can see it', 64)}</section>
+      <section class="le-panel"><div class="le-label" data-skel-keep>Your list</div><div class="ls-list">${Array.from({ length: 5 }, row).join('')}</div></section></div>
+      <aside class="le-panel le-add"><div class="le-label" data-skel-keep>Add titles</div><div class="skel" style="height:40px;border-radius:10px;margin-bottom:10px"></div><div class="skel" style="height:42px;border-radius:10px;margin-bottom:10px"></div><div class="ls-results">${Array.from({ length: 6 }, pick).join('')}</div></aside></div></div>`;
+});
+// edit mode: the editor's skeleton instead of the list page's
+if (_lvParams.get('edit') || _lvParams.get('new')) $('lvLoading').dataset.skel = 'le-page';
 
 function _lvObserveCards() {
   if (!_lvRevealObserver) {
-    _lvRevealObserver = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('lv-in-view');
-          _lvRevealObserver.unobserve(entry.target);
-        }
-      });
-    }, { rootMargin: '0px 0px -8% 0px', threshold: 0.05 });
+    _lvRevealObserver = new IntersectionObserver(entries => entries.forEach(entry => {
+      if (entry.isIntersecting) { entry.target.classList.add('lv-in-view'); _lvRevealObserver.unobserve(entry.target); }
+    }), { rootMargin: '0px 0px -8% 0px', threshold: 0.05 });
   }
-  const grid = document.getElementById('lvGrid');
-  const selector = _lvView === 'list' ? '.lv-list-row' : '.lv-card';
-  grid.querySelectorAll(selector).forEach(el => _lvRevealObserver.observe(el));
+  $('lvGrid').querySelectorAll('.lv-card').forEach(el => _lvRevealObserver.observe(el));
 }
 
 function _lvRenderGrid() {
-  const grid = document.getElementById('lvGrid');
-  grid.className = _lvView === 'list' ? 'lv-list' : 'lv-grid';
+  const grid = $('lvGrid');
   if (!_lvItems.length) {
     grid.className = '';
-    grid.innerHTML = mssEmpty({ art: 'lists', title: 'This list is empty', text: 'A list with nothing on it is just a title with big plans.' });
+    grid.innerHTML = mssEmpty({ art: 'lists', title: 'This list is empty', text: 'A list with nothing on it is just a title with big plans.',
+      actions: _lvOwn() || _lvShared ? [{ label: 'Add titles', icon: 'plus', href: MSSListActions.editURL(_lvList), primary: true }] : [] });
     return;
   }
   const shown = SF.list('lv', 'all');
-  document.getElementById('lvSfBar').innerHTML = SF.bar('lv', 'all');
+  $('lvSfBar').innerHTML = SF.bar('lv', 'all');
   if (!shown.length) {
     grid.className = '';
     grid.innerHTML = mssEmpty({ compact: true, art: 'filter', title: 'Nothing matches these filters', text: 'Your filters are a little too picky. Loosen one and try again.',
       actions: [{ label: 'Clear filters', icon: 'x', onclick: "SF.clearFilters('lv', 'all'); SF.refresh('lv', 'all')", primary: true }] });
     return;
   }
-  // Number badges (same corner badges as the category pages):
-  //   • a Ranked list in its own order (or reversed) → the title's place in the list
-  //   • sorted by rating (Highest / Lowest) → its place in that rating order,
-  //     ranked list or not (unrated titles get no number)
-  //   • any other sort, or an unranked list in its order → no numbers
+  // Rank numbers: a ranked list in its own order (or reversed) → its place in the list; sorted by rating → its
+  // place in that order (unrated titles get none); anything else → none
   const sort = SF.getSort('lv', 'all');
   const byScore = sort === 'highest' || sort === 'lowest';
   const byOrder = (sort === 'rank' || sort === 'rankRev') && _lvList?.ranked === true;
   let n = 0;
-  grid.innerHTML = shown.map(e => {
-    let rank = null;
-    if (byScore) rank = (_lvIsTmdbOnly(e) ? null : liveScore(e)) != null ? n++ : null;
-    else if (byOrder) rank = e._rank - 1;
-    return _lvView === 'list' ? _lvListRowHTML(e, rank) : _lvCardHTML(e, rank);
-  }).join('');
-  _lvObserveCards();
+  const ranks = shown.map(e => byScore ? ((_lvIsTmdbOnly(e) ? null : liveScore(e)) != null ? n++ : null) : byOrder ? e._rank - 1 : null);
+  grid.className = _lvView === 'list' ? 'lp-grid lv-rows' : 'lv-grid msf-grid';
+  // Whole rows, the Library's system: grid starts with 5 rows and Show more adds 3; list view starts with 10
+  // rows and adds 5 (a row = as many cards as fit right now)
+  const sig = [sort, JSON.stringify(SF.filterState('lv', 'all')), _lvView].join('|');
+  const R = _LV_ROWS[_lvView];
+  if (_lvRows.sig !== sig) Object.assign(_lvRows, { sig, n: R[0] });
+  const cols = _lvCols();
+  _lvRows.cols = cols;
+  const count = Math.min(shown.length, _lvRows.n * cols), left = shown.length - count;
+  grid.innerHTML = shown.slice(0, count).map((e, i) => _lvView === 'list' ? _lvRowHTML(e, ranks[i]) : _lvCardHTML(e, ranks[i])).join('')
+    + (left > 0 ? `<div class="msf-more lv-more"><button type="button" class="msf-more-btn" onclick="_lvMore()">Show ${Math.min(left, R[1] * cols)} more <small>· ${left} left</small></button></div>` : '');
+  if (_lvView === 'grid') _lvObserveCards();
 }
+const _LV_ROWS = { grid: [5, 3], list: [10, 5] };   // first rows, rows per Show more (library-view.js's LIB_ROWS)
+const _lvRows = {};
+// how many cards one row holds: the real grid's columns (a number per column once it's laid out on the page)
+function _lvCols() {
+  const n = getComputedStyle($('lvGrid')).gridTemplateColumns.split(' ').filter(t => /^[\d.]+px$/.test(t)).length;
+  return Math.max(1, n || (_lvView === 'list' ? 2 : 5));
+}
+// Show more: the next rows come in under the ones you've seen — the page stays where you are (owner)
+function _lvMore() {
+  const y = scrollY, from = $('lvGrid').querySelectorAll('.lv-card, .lv-lp').length;
+  _lvRows.n += _LV_ROWS[_lvView][1];
+  _lvRenderGrid();
+  const cards = $('lvGrid').querySelectorAll('.lv-card, .lv-lp');
+  for (let i = 0; i < from && i < cards.length; i++) cards[i].classList.add('lv-in-view');   // the ones already seen don't fade in again
+  scrollTo({ top: y, behavior: 'instant' });   // (the page scrolls smoothly otherwise)
+  cards[from]?.focus?.({ preventScroll: true });
+}
+// a wider or narrower window changes how many fit in a row: draw whole rows again
+let _lvResizeT = 0;
+addEventListener('resize', () => { clearTimeout(_lvResizeT); _lvResizeT = setTimeout(() => {
+  const g = $('lvGrid'); if (!g?.firstElementChild || !_lvRows.cols) return;
+  if (_lvCols() !== _lvRows.cols) _lvRenderGrid();
+}, 200); }, { passive: true });
 
 /* Sort & Filter — shared js/sort-filter.js module */
-function _lvIsTmdbOnly(e) { return typeof e.id === 'string' && e.id.startsWith('tmdb:'); }
 SF.register('lv', {
   base: () => _lvItems,
   render: () => _lvRenderGrid(),
@@ -347,131 +264,212 @@ SF.register('lv', {
   scoreOf: e => _lvIsTmdbOnly(e) ? null : liveScore(e),
 });
 
-function _lvRankedBadgeHTML() {
-  // official lists: just the Official tag — no Ranked / Unranked (or its switch)
-  return _lvList?.official ? `<span class="list-rank-badge is-official">${icon('crown', 11)} Official</span>` : _lvRankedOnlyHTML();
-}
-function _lvRankedOnlyHTML() {
-  const ranked = _lvList?.ranked;
-  const isOwner = _lvUser && _lvList && _lvList.user_id === _lvUser.id;
-  if (ranked === true)  return `<span class="list-rank-badge is-ranked">Ranked</span>`;
-  if (ranked === false) return `<span class="list-rank-badge is-unranked">Unranked</span>`;
-  if (isOwner) {
-    return `<span class="sf-choice-inline" style="margin-left:12px;">
-      <label class="sf-check-row">
-        <input type="checkbox" onchange="if(this.checked) _lvSetRanked(true)">
-        <span class="sf-check-mark"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
-        <span>Ranked</span>
-      </label>
-      <label class="sf-check-row">
-        <input type="checkbox" onchange="if(this.checked) _lvSetRanked(false)">
-        <span class="sf-check-mark"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
-        <span>Unranked</span>
-      </label>
-    </span>`;
-  }
-  return '';
+/* ── The hero ── */
+function _lvHero() {
+  const l = _lvList, own = _lvOwn(), p = l.profiles || {};
+  document.title = `${l.title} — MyScreenFolio`;
+  $('lvBack').setAttribute('href', _lvFrom);
+  $('lvBack').textContent = '‹ ' + ({ 'lists.html': 'Lists', 'profile.html': 'Profile', 'friends.html': 'Friends' }[_lvFrom.split('?')[0]] || 'Back');
+  $('lvOwner').innerHTML = ` · ${mssProfileLinkHTML({ id: l.user_id, username: p.username }, `<span class="lh-owner"><span class="lh-av">${safeURL(p.avatar_url) ? `<img src="${safeURL(p.avatar_url)}" alt="" loading="lazy">` : escHTML((p.username || '?')[0].toUpperCase())}</span>@${escHTML(p.username || 'user')}</span>`)}`;
+  $('lvChips').innerHTML = (MSSList.officialBadge(l) || MSSList.rankBadge(l.ranked)) + mssVisBadge(l.visibility)
+    + (_lvShared ? '<span class="cl-tag">Shared with you</span>' : '');
+  $('lvTitle').textContent = l.title;
+  $('lvDesc').textContent = l.description || '';
+  $('lvDesc').hidden = !l.description;
+  // Stats: titles · average (when there are ratings) · ordered by · updated (the last saved edit — sql/124)
+  const avg = MSSList.average(l, id => _lvItems.find(e => e.id === id) || null);
+  const order = l.sort_mode && l.sort_mode !== 'picked' ? MSSList.orderLabel(l.sort_mode) : own ? 'Your order' : `@${p.username || 'user'}’s order`;
+  const stat = (k, v) => `<div class="lh-stat"><dt>${k}</dt><dd>${v}</dd></div>`;
+  $('lvStats').innerHTML = stat('Titles', `<b>${_lvItems.length}</b>`)
+    + (avg != null ? stat('Average', mssScoreHTML(avg, { cls: 'lh-score' })) : '')
+    + stat('Ordered by', escHTML(order))
+    + (l.updated_at ? stat('Updated', escHTML(_lvFmt(l.updated_at))) : '');
+  const bdBtn = $('lvBdBtn');
+  bdBtn.hidden = !own || !_lvItems.length;
+  bdBtn.innerHTML = `${icon('image', 14)}<span>Edit backdrop</span>`;
+  _lvPaintBackdrop();
 }
 
-async function _lvSetRanked(value) {
+/* The backdrop: the owner's pick (backdrop_item, sql/124 — this device until it runs), else the first title
+   (the #1 of a ranked list). The pick is "<item id>|<TMDB backdrop path>" (one picture of that title), or an
+   older "<item id>" (that title's own backdrop: an entry's owner's choice and framing, MSSBackdrop). */
+const _lvBdKey = () => 'msf_list_bd_' + _lvList.id;
+function _lvBdPick() {
+  let v = _lvList.backdrop_item;
+  if (!('backdrop_item' in _lvList)) try { v = localStorage.getItem(_lvBdKey()); } catch {}
+  const [id, path] = String(v || '').split('|');
+  return { id: id || null, path: /^\/[\w.-]{1,120}$/.test(path || '') ? path : null };
+}
+function _lvBdItem() {
+  const { id } = _lvBdPick();
+  return (id && _lvItems.find(e => e.id === id)) || _lvItems[0] || null;
+}
+async function _lvPaintBackdrop(previewPath) {
+  const e = _lvBdItem(), img = $('lvBd'), hero = $('lvHero');
+  if (!e) return;
+  const pick = _lvBdPick(), path = previewPath !== undefined ? previewPath : pick.id === e.id ? pick.path : null;
+  const real = !_lvIsTmdbOnly(e), phone = matchMedia('(max-width:640px)').matches;
+  let u = path ? `https://image.tmdb.org/t/p/w1280${path}` : await MSSBackdrop.url(real ? e : { tmdb_id: e.tmdb_id, tmdb_type: e.tmdb_type }, 'w1280');
+  const poster = !u;
+  if (poster) u = safeURL(e.poster_url);
+  if (!u) return;
+  hero.classList.toggle('is-poster', poster);
+  img.setAttribute('style', real && !poster && !path ? MSSBackdrop.style(e, true, phone ? 'phone' : 'desk') : '');
+  if (img.getAttribute('src') === u) { hero.classList.add('has-bd'); return; }
+  img.onload = () => hero.classList.add('has-bd');
+  img.src = u; img.hidden = false;
+}
+
+/* Edit backdrop (owner) — like the Edit page's picker: first the list's titles; pick one and you see every
+   backdrop TMDB has for it (grouped by language, a box to narrow them), tapping one tries it on the hero
+   behind; "Use this backdrop" keeps it, Cancel puts the old one back, "Reset to default" → the first title's. */
+let _bp = null;   // { h, item, pics, groups, lang, closed, sel, used }
+const _bpLang = key => { if (key === 'none') return 'No language / Textless'; try { return new Intl.DisplayNames(['en'], { type: 'language' }).of(key) || key.toUpperCase(); } catch { return key.toUpperCase(); } };
+async function _lvPickBackdrop() {
+  await mssLoadScript('js/panel.js');
+  const h = MSSPanel.open({ size: 'L', kind: 'generic', title: 'Edit backdrop', subtitle: _lvList.title, body: '<div id="bpBody"></div>',
+    footer: _bpFooter(false),
+    onClose: () => { if (_bp?.h === h) { if (!_bp.used) _lvPaintBackdrop(); _bp = null; } } });
+  _bp = { h, item: null, pics: [], groups: [], lang: '', closed: new Set(), sel: null, used: false };
+  h.body.addEventListener('click', ev => {
+    const t = ev.target.closest('[data-bpi]'); if (t) return _bpOpenItem(t.dataset.bpi);
+    const p = ev.target.closest('[data-pp]'); if (p) return _bpPick(Number(p.dataset.pp));
+    const g = ev.target.closest('[data-ppg]'); if (g) { if (!_bp.closed.delete(g.dataset.ppg)) _bp.closed.add(g.dataset.ppg); _bpGrid(); }
+    if (ev.target.closest('[data-bp-back]')) _bpTitles();
+  });
+  _bpTitles();
+}
+function _bpFooter(canUse) {
+  const pick = _lvBdPick();
+  return { secondary: [{ label: 'Cancel', onClick: x => x.close() }, ...(pick.id ? [{ label: 'Reset to default', onClick: () => _lvSetBackdrop(null) }] : [])],
+    primary: { label: 'Use this backdrop', disabled: !canUse, onClick: () => { const p = _bp.pics[_bp.sel]; if (p) _lvSetBackdrop(`${_bp.item.id}|${p.file_path}`); } } };
+}
+// Step 1: the list's titles as posters (a normal poster picker, the pp-* grid)
+function _bpTitles() {
+  const cur = _lvBdItem();
+  _bp.item = null; _bp.sel = null;
+  _bp.h.setTitle('Edit backdrop', `${_lvList.title} · pick a title`);
+  _bp.h.setFooter(_bpFooter(false));
+  const linked = _lvItems.filter(e => e.tmdb_id && e.tmdb_type);
+  $('bpBody').innerHTML = linked.length ? `<p class="pp-rule">${icon('info', 13)}<span>Pick a title, then choose one of its backdrops.</span></p>
+    <div class="pp-grid bp-titles">${linked.map(e => {
+      const r = _lvItems.indexOf(e) + 1, u = safeURL(e.poster_url);
+      return `<button type="button" class="pp-opt${e === cur ? ' selected' : ''}" data-bpi="${escHTML(e.id)}" aria-label="${_lvList.ranked === true ? '#' + r + ' ' : ''}${escHTML(e.title)}${e === cur ? ' (now)' : ''}">
+        ${u ? `<img src="${u}" alt="" loading="lazy">` : `<span class="bp-letter">${escHTML((e.title || '?')[0].toUpperCase())}</span>`}
+        ${_lvList.ranked === true ? `<span class="cg-rank-badge ${r === 1 ? 'cg-rank-1' : r === 2 ? 'cg-rank-2' : r === 3 ? 'cg-rank-3' : 'cg-rank-other'}" aria-hidden="true">${r}</span>` : ''}</button>`;
+    }).join('')}</div>`
+    : `<p class="pp-empty">None of these titles is linked to TMDB, so there are no backdrops to choose from.</p>`;
+}
+// Step 2: every backdrop of one title
+async function _bpOpenItem(id) {
+  const e = _lvItems.find(x => x.id === id); if (!e) return;
+  const at = _bp;
+  Object.assign(_bp, { item: e, pics: [], groups: [], lang: '', closed: new Set(), sel: null });
+  _bp.h.setTitle(`Backdrops · ${e.title}`, 'Loading…');
+  _bp.h.setFooter(_bpFooter(false));
+  $('bpBody').innerHTML = `<button type="button" class="bp-back" data-bp-back>${icon('chevleft', 15)} All titles</button>
+    <div class="pp-tools"><div class="pp-lang" id="bpLang"></div></div><div class="pp-sel" id="bpSel" hidden></div>
+    <div id="bpGrid"><div class="pp-grid is-wide" aria-label="Loading">${'<span class="pp-skel"></span>'.repeat(4)}</div></div>`;
   try {
-    const { error } = await sb.from('favorite_lists').update({ ranked: value }).eq('id', _lvList.id).eq('user_id', _lvUser.id);
-    if (error) throw error;
-    _lvList.ranked = value;
-    document.getElementById('lvRankedBadgeSlot').innerHTML = _lvRankedBadgeHTML() + mssVisBadge(_lvList.visibility);
-    showToast(value ? 'Marked as ranked!' : 'Marked as unranked.');
+    const res = await tmdbFetch(`${TMDB_BASE}/${e.tmdb_type === 'movie' ? 'movie' : 'tv'}/${Number(e.tmdb_id)}/images`);
+    if (!res.ok) throw new Error('TMDB images');
+    const data = await res.json();
+    if (_bp !== at || _bp.item !== e) return;
+    const pics = (data.backdrops || []).sort((a, b) => (b.vote_average || 0) - (a.vote_average || 0));
+    _bp.h.setTitle(`Backdrops · ${e.title}`, `${pics.length} ${pics.length === 1 ? 'backdrop' : 'backdrops'}`);
+    if (!pics.length) { $('bpGrid').innerHTML = '<p class="pp-empty">TMDB has no backdrops for this title.</p>'; return; }
+    const groups = new Map();
+    pics.forEach((p, i) => { const k = p.iso_639_1 || 'none'; if (!groups.has(k)) groups.set(k, []); groups.get(k).push(i); });
+    _bp.pics = pics;
+    _bp.groups = [...groups.keys()].sort((a, b) => a === 'none' ? -1 : b === 'none' ? 1 : _bpLang(a).localeCompare(_bpLang(b))).map(key => ({ key, items: groups.get(key) }));
+    const pick = _lvBdPick();
+    _bp.sel = pick.id === e.id && pick.path ? pics.findIndex(p => p.file_path === pick.path) : -1;
+    if (_bp.sel < 0) _bp.sel = null;
+    MSSPicker.mount($('bpLang'), { id: 'bpLangPick', label: 'Language', value: '', placeholder: 'All languages', search: 'Search languages…',
+      groups: [{ items: [{ value: '', label: 'All languages' }, ..._bp.groups.map(g => ({ value: g.key, label: `${_bpLang(g.key)} · ${g.items.length}`, keys: [g.key] }))] }],
+      onChange: v => { _bp.lang = v || ''; _bp.closed.delete(_bp.lang); _bpGrid(); } });
+    _bpGrid(); _bpSel();
   } catch (err) {
-    console.error('Set ranked error:', err);
-    showToast('Failed to update.', 'err');
+    console.error(err);
+    if (_bp === at && _bp.item === e) { _bp.h.setTitle(`Backdrops · ${e.title}`, ''); $('bpGrid').innerHTML = '<p class="pp-empty">Couldn’t load the backdrops right now — please try again.</p>'; }
   }
 }
-
-// Send this list to friends (social.js, loaded on demand by mssRecommend)
-// Export this list — the Export Studio (export-studio.js), with this list already chosen
-function _lvExport() {
-  if (!_lvList || !_lvUser) return;
-  const p = window._navUserProfile || {};
-  MSSStudio.open({ who: { name: p.display_name || p.username || '', username: p.username || '', avatar_url: p.avatar_url || '' },
-    preset: { what: 'list', list: { id: _lvList.id, title: _lvList.title, description: _lvList.description, items: _lvList.items || [], ranked: !!_lvList.ranked,
-      owner: _lvList.profiles?.username, mine: _lvList.user_id === _lvUser.id } },
-    load: () => getEntries(_lvUser.id) });
+function _bpGrid() {
+  const grid = $('bpGrid'); if (!grid || !_bp?.item) return;
+  grid.innerHTML = _bp.groups.filter(g => !_bp.lang || g.key === _bp.lang).map(g => {
+    const open = !_bp.closed.has(g.key);
+    return `<section class="pp-group"><h3 class="pp-group-h"><button type="button" class="pp-group-btn" data-ppg="${escHTML(g.key)}" aria-expanded="${open}">
+        <span>${escHTML(_bpLang(g.key))}</span><span class="pp-count">${g.items.length}</span>${icon('chevdown', 16)}</button></h3>
+      <div class="pp-grid is-wide"${open ? '' : ' hidden'}>${g.items.map((i, n) => `<button type="button" class="pp-opt${i === _bp.sel ? ' selected' : ''}" data-pp="${i}" aria-pressed="${i === _bp.sel}" aria-label="Backdrop ${n + 1} of ${g.items.length}"><img src="https://image.tmdb.org/t/p/w780${_bp.pics[i].file_path}" alt="" loading="lazy"></button>`).join('')}</div></section>`;
+  }).join('');
+}
+function _bpSel() {
+  const box = $('bpSel'), p = _bp.pics[_bp.sel];
+  box.hidden = !p; if (!p) return;
+  const bits = [_bpLang(p.iso_639_1 || 'none'), p.width && p.height ? `${p.width} × ${p.height}` : '', p.vote_count ? `★ ${mssR1(Number(p.vote_average))} · ${p.vote_count} ${p.vote_count === 1 ? 'vote' : 'votes'} on TMDB` : ''].filter(Boolean);
+  box.innerHTML = `<img src="https://image.tmdb.org/t/p/w300${p.file_path}" alt="" class="is-wide"><div><h3 class="lyr-sec-h">Selected backdrop</h3><p>${bits.map(escHTML).join(' · ')}</p></div>`;
+}
+function _bpPick(i) {
+  const p = _bp?.pics[i]; if (!p) return;
+  _bp.sel = i;
+  _bp.h.body.querySelectorAll('[data-pp]').forEach(b => { const on = Number(b.dataset.pp) === i; b.classList.toggle('selected', on); b.setAttribute('aria-pressed', on); });
+  _bpSel();
+  const pick = _lvBdPick();
+  _bp.h.setPrimary({ disabled: pick.id === _bp.item.id && pick.path === p.file_path });
+  // try it on the hero behind the panel
+  const img = $('lvBd'); img.setAttribute('style', ''); img.src = `https://image.tmdb.org/t/p/w1280${p.file_path}`; img.hidden = false;
+  $('lvHero').classList.remove('is-poster');
+}
+async function _lvSetBackdrop(v) {
+  const prev = _lvList.backdrop_item;
+  if ('backdrop_item' in _lvList) {
+    _lvList.backdrop_item = v;
+    const { error } = await sb.from('favorite_lists').update({ backdrop_item: v }).eq('id', _lvList.id).eq('user_id', _lvUser.id);
+    if (error) { _lvList.backdrop_item = prev; showToast('Couldn’t save that — try again.', 'err'); return; }
+  } else try { v ? localStorage.setItem(_lvBdKey(), v) : localStorage.removeItem(_lvBdKey()); } catch {}
+  if (_bp) { _bp.used = true; _bp.h.closeNow(); }
+  _lvPaintBackdrop();
+  showToast(v ? 'Backdrop changed.' : 'Back to the default backdrop.');
 }
 
-function _lvShare() {
-  if (!_lvList) return;
-  mssRecommend({ kind: 'list', list_id: _lvList.id, title: _lvList.title, count: (_lvList.items || []).length });
+/* ── The bar under the hero: Edit list (owner / shared) · Share · Export · ⋯ · likes (someone else's) ── */
+function _lvBar() {
+  const l = _lvList, own = _lvOwn(), b = (a, label, ic, cls = '') => `<button type="button" class="lv-btn${cls}" onclick="${a}">${icon(ic, 15)}<span>${label}</span></button>`;
+  const canShare = !!_lvUser && l.cat === 'custom' && (l.visibility === 'anyone' || own);
+  const st = _lvReact;
+  const react = like => `<button type="button" class="lv-btn is-icon${st?.mine === (like ? 'like' : 'dislike') ? ' is-on' : ''}"${like ? ' data-like' : ''} onclick="_lvLike(${like})" aria-pressed="${st?.mine === (like ? 'like' : 'dislike')}" aria-label="${like ? 'Like' : 'Dislike'}: ${st ? (like ? st.like : st.dislike) : 0}">${icon(st?.mine === (like ? 'like' : 'dislike') ? (like ? 'thumbsUpFilled' : 'thumbsDownFilled') : (like ? 'thumbsUp' : 'thumbsDown'), 15)}<span>${st ? (like ? st.like : st.dislike) : 0}</span></button>`;
+  $('lvActions').innerHTML = (own || _lvShared ? b(`location.href=${escHTML(JSON.stringify(MSSListActions.editURL(l)))}`, 'Edit list', 'edit', ' is-main') : '')
+    + (canShare ? b('MSSListActions.share(_lvList)', 'Share', 'send') : '')
+    + (_lvUser ? `<button type="button" class="lv-btn is-icon" onclick="MSSListActions.exportList(_lvList)" aria-label="Export" title="Export">${icon('download', 15)}</button>` : '')
+    + (_lvUser ? `<button type="button" class="lv-btn is-icon" onclick="_lvMenu(this)" aria-label="More actions" aria-haspopup="menu" data-top-more>${icon('moreV', 15)}</button>` : '')
+    + (!own && st ? `<span class="lv-react" data-dbl-like>${react(true)}${react(false)}</span>` : '');
 }
-
-function _lvMarkImported() {
-  const btn = document.getElementById('lvImportBtn');
-  btn.disabled = true;
-  btn.innerHTML = '<span class="lv-import-btn-label">Added to My Lists ✓</span>';
-}
-
-// The original list's items are the OWNER's personal entry ids. Copied
-// as-is, they'd point at someone else's entries, which the importer's
-// Lists page can't resolve (it only loads their own library) — the
-// imported list would show up empty or with gaps. So each item is
-// re-pointed: to the importer's own entry for the same title if they
-// have one, otherwise to a TMDB reference (tmdb:movie:123), and only
-// kept as the original id when the entry was never linked to TMDB.
-async function _lvItemsForImport() {
-  const byId = Object.fromEntries(_lvItems.map(e => [e.id, e]));
-  const { data: mine } = await sb.from('entries')
-    .select('id, tmdb_id, tmdb_type').eq('user_id', _lvUser.id).not('tmdb_id', 'is', null);
-  const myByTmdb = {};
-  (mine || []).forEach(e => { myByTmdb[`${e.tmdb_type}:${e.tmdb_id}`] = e.id; });
-  const out = [];
-  for (const id of (_lvList.items || [])) {
-    let next = id;
-    if (!(typeof id === 'string' && id.startsWith('tmdb:'))) {
-      const e = byId[id];
-      if (e && e.tmdb_id && e.tmdb_type) {
-        next = myByTmdb[`${e.tmdb_type}:${e.tmdb_id}`] || `tmdb:${e.tmdb_type}:${e.tmdb_id}`;
-      }
-    } else {
-      const [, type, tmdbId] = id.split(':');
-      next = myByTmdb[`${type}:${tmdbId}`] || id;
-    }
-    if (!out.includes(next)) out.push(next);
+// ⋯: yours → Invite collaborators · Delete list…; shared with you → Leave list…; someone else's → Add to my lists · Report
+async function _lvMenu(btn) {
+  await mssLoadScript('js/panel.js');
+  const l = _lvList, items = [], add = (label, ic, fn, danger) => items.push({ label, icon: ic, onSelect: fn, danger });
+  const resolve = id => _lvItems.find(e => e.id === id) || null;
+  if (_lvOwn()) {
+    add('Invite collaborators', 'users', () => MSSListActions.collab(l));
+    items.push({ divider: true });
+    add('Delete list…', 'trash', async () => { if (await MSSListActions.remove(l)) location.replace(_lvFrom); }, true);
+  } else if (_lvShared) add('Leave list…', 'x', async () => { if (await MSSListActions.leave(l)) location.replace(_lvFrom); }, true);
+  else {
+    add('Add to my lists', 'plus', () => MSSListActions.fork(l, resolve));
+    if (!l.official) add('Report', 'flag', () => mssReport('list', l.id));
   }
-  return out;
+  MSSPopover.open(btn, { title: l.title, label: 'List actions', items });
+}
+async function _lvLike(isLike) {
+  if (!_lvUser) return mssJoin('react to lists');
+  _lvReact = await mssReact('list', _lvList.id, isLike, _lvReact || { like: 0, dislike: 0, mine: null });
+  _lvBar();
 }
 
-async function importList() {
-  if (mssGuestGate('save lists') || !_lvUser) return;
-  if (!_lvList) return;
-  const btn = document.getElementById('lvImportBtn');
-  btn.disabled = true;
-  try {
-    const items = await _lvItemsForImport();
-    const { error } = await sb.from('favorite_lists').insert({
-      user_id: _lvUser.id,
-      cat: 'custom',
-      genre: _lvList.genre || '',
-      title: _lvList.title,
-      description: _lvList.description || null,
-      items,
-      ranked: _lvList.ranked ?? null,
-      forked_from: _lvList.id,
-    });
-    if (error) throw error;
-    showToast('Added to your lists!');
-    _lvMarkImported();
-  } catch (err) {
-    console.error('Import list error:', err);
-    showToast('Failed to import list.', 'err');
-    btn.disabled = false;
-  }
-}
-
+/* ── Loading ── */
 async function _lvLoad() {
-  if (!_lvListId) { mssErrorPage('badlink'); return; }
   try {
-    let { data: list, error } = await sb.from('favorite_lists')
-      .select('*, profiles(username, avatar_url)')
-      .eq('id', _lvListId)
-      .maybeSingle();
+    let { data: list, error } = await sb.from('favorite_lists').select('*, profiles(username, avatar_url)').eq('id', _lvListId).maybeSingle();
     if (error) throw error;
     // A private list (068) opened from its link: list-view.html?list=…&k=<token>
     if (!list && _lvParams.get('k')) {
@@ -479,73 +477,74 @@ async function _lvLoad() {
       list = (data || [])[0] || null;
       if (list) list.profiles = (await sb.from('profiles').select('username, avatar_url').eq('id', list.user_id).maybeSingle()).data;
     }
-    if (!list) { mssErrorPage('list'); return; }
+    if (!list) { mssErrorPage('list'); return null; }
     _lvList = list;
-
-    const items = list.items || [];
-    let entries = [];
-    if (items.length) {
-      const entryItemIds = items.filter(id => !(typeof id === 'string' && id.startsWith('tmdb:')));
-      const map = {};
-      if (entryItemIds.length) {
-        const { data: entryRows } = await sb.from('entries').select('*').in('id', entryItemIds);
-        (entryRows || []).forEach(e => { map[e.id] = e; });
-        await mssFillHiddenListItems(entryItemIds, map);   // titles hidden from you (073): name + poster only
-      }
-      await _hydrateTmdbItems(items);
-      const look = id => (typeof id === 'string' && id.startsWith('tmdb:')) ? _tmdbItemCache[id] : map[id];
-      // A list set to an order (Ratings Highest, Date Watched…) shows in it even if a score changed
-      // since it was last saved; your own is saved that way too (db.js keeps it so from now on)
-      if (MSSOrder.reorder(list, list.sort_mode, id => look(id) || null) && _lvUser && list.user_id === _lvUser.id)
-        sb.from('favorite_lists').update({ items: list.items }).eq('id', list.id).eq('user_id', _lvUser.id).then(() => {}, () => {});
-      entries = list.items.map(look).filter(Boolean);
+    if (_lvUser && !_lvOwn()) {
+      const { data: c } = await sb.from('list_collaborators').select('status').eq('list_id', list.id).eq('user_id', _lvUser.id).eq('status', 'accepted').limit(1);
+      _lvShared = !!c?.length;
     }
-    _lvItems = entries.map((e, i) => Object.assign({}, e, { _rank: i + 1 }));
-
-    document.title = `${list.title} — MyScreenFolio`;
-    document.getElementById('lvTitle').textContent = list.title; document.getElementById('lvRankedBadgeSlot').innerHTML = _lvRankedBadgeHTML() + mssVisBadge(list.visibility);
-    document.getElementById('lvDesc').textContent = list.description || '';
-    document.getElementById('lvDesc').style.display = list.description ? '' : 'none';
-    const username = list.profiles?.username || 'user';
-    const avatarUrl = list.profiles?.avatar_url;
-    document.getElementById('lvUsername').textContent = '@' + username;
-    document.getElementById('lvAvatar').innerHTML = safeURL(avatarUrl)
-      ? `<img src="${safeURL(avatarUrl)}" loading="lazy">`
-      : (username[0] || '?').toUpperCase();
-    document.getElementById('lvCount').textContent = entries.length;
-    mssSkeleton.shape('lv', { n: Math.min(entries.length, 12) });
-    document.getElementById('lvCountLabel').textContent = entries.length === 1 ? 'title' : 'titles';
-
-    const isOwn = _lvUser && list.user_id === _lvUser.id;
-    // Social → Recommendations; a private list (068) is only sent on by its owner
-    document.getElementById('lvShareBtn').hidden = !_lvUser || list.cat !== 'custom' || (list.visibility !== 'anyone' && list.user_id !== _lvUser.id);
-    document.getElementById('lvExportBtn').hidden = !_lvUser;
-    document.getElementById('lvExportLabel').innerHTML = `${icon('download', 15)} Export List`;
-    document.getElementById('lvImportPopupActions').style.display = isOwn ? 'none' : '';
-    const rep = document.getElementById('lvReportBtn');
-    rep.hidden = !_lvUser || isOwn || !!list.official;
-    rep.innerHTML = `${icon('flag', 12)} Report`;
-    if (!isOwn && _lvUser) {
-      // Collaborators already have this list in their Lists — no Import
-      const { data: collab } = await sb.from('list_collaborators')
-        .select('status').eq('list_id', list.id).eq('user_id', _lvUser.id).eq('status', 'accepted').limit(1);
-      if (collab && collab.length) document.getElementById('lvImportPopupActions').style.display = 'none';
-      // Already imported this one before? Show that instead of letting
-      // the same list get copied into their lists twice.
-      const { data: existing } = await sb.from('favorite_lists')
-        .select('id').eq('user_id', _lvUser.id).eq('forked_from', list.id).limit(1);
-      if (existing && existing.length) _lvMarkImported();
+    const items = list.items || [], map = {};
+    const entryIds = items.filter(id => !MSSList.isTmdbId(id));
+    if (entryIds.length) {
+      const { data: rows } = await sb.from('entries').select('*').in('id', entryIds);
+      (rows || []).forEach(e => { map[e.id] = e; });
+      await mssFillHiddenListItems(entryIds, map);   // titles hidden from you (073): name + poster only
     }
-
-    _lvRenderViewToggle();
-    _lvRenderGrid();
-
-    document.getElementById('lvLoading').style.display = 'none';
-    document.getElementById('lvContent').style.display = '';
+    await MSSList.hydrate([list]);
+    const look = id => MSSList.isTmdbId(id) ? MSSList.tmdb(id) : map[id];
+    // A list set to an order (Ratings Highest, Date Watched…) shows in it even if a score changed since it was
+    // last saved; your own is saved that way too (db.js keeps it so from now on)
+    if (MSSOrder.reorder(list, list.sort_mode, id => look(id) || null) && _lvOwn())
+      sb.from('favorite_lists').update({ items: list.items }).eq('id', list.id).eq('user_id', _lvUser.id).then(() => {}, () => {});
+    _lvItems = list.items.map(look).filter(Boolean).map((e, i) => Object.assign({}, e, { _rank: i + 1 }));
+    mssSkeleton.shape('lv', { n: Math.min(_lvItems.length, 15) });
+    return list;
   } catch (err) {
     console.error('Load list error:', err);
     mssErrorPage(mssErrorKind(err), { error: err });
+    return null;
   }
+}
+function _lvShow() {
+  $('lvLoading').remove();
+  $('lvContent').style.display = '';   // shown first: the grid's row length is measured from the real page
+  _lvHero(); _lvBar(); _lvRenderViewToggle(); _lvRenderGrid();
+  if (_lvUser && !_lvOwn() && !_lvShared) mssReactions('list', _lvList.id).then(st => { _lvReact = st; _lvBar(); }).catch(() => {});
+}
+
+/* ── Edit mode: ?list=…&edit=1 (yours, or shared with you) and ?new=1 — the list editor (list-studio.js) ── */
+async function _lvEdit(list) {
+  await mssLoadScript('js/list-studio.js');
+  const entries = await getEntries(_lvUser.id) || [];
+  const map = Object.fromEntries(entries.map(e => [e.id, e]));
+  _lvItems.forEach(e => { if (!map[e.id]) map[e.id] = e; });   // a shared list's titles that aren't yours
+  const resolve = id => MSSList.isTmdbId(id) ? MSSList.tmdb(id) : map[id] || null;
+  if (list) { list._collab = !_lvOwn(); list._owner = list.profiles; }
+  MSSListStudio.init({ root: $('lvEditor'), lists: () => list ? [list] : [], entries: () => entries, resolve,
+    save: _lvSaveList, remove: l => MSSListActions.remove(l),
+    afterSave: (saved, isNew, collab) => {
+      const go = () => location.replace(MSSList.url(saved));
+      if (isNew && collab) MSSListActions.collab(saved, go); else go();
+    },
+    onClose: deleted => { location.href = deleted || !list ? _lvFrom : MSSList.url(list); } });
+  $('lvLoading')?.remove();
+  $('lvEditor').hidden = false;
+  document.body.dataset.ownActions = '';   // the editor's own Save bar: no Create button over it
+  document.title = `${list ? 'Edit ' + list.title : 'New list'} — MyScreenFolio`;
+  MSSListStudio.open(list ? { id: list.id } : {});
+}
+async function _lvSaveList(list) {
+  if (list.id) {
+    const upd = { items: list.items, title: list.title, description: list.description, ranked: list.ranked ?? null, sort_mode: list.sort_mode, visibility: list.visibility };
+    const { data, error } = await sb.from('favorite_lists').update(upd).eq('id', list.id).eq('user_id', _lvUser.id).select().single();
+    if (error) throw error;
+    return data;
+  }
+  const { data, error } = await sb.from('favorite_lists')
+    .insert({ user_id: _lvUser.id, cat: list.cat, genre: list.genre, title: list.title, description: list.description || null, items: list.items || [], ranked: list.ranked ?? null, sort_mode: list.sort_mode ?? null, visibility: list.visibility || 'anyone' })
+    .select().single();
+  if (error) throw error;
+  return data;
 }
 
 /* ══ Invite link: list-view.html?list=…&join=<token> ══
@@ -572,57 +571,27 @@ async function _lvHandleJoinLink() {
   _lvShowJoinPopup();
 }
 
-function _lvShowJoinPopup() {
-  const l = _lvList, owner = l.profiles || {};
-  const initial = escHTML((owner.username || '?')[0].toUpperCase());
-  const av = safeURL(owner.avatar_url) ? `<img src="${safeURL(owner.avatar_url)}" alt="">` : initial;
-  const count = (l.items || []).length;
-  const el = document.createElement('div');
-  el.id = 'lvJoinOverlay';
-  el.innerHTML = `<div class="lvj-card" role="dialog" aria-modal="true" aria-labelledby="lvjTitle">
-      <div class="lvj-av">${av}<span class="lvj-av-ic">${icon('users', 12)}</span></div>
-      <div class="lvj-eyebrow">List invite</div>
-      <div class="lvj-title" id="lvjTitle"><b>@${escHTML(owner.username || 'user')}</b> invited you to collaborate on</div>
-      <div class="lvj-list">&ldquo;${escHTML(l.title)}&rdquo;</div>
-      <div class="lvj-meta">${count} ${count === 1 ? 'title' : 'titles'}</div>
-      <div class="lvj-note">As a collaborator you can add and remove titles. Only the owner can rename or delete the list.</div>
-      <div class="lvj-actions" id="lvjPopupActions">
-        ${_lvUser
-          ? `<button class="popup-action-btn" id="lvjAccept" onclick="_lvJoinRespond(true)">Accept</button>
-             <button class="popup-action-btn lvj-ghost" onclick="_lvJoinRespond(false)">Decline</button>`
-          : `<button type="button" class="popup-action-btn" onclick="mssJoin('join this list')">Join this list</button>
-             <button class="popup-action-btn lvj-ghost" onclick="_lvJoinRespond(false)">Not now</button>`}
-      </div>
-    </div>`;
-  el.addEventListener('click', e => { if (e.target === el) _lvJoinRespond(false); });
-  document.body.appendChild(el);
-  mssLockScroll('lvJoin');
-  requestAnimationFrame(() => el.classList.add('open'));
-}
-
-function _lvCloseJoinPopup() {
-  const el = document.getElementById('lvJoinOverlay');
-  if (!el) return;
-  el.classList.remove('open');
-  mssUnlockScroll('lvJoin');
-  setTimeout(() => el.remove(), 220);
+// A list invite: the shared confirm (Accept / Decline — or, signed out, Join this list / Not now)
+async function _lvShowJoinPopup() {
+  const l = _lvList, owner = l.profiles || {}, count = (l.items || []).length;
+  const ok = await showConfirm({ title: 'List invite',
+    message: `@${owner.username || 'user'} invited you to collaborate on “${l.title}” (${count} ${count === 1 ? 'title' : 'titles'}). As a collaborator you can add and remove titles. Only the owner can rename or delete the list.`,
+    confirmText: _lvUser ? 'Accept' : 'Join this list', cancelText: _lvUser ? 'Decline' : 'Not now', iconName: 'users', danger: false });
+  if (ok && !_lvUser) { mssJoin('join this list'); return; }
+  _lvJoinRespond(ok);
 }
 
 async function _lvJoinRespond(accept) {
-  if (!accept) { _lvDropJoinParam(); _lvCloseJoinPopup(); return; }
-  const btn = document.getElementById('lvjAccept');
-  if (btn) { btn.disabled = true; btn.textContent = 'Joining…'; }
+  _lvDropJoinParam();
+  if (!accept) return;
   try {
     const { data, error } = await sb.rpc('join_list_with_token', { p_list_id: _lvList.id, p_token: _lvJoinToken });
     if (error) throw error;
-    _lvDropJoinParam(); _lvCloseJoinPopup();
     if (data === 'invalid') { showToast('This invite link has expired or was reset.', 'err'); return; }
     showToast(data === 'member' ? "You're already collaborating on this list." : "You joined! It's at the top of your Lists.");
-    const imp = document.getElementById('lvImportPopupActions');
-    if (imp) imp.style.display = 'none';
+    _lvShared = true; _lvBar();
   } catch (e) {
     console.error(e);
-    if (btn) { btn.disabled = false; btn.textContent = 'Accept'; }
     showToast(isRateLimitError(e) ? RATE_LIMIT_MESSAGE : 'Could not join — try again.', 'err');
   }
 }
@@ -630,7 +599,15 @@ async function _lvJoinRespond(accept) {
 document.addEventListener('DOMContentLoaded', () => {
   initPageGuest(async (user) => {
     _lvUser = user;
-    await _lvLoad();
+    if (_lvParams.get('new')) {
+      if (!user) { mssJoin('make lists'); return; }
+      return _lvEdit(null);
+    }
+    if (!_lvListId) { mssErrorPage('badlink'); return; }
+    const list = await _lvLoad();
+    if (!list) return;
+    if (_lvParams.get('edit') && (_lvOwn() || _lvShared)) return _lvEdit(list);
+    _lvShow();
     _lvHandleJoinLink();
   });
 });
@@ -638,11 +615,8 @@ document.addEventListener('DOMContentLoaded', () => {
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js')
-      .then(r => console.log('SW registered:', r.scope))
-      .catch(e => console.warn('SW failed:', e));
+    navigator.serviceWorker.register('sw.js').catch(e => console.warn('SW failed:', e));
   });
 }
 </script>
 </body>
-</html>

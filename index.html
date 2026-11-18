@@ -4,15 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script src="js/splash.js"></script>
+<script>/* signed in (splash.js's hint, before auth answers) → the personal home, not the landing page, from the first paint */
+if (window.mssSignedInHint) document.documentElement.classList.add('mh-on');</script>
 <script src="js/i18n.js"></script>
 <title>MyScreenFolio</title>
 <link rel="stylesheet" href="css/fonts.css">
+<link rel="stylesheet" href="css/theme.css">
 <link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/discover.css">
 <style>
-  /* Hide nav search bar on home page — hero search replaces it */
-  .search-wrap { display:none !important; }
-  .nav-icon-btn { display:none !important; }
-  .mobile-search-bar { display:none !important; }
   .home-hero { padding-bottom: 0.5rem; }
 
   /* ── Explore — highlighted Discover shortcuts ──
@@ -40,7 +40,7 @@
   .xp-group { display:flex; gap:18px; padding-inline-end:18px; flex-shrink:0; }
 
   .xp-card {
-    --xp-a:#1E5C26; --xp-b:#0F2D14;
+    --xp-a:var(--p-forest-700); --xp-b:var(--p-forest-900);
     position:relative; flex-shrink:0; width:360px; height:200px; border-radius:18px; overflow:hidden;
     display:flex; align-items:stretch; text-decoration:none; color:#fff; isolation:isolate;
     background:linear-gradient(135deg, var(--xp-a), var(--xp-b));
@@ -112,17 +112,71 @@
 </style>
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#1E5C26">
+  <meta name="theme-color" content="#F3EEDC">
+  <meta name="color-scheme" content="light dark">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="MyScreenFolio">
-  <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
-  <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <link rel="icon" type="image/svg+xml" sizes="any" href="icons/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
 </head>
 <body>
 
 <div class="page-wrap">
+  <!-- SIGNED IN: your home (js/home.js — the Home page redesign) -->
+  <div class="mh" id="mh">
+    <header class="mh-top">
+      <div class="mh-hi">
+        <div class="mh-date" id="mhDate"></div>
+        <h1 class="mh-hello" id="mhHello">Welcome back</h1>
+        <p class="mh-sum" id="mhSum"></p>
+      </div>
+      <div class="mh-tools">
+        <!-- the Library's search box (SF.searchHTML's look): field + the green Search button (an icon on phones) -->
+        <div class="shs-host mh-search-host"><div class="sf-search mh-search" role="search">
+          <input type="search" id="mhSearch" class="sf-search-input" placeholder="Search movies, shows or people…" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" aria-label="Search movies, shows or people">
+          <button type="button" class="sf-search-go" tabindex="-1" aria-hidden="true" onclick="document.getElementById('mhSearch').focus()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span>Search</span></button>
+        </div></div>
+        <button type="button" class="lib-tool mh-custom" id="mhCustom" onclick="MSSHome.customize()" aria-expanded="false" aria-controls="mhBar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
+          <span class="lib-tool-l">Customize</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Customize: presets, the widget list, restore, cancel, done -->
+    <div class="mh-bar" id="mhBar" role="region" aria-labelledby="mhBarT" hidden>
+      <div class="mh-bar-l">
+        <h2 class="mh-bar-t" id="mhBarT" tabindex="-1">Customizing your home</h2>
+        <p class="mh-bar-hint">Drag <span class="mh-bar-grip" aria-hidden="true">⋮⋮</span> to move (or use the arrow keys) · S / M / L to resize</p>
+      </div>
+      <div class="mh-bar-r">
+        <div class="pn-toggle mh-presets mh-names" role="group" aria-label="Your name">
+          <button type="button" class="pn-toggle-btn mh-name-sig" data-name="signature" aria-pressed="false" onclick="MSSHome.setName('signature')">Signature</button>
+          <button type="button" class="pn-toggle-btn" data-name="simple" aria-pressed="false" onclick="MSSHome.setName('simple')">Simple</button>
+        </div>
+        <div class="pn-toggle mh-presets" role="group" aria-label="Presets">
+          <button type="button" class="pn-toggle-btn" data-preset="default" aria-pressed="false" onclick="MSSHome.applyPreset('default')">Default</button>
+          <button type="button" class="pn-toggle-btn" data-preset="binge" aria-pressed="false" onclick="MSSHome.applyPreset('binge')">Binge mode</button>
+          <button type="button" class="pn-toggle-btn" data-preset="social" aria-pressed="false" onclick="MSSHome.applyPreset('social')">Social</button>
+          <button type="button" class="pn-toggle-btn" data-preset="minimal" aria-pressed="false" onclick="MSSHome.applyPreset('minimal')">Minimal</button>
+        </div>
+        <div class="mh-bar-btns">
+          <button type="button" class="lc-btn" onclick="MSSHome.widgets()" aria-haspopup="dialog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><path d="M17.5 14v7M14 17.5h7"/></svg><span>Widgets</span></button>
+          <button type="button" class="lc-btn" onclick="MSSHome.restore()"><span>Restore default</span></button>
+          <button type="button" class="lc-btn" onclick="MSSHome.cancel()"><span>Cancel</span></button>
+          <button type="button" class="lc-btn is-primary" onclick="MSSHome.done()"><span>Done</span></button>
+        </div>
+      </div>
+    </div>
+
+    <div class="mh-grid" id="mhGrid"></div>
+    <div class="sr-only" id="mhLive" aria-live="polite"></div>
+  </div>
+
+  <!-- SIGNED OUT: the landing page (unchanged) -->
+  <div class="home-guest">
   <!-- HERO -->
   <div class="home-hero fade-up">
     <div class="home-eyebrow">Your screen portfolio</div>
@@ -133,7 +187,7 @@
   <!-- HERO SEARCH -->
   <div class="hero-search-wrap fade-up" style="margin:1rem 0 2.5rem;">
     <input type="text" id="heroSearch" placeholder="Search movies, shows or people…" autocomplete="off">
-    <button type="button" class="hero-search-btn" tabindex="-1" onclick="document.getElementById('heroSearch').focus()">
+    <button type="button" class="hero-search-btn" tabindex="-1" aria-label="Search" onclick="document.getElementById('heroSearch').focus()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
       <span>Search</span>
     </button>
@@ -153,36 +207,25 @@
     </div>
   </section>
 
-  <!-- CURRENTLY WATCHING -->
-  <div id="homeWatching" style="margin-top:4rem"></div>
-
-  <!-- FRIENDS ACTIVITY — what your friends just watched -->
-  <div id="homeFriends" style="margin-top:3rem"></div>
-
-  <!-- RECOMMENDED FOR YOU (from every profile favorite) -->
-  <div id="homeRecs" style="margin-top:3rem"></div>
-
-  <!-- FROM YOUR WATCHLIST -->
-  <div id="homeWatchlist" style="margin-top:3rem"></div>
-
-  <!-- RECENTLY VIEWED (MyScreenFolio view history) -->
-  <div id="homeRecentlyViewed" style="margin-top:3rem"></div>
-
   <!-- GUEST SIGN-IN CTA (shown only when logged out) -->
-  <div id="guestCta" style="margin-top:3rem"></div>
+  <div id="guestCta" style="margin-top:4rem"></div>   <!-- 4rem: the gap the (empty, for guests) signed-in rows used to leave -->
+  </div>
 </div>
 
 <script src="js/vendor/supabase-2.118.0.js"></script>
 <script src="js/config.js"></script>
 <script src="js/db.js"></script>
 <script src="js/nav.js"></script>
+<script src="js/folio-cards.js"></script>
 <script src="js/info-popup.js"></script>
-<script src="js/rating-popup.js"></script>
+<script src="js/title-view.js"></script>
 <script src="js/easter-egg.js"></script>
 <script src="js/note-popup.js"></script>
 <script src="js/list-popup.js"></script>
 <script src="js/episode-ratings.js"></script>
 <script src="js/discover-categories.js"></script>
+<script src="js/pick.js"></script>
+<script src="js/home.js"></script>
 <script>
 let _homeUser = null;
 
@@ -353,216 +396,11 @@ function _xpLoad() {
   });
 }
 
-const _NAV_LEFT_SVG  = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>`;
-const _NAV_RIGHT_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>`;
 
 function _homeEsc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
-// Shared horizontal-scroll section shell — used by the home row sections.
-// seeAll: link for a "See All" on the right (same header as the Discover rows)
-function _homeHScrollSection(containerId, gridId, eyebrow, title, cardsHTML, seeAll) {
-  const el = document.getElementById(containerId);
-  if (!el) return;
-  el.innerHTML = cardsHTML ? _homeRowHTML(gridId, eyebrow, title, cardsHTML, seeAll) : '';
-}
-function _homeRowHTML(gridId, eyebrow, title, cardsHTML, seeAll, gridCls = 'queue-grid') {
-  return `
-    ${seeAll ? `<div class="disc-section-head">
-      <div><div class="section-eyebrow">${eyebrow}</div><div class="section-title" style="margin-bottom:0">${title}</div></div>
-      <a class="disc-see-all" href="${escHTML(seeAll)}">See All ${_SEE_ALL_SVG}</a>
-    </div>` : `<div class="section-eyebrow">${eyebrow}</div>
-    <div class="section-title">${title}</div>`}
-    <div class="grid-nav-wrap">
-      <button class="grid-nav-btn arr-left" onclick="event.stopPropagation();document.getElementById('${gridId}').scrollBy({left:-660,behavior:'smooth'})" aria-label="Scroll left">${_NAV_LEFT_SVG}</button>
-      <button class="grid-nav-btn arr-right" onclick="event.stopPropagation();document.getElementById('${gridId}').scrollBy({left:660,behavior:'smooth'})" aria-label="Scroll right">${_NAV_RIGHT_SVG}</button>
-      <div class="${gridCls}" id="${gridId}">${cardsHTML}</div>
-    </div>`;
-}
-
-// Card for a TMDB-sourced item (Trending/Top Picks/Upcoming/Recently Viewed) —
-// these aren't local library entries, so they use their own light card
-// instead of posterHTML()/genreHTML() which expect the local entry shape.
-function _tmdbCardHTML(posterUrl, title, year, onclick) {
-  return MSSCard.poster({ poster: posterUrl, title, year, onclick });
-}
-
-/* Currently Watching — only what you're watching right now (not Up Next or Taking a Break).
-   One title: the wide list card. More: the Library's Watching grid cards, scrolling sideways. */
-function renderHomeWatching(entries) {
-  const watching = entries.filter(e => e.status === 'watching');
-  const el = document.getElementById('homeWatching');
-  if (!watching.length) { el.innerHTML = ''; return; }
-  if (watching.length === 1) { el.innerHTML = _HOME_WATCH_HEAD + _homeWatchOne(watching[0]); return; }
-  el.innerHTML = _HOME_WATCH_HEAD + _homeWatchGrid(watching.slice(0, 12).map(_homeWatchCard).join(''));
-}
-const _HOME_WATCH_HEAD = `<div class="section-eyebrow">In Progress</div><div class="section-title">Currently Watching</div>`;
-function _homeWatchInfo(e) {
-  const isM = e.cat === 'movies' || (e.ratings && e.ratings._media_type === 'movie');
-  const pct = e.total_eps ? Math.round(((e.watched || 0) / e.total_eps) * 100) : 0;
-  const rtH = Number(e.runtime_h) || 0, rtM = Number(e.runtime_m) || 0;
-  const ep = isM ? (rtH || rtM ? (rtH ? `${rtH}h ${rtM}m` : `${rtM}m`) : '')
-    : (e.season != null ? `S${e.season} · E${e.episode ?? 0}` : (e.watched ? `Ep ${e.watched}` : ''));
-  return { isM, pct, ep, rewatch: typeof rewatchBadgeHTML === 'function' && getRewatchCount(e) > 1 };
-}
-// One title: the wide list card
-function _homeWatchOne(e) {
-  const { isM, pct, ep, rewatch } = _homeWatchInfo(e);
-  const typeBadge = `<span class="${isM ? 'type-label' : 'type-label type-label-tv'}">${isM ? 'Movie' : 'TV Show'}</span>`;
-  return `<div class="watch-list"><div class="w-card" onclick="_homeOpenInfo('${e.id}')">
-      <div class="w-poster" style="position:relative">${posterHTML(e)}</div>
-      <div class="w-body">
-        <div class="w-top"><div class="w-title" style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;" translate="no">${escHTML(e.title)}${e.year ? `<span class="title-year-inline">${escHTML(e.year)}</span>` : ''}${rewatch ? rewatchBadgeHTML(e) : ''}</div></div>
-        <div class="w-ep-row">${typeBadge}${ep ? `<span class="w-ep-badge">${ep}</span>` : ''}</div>
-        ${(!isM && e.total_eps) ? `<div class="w-prog-track" style="margin-top:6px;"><div class="w-prog-fill" style="width:${pct}%"></div></div><div class="w-prog-label">${e.watched || 0} / ${e.total_eps} eps · ${pct}%</div>` : (!isM && e.watched ? `<div class="w-prog-label">${e.watched} watched</div>` : '')}
-      </div>
-    </div></div>`;
-}
-// More: the Library's Watching grid cards, scrolling sideways
-function _homeWatchCard(e) {
-  const { isM, pct, ep, rewatch } = _homeWatchInfo(e);
-  return `<div class="wg-card" onclick="_homeOpenInfo('${e.id}')">
-      <div class="wg-poster" style="position:relative">${posterHTML(e, 'big')}${rewatch ? `<div class="rewatch-card-icon">${icon('refresh', 9)}${getRewatchCount(e)}</div>` : ''}
-        <span class="${isM ? 'type-label' : 'type-label type-label-tv'} type-label-overlay-bottom">${isM ? 'Movie' : 'TV Show'}</span></div>
-      <div class="wg-info"><div class="title-year-row"><div class="wg-title" translate="no">${escHTML(e.title)}</div>${e.year ? `<span class="title-year-inline">${escHTML(e.year)}</span>` : ''}</div>
-        ${ep ? `<div class="wg-genre"><span class="w-ep-badge">${ep}</span></div>` : ''}
-        ${!isM && e.total_eps ? `<div class="fv-w-prog-track" style="margin-top:6px;"><div class="fv-w-prog-fill" style="width:${pct}%"></div></div><div class="wg-prog-label">${e.watched || 0} / ${e.total_eps} eps · ${pct}%</div>` : ''}
-      </div></div>`;
-}
-function _homeWatchGrid(cards) {
-  return `
-    <div class="grid-nav-wrap">
-      <button class="grid-nav-btn arr-left" onclick="event.stopPropagation();document.getElementById('homeWatchingGrid').scrollBy({left:-660,behavior:'smooth'})" aria-label="Scroll left">${_NAV_LEFT_SVG}</button>
-      <button class="grid-nav-btn arr-right" onclick="event.stopPropagation();document.getElementById('homeWatchingGrid').scrollBy({left:660,behavior:'smooth'})" aria-label="Scroll right">${_NAV_RIGHT_SVG}</button>
-      <div class="watching-grid" id="homeWatchingGrid">${cards}</div>
-    </div>`;
-}
-
-/* Tapping one of your titles opens the shared info popup (info-popup.js)
-   with your entry's actions; a change or delete re-draws these sections. */
-function _homeOpenInfo(id) {
-  const e = (window._homeEntries || []).find(x => x.id === id);
-  if (!e) return;
-  MSSViews.open(e, {
-    own: true, start: 'info', from: 'index.html',
-    onChange: _homeRerender,
-    onDelete: x => { window._homeEntries = window._homeEntries.filter(y => y.id !== x.id); _homeRerender(); },
-  });
-}
-function _homeRerender() {
-  renderHomeWatching(window._homeEntries);
-  renderHomeWatchlist(window._homeEntries);
-}
-
-/* Friends Activity — the titles your friends logged as watched, newest first.
-   Tapping one opens its Info first (Info · Ratings · Note switcher, MSSViews). */
-const _homeFriendEntries = {}, _homeFriendProfiles = {};
-async function renderHomeFriends(user) {
-  const fr = (await getFriendships(user.id)).filter(f => f.status === 'accepted');
-  const ids = fr.map(f => f.friendId);
-  if (!ids.length) { _homeHScrollSection('homeFriends', 'homeFriendsGrid', '', '', ''); return; }
-  fr.forEach(f => { _homeFriendProfiles[f.friendId] = f.friendProfile || {}; });
-  // what they finished — and what they dropped (071: a muted "Dropped" tag instead of the score)
-  const { data } = await sb.from('entries').select('*').in('user_id', ids).in('status', ['completed', 'dropped'])
-    .order('updated_at', { ascending: false }).limit(80);
-  const at = e => new Date(e.status === 'dropped' ? (e.progress_at || e.updated_at) : (e.completed_at || e.created_at || e.updated_at));   // when they watched / dropped it
-  const rows = (data || []).filter(e => !isNaN(at(e))).sort((a, b) => at(b) - at(a)).slice(0, 12);
-  rows.forEach(e => { _homeFriendEntries[e.id] = e; });
-  const cards = rows.map(e => {
-    const p = _homeFriendProfiles[e.user_id] || {}, u = safeURL(p.avatar_url), name = p.username || 'friend', sc = liveScore(e), drop = e.status === 'dropped';
-    return MSSCard.poster({ onclick: `_homeOpenFriend('${e.id}')`, title: e.title, year: e.year, posterHTML: posterHTML(e, 'big'), typeHTML: getTypeBadgeOverlay(e, 'latest'), age: [e.tmdb_type, e.tmdb_id],
-      cls: drop ? 'is-dropped' : '',
-      overPoster: `<span class="hf-av" aria-hidden="true">${u ? `<img src="${u}" alt="" loading="lazy">` : escHTML(name[0].toUpperCase())}</span>`,
-      below: `<div class="hf-who"><b translate="no">@${escHTML(name)}</b> · ${drop ? 'dropped · ' : ''}${escHTML(_notifTimeAgo(at(e)))}</div>`,
-      score: !drop && sc != null ? Number(sc).toFixed(2) : '',
-      scoreHTML: drop ? mssDroppedTagHTML(e) : '' });
-  }).join('');
-  _homeHScrollSection('homeFriends', 'homeFriendsGrid', 'Your friends', 'Friends Activity', cards, 'activity.html');
-}
-function _homeOpenFriend(id) {
-  const e = _homeFriendEntries[id];
-  if (e) MSSViews.open(e, { start: 'info', profile: _homeFriendProfiles[e.user_id] || {} });
-}
-
-function renderHomeWatchlist(entries) {
-  const all = entries.filter(e => e.status === 'queue');
-  // Fisher-Yates shuffle — a fresh random sample each page load, instead of
-  // always the same items in the same order.
-  const shuffled = [...all];
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-  }
-  const queue = shuffled.slice(0, 12);
-  const cards = queue.map(e => MSSCard.poster({ onclick: `_homeOpenInfo('${e.id}')`, title: e.title, year: e.year, posterHTML: posterHTML(e, 'big'), typeHTML: getTypeBadgeOverlay(e, 'latest') })).join('');
-  _homeHScrollSection('homeWatchlist', 'homeWatchlistGrid', 'Saved', 'From Your Watchlist', cards);
-}
-/* ── Recommended for You ── (pool: MSSRecs in discover-categories.js)
-   Each visit draws a fresh mix from the strongest ~40 (stronger ones more
-   often), so it changes as you come back. 12 of them. "See All" opens every one, ranked by rating. */
-async function renderHomeRecs(entries, profile) {
-  const top = (await MSSRecs.pool(entries, profile)).sort((a, b) => b.w - a.w).slice(0, 40);
-  const picks = [];
-  while (picks.length < 12 && top.length) { // weighted draw, no repeats
-    let r = Math.random() * top.reduce((a, p) => a + p.w * p.w, 0), j = 0;
-    while (j < top.length - 1 && (r -= top[j].w * top[j].w) > 0) j++;
-    picks.push(top.splice(j, 1)[0].it);
-  }
-  const cards = picks.map(it => MSSCard.poster({ attrs: _discClickAttr(it), title: it.title, year: it.year, poster: it.poster_url,
-    type: it.media_type, score: _discFloorScore(it.score) })).join('');
-  _homeHScrollSection('homeRecs', 'homeRecsGrid', 'Based on your favorites', MSSRecs.category.title, cards, MSSRecs.category.href);
-}
-function renderHomeRecentlyViewed(rows) {
-  const cards = rows.map(r => _tmdbCardHTML(r.poster_url, r.title, null,
-    `MSSInfo.fromDiscover({ id: ${Number(r.tmdb_id)}, media_type: ${escHTML(JSON.stringify(r.tmdb_type === 'movie' ? 'movie' : 'tv'))}, title: ${escHTML(JSON.stringify(r.title || ''))}, poster_url: ${escHTML(JSON.stringify(r.poster_url || ''))} })`)).join('');
-  _homeHScrollSection('homeRecentlyViewed', 'homeRecentlyViewedGrid', 'History', 'Recently Viewed', cards);
-}
-
-/* Home rows show top to bottom: a row only appears once every row above it is ready, so
-   nothing jumps when a slower row above — Friends, Recommended — finishes later. Until then
-   each row shows its skeleton: the real heading and cards the same size as the real ones
-   (mssSkeleton, config.js) — only for the rows you had last time (remembered on this device),
-   so a row you never have doesn't flash in and out. After 8 s everything shows anyway. */
-const _HOME_ROWS = ['homeWatching', 'homeFriends', 'homeRecs', 'homeWatchlist', 'homeRecentlyViewed'];
-const _homeReady = new Set();
-let _homeShown = 0;   // how many rows (top down) are showing for real
-function _homeLayout() {
-  while (_homeShown < _HOME_ROWS.length && _homeReady.has(_HOME_ROWS[_homeShown])) _homeShown++;
-  const had = mssSkeleton.shape('home');
-  _HOME_ROWS.forEach((id, i) => {
-    const el = document.getElementById(id), sk = document.getElementById(id + 'Skel');
-    const real = i < _homeShown;
-    el.hidden = !real;
-    if (real || (had && !had.rows.includes(id))) { sk?.remove(); return; }
-    if (sk) return;
-    el.insertAdjacentHTML('beforebegin', `<div class="page-loading" id="${id}Skel" data-skel="home-${id}" style="margin-top:${el.style.marginTop}"></div>`);
-  });
-  if (_homeShown === _HOME_ROWS.length)
-    mssSkeleton.shape('home', { rows: _HOME_ROWS.filter(id => document.getElementById(id).innerHTML.trim()), one: !!document.querySelector('#homeWatching .watch-list') });
-}
-function _homeDone(id) { _homeReady.add(id); _homeLayout(); }
-
-// Each row's skeleton: the row's own markup with sample cards (masked into placeholders)
-(() => {
-  const ent = (cat = 'tv') => ({ id: '', title: 'Sample title', year: '2024', cat, status: 'watching', season: 1, episode: 4, total_eps: 10, watched: 4, ratings: {} });
-  const n = (k, f) => Array.from({ length: k }, (_, i) => f(i)).join('');
-  const poster = o => MSSCard.poster({ title: 'Sample title', year: '2024', posterHTML: '', ...o });
-  const keep = html => html.replace(/class="(section-eyebrow|section-title|disc-see-all)"/g, 'class="$1" data-skel-keep');
-  const rows = {
-    homeWatching: () => keep(_HOME_WATCH_HEAD) + (mssSkeleton.shape('home')?.one ? _homeWatchOne(ent()) : _homeWatchGrid(n(6, () => _homeWatchCard(ent())))),
-    homeFriends: () => keep(_homeRowHTML('', 'Your friends', 'Friends Activity', n(6, () => poster({ overPoster: '<span class="hf-av"></span>',
-      below: '<div class="hf-who"><b>@friend</b> · 2d ago</div>', score: '8.50', typeHTML: '<span class="type-label type-label-overlay-bottom">TV Show</span>' })), 'activity.html')),
-    homeRecs: () => keep(_homeRowHTML('', 'Based on your favorites', MSSRecs.category.title, n(6, () => poster({ type: 'tv', score: '7.90' })), MSSRecs.category.href)),
-    homeWatchlist: () => keep(_homeRowHTML('', 'Saved', 'From Your Watchlist', n(6, () => poster({ typeHTML: '<span class="type-label type-label-overlay-bottom">TV Show</span>' })))),
-    homeRecentlyViewed: () => keep(_homeRowHTML('', 'History', 'Recently Viewed', n(6, () => poster({ year: '' })))),
-  };
-  Object.entries(rows).forEach(([id, f]) => mssSkeleton.define('home-' + id, f));
-})();
-
+/* Signed out: the landing page's Sign In / Create Account */
 function renderGuestLanding() {
-  document.getElementById('homeWatching').innerHTML = '';
-  document.getElementById('homeWatchlist').innerHTML = '';
-  document.getElementById('homeRecs').innerHTML = '';
-  document.getElementById('homeRecentlyViewed').innerHTML = '';
   document.getElementById('guestCta').innerHTML = `
     <div class="guest-cta">
       <a href="login.html" class="guest-btn-primary">Sign In</a>
@@ -577,30 +415,30 @@ window.addEventListener('pageshow', (event) => {
   if (event.persisted && mssDataChangedSince(window._mssPageAt)) location.reload();   // only if something changed since (config.js)
 });
 
-document.addEventListener('DOMContentLoaded', () => {
+/* The landing page's Explore row — drawn for guests only (signed in, Discover is a widget) */
+let _xpOn = false;
+function _xpStart() {
+  if (_xpOn) return; _xpOn = true;
   _xpRender();   // cards show instantly in their colors; posters fill in as they load
   _xpAutoScroll();
   _xpLoad();
-  initInlineSearch('heroSearch', { hide: ['.xp', '#homeWatching', '#homeFriends', '#homeRecs', '#homeWatchlist', '#homeRecentlyViewed', '#guestCta'] });   // live results on the page (no dropdown)
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  if (!window.mssSignedInHint) _xpStart();
+  initInlineSearch('heroSearch', { hide: ['.xp', '#guestCta'] });   // live results on the page (no dropdown)
   initPageGuest(async (user) => {
-    if (!user) { renderGuestLanding(); return; }
+    if (!user) {                                                     // the hint was wrong (signed out since): the landing page
+      document.documentElement.classList.remove('mh-on');
+      _xpStart();
+      renderGuestLanding();
+      return;
+    }
     _homeUser = user;
-    _homeLayout();                                                  // skeletons until each row's turn
-    setTimeout(() => { _HOME_ROWS.forEach(id => _homeReady.add(id)); _homeLayout(); }, 8000);
-
-    const entries = await getEntries(user.id);
-    window._homeEntries = entries;
-
-    renderHomeWatching(entries); _homeDone('homeWatching');
-    renderHomeFriends(user).catch(e => console.warn('Friends activity:', e)).finally(() => _homeDone('homeFriends'));
-
-    /* The rows load side by side (TMDB ones don't hold up the rest) — but they
-       show in page order (_homeDone), so nothing jumps. */
-    renderHomeWatchlist(entries); _homeDone('homeWatchlist');
-    getProfile(user.id).then(p => renderHomeRecs(entries, p)).catch(e => console.warn('Recommendations:', e)).finally(() => _homeDone('homeRecs'));
-
-    getRecentlyViewed(user.id, 12).then(renderHomeRecentlyViewed).catch(() => {}).finally(() => _homeDone('homeRecentlyViewed'));
-
+    document.documentElement.classList.add('mh-on');
+    // the same search as the header on other pages: titles, people and users drop down under the field (shell-search.js)
+    mssLoadScript('js/shell-search.js').then(() => { if (typeof MSSSearch !== 'undefined') MSSSearch.mount(document.getElementById('mhSearch')); });
+    await MSSHome.start(user);
   });
 });
 </script>

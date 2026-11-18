@@ -7,70 +7,34 @@
 <script src="js/i18n.js"></script>
 <title>Notifications — MyScreenFolio</title>
 <link rel="stylesheet" href="css/fonts.css">
+<link rel="stylesheet" href="css/theme.css">
 <link rel="stylesheet" href="css/style.css">
-<style>
-.np-page-head { display:flex; align-items:flex-end; justify-content:space-between; gap:1rem; flex-wrap:wrap; margin-bottom:1.25rem; }
-.np-page-title { font-family:var(--serif); font-size:clamp(28px, 6vw, 44px); font-weight:600; line-height:1.15; margin:0; }
-.np-page-sub { font-size:13.5px; color:var(--text-2); margin-top:4px; }
-.np-page-actions { display:flex; gap:8px; }
-.np-page-btn {
-  display:inline-flex; align-items:center; gap:7px; padding:9px 16px; border-radius:var(--radius-sm); cursor:pointer;
-  font-family:'Manrope',var(--sans); font-size:13px; font-weight:600;
-  background:var(--card); border:1px solid var(--border-2); color:var(--text-2); transition:all .15s;
-}
-.np-page-btn:hover:not(:disabled) { border-color:var(--border-olive); color:var(--text); }
-.np-page-btn.primary { background:var(--olive); border-color:var(--olive); color:#fff; }
-.np-page-btn.primary:hover:not(:disabled) { background:var(--olive-light); border-color:var(--olive-light); }
-.np-page-btn:disabled { opacity:.5; cursor:default; }
-.np-page-actions[hidden] { display:none; }
-.np-page-btn svg { flex:none; }
-.np-page-tabs .notif-tabs { padding:0 0 12px; margin-bottom:1rem; border-bottom:0.5px solid var(--border); }
-.np-page-tabs .notif-tab { padding:8px 16px; font-size:13px; }
-.np-group-label { font-family:var(--serif); font-size:12px; font-weight:500; letter-spacing:2.5px; text-transform:uppercase; color:var(--olive-light); margin:1.25rem 0 .5rem; }
-.np-page-list { display:flex; flex-direction:column; gap:8px; }
-.np-page-list .notif-item { background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius); padding:14px; }
-.np-page-list .notif-item.unread { background:var(--olive-faint); border-color:var(--border-olive); }
-.np-page-list .notif-item.unread::after { top:20px; inset-inline-end:48px; }
-.np-page-list .notif-av { width:44px; height:44px; font-size:17px; }
-.np-page-list .notif-text { font-size:14px; }
-.np-page-list .notif-card { max-width:420px; }
-.np-page-list .notif-card-poster { width:44px; height:66px; }
-.np-page-list .mss-es { padding-block:4rem; }   /* the notifications page: more room than the panel */
-@media(max-width:640px) {
-  .np-page-actions { width:100%; }
-  .np-page-btn { flex:1; justify-content:center; padding:9px 10px; font-size:12.5px; }
-  .np-page-btn.np-set-btn { flex:0 0 auto; }
-  .np-page-list .notif-item { padding:12px; }
-  .np-page-list .notif-av { width:38px; height:38px; font-size:15px; }
-  .np-page-list .notif-text { font-size:13px; }
-}
-@media(max-width:400px) { .np-set-btn span { display:none; } .np-page-btn.np-set-btn { padding-inline:12px; } }
-</style>
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#1E5C26">
+  <meta name="theme-color" content="#F3EEDC">
+  <meta name="color-scheme" content="light dark">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="MyScreenFolio">
-  <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
-  <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <link rel="icon" type="image/svg+xml" sizes="any" href="icons/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
 </head>
 <body>
 <div class="page-wrap">
-  <div class="np-page-head fade-up">
-    <div>
-      <h1 class="np-page-title">Notifications</h1>
-      <div class="np-page-sub" id="npSub">New releases, comments and likes, friend activity, list invites and new followers — all in one place.</div>
+  <div class="cat-page-header lib-head np-head fade-up">
+    <div class="lib-head-l">
+      <div class="lib-kicker">You · Notifications</div>
+      <h1 class="cat-page-title" id="npTitle" tabindex="-1">Notifications</h1>
+      <div class="cat-page-sub" id="npSub"><span class="skel-txt">0 new · 000 most recent</span></div>
     </div>
-    <div class="np-page-actions">
-      <button class="np-page-btn primary" id="npReadAll" onclick="npMarkAllRead()">Mark all read</button>
-      <button class="np-page-btn" id="npClear" onclick="npClearAll()">Clear all</button>
-      <button class="np-page-btn np-set-btn" id="npSetBtn" onclick="npSetTab('settings')" aria-label="Notification settings" title="Notification settings"></button>
-    </div>
+    <div class="lib-head-r np-actions" id="npActions" hidden></div>
   </div>
-  <div class="np-page-tabs fade-up fade-up-1" id="npTabs"></div>
-  <div class="np-page-list fade-up fade-up-2" id="npList"><div class="page-loading"><div class="spinner"></div></div></div>
+  <div class="np-filters fade-up fade-up-1" id="npFilters"></div>
+  <div class="np-grid fade-up fade-up-2">
+    <div class="np-main" id="npList"><div class="page-loading" data-skel="notif"></div></div>
+    <aside class="np-side" id="npSide" aria-label="Notification shortcuts"></aside>
+  </div>
 </div>
 
 <script src="js/vendor/supabase-2.118.0.js"></script>
@@ -79,74 +43,196 @@
 <script src="js/nav.js"></script>
 <script src="js/notif-settings.js"></script>
 <script>
-let _npTab = new URLSearchParams(location.search).get('tab') || 'all';
-let _npLoaded = false;
+/* The Notifications page: header, the shared filters, the rows by day (15 at a time, 11 on phones, then
+   Show older), swipe left to delete on phones, and on desktop (1200px+) Quiet the noise + In your last 200.
+   ?tab=settings: Notification settings (notif-settings.js). Rows, filters, grouping, delete + Undo and the
+   bell panel are nav.js's (_nf…). */
+let _npView = new URLSearchParams(location.search).get('tab') === 'settings' ? 'settings' : 'list';
+let _npLoaded = false, _npShown = 0;
+const _npStep = () => _nfPhone() ? 11 : 15;
 
-function npSetTab(t) {
-  _npTab = t;
-  const url = new URL(location.href); url.searchParams.set('tab', t); history.replaceState(null, '', url);
-  renderNotificationsPage();
+// While it loads: 8 rows of the real markup, masked into placeholders
+mssSkeleton.define('notif', () => `<div class="ntf-list"><div class="ntf-day" data-skel-keep>Today</div>${Array.from({ length: 8 }, (_, i) =>
+  `<div class="ntf-row"><div class="ntf-in"><div class="ntf-av notif-av"><span class="skel-media-box"></span></div>
+    <div class="ntf-body"><div class="ntf-text">${['Someone watched 2 episodes of A Show · S1 · E4', 'Someone added A Long Title to their watchlist', 'New episode of Something · S2 · E8'][i % 3]}</div><div class="ntf-time">7h ago</div></div></div></div>`).join('')}</div>`);
+
+function npSetView(v) {
+  _npView = v;
+  const url = new URL(location.href);
+  v === 'settings' ? url.searchParams.set('tab', 'settings') : url.searchParams.delete('tab');
+  history.replaceState(null, '', url);
+  renderNotificationsPage({ reset: true });
+  scrollTo(0, 0);
+  document.getElementById('npTitle').focus({ preventScroll: true });
+  return false;
 }
 
-// Groups: New (unread) · Earlier — or ?tab=settings: Notification settings (notif-settings.js)
-function renderNotificationsPage() {
+function renderNotificationsPage(o = {}) {
   if (!_npLoaded) return;
-  const set = _npTab === 'settings';
-  document.querySelector('.np-page-title').textContent = set ? 'Notification Settings' : 'Notifications';
-  document.getElementById('npSub').textContent = set
-    ? 'Alerts, and what your friends get notified about when you watch, rate or drop something.'
-    : 'New releases, comments and likes, friend activity, list invites and new followers — all in one place.';
-  document.querySelector('.np-page-actions').hidden = set;
-  document.getElementById('npTabs').hidden = set;
+  const set = _npView === 'settings';
+  const list = document.getElementById('npList'), acts = document.getElementById('npActions');
+  document.body.classList.toggle('np-is-settings', set);
+  document.getElementById('npTitle').textContent = set ? 'Notification settings' : 'Notifications';
+  document.title = (set ? 'Notification settings' : 'Notifications') + ' — MyScreenFolio';
   if (set) {
-    const list = document.getElementById('npList');
-    list.innerHTML = `<button type="button" class="ns-back" onclick="npSetTab('all')">${icon('back', 14)} Back to notifications</button><div id="npSettings"></div>`;
+    if (list.querySelector('#npSettings')) return;             // drawn already (the bell's polling redraws the list only)
+    document.getElementById('npSub').textContent = 'What reaches you, and what your friends hear about you.';
+    acts.hidden = true;
+    document.getElementById('npFilters').innerHTML = '';
+    document.getElementById('npSide').innerHTML = '';
+    list.innerHTML = `<a class="ns-back" href="notifications.html" onclick="return npSetView('list')">${icon('back', 14)} Notifications</a><div id="npSettings"></div>`;
     MSSNotifSettings.render(document.getElementById('npSettings'));
     return;
   }
-  document.getElementById('npTabs').innerHTML = _notifTabsHTML(_npTab, 'npSetTab');
-  const items = _notifFiltered(_npTab);
-  const unread = items.filter(n => !n.read_at);
-  const read = items.filter(n => n.read_at);
-  document.getElementById('npReadAll').disabled = !unread.length;
-  document.getElementById('npClear').disabled = !items.length;
-  const list = document.getElementById('npList');
-  if (!items.length) { list.innerHTML = _notifEmptyHTML(_npTab); return; }
-  list.innerHTML =
-    (unread.length ? `<div class="np-group-label">New</div>${unread.map(n => _notifItemHTML(n, { page: true })).join('')}` : '') +
-    (read.length ? `<div class="np-group-label">Earlier</div>${read.map(n => _notifItemHTML(n, { page: true })).join('')}` : '');
+  if (o.reset || !_npShown) _npShown = _npStep();
+  const unread = _notifItems.filter(n => !n.read_at).length;
+  document.getElementById('npSub').innerHTML = `<b>${unread}</b> new · <b>${_notifItems.length}</b> most recent`;
+  if (acts.hidden) {
+    acts.hidden = false;
+    acts.innerHTML = `<button type="button" class="np-btn" id="npReadAll" onclick="npMarkAllRead()">${icon('check', 14)} Mark all read</button>
+      <a class="np-ic" href="notifications.html?tab=settings" onclick="return npSetView('settings')" aria-label="Notification settings" title="Notification settings">${icon('settings', 16)}</a>
+      <button type="button" class="np-ic" onclick="npMore(this)" aria-label="More options" aria-haspopup="menu">${icon('moreV', 16)}</button>`;
+  }
+  document.getElementById('npReadAll').disabled = !unread;
+  document.getElementById('npFilters').innerHTML = _nfFiltersHTML(false);
+  const rows = _nfRows(_notifItems.filter(n => _nfMatch(n, _nfFilter)));
+  list.innerHTML = !rows.length ? _notifEmptyHTML(_nfFilter)
+    : `<div class="ntf-list">${_nfListHTML(rows.slice(0, _npShown), { page: true })}${rows.length > _npShown
+      ? `<button type="button" class="ntf-older" onclick="npOlder()">Show older</button>` : ''}</div>`;
   mssFillEpNames(list);
+  npSide();
+}
+function npOlder() {
+  const from = _npShown;
+  _npShown += _npStep();
+  renderNotificationsPage();
+  document.querySelectorAll('#npList .ntf-row')[from]?.querySelector('a, button:not([tabindex="-1"])')?.focus();
+}
+
+// Desktop side column: Quiet the noise (the same settings as Notification settings) + In your last 200
+async function npSide() {
+  const side = document.getElementById('npSide');
+  if (_npView !== 'list' || !matchMedia('(min-width: 1200px)').matches) { side.innerHTML = ''; return; }
+  const c = f => _notifItems.filter(n => _nfMatch(n, f)).length;
+  const adds = _notifItems.filter(n => n.type === 'friend_watchlist').length;
+  const known = MSSNotifSettings.loaded();
+  const sw = (id, k, on, name, sub) => `<div class="ntf-q">
+      <div class="ntf-q-txt"><div class="ntf-q-name" id="${id}L">${name}</div><div class="ntf-q-sub" id="${id}S">${sub}</div></div>
+      <button type="button" class="push-switch ntf-sw" id="${id}" role="switch" aria-checked="${!!on}" aria-labelledby="${id}L" aria-describedby="${id}S" onclick="npQuiet('${k}', this)"${on == null ? ' disabled' : ''}><span aria-hidden="true"></span></button>
+    </div>`;
+  const isOn = k => known ? MSSNotifSettings.isOn(k) : null;
+  side.innerHTML = `<section class="ntf-card" aria-labelledby="npQuietT">
+      <h2 class="ntf-card-h" id="npQuietT">Quiet the noise</h2>
+      ${sw('npQGroup', 'group', _nfGroupOn(), 'Group watchlist adds', adds ? `${adds} watchlist adds become one line per friend per day` : 'One line per friend per day')}
+      ${sw('npQActivity', 'activity', isOn('activity'), 'Friends’ activity', 'What friends you turned “Notify me” on for are doing')}
+      ${sw('npQReleases', 'releases', isOn('releases'), 'New episodes & releases', 'Of the shows and films in your library')}
+      <a class="ntf-card-link" href="notifications.html?tab=settings" onclick="return npSetView('settings')">All notification settings ${icon('arrowRight', 13)}</a>
+    </section>
+    <section class="ntf-card" aria-labelledby="npSumT">
+      <h2 class="ntf-card-h" id="npSumT">In your last ${_notifItems.length}</h2>
+      ${[['watched', 'Watched'], ['watchlist', 'Watchlist adds'], ['notes', 'Notes'], ['ratings', 'Ratings'], ['lists', 'Lists'], ['you', 'For you']].map(([f, l]) =>
+        `<button type="button" class="ntf-sum${_nfFilter === f ? ' on' : ''}" data-f="${f}" aria-pressed="${_nfFilter === f}" onclick="_nfSetFilter('${f}')"><span>${l}</span><b>${c(f)}</b></button>`).join('')}
+    </section>`;
+  // the two receive switches fill in once the settings are loaded
+  if (!known) MSSNotifSettings.ready().then(() => npSide(), () => {});
+}
+async function npQuiet(k, btn) {
+  if (k === 'group') {
+    await _nfDisplaySet('group_watchlist', !_nfGroupOn());
+    document.getElementById('npQGroup')?.focus();
+    return;
+  }
+  const on = !MSSNotifSettings.isOn(k);
+  btn.setAttribute('aria-checked', on);
+  if (await MSSNotifSettings.setOn(k, on)) showToast(on ? `${MSSNotifSettings.name(k)} on.` : `${MSSNotifSettings.name(k)} off — they won’t reach you.`);
+  else { btn.setAttribute('aria-checked', !on); showToast('Couldn’t save that — try again.', 'err'); }
 }
 
 async function npMarkAllRead() {
-  await _notifMarkRead(_notifFiltered(_npTab).filter(n => !n.read_at).map(n => n.id));
+  const ids = _notifItems.filter(n => !n.read_at).map(n => n.id);
+  if (!ids.length) { showToast('You’re all caught up.'); return; }
+  await _notifMarkRead(ids);
   renderNotificationsPage();
   showToast('All caught up!');
 }
-
+// ⋯: Clear all… (and Mark all read on phones)
+async function npMore(btn) {
+  await mssLoadScript('js/panel.js');
+  const kind = _NF_KINDS.find(k => k[0] === _nfFilter);
+  MSSPopover.open(btn, { title: 'Notifications', label: 'More options', items: [
+    ...(_nfPhone() ? [{ label: 'Mark all read', icon: 'check', onSelect: npMarkAllRead }] : []),
+    { label: _nfFilter === 'all' ? 'Clear all…' : `Clear ${_nfFilter === 'you' ? 'For you' : kind ? kind[1] : 'Friends’ activity'}…`, icon: 'trash', danger: true, onSelect: npClearAll },
+  ] });
+}
 async function npClearAll() {
-  const items = _notifFiltered(_npTab);
-  if (!items.length) return;
-  const label = NOTIF_SECTIONS.find(([k]) => k === _npTab)[1];
-  const ok = await showConfirm({ title: 'Clear notifications?', message: _npTab === 'all' ? 'Delete all of your notifications?' : `Delete all ${label} notifications?`, confirmText: 'Clear', iconName: 'trash' });
+  const items = _notifItems.filter(n => _nfMatch(n, _nfFilter));
+  if (!items.length) { showToast('Nothing to clear.'); return; }
+  const n = items.length, what = n === 1 ? 'notification' : 'notifications';
+  const ok = await showConfirm({ title: _nfFilter === 'all' ? `Clear all ${n} ${what}?` : `Clear these ${n} ${what}?`,
+    message: 'This can’t be undone.', confirmText: 'Clear', iconName: 'trash' });
   if (!ok) return;
-  const ids = items.map(n => n.id);
-  _notifItems = _notifItems.filter(n => !ids.includes(n.id));
+  const ids = items.map(x => x.id);
+  _notifItems = _notifItems.filter(x => !ids.includes(x.id));
   _notifRenderBadge();
-  renderNotificationsPage();
-  try { await sb.from('notifications').delete().in('id', ids); } catch {}
+  renderNotificationsPage({ reset: true });
+  const { error } = await sb.from('notifications').delete().in('id', ids).then(r => r, e => ({ error: e }));
+  if (error) { showToast('Couldn’t clear them all — try again.', 'err'); _notifLoad(); return; }
   showToast('Notifications cleared.');
 }
+
+/* Phones: swipe a row left to show a red Delete (tap it to remove). Taps elsewhere close it. */
+(() => {
+  const W = 88;
+  let row = null, x0 = 0, y0 = 0, dx = 0, mode = '', swiped = false;
+  const list = document.getElementById('npList');
+  const inner = r => r.querySelector('.ntf-in');
+  const set = (r, open) => {
+    r.classList.toggle('is-open', open);
+    inner(r).style.transform = open ? `translateX(${-W}px)` : '';
+    const d = r.querySelector('.ntf-swipe-del');
+    if (d) { d.tabIndex = open ? 0 : -1; d.setAttribute('aria-hidden', !open); }
+  };
+  list.addEventListener('pointerdown', e => {
+    if (e.pointerType !== 'touch' || _npView !== 'list') return;
+    const r = e.target.closest('.ntf-row');
+    list.querySelectorAll('.ntf-row.is-open').forEach(o => { if (o !== r) set(o, false); });
+    if (!r || !r.querySelector('.ntf-swipe-del') || e.target.closest('.ntf-swipe-del, .notif-actions')) return;
+    row = r; x0 = e.clientX; y0 = e.clientY; dx = 0; mode = '';
+  });
+  list.addEventListener('pointermove', e => {
+    if (!row) return;
+    const mx = e.clientX - x0, my = e.clientY - y0;
+    if (!mode) {
+      if (Math.abs(mx) > 8 && Math.abs(mx) > Math.abs(my)) mode = 'x';
+      else if (Math.abs(my) > 8) { row = null; return; } else return;
+    }
+    dx = Math.max(-W * 1.3, Math.min(0, mx + (row.classList.contains('is-open') ? -W : 0)));
+    row.classList.add('is-drag');
+    inner(row).style.transform = `translateX(${dx}px)`;
+  });
+  const end = () => {
+    if (!row) return;
+    const r = row; row = null;
+    r.classList.remove('is-drag');
+    if (mode !== 'x') return;
+    swiped = true; setTimeout(() => { swiped = false; }, 350);
+    set(r, dx < -W / 2);
+  };
+  list.addEventListener('pointerup', end);
+  list.addEventListener('pointercancel', end);
+  list.addEventListener('click', e => { if (swiped) { e.preventDefault(); e.stopPropagation(); swiped = false; } }, true);
+})();
+
+document.addEventListener('mss:notif-prefs', () => { if (_npLoaded && _npView === 'list') npSide(); });
+matchMedia('(min-width: 1200px)').addEventListener('change', () => { if (_npLoaded) npSide(); });
 
 document.addEventListener('DOMContentLoaded', () => {
   initPage(async user => {
     if (!user) {
-      document.querySelector('.np-page-actions')?.remove();
-      document.getElementById('npTabs')?.remove();
+      document.getElementById('npSub').textContent = '';
       document.getElementById('npList').innerHTML = mssGuestEmpty('notifications');
       return;
     }
-    document.getElementById('npSetBtn').innerHTML = `${icon('settings', 15)}<span>Settings</span>`;
     await _notifLoad(200);
     _npLoaded = true;
     renderNotificationsPage();

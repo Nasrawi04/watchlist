@@ -2,54 +2,60 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#F3EEDC">
+  <meta name="color-scheme" content="light dark">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="MyScreenFolio">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <link rel="icon" type="image/svg+xml" sizes="any" href="icons/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script src="js/splash.js"></script>
 <script src="js/i18n.js"></script>
 <title>Movies — MyScreenFolio</title>
 <link rel="stylesheet" href="css/fonts.css">
+<link rel="stylesheet" href="css/theme.css">
 <link rel="stylesheet" href="css/style.css">
-  <!-- PWA -->
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#1E5C26">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="MyScreenFolio">
-  <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
-  <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
 </head>
 <body>
-<div class="page-wrap">
-  <div class="cat-page-header fade-up">
-    <div class="cat-page-header-left">
+<div class="page-wrap lib-page">
+
+  <div class="cat-page-header lib-head fade-up">
+    <div class="lib-head-l">
+      <div class="lib-kicker" id="libKicker">Your collection</div>
       <h1 class="cat-page-title">Movies</h1>
-      <div class="cat-page-sub" id="catSubtitle"></div>
+      <div class="cat-page-sub" id="libPageSub"><span class="skel-txt">0 in progress · 00 queued · 00 watched</span></div>
     </div>
-    <div class="cat-page-header-right">
-      <button class="btn-add-entry" onclick="openAddModal('movies')">+ Add Movie</button>
-    </div>
+    <div class="lib-head-r" id="libHeadTools"></div>
   </div>
-  <div class="page-stats fade-up fade-up-1" id="pageStats" data-skel-stats="4"></div>
-  <div id="sectionsWrap" class="fade-up fade-up-2"><div class="page-loading" data-skel="sections"></div></div>
+
+  <div id="libraryLoading"><div class="page-loading"></div></div>
+  <div id="libraryContent" style="display:none"></div>
+
 </div>
-<script>window.PAGE_CAT = 'movies';</script>
+<script>window.LIB_SCOPE = 'cat'; window.LIB_CAT = 'movies';</script>
 <script src="js/vendor/supabase-2.118.0.js"></script>
 <script src="js/config.js"></script>
 <script src="js/db.js"></script>
 <script src="js/nav.js"></script>
-
 <script src="js/sort-filter.js"></script>
 <script src="js/pick.js"></script>
-<script src="js/category.js"></script>
+<script src="js/library-view.js"></script>
 <script src="js/rewatch.js"></script>
 <script src="js/create-card.js"></script>
 <script src="js/info-popup.js"></script>
 <script src="js/episode-ratings.js"></script>
-<script src="js/easter-egg.js"></script>
-<script src="js/rating-popup.js"></script>
+<script src="js/title-view.js"></script>
 <script src="js/list-popup.js"></script>
+<script src="js/easter-egg.js"></script>
 <script src="js/note-popup.js"></script>
-<script src="js/comments.js"></script>
+<script>
+/* The Library (library-view.js): this category only. Signed in → your titles, then the page draws itself. */
+var _pUser = null, _pProfile = null, _pEntries = [];
+_libInitPage();
+</script>
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {

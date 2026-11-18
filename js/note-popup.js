@@ -1,95 +1,50 @@
 /* ═══════════════════════════════════════════════════════════════
-   note-popup.js — Personal note card + note popup (v632)
+   note-popup.js — note cards, the featured note and the pinned note (Notes redesign)
 
-   The Notes page's "Personal" design, shared by the Notes page and the
-   Notes tab on profile.html / profile-view.html:
+   One card for every note list — the Notes page (Mine, Friends, Community), the Notes tab on
+   profile.html / profile-view.html and a title page's Community notes:
 
-     MSSNote.cardHTML(entry, { counts, onclick, blurSpoiler })
-       → the nc-card: poster, title + score, type/genre/date tags,
-         a 60-word preview, 👍/👎 counts and the word count
-     MSSNote.open(entry, { counts, editable, eyebrow, onSaved, profile, react, onReact })
-       → the note popup: backdrop header, poster, tags, reactions and the
-         full note. editable → "Edit Note" with the 500-word editor and
-         the spoiler toggle; read-only → spoiler notes stay blurred until
-         revealed. Someone else's note: profile → their avatar + @username
-         on top; react → 👍 / 👎 buttons (onReact(state) after a change).
-         (Their ratings are the switcher's Entry tab — no button for them.)
+     MSSNote.cardHTML(note, { open, counts, blur, author, react: { mine, fn }, replies })
+       → the nc-card: poster, title + year, score, "Watched … · genres" + Spoiler, 3 lines of the
+         note, words · 👍 · 👎 (or live buttons) and Read →
+       open: JS run on click / Enter · counts: { like, dislike } · blur: someone else's spoiler
+       author: { username, avatar_url } (Friends / Community) · react: live like / dislike —
+       mine ('like' | 'dislike' | undefined) and fn(entryId, isLike) · replies: fn(entryId, username)
+     MSSNote.featuredHTML(entry, { open, pinned, blur }) → the big note over the title's backdrop
+       (the Library's Watching card look), with the Edit page's score ring
+     MSSNote.featured(list, pinId) → the entry to feature: the pinned one, else the latest
      MSSNote.reactionCounts(entryIds) → { entryId: { like, dislike } }
+     MSSNote.pinnedId(userId) / setPin(entry | null) / pinOrAsk(entry) → one pinned note per person
+       (profiles.pinned_note_id, sql/123; this device until it runs). 'mss:notepin' fires on a change.
+     MSSNote.more(n) → the View more button (20 at a time) · MSSNote.PAGE
 
-   Small helpers the Notes page also uses for its Community notes:
-     MSSNote.words · date · watchedDate · trim · badges · scorePill ·
-     poster · loadHero · fitLong
-
-   Styles: nc-* / np-* / .note-popup-overlay2 in style.css.
+   Small helpers: MSSNote.words · date · watchedDate · readMins
+   Styles: nc-* and nf-* in style.css. A note is read and written in the title's panel / page (title-view.js).
 ═══════════════════════════════════════════════════════════════ */
 
 const MSSNote = (() => {
   const esc = s => escHTML(s == null ? '' : String(s));
-  let current = null, opts = {}, reactState = null;
-
+  const PAGE = 20;
   /* ── Helpers ── */
   const words = t => MSSRich.plain(t).trim().split(/\s+/).filter(Boolean).length;     // markers (**, > …) aren't words
+  const readMins = t => Math.max(1, Math.round(words(t) / 220));
   // Date the title was watched (finished), falling back to when it was added
-  const watchedDate = e => e.completed_date || e.created_at;
+  const watchedDate = e => e.completed_date || e.created_at || e.updated_at;
+  const has = e => !!(e && e.notes && String(e.notes).trim());
   function date(d, withDay) {
     if (!d) return '';
     const dt = new Date(String(d).length <= 10 ? d + 'T12:00:00' : d);
     return isNaN(dt) ? '' : dt.toLocaleDateString(MSSI18n.locale, withDay ? { day: 'numeric', month: 'short', year: 'numeric' } : { month: 'short', year: 'numeric' });
   }
-  // Card preview only — popups always show the full note
-  function trim(text) {
-    if (!text) return '';
-    const w = text.trim().split(/\s+/);
-    return w.length > 60 ? w.slice(0, 60).join(' ') + '…' : text;
+  // the card's few lines — CSS clamps them to three; the full note is in the panel
+  const excerpt = t => { const w = MSSRich.plain(t).trim().split(/\s+/); return w.length > 70 ? w.slice(0, 70).join(' ') + '…' : w.join(' '); };
+  const year = n => String(n.year || '').slice(0, 4);
+  function poster(n, cls) {
+    const u = safeURL(n.poster_url);
+    return `<div class="${cls}" aria-hidden="true">${u ? `<img src="${u}" loading="lazy" alt="" data-letter="${esc((n.title || '?')[0])}" onerror="mssImgError(this)">` : esc((n.title || '?')[0].toUpperCase())}</div>`;
   }
-  function poster(url, title, cls) {
-    const u = safeURL(url);
-    return `<div class="${cls}">${u ? `<img src="${u}" loading="lazy" alt="" data-letter="${esc((title || '?')[0])}" onerror="mssImgError(this)">` : esc((title || '?')[0].toUpperCase())}</div>`;
-  }
-  // Score exactly like the category list view: plain Bebas, olive, no pill
-  const scorePill = v => v != null ? `<span class="nc-score">★ ${Number(v).toFixed(2)}</span>` : '';
-  // Badges like the ratings popup: type-label for the type, w-ep-badge for genres and dates
-  const NB = `style="font-family:'Manrope',var(--sans);font-weight:500;"`;
-  function typeBadge(e) {
-    const isMovie = e.cat === 'movies' || e.tmdb_type === 'movie' || e.ratings?._media_type === 'movie';
-    const label = (e.cat && CAT_META[e.cat]?.label) || (isMovie ? 'Movie' : e.tmdb_type === 'tv' ? 'TV Show' : '');
-    return label ? `<span class="${isMovie ? 'type-label' : 'type-label type-label-tv'}" ${NB}>${esc(label)}</span>` : '';
-  }
-  function badges(e, { genres = 3, dateLabel = '', date: d = '' } = {}) {
-    return typeBadge(e)
-      + mssGenreList(e.genres).slice(0, genres).map(g => `<span class="w-ep-badge" ${NB}>${esc(g)}</span>`).join('')
-      + (d ? `<span class="w-ep-badge" ${NB}>${dateLabel ? esc(dateLabel) + ' ' : ''}${esc(d)}</span>` : '');
-  }
-
-  /* Popup header: the title's TMDB backdrop, crisp. Until it loads — or
-     when a title has none — a softly blurred poster fills in. */
-  const backdropCache = {};
-  async function loadHero(el, item) {
-    if (!el) return;
-    el.classList.remove('is-backdrop');
-    el.style.backgroundImage = safeURL(item.poster_url) ? cssURL(item.poster_url) : 'none';
-    if (!item.tmdb_id || !item.tmdb_type) return;
-    const key = `${item.tmdb_type}:${item.tmdb_id}`;
-    let path = backdropCache[key];
-    if (path === undefined) {
-      try {
-        const res = await tmdbFetch(`${TMDB_BASE}/${item.tmdb_type}/${item.tmdb_id}?language=en-US`);
-        path = res.ok ? ((await res.json()).backdrop_path || null) : null;
-      } catch { path = null; }
-      backdropCache[key] = path;
-    }
-    if (!path || !el.isConnected) return;
-    const url = `https://image.tmdb.org/t/p/w1280${path}`;
-    const img = new Image();
-    img.onload = () => { el.style.backgroundImage = cssURL(url); el.classList.add('is-backdrop'); };
-    img.src = url;
-  }
-  // Long notes: upright text that's easier to read; the whole card scrolls
-  function fitLong(card, n) {
-    if (!card) return;
-    card.classList.toggle('np-long', n > 120);
-    card.scrollTop = 0;
-  }
+  const avatar = p => { const u = safeURL(p?.avatar_url); return `<span class="snote-avatar">${u ? `<img src="${u}" alt="" loading="lazy">` : esc((p?.username || '?')[0].toUpperCase())}</span>`; };
+  const enterKey = `onkeydown="if((event.key==='Enter'||event.key===' ')&&event.target===this){event.preventDefault();this.click()}"`;
 
   async function reactionCounts(ids) {
     const out = {};
@@ -102,272 +57,94 @@ const MSSNote = (() => {
     return out;
   }
 
-  /* ── Card ── */
-  function cardHTML(e, { counts, onclick, blurSpoiler } = {}) {
-    const c = counts || { like: 0, dislike: 0 };
-    const n = words(e.notes);
-    const quote = `<blockquote class="nc-quote" translate="no">&ldquo;${esc(trim(MSSRich.plain(e.notes)))}&rdquo;</blockquote>`;
+  /* ── The card ── */
+  function cardHTML(n, { open = '', counts, blur, author, react, replies } = {}) {
+    const id = n.entry_id || n.id, w = words(n.notes), sp = mssIsSpoiler(n);
+    const meta = [n.completed_date || n.created_at ? `Watched ${date(watchedDate(n), true)}` : '', mssGenreList(n.genres).slice(0, 2).join(', ')].filter(Boolean).join(' · ');
+    const text = `<p class="nc-excerpt" translate="no">${esc(excerpt(n.notes))}</p>`;
     // someone else's note on a title above your age limit is left out (088)
-    const age = e.user_id && e.user_id !== window._navUser?.id ? MSSAge.attr(e.tmdb_type, e.tmdb_id, true) : '';
-    return `<article class="nc-card" onclick="${onclick}"${age}>
-      ${poster(e.poster_url, e.title, 'nc-poster')}
+    const age = n.user_id && n.user_id !== window._navUser?.id ? MSSAge.attr(n.tmdb_type, n.tmdb_id, true) : '';
+    const c = react ? { like: Number(n.like_count) || 0, dislike: Number(n.dislike_count) || 0 } : counts || { like: 0, dislike: 0 };
+    const btn = like => { const on = react.mine === (like ? 'like' : 'dislike'), k = like ? c.like : c.dislike;
+      return `<button type="button" class="snote-react-btn ${on ? (like ? 'active-like' : 'active-dislike') : ''}"${like ? ' data-like' : ''} aria-label="${like ? 'Like' : 'Dislike'}: ${k}" aria-pressed="${on}" onclick="event.stopPropagation();${react.fn}(${attrJSON(id)}, ${like})">${icon(like ? (on ? 'thumbsUpFilled' : 'thumbsUp') : (on ? 'thumbsDownFilled' : 'thumbsDown'), 14)} <span>${k}</span></button>`; };
+    const stats = react
+      ? `<span class="nc-reacts">${btn(true)}${btn(false)}${replies ? `<button type="button" class="snote-react-btn" onclick='event.stopPropagation();${replies}(${attrJSON(id)}, ${attrJSON(n.username || '')})'>${icon('reply', 14)} Replies</button>` : ''}</span>`
+      : `<span class="nc-count" aria-label="${c.like} likes, ${c.dislike} dislikes">${icon('thumbsUp', 13)}<b>${c.like}</b>${icon('thumbsDown', 13)}<b>${c.dislike}</b></span>`;
+    const by = author ? `<div class="nc-author">${avatar(author)}<span translate="no">@${esc(author.username || 'user')}</span></div>` : '';
+    return `<article class="nc-card" onclick="${open}" role="button" tabindex="0" ${enterKey} aria-label="Read ${author ? '@' + esc(author.username || 'user') + '’s' : 'the'} note on ${esc(n.title)}"${react ? ' data-dbl-like' : ''}${age}>
+      ${poster(n, 'nc-poster')}
       <div class="nc-main">
-        <div class="nc-top"><div class="nc-title" translate="no">${esc(e.title)}</div>${scorePill(liveScore(e))}</div>
-        <div class="nc-tags">${badges(e, { genres: 2, date: date(watchedDate(e), true) })}${mssIsSpoiler(e) ? mssSpoilerTag(e) : ''}</div>
-        ${blurSpoiler && mssIsSpoiler(e) ? mssSpoilerHTML(quote, { compact: true, id: e.id, e }) : quote}
-        <div class="nc-foot">
-          <div class="nc-reacts">
-            <span class="snote-react-btn" style="cursor:default;">${icon('thumbsUp', 13)} <span>${c.like}</span></span>
-            <span class="snote-react-btn" style="cursor:default;">${icon('thumbsDown', 13)} <span>${c.dislike}</span></span>
-          </div>
-          <span class="nc-words"><b>${n}</b> ${n === 1 ? 'word' : 'words'}</span>
-        </div>
+        ${by}
+        <div class="nc-top"><h3 class="nc-title" translate="no">${esc(n.title)}${year(n) ? ` <span class="nc-year">${year(n)}</span>` : ''}</h3>${mssScoreHTML(liveScore(n), { cls: 'nc-score' })}</div>
+        <div class="nc-meta">${meta ? `<span>${esc(meta)}</span>` : ''}${sp ? mssSpoilerTag(n) : ''}</div>
+        ${blur && sp ? mssSpoilerHTML(text, { compact: true, id, e: n }) : text}
+        <div class="nc-foot"><span class="nc-stats"><span class="nc-words"><b>${w}</b> ${w === 1 ? 'word' : 'words'}</span>${stats}</span><span class="nc-read" aria-hidden="true">Read →</span></div>
       </div>
     </article>`;
   }
 
-  /* Someone's note, with who wrote it and live like / dislike buttons — the Notes page's
-     Community cards and a title page's Community Notes (one design for both).
-       mine: your reaction ('like' | 'dislike'), me: your user id (your own spoilers aren't covered),
-       open / react / replies: names of the page's functions — open(id), react(id, isLike), replies(id, username) */
-  function communityCardHTML(n, { mine, me, open, react, replies } = {}) {
-    const id = attrJSON(n.entry_id), w = words(n.notes);
-    const quote = `<blockquote class="nc-quote" translate="no">&ldquo;${esc(trim(MSSRich.plain(n.notes)))}&rdquo;</blockquote>`;
-    const btn = (like, on) => `<button type="button" class="snote-react-btn ${on ? (like ? 'active-like' : 'active-dislike') : ''}"${like ? ' data-like' : ''} aria-label="${like ? 'Like' : 'Dislike'}: ${like ? (n.like_count || 0) : (n.dislike_count || 0)}" aria-pressed="${on}" onclick="event.stopPropagation();${react}(${id}, ${like})">
-            ${icon(like ? (on ? 'thumbsUpFilled' : 'thumbsUp') : (on ? 'thumbsDownFilled' : 'thumbsDown'), 14)} <span>${(like ? n.like_count : n.dislike_count) || 0}</span>
-          </button>`;
-    return `<article class="nc-card" onclick="${open}(${id})"${n.user_id !== me ? MSSAge.attr(n.tmdb_type, n.tmdb_id, true) : ''} data-dbl-like role="button" tabindex="0" aria-label="Open @${esc(n.username || 'user')}’s note" onkeydown="if((event.key==='Enter'||event.key===' ')&&event.target===this){event.preventDefault();this.click()}">
-    ${poster(n.poster_url, n.title, 'nc-poster')}
-    <div class="nc-main">
-      <div class="nc-top">
-        <div class="nc-author">
-          <div class="snote-avatar">${safeURL(n.avatar_url) ? `<img src="${safeURL(n.avatar_url)}" alt="" loading="lazy">` : esc((n.username || '?')[0].toUpperCase())}</div>
-          <span>@${esc(n.username || 'user')}</span>
-        </div>
+  /* ── The featured note: pinned, else the latest (owner: the Library's Watching card look, the Edit page's ring) ── */
+  const featured = (list, pinId) => (pinId && list.find(e => e.id === pinId && has(e)))
+    || [...list].filter(has).sort((a, b) => new Date(watchedDate(b)) - new Date(watchedDate(a)))[0] || null;
+  function featuredHTML(e, { open = '', pinned, blur } = {}) {
+    const w = words(e.notes), s = liveScore(e), sp = mssIsSpoiler(e);
+    const bd = e.tmdb_id || e.ratings?._backdrop ? MSSBackdrop.key(e) : '', art = safeURL(e.poster_url) ? safeURL(e.poster_url).replace(/\/(w\d+|original)\//, '/w342/') : '';
+    const frame = MSSBackdrop.style(e, false, 'big');
+    const text = `<p class="nf-text" translate="no">${esc(excerpt(e.notes))}</p>`;
+    const ring = s != null && typeof MSSViews !== 'undefined' ? MSSViews.ring(s, '', e.status === 'dropped') : s != null ? mssScoreHTML(s, { cls: 'nf-score' }) : '';
+    return `<article class="nf-card" onclick="${open}" role="button" tabindex="0" ${enterKey} aria-label="Read the ${pinned ? 'pinned' : 'latest'} note on ${esc(e.title)}">
+      ${bd || art ? `<span class="msf-row__art nf-art${bd ? ' is-bd' : ''}"${bd ? ` data-bd="${esc(bd)}"` : ''}${art ? ` data-poster="${esc(art)}"` : ''}${!bd && art ? ` style="background-image:url('${art}')"` : frame ? ` style="${esc(frame)}"` : ''} aria-hidden="true"></span>` : ''}
+      <span class="nf-shade" aria-hidden="true"></span>
+      ${poster(e, 'nf-poster')}
+      <div class="nf-body">
+        <p class="nf-label">${pinned ? `${icon('pin', 11)} Pinned note` : 'Latest note'}${watchedDate(e) ? ` · ${esc(date(watchedDate(e), true))}` : ''}</p>
+        <h2 class="nf-title" translate="no">${esc(e.title)}</h2>
+        ${blur && sp ? mssSpoilerHTML(text, { compact: true, id: e.id, e }) : text}
+        <span class="nf-link">Read the full note · ${w} ${w === 1 ? 'word' : 'words'} <span aria-hidden="true">→</span></span>
       </div>
-      <div class="nc-top"><div class="nc-title" translate="no">${esc(n.title)}</div>${scorePill(n.final_score)}</div>
-      <div class="nc-tags">${badges(n, { date: date(watchedDate(n), true) })}</div>
-      ${mssIsSpoiler(n) && n.user_id !== me ? mssSpoilerHTML(quote, { compact: true, id: n.entry_id, e: n }) : quote}
-      <div class="nc-foot">
-        <div class="nc-reacts">
-          ${btn(true, mine === 'like')}
-          ${btn(false, mine === 'dislike')}
-          ${replies ? `<button type="button" class="snote-react-btn" onclick='event.stopPropagation();${replies}(${id}, ${attrJSON(n.username || '')})'>${icon('reply', 14)} Replies</button>` : ''}
-        </div>
-        <span class="nc-words"><b>${w}</b> ${w === 1 ? 'word' : 'words'}</span>
-      </div>
-    </div>
-  </article>`;
+      ${ring ? `<div class="nf-ring">${ring}</div>` : ''}
+    </article>`;
   }
 
-  /* ── Popup ── */
-  const PEN = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>';
-  function inject() {
-    if (document.getElementById('mssNoteOverlay')) return;
-    const el = document.createElement('div');
-    el.className = 'note-popup-overlay2';
-    el.id = 'mssNoteOverlay';
-    el.innerHTML = `<div class="note-popup2 np-card" role="dialog" aria-modal="true" aria-labelledby="mssNoteTitle">
-        <div class="mss-views" id="mssNoteViews"></div>
-        <div class="np-hero">
-          <div class="np-hero-blur" id="mssNoteBlur"></div>
-          <button type="button" class="np-close" onclick="MSSNote.close()" aria-label="Close">&#x2715;</button>
-        </div>
-        <div class="np-head">
-          <div class="np-poster" id="mssNotePoster"></div>
-          <div class="np-head-info">
-            <div class="np-eyebrow" id="mssNoteEyebrow"></div>
-            <div class="np-title" id="mssNoteTitle"></div>
-            <div class="np-meta-row"><div class="np-meta" id="mssNoteTags"></div><span id="mssNoteScore" class="np-score-slot"></span></div>
-          </div>
-        </div>
-        <div class="np-stats" id="mssNoteStats"></div>
-        <div class="np-body" id="mssNoteViewBody"><div id="mssNoteText"></div></div>
-        <div class="np-footer" id="mssNoteViewFooter">
-          <div class="np-actions" id="mssNoteViewPopupActions"></div>
-        </div>
-        <div class="np-body" id="mssNoteEditBody" style="display:none">
-          ${MSSRich.toolbarHTML('mssNoteTextarea', '<div class="mss-rt-end" id="mssNoteSpoilerWrap"></div>')}
-          <textarea class="np-textarea" id="mssNoteTextarea" aria-label="Your note" placeholder="What did you think? Favorite moments, hot takes, anything…" oninput="MSSNote._count()"></textarea>
-          <div class="np-count" id="mssNoteCount">0 / ${NOTE_WORD_LIMIT} words</div>
-          <div class="np-vis-wrap" id="mssNoteVisWrap"></div>
-        </div>
-        <div class="np-footer" id="mssNoteEditFooter" style="display:none">
-          <div class="np-actions" id="mssNoteEditPopupActions">
-            <button type="button" class="popup-action-btn np-grow" id="mssNoteSave" onclick="MSSNote._save()">Save Note</button>
-            <button type="button" class="popup-action-btn np-ghost" onclick="MSSNote._cancel()">Cancel</button>
-          </div>
-        </div>
-      </div>`;
-    MSSDialog.bind(el, close);
-    document.body.appendChild(el);
-    MSSEgg.noteBox(document.getElementById('mssNoteTextarea'), () => current);   // easter-egg.js
-    MSSRich.attach(document.getElementById('mssNoteTextarea'), { maxWords: NOTE_WORD_LIMIT, onLimit: () => {
-      const c = document.getElementById('mssNoteCount');
-      c.textContent = `Reached max word limit (${NOTE_WORD_LIMIT}/${NOTE_WORD_LIMIT} words)`;
-      c.classList.add('over');
-    } });
-  }
+  /* ── View more: 20 at a time ── */
+  const more = (left, fn) => left > 0 ? `<div class="nc-more"><button type="button" class="btn-secondary nc-more-btn" onclick="${fn}">View more <span class="nc-more-n">${left} more</span></button></div>` : '';
 
-  function showView() {
-    const e = current, $ = id => document.getElementById(id);
-    const q = `<blockquote class="np-quote mss-rich" translate="no">${MSSRich.html(e.notes)}</blockquote>`;
-    $('mssNoteText').innerHTML = !opts.editable && mssIsSpoiler(e) ? mssSpoilerHTML(q, { id: e.id, e }) : q;
-    viewFooter();
-    ['mssNoteViewBody', 'mssNoteViewFooter'].forEach(id => { $(id).style.display = ''; });
-    ['mssNoteEditBody', 'mssNoteEditFooter'].forEach(id => { $(id).style.display = 'none'; });
-    fitLong(document.querySelector('#mssNoteOverlay .np-card'), words(e.notes));
+  /* ── The pinned note: one per person (profiles.pinned_note_id, sql/123 — this device until it runs) ── */
+  const pins = {}, LOCAL = uid => 'msf_pinned_note_' + uid;
+  const local = uid => { try { return localStorage.getItem(LOCAL(uid)) || null; } catch { return null; } };
+  function pinnedId(uid) {
+    if (!uid) return Promise.resolve(null);
+    return pins[uid] ||= sb.from('profiles').select('pinned_note_id').eq('id', uid).maybeSingle()
+      .then(({ data, error }) => error ? (uid === window._navUser?.id ? local(uid) : null) : data?.pinned_note_id || null)
+      .catch(() => null);
   }
-  // Your note: Edit · Close. Someone else's: 👍 / 👎 · Close
-  function viewFooter() {
-    const el = document.getElementById('mssNoteViewPopupActions');
-    if (opts.editable) {
-      el.innerHTML = `<button type="button" class="popup-action-btn np-grow" onclick="MSSNote._edit()">${PEN}Edit Note</button>`
-        + (current?.notes?.trim() ? `<button type="button" class="popup-action-btn popup-action-danger np-del" onclick="MSSNote._delete()" aria-label="Delete note" title="Delete note">${icon('trash', 15)}</button>` : '')
-        + `<button type="button" class="popup-action-btn np-ghost" onclick="MSSNote.close()">Close</button>`;
-      return;
+  async function setPin(e) {
+    const uid = window._navUser?.id || (await getCurrentUser())?.id; if (!uid) return;
+    const id = e ? e.id : null;
+    const { error } = await sb.from('profiles').update({ pinned_note_id: id }).eq('id', uid);
+    if (error) { try { id ? localStorage.setItem(LOCAL(uid), id) : localStorage.removeItem(LOCAL(uid)); } catch {} }   // sql/123 not run yet
+    pins[uid] = Promise.resolve(id);
+    document.dispatchEvent(new CustomEvent('mss:notepin', { detail: { id } }));
+  }
+  // Pin this note; another already pinned → ask which one stays
+  async function pinOrAsk(e) {
+    const uid = window._navUser?.id;
+    const cur = await pinnedId(uid);
+    if (cur && cur !== e.id) {
+      const { data: old } = await sb.from('entries').select('title, notes, note_visibility').eq('id', cur).maybeSingle();
+      // a Friends / Private note's text lives elsewhere (069), so its entries.notes is empty
+      if (old && (has(old) || old.note_visibility !== 'anyone') && !(await showConfirm({ title: `Pin ${e.title || 'this note'} instead?`, danger: false, iconName: 'pin',
+        message: `Your note on ${old.title || 'another title'} is pinned now. Only one note can be pinned at a time.`,
+        confirmText: `Pin ${e.title || 'this note'}`, cancelText: `Keep ${old.title || 'the current pin'}` }))) return false;
     }
-    // (no "See Ratings" — inside the Title · Their Entry · Note switcher it's a tab already)
-    el.innerHTML = (opts.react ? mssReactButtonsHTML(reactState, 'MSSNote._react(true)', 'MSSNote._react(false)') : '')
-      + `<button type="button" class="popup-action-btn np-ghost np-grow" onclick="MSSViews.has('note') ? MSSViews.close() : MSSNote.close()">Close</button>`
-      + (canReport() ? `<button type="button" class="popup-action-btn np-ghost np-flag" onclick="MSSNote._report()" aria-label="Report this note" title="Report this note">${icon('flag', 15)}</button>` : '');
+    await setPin(e);
+    showToast('Note pinned. It’s at the top of your Notes.');
+    return true;
   }
-  // someone else's note (not yours, not when signed out) → Report (report.js)
-  function canReport() {
-    const me = window._navUser?.id, owner = current?.user_id || opts.profile?.id;
-    return !!(me && owner && owner !== me && current?.notes?.trim());
-  }
-  async function react(isLike) {
-    const e = current;
-    if (!e || !reactState) return;
-    reactState = await mssReact('note', e.id, isLike, reactState);
-    if (current !== e) return;
-    viewFooter(); stats();
-    opts.onReact?.(reactState, e);
-  }
-  function showEdit() {
-    const e = current, $ = id => document.getElementById(id);
-    const ta = $('mssNoteTextarea');
-    ta.value = e.notes || '';
-    $('mssNoteSpoilerWrap').innerHTML = mssSpoilerToggleHTML('mssNoteSpoiler', e);   // per title — some word it their own way
-    $('mssNoteSpoiler').checked = mssIsSpoiler(e);
-    $('mssNoteVisWrap').innerHTML = mssNoteVisHTML('mssNoteVis', e.note_visibility, e.id);   // who can view (069)
-    updateCount();
-    ['mssNoteViewBody', 'mssNoteViewFooter'].forEach(id => { $(id).style.display = 'none'; });
-    ['mssNoteEditBody', 'mssNoteEditFooter'].forEach(id => { $(id).style.display = ''; });
-    fitLong(document.querySelector('#mssNoteOverlay .np-card'), NOTE_WORD_LIMIT);   // editing: compact header, most room for typing
-    setTimeout(() => ta.focus(), 100);
-  }
-  function stats() {
-    const e = current, c = opts.counts || { like: 0, dislike: 0 }, n = words(e.notes);
-    const el = document.getElementById('mssNoteStats');
-    el.innerHTML = (opts.react ? '' : `<span>${icon('thumbsUp', 14)} <b>${c.like}</b></span><span>${icon('thumbsDown', 14)} <b>${c.dislike}</b></span>`)
-      + `<span><b>${n}</b> ${n === 1 ? 'word' : 'words'}</span>${mssIsSpoiler(e) ? mssSpoilerTag(e) : ''}${mssVisBadge(e.note_visibility)}`;
-    el.style.display = (e.notes && e.notes.trim()) ? 'flex' : 'none';
+  // a note's text was deleted: it can't stay pinned
+  async function unpinIfGone(e) {
+    if (!has(e) && (await pinnedId(window._navUser?.id)) === e.id) await setPin(null);
   }
 
-  function open(e, o = {}) {
-    if (!e) return;
-    inject();
-    current = e; opts = o;
-    reactState = o.react ? { like: o.counts?.like || 0, dislike: o.counts?.dislike || 0, mine: null } : null;
-    const $ = id => document.getElementById(id);
-    $('mssNoteViews').innerHTML = '';   // MSSViews fills it when switching views
-    loadHero($('mssNoteBlur'), e);
-    $('mssNotePoster').innerHTML = safeURL(e.poster_url) ? `<img src="${safeURL(e.poster_url)}" loading="lazy" alt="">` : esc(((e.title || '?')[0]).toUpperCase());
-    const p = o.profile;
-    if (p) {
-      const av = safeURL(p.avatar_url);
-      $('mssNoteEyebrow').innerHTML = mssProfileLinkHTML(p, `<div class="snote-avatar">${av ? `<img src="${av}" alt="" loading="lazy">` : esc((p.username || '?')[0].toUpperCase())}</div><span class="np-user">@${esc(p.username || 'user')}</span>`);
-    } else $('mssNoteEyebrow').textContent = o.eyebrow || 'Your Note';
-    $('mssNoteTitle').innerHTML = mssTitleLinkHTML(e, esc(e.title || ''));
-    $('mssNoteScore').innerHTML = scorePill(liveScore(e));
-    $('mssNoteTags').innerHTML = badges(e, { genres: 3, dateLabel: e.completed_date ? MSS_WATCHED_ON : 'Added On:', date: date(watchedDate(e), true) });
-    stats();
-    MSSDialog.open($('mssNoteOverlay'));
-    // An existing note opens read-only; a brand-new one goes straight to the editor
-    if (e.notes && e.notes.trim()) showView(); else if (o.editable) showEdit(); else showView();
-    $('mssNoteViewBody').toggleAttribute('data-dbl-like', !!o.react);   // double-tap their note → Like
-    if (o.react) mssReactions('note', e.id).then(st => {
-      if (current !== e) return;
-      reactState = st; viewFooter();
-    }).catch(() => {});
-  }
-  function close() {
-    MSSDialog.close(document.getElementById('mssNoteOverlay'));
-    current = null;
-  }
-  function cancel() {
-    // A brand-new note has nothing to go back to — just close
-    if (!current?.notes?.trim()) { close(); return; }
-    showView();
-  }
-
-  async function save() {
-    const e = current;
-    if (!e) return;
-    const btn = document.getElementById('mssNoteSave');
-    const notes = document.getElementById('mssNoteTextarea').value.trim();
-    if (!(await MSSEgg.beforeNoteSave(e, notes, e.notes))) return;   // easter-egg.js
-    btn.disabled = true; btn.textContent = 'Saving…';
-    try {
-      const spoiler = !!document.getElementById('mssNoteSpoiler').checked;
-      const ratings = { ...(e.ratings || {}), _notes_spoiler: spoiler && !!notes };
-      const uid = window._navUser?.id || (await getCurrentUser()).id;
-      const note_visibility = document.getElementById('mssNoteVis').value;
-      const { error } = await sb.from('entries').update({ notes, ratings, note_visibility }).eq('id', e.id).eq('user_id', uid);
-      if (error) throw error;
-      e.notes = notes; e.ratings = ratings; e.note_visibility = note_visibility;
-      close();
-      opts.onSaved?.(e);
-      showToast(MSSEgg.savedMsg(e, 'Note saved!'));
-    } catch (err) {
-      console.error('MSSNote save:', err);
-      showToast('Error saving note.', 'err');
-    } finally {
-      btn.disabled = false; btn.textContent = 'Save Note';
-    }
-  }
-
-  // Your note → gone (the title stays in your library; only the note and its spoiler mark go)
-  async function remove() {
-    const e = current;
-    if (!e) return;
-    if (!(await showConfirm({ title: 'Delete this note?', message: `Your note on “${e.title || 'this title'}” will be removed. Its likes and replies go with it.`, confirmText: 'Delete', iconName: 'trash' }))) return;
-    try {
-      const ratings = { ...(e.ratings || {}), _notes_spoiler: false };
-      const uid = window._navUser?.id || (await getCurrentUser()).id;
-      const { error } = await sb.from('entries').update({ notes: '', ratings }).eq('id', e.id).eq('user_id', uid);
-      if (error) throw error;
-      e.notes = ''; e.ratings = ratings;
-      if (typeof MSSViews !== 'undefined' && MSSViews.has('note')) MSSViews.close(); else close();
-      opts.onSaved?.(e);
-      showToast('Note deleted.');
-    } catch (err) {
-      console.error('MSSNote delete:', err);
-      showToast('Couldn’t delete the note — try again.', 'err');
-    }
-  }
-
-  /* NOTE_WORD_LIMIT cap — blocks further typing at the limit instead of
-     trimming after the fact, with a clear message when you hit it. */
-  function updateCount() {
-    const el = document.getElementById('mssNoteTextarea'), countEl = document.getElementById('mssNoteCount');
-    const n = words(el.value);
-    if (n > NOTE_WORD_LIMIT) {
-      el.value = clampWords(el.value, NOTE_WORD_LIMIT);
-      countEl.textContent = `Reached max word limit (${NOTE_WORD_LIMIT}/${NOTE_WORD_LIMIT} words)`;
-      countEl.classList.add('over');
-      return;
-    }
-    countEl.textContent = `${n} / ${NOTE_WORD_LIMIT} words`;
-    countEl.classList.toggle('over', n >= NOTE_WORD_LIMIT);
-  }
-
-
-  return {
-    cardHTML, communityCardHTML, open, close, reactionCounts,
-    words, date, watchedDate, trim, badges, scorePill, poster, loadHero, fitLong,
-    _edit: showEdit, _cancel: cancel, _save: save, _delete: remove, _count: updateCount, _react: react, _report: () => current && mssReport('note', current.id),
-  };
+  return { cardHTML, featuredHTML, featured, reactionCounts, more, PAGE, pinnedId, setPin, pinOrAsk, unpinIfGone, words, readMins, date, watchedDate };
 })();

@@ -1,0 +1,447 @@
+/* ═══════════════════════════════════════════════════════════════
+   Profiles V2 — one layout for your profile, a friend's and a visitor's (js/profile-v2.js)
+   Header (a title page for a person) · tabs · Top Favorites · Top 5 by category · side column
+   (Library, Ratings, Entertainment identity) · editors · Showcase. Uses style.css's tokens (light + dark);
+   the favourite tiles stay dark in both themes.
+   ═══════════════════════════════════════════════════════════════ */
+.pf-page { max-width:none; }   /* the full page width, like the other pages */
+.pf-page .prof-panel { padding-top:24px; }
+.pf-tp.is-phone .prof-panel { padding-top:16px; }
+
+/* ── The header: a title page for a person — the title / person pages' hero, tiles, ring and tab bar
+   (style.css .tv-hero, .tp-hero, .tp-tiles, .tv-ring, .tv-tabs). Only what a profile adds is here. ── */
+/* no backdrop chosen (and no #1 favourite to borrow one from): the MSF backdrop — the brand's greens, the logo faintly */
+.pf-hero { background:radial-gradient(80% 110% at 88% 0%, color-mix(in srgb, var(--p-forest-300) 30%, transparent) 0%, transparent 60%),
+  radial-gradient(70% 90% at 0% 100%, color-mix(in srgb, var(--p-forest-700) 62%, transparent) 0%, transparent 65%),
+  linear-gradient(160deg, #173a20 0%, #10200f 52%, #0b100c 100%); }
+.pf-hero::after { content:''; position:absolute; z-index:-1; inset-inline-end:clamp(18px, 4vw, 56px); top:clamp(18px, 4vw, 48px); width:clamp(110px, 16vw, 220px); aspect-ratio:507 / 320;
+  background:url('../icons/logo-nav.png') center / contain no-repeat; opacity:.16; pointer-events:none; }
+.pf-hero.has-bd::after { display:none; }
+
+/* the photo, where a title's poster goes: a 2:3 photo fills it; an older square one sits whole over a blurred copy */
+.tv-poster.pf-poster { position:relative; isolation:isolate; overflow:hidden; color:#fff; text-decoration:none; }
+.tv-poster.pf-poster img { position:relative; object-fit:contain; }
+.pf-poster .pf-poster-fill { position:absolute; inset:-14px; z-index:-1; background:center / cover no-repeat; filter:blur(14px) saturate(1.05) brightness(.72); }
+.pf-poster.is-default { background:linear-gradient(160deg, #2f6a33 0%, var(--p-forest-700) 45%, #12341a 100%); border-color:color-mix(in srgb, var(--p-forest-300) 45%, transparent); }
+.pf-poster .pf-poster-mono { display:flex; flex-direction:column; align-items:center; gap:8px; font:inherit; color:#fff; }
+.pf-poster .pf-poster-mono b { font:600 clamp(52px, 4.6vw, 92px)/1 var(--serif); color:#fff; }
+.pf-poster .pf-poster-mono i { font:800 10.5px/1 'Manrope',var(--sans); font-style:normal; letter-spacing:.32em; padding-inline-start:.32em; color:rgba(255,255,255,.62); }
+/* your own: the photo is the way to change it */
+.pf-poster .pf-poster-edit { position:absolute; inset:auto 8px 8px; display:flex; align-items:center; justify-content:center; gap:6px; min-height:34px; padding:0 8px;
+  border-radius:var(--radius-sm); border:1px solid rgba(255,255,255,.24); background:rgba(0,0,0,.66); -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px);
+  font:700 12px 'Manrope',var(--sans); color:#fff; opacity:0; transform:translateY(4px); transition:opacity .15s, transform .15s; }
+.pf-poster .pf-poster-edit span { font:inherit; color:inherit; }
+a.pf-poster:hover .pf-poster-edit, a.pf-poster:focus-visible .pf-poster-edit, a.pf-poster.is-default .pf-poster-edit { opacity:1; transform:none; }
+a.pf-poster:focus-visible { outline:2px solid var(--tv-green); outline-offset:3px; }
+@media (prefers-reduced-motion:reduce) { .pf-poster .pf-poster-edit { transition:none; } }
+/* the photo as a circle (Edit profile › Show my photo as): as wide as the poster, round, the photo filling it */
+.tv-poster.pf-poster.is-circle { aspect-ratio:1; border-radius:50%; align-self:center; }
+.tv-poster.pf-poster.is-circle img { object-fit:cover; }
+.pf-poster.is-circle .pf-poster-edit { inset:auto 0 14%; width:max-content; max-width:80%; margin-inline:auto; }
+.pf-poster.is-circle .pf-poster-mono b { font-size:clamp(48px, 4.2vw, 84px); }
+
+/* the text: name, @username · Member since, the quote as the tagline, Followers · Following · Friends, the bio */
+.pf-hero .pf-name { overflow-wrap:anywhere; }
+.pf-hero .pf-quote { max-width:680px; display:-webkit-box; -webkit-line-clamp:3; line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
+.pf-hero .pf-quote.is-default { color:rgba(255,255,255,.7); }
+.pf-social { display:flex; flex-wrap:wrap; align-items:center; gap:6px; }
+.pf-social:empty { display:none; }
+.pf-social .fl-counts { justify-content:flex-start; gap:6px; margin:0; }
+.pf-hero .fl-count { align-items:center; min-height:32px; padding:0 10px; border-radius:var(--radius-sm); border:1px solid rgba(255,255,255,.2); background:rgba(0,0,0,.52);
+  -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); color:#fff; }
+.pf-hero .fl-count b { font-size:18px; color:#fff; }
+.pf-hero .fl-count span { font:600 12px 'Manrope',var(--sans); color:rgba(255,255,255,.78); }
+.pf-hero a.fl-count:hover, .pf-hero button.fl-count:hover { background:rgba(0,0,0,.72); border-color:rgba(255,255,255,.45); }
+.pf-hero a.fl-count:focus-visible, .pf-hero button.fl-count:focus-visible { outline-color:var(--tv-green); }
+.pf-hero .fl-req-chip { margin:0; min-height:32px; }
+.pf-bio { margin:0; max-width:680px; font:500 14px/1.55 'Manrope',var(--sans); color:rgba(255,255,255,.88); white-space:pre-line;
+  display:-webkit-box; -webkit-line-clamp:3; line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
+.pf-hero .tv-acts { margin-top:6px; }
+
+/* the right side: Taste match (the title page's score ring, as a percentage) over the stats (its tiles) */
+/* (the title page keeps .tp-scores / .tp-mine in title.html: the same values here) */
+.pf-scores { flex:none; display:flex; flex-direction:column; align-items:center; gap:16px; align-self:flex-end; }
+.pf-match { display:flex; flex-direction:column; align-items:center; gap:8px; color:#fff; text-decoration:none; border-radius:var(--radius); }
+.pf-match small { font:800 10.5px/1 'Manrope',var(--sans); letter-spacing:.16em; text-transform:uppercase; color:rgba(255,255,255,.85); }
+.pf-match:hover .tv-ring-track { stroke:rgba(255,255,255,.3); }
+.pf-match:focus-visible { outline:2px solid var(--tv-green); outline-offset:4px; }
+.pf-ring b i { font-style:normal; font-size:.5em; margin-inline-start:1px; }
+.pf-ring.is-empty b { color:rgba(255,255,255,.55); }
+.pf-tiles.is-n4 { grid-template-columns:repeat(2, 80px); }
+.pf-tiles .tp-tile small { max-width:100%; overflow:hidden; text-overflow:ellipsis; }
+/* narrower computers: the right side goes under the text, in one row */
+.pf-ph { display:none; }
+@media (max-width:1100px) {
+  .pf-tp:not(.is-phone) .pf-scores { display:none; }
+  .pf-tp:not(.is-phone) .pf-ph { display:flex; flex-wrap:wrap; align-items:stretch; gap:10px; margin-top:6px; }
+  .pf-tp:not(.is-phone) .pf-ph .tp-tiles { grid-template-columns:none; grid-auto-flow:column; grid-auto-columns:84px; }
+  .pf-tp:not(.is-phone) .pf-ph-match { min-width:250px; }
+}
+.pf-ph-match { display:flex; align-items:center; gap:12px; min-height:58px; padding:6px 14px 6px 8px; border-radius:var(--radius-sm); border:1px solid rgba(255,255,255,.2);
+  background:rgba(0,0,0,.55); -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); color:#fff; text-decoration:none; }
+.pf-ph-match:hover { background:rgba(0,0,0,.72); border-color:rgba(255,255,255,.45); }
+.pf-ph-match:focus-visible { outline:2px solid var(--tv-green); outline-offset:2px; }
+.pf-ph-match .tv-ring { align-self:center; }
+.pf-ph-match-t { flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; }
+.pf-ph-match-t b { font:700 14px 'Manrope',var(--sans); color:#fff; }
+.pf-ph-match-t small { font:500 12px 'Manrope',var(--sans); color:rgba(255,255,255,.75); }
+.pf-ph-match > svg { flex:none; color:rgba(255,255,255,.7); }
+
+/* phones: the poster beside the name, then the quote, people, bio and buttons the full width, then the match and the stats */
+.pf-tp.is-phone .pf-hero { min-height:0; padding:14px 14px 16px; gap:12px; }
+.pf-tp.is-phone .pf-hero .tv-hero-main { display:grid; grid-template-columns:96px minmax(0, 1fr); grid-template-rows:minmax(0, 1fr) auto; column-gap:14px; row-gap:8px;
+  align-items:end; margin-top:96px; }
+.pf-tp.is-phone .pf-hero .tv-hero-txt { display:contents; }
+.pf-tp.is-phone .pf-hero .pf-poster { grid-column:1; grid-row:1 / span 2; width:96px; }
+.pf-tp.is-phone .pf-hero .pf-name { grid-column:2; grid-row:1; align-self:end; font-size:28px; }
+.pf-tp.is-phone .pf-hero .pf-facts { grid-column:2; grid-row:2; align-self:start; flex-direction:column; align-items:flex-start; font-size:12.5px; }
+.pf-tp.is-phone .pf-hero .pf-facts .tv-sep { display:none; }
+.pf-tp.is-phone .pf-hero .tv-hero-txt > :not(.pf-name):not(.pf-facts) { grid-column:1 / -1; }
+.pf-tp.is-phone .pf-hero .tv-tagline.pf-quote { display:-webkit-box; margin:4px 0 0; font-size:14px; }
+.pf-tp.is-phone .pf-hero .tp-acts.pf-acts { display:flex; flex-wrap:nowrap; gap:8px; margin-top:4px; }
+.pf-tp.is-phone .pf-hero .pf-acts .tv-btn { flex:1 1 auto; min-width:0; min-height:44px; padding:0 10px; }
+.pf-tp.is-phone .pf-hero .pf-acts .tv-btn.is-icon { flex:none; width:44px; padding:0; }
+.pf-tp.is-phone .pf-hero .pf-poster-mono b { font-size:44px; }
+.pf-tp.is-phone .pf-hero .pf-poster-edit { inset:auto 4px 4px; min-height:28px; font-size:11px; }
+.pf-tp.is-phone .pf-hero .pf-poster-edit svg { display:none; }
+.pf-tp.is-phone .pf-hero .pf-poster.is-circle .pf-poster-edit { inset:auto 0 10%; white-space:nowrap; }
+.pf-tp.is-phone .pf-scores { display:none; }
+.pf-tp.is-phone .pf-ph { display:flex; flex-direction:column; gap:8px; }
+.pf-tp.is-phone .pf-ph .tp-tiles { grid-template-columns:repeat(3, minmax(0, 1fr)); }
+.pf-tp.is-phone .pf-ph .tp-tile { min-height:58px; }
+.pf-tp.is-phone .pf-hero::after { width:96px; top:14px; }
+
+/* phones: the tab bar scrolls sideways — each tab keeps its full label and count */
+.pf-tp.is-phone .pf-tabs { overflow-x:auto; scrollbar-width:none; }
+.pf-tp.is-phone .pf-tabs .tv-tab { flex:none; padding:0 10px; gap:5px; }
+
+/* the slim bar: no photo → your initial */
+.pf-mini .pf-mini-circle { width:36px; height:36px; border-radius:50%; }
+.pf-mini .pf-mini-mono { display:grid; place-items:center; background:var(--olive); font:600 18px/1 var(--serif); color:var(--text-on-brand); }
+
+/* their request to follow you, under the header */
+.pf-ask { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:14px 0 0; padding:10px 12px; border-radius:var(--radius); background:var(--olive-faint); border:1px solid var(--border-olive); font:600 13px 'Manrope',var(--sans); }
+.pf-ask > span { flex:1; display:inline-flex; align-items:center; gap:6px; }
+.pf-locked { margin-top:18px; }
+
+/* Make it yours (your own Overview): what's left to personalise */
+.pf-make { position:relative; display:flex; flex-wrap:wrap; align-items:center; gap:12px 22px; margin-bottom:24px; padding:16px 56px 16px 18px;
+  border-radius:var(--radius); border:1px solid var(--border-olive); background:var(--olive-faint); }
+.pf-make-t { display:flex; flex-direction:column; gap:5px; min-width:190px; }
+.pf-make-t b { font:600 21px/1.15 var(--serif); color:var(--text-heading); }
+.pf-make-bar { display:block; width:170px; height:4px; border-radius:2px; background:var(--border-2); overflow:hidden; }
+.pf-make-bar i { display:block; height:100%; border-radius:inherit; background:var(--olive-light); }
+.pf-make-chips { flex:1; display:flex; flex-wrap:wrap; gap:8px; }
+.pf-make-chip { display:inline-flex; align-items:center; gap:7px; min-height:40px; padding:0 14px; border-radius:var(--radius-sm); border:1px solid var(--border-2); background:var(--panel);
+  color:var(--text); font:700 13px 'Manrope',var(--sans); text-decoration:none; cursor:pointer; }
+.pf-make-chip svg { flex:none; color:var(--olive-light); }
+.pf-make-chip:hover { border-color:var(--border-olive); background:var(--card); }
+.pf-make-chip:focus-visible, .pf-make-x:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
+.pf-make-x { position:absolute; top:8px; inset-inline-end:8px; width:40px; height:40px; display:grid; place-items:center; border:0; border-radius:var(--radius-sm); background:none; color:var(--text-3); cursor:pointer; }
+.pf-make-x:hover { background:var(--card); color:var(--text); }
+.pf-tp.is-phone .pf-make { padding:14px 48px 14px 14px; margin-bottom:16px; }
+.pf-tp.is-phone .pf-make-chip { min-height:44px; flex:1 1 calc(50% - 4px); justify-content:flex-start; }
+
+/* ── The Overview: main + side column ── */
+.pf-ov { display:grid; grid-template-columns:minmax(0, 1fr) clamp(300px, 22vw, 400px); grid-template-areas:"main side" "t5 t5" "t5p t5p"; column-gap:28px; align-items:start; }
+.pf-main { grid-area:main; min-width:0; }
+.pf-side { grid-area:side; display:flex; flex-direction:column; gap:14px; min-width:0; margin-bottom:2.25rem; }
+.pf-t5-wrap { grid-area:t5; min-width:0; }
+.pf-t5-wrap.pf-t5p-wrap { grid-area:t5p; margin-top:clamp(18px, 2.4vw, 28px); }   /* Favourite people: their own section under the titles' Top 5 */
+.pf-sec { margin-bottom:2.25rem; }
+.pf-sec-h { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px; }
+.pf-sec-t { display:flex; align-items:baseline; gap:12px; min-width:0; }
+.pf-sec-t h2 { margin:0; font:600 26px/1.1 var(--serif); color:var(--text-heading); }
+.pf-eyebrow { font:800 10.5px 'Manrope',var(--sans); letter-spacing:1.8px; text-transform:uppercase; color:var(--olive-light); }
+.pf-link { display:inline-flex; align-items:center; gap:6px; padding:6px 4px; border:0; background:none; cursor:pointer; text-decoration:none; color:var(--olive-light); font:700 13px 'Manrope',var(--sans); }
+.pf-link:hover { text-decoration:underline; }
+.pf-muted { margin:0; font:500 12.5px/1.5 'Manrope',var(--sans); color:var(--text-3); }
+.pf-btn-soft { display:inline-flex; align-items:center; justify-content:center; gap:6px; height:36px; padding:0 14px; border-radius:10px; cursor:pointer; text-decoration:none;
+  border:1px solid var(--border-2); background:var(--card); color:var(--text); font:700 12.5px 'Manrope',var(--sans); white-space:nowrap; }
+.pf-btn-soft:hover { border-color:var(--border-olive); color:var(--olive-light); }
+.pf-empty-row { display:flex; align-items:center; gap:14px; width:100%; padding:16px 18px; border-radius:16px; border:1px dashed var(--border-olive); background:transparent; cursor:pointer; text-align:start; color:var(--text); }
+.pf-empty-row:hover { background:var(--olive-faint); }
+.pf-empty-row b { display:block; font:700 14px 'Manrope',var(--sans); }
+.pf-empty-row small { display:block; margin-top:2px; font:500 12.5px 'Manrope',var(--sans); color:var(--text-3); }
+.pf-empty-plus { flex:none; width:34px; height:34px; border-radius:50%; display:grid; place-items:center; background:var(--olive-faint); color:var(--olive-light); }
+.pf-empty-row.is-add { margin-top:10px; }
+
+/* ── Top Favorites: #1 four columns of six, #2 two beside it, #3–#5 share the row under ── */
+.pf-favs { display:grid; grid-template-columns:repeat(6, minmax(0, 1fr)); gap:14px; }
+/* every tile the same language: the backdrop full bleed, a soft fade from the bottom, the rank in the corner,
+   details, title and score along the bottom. #1 is the hero; the sizes carry the ranking. */
+.pf-fav { position:relative; grid-column:span var(--span, 2); display:flex; flex-direction:column; justify-content:flex-end; align-items:flex-start; min-width:0;
+  height:calc(190px + var(--pf-grow, 0px) * .4); padding:20px 22px; border:0; border-radius:18px; overflow:hidden; isolation:isolate; cursor:pointer; text-align:start;
+  background:#121714; color:#fff; box-shadow:inset 0 0 0 1px rgba(255,255,255,.06); --score-mine:var(--p-forest-300); --score-gold:var(--p-score-top-dark); transition:translate .25s var(--ease), box-shadow .25s var(--ease); }
+.pf-fav.is-r1, .pf-fav.is-r2 { height:calc(320px + var(--pf-grow, 0px) * .6); }
+.pf-fav.is-r1 { padding:30px 34px; }
+.pf-fav-bg { position:absolute; inset:0; z-index:-2; background-size:cover; background-position:50% 25%; opacity:0; transform-origin:50% 25%; transition:opacity .3s var(--ease), scale .4s var(--ease); }
+.pf-fav-bg.in { opacity:1; }
+.pf-fav-bg.is-poster { filter:blur(18px) saturate(1.1); scale:1.2; }
+.pf-fav-shade { position:absolute; inset:0; z-index:-1; background:linear-gradient(0deg, rgba(4,19,10,.92) 0%, rgba(4,19,10,.55) 38%, rgba(4,19,10,.08) 72%, rgba(4,19,10,0) 100%); }
+.pf-fav.is-r1 .pf-fav-shade { background:linear-gradient(0deg, rgba(4,19,10,.9) 0%, rgba(4,19,10,.45) 35%, rgba(4,19,10,0) 65%), linear-gradient(90deg, rgba(4,19,10,.45) 0%, rgba(4,19,10,0) 55%); }
+.pf-fav-rank.cg-rank-badge { position:absolute; top:0; inset-inline-start:0; z-index:2; }
+.pf-fav-poster { display:none; position:relative; flex:none; aspect-ratio:2/3; border-radius:10px; overflow:hidden; background:#212622; }   /* phones only */
+.pf-fav-poster img { width:100%; height:100%; object-fit:cover; display:block; }
+.pf-fav-poster .cg-rank-badge { position:absolute; top:0; inset-inline-start:0; z-index:2; }
+.pf-fav-tx { display:flex; flex-direction:column; gap:5px; min-width:0; max-width:100%; }
+.pf-fav-meta { font:600 11.5px 'Manrope',var(--sans); letter-spacing:.3px; color:rgba(255,255,255,.7); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+/* Oswald's g, j, p, q, y hang below the line: a little room under the last line so they aren't cut (less than the next line's
+   cap height, so a third line never peeks in) */
+.pf-fav-title { font:600 22px/1.12 var(--serif); padding-bottom:.14em; color:#fff; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; overflow-wrap:anywhere; }
+.pf-fav.is-r1 .pf-fav-title { font-size:46px; }
+.pf-fav.is-r2 .pf-fav-title { font-size:28px; }
+/* the score: the Edit page's ring (MSSViews.ring), bottom right of the tile; the title stays clear of it */
+.pf-fav { --tv-green:var(--p-forest-300); --tv-gold:var(--p-score-top-dark); }
+.pf-fav-ring { position:absolute; inset-inline-end:22px; bottom:20px; z-index:1; display:flex; }
+.pf-fav.is-r1 .pf-fav-ring { inset-inline-end:34px; bottom:30px; }
+.pf-fav:has(.pf-fav-ring) .pf-fav-tx { padding-inline-end:90px; }
+.pf-fav.is-r1:has(.pf-fav-ring) .pf-fav-tx { padding-inline-end:136px; }
+.pf-fav:hover { translate:0 -2px; box-shadow:inset 0 0 0 1px rgba(255,255,255,.12), 0 14px 30px -14px rgba(0,0,0,.55); }
+.pf-fav:hover .pf-fav-bg { scale:1.04; }
+.pf-fav:hover .pf-fav-bg.is-poster { scale:1.24; }
+.pf-fav:focus-visible { outline:2px solid var(--olive-light); outline-offset:3px; }
+
+/* ── Top 5 by category: panels in a sliding rail (four at a time; one per screen on phones) ── */
+.pf-t5-nav { display:flex; gap:6px; margin-inline-start:auto; }
+.pf-arrow { width:34px; height:34px; border-radius:50%; display:grid; place-items:center; cursor:pointer; border:1px solid var(--border-2); background:var(--card); color:var(--text); }
+.pf-arrow:disabled { opacity:.35; cursor:default; }
+.pf-arrow:not(:disabled):hover { border-color:var(--border-olive); color:var(--olive-light); }
+.pf-t5-tabs { display:none; }
+.pf-t5-rail { --pf-t5c:4; display:grid; grid-auto-flow:column; grid-auto-columns:calc((100% - (var(--pf-t5c) - 1) * 14px) / var(--pf-t5c)); gap:14px; overflow-x:auto; scroll-snap-type:x mandatory; scrollbar-width:none; padding-bottom:2px; overscroll-behavior-x:contain; }
+.pf-t5-rail::-webkit-scrollbar { display:none; }
+.pf-t5 { scroll-snap-align:start; min-width:0; display:flex; flex-direction:column; padding:14px 14px 10px; border-radius:16px; background:var(--card); border:1px solid var(--border); }
+.pf-t5-h { display:flex; align-items:baseline; gap:8px; padding:2px 2px 10px; border-bottom:1px solid var(--border); }
+.pf-t5-k { font:800 9.5px 'Manrope',var(--sans); letter-spacing:1.6px; text-transform:uppercase; color:var(--olive-light); }
+.pf-t5-h h3 { margin:0; font:600 17px/1.2 var(--serif); color:var(--text-heading); }
+.pf-t5-edit { margin-inline-start:auto; align-self:center; width:30px; height:30px; border-radius:8px; display:grid; place-items:center; cursor:pointer; border:0; background:none; color:var(--text-3); }
+.pf-t5-edit:hover { background:var(--olive-faint); color:var(--olive-light); }
+.pf-t5-list { list-style:none; margin:0; padding:0; }
+.pf-t5-row + .pf-t5-row { border-top:1px solid var(--border); }
+.pf-t5-a { display:flex; align-items:center; gap:10px; padding:8px 2px; min-width:0; text-decoration:none; color:inherit; border-radius:10px; }
+a.pf-t5-a:hover .pf-t5-tx b { color:var(--olive-light); }
+a.pf-t5-a:focus-visible { outline:2px solid var(--olive-light); outline-offset:1px; }
+/* the rank: a slim numeral — gold, silver, bronze for the podium, quiet after */
+.pf-rk { flex:none; width:22px; text-align:center; font:400 24px/1 var(--bebas); letter-spacing:.5px; color:var(--text-3); }
+.pf-rk.is-1 { background:linear-gradient(180deg, #F3DD8E 0%, #C9A23A 100%); -webkit-background-clip:text; background-clip:text; color:transparent; }
+.pf-rk.is-2 { background:linear-gradient(180deg, #EEEDE7 0%, #9AA5B1 100%); -webkit-background-clip:text; background-clip:text; color:transparent; }
+.pf-rk.is-3 { background:linear-gradient(180deg, #E8B48A 0%, #A8653A 100%); -webkit-background-clip:text; background-clip:text; color:transparent; }
+[data-theme="light"] .pf-rk.is-1 { background-image:linear-gradient(180deg, #C69B2A 0%, var(--rating-top) 100%); }
+[data-theme="light"] .pf-rk.is-2 { background-image:linear-gradient(180deg, #8C98A6 0%, #57616D 100%); }
+[data-theme="light"] .pf-rk.is-3 { background-image:linear-gradient(180deg, #C27B48 0%, #8A4E26 100%); }
+.pf-t5-img { position:relative; flex:none; width:36px; aspect-ratio:2/3; border-radius:6px; overflow:hidden; background:var(--card-2); display:grid; place-items:center; color:var(--text-3); }
+.pf-t5-img img { width:100%; height:100%; object-fit:cover; display:block; }
+.pf-t5-img.is-person { border-radius:8px; }
+.pf-t5-letter { font:600 16px var(--serif); color:var(--text-2); }
+.pf-t5-tx { flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; }
+.pf-t5-tx b { font:600 14px/1.25 var(--serif); color:var(--text-heading); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.pf-t5-tx small { font:500 11.5px 'Manrope',var(--sans); color:var(--text-3); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.pf-t5-score.msf-score { flex:none; font-size:19px; }
+.pf-t5-row.is-lead .pf-t5-a { margin:6px -6px 4px; padding:10px 8px 12px; background:linear-gradient(90deg, var(--olive-faint), transparent 85%); }
+.pf-t5-row.is-lead .pf-rk { font-size:34px; width:26px; }
+.pf-t5-row.is-lead .pf-t5-img { width:56px; border-radius:8px; box-shadow:0 6px 16px rgba(0,0,0,.18); }
+.pf-t5-row.is-lead .pf-t5-tx b { font-size:16px; white-space:normal; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+.pf-t5-row.is-lead .pf-t5-score.msf-score { font-size:24px; }
+.pf-t5.is-empty { border-style:dashed; background:transparent; }
+.pf-t5-none { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; padding:28px 10px 24px; text-align:center; }
+.pf-t5-none-ic { width:48px; height:48px; border-radius:50%; display:grid; place-items:center; margin-bottom:4px; background:var(--olive-faint); color:var(--olive-light); }
+.pf-t5-none b { font:600 15px var(--serif); color:var(--text-heading); }
+.pf-t5-none small { max-width:200px; font:500 12px/1.45 'Manrope',var(--sans); color:var(--text-3); margin-bottom:8px; }
+
+/* ── Side column cards ── */
+.pf-card { padding:16px 18px; border-radius:16px; background:var(--card); border:1px solid var(--border); }
+.pf-side .rc-box { margin:0; }
+.pf-card-h { display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin-bottom:12px; }
+.pf-card-h b { font:700 13px 'Manrope',var(--sans); color:var(--text); }
+.pf-lib-row + .pf-lib-row { margin-top:10px; }
+.pf-lib-t { display:flex; justify-content:space-between; gap:10px; margin-bottom:5px; font:700 13px 'Manrope',var(--sans); color:var(--text); }
+.pf-lib-t small { font-weight:500; color:var(--text-3); }
+.pf-bar { display:block; height:6px; border-radius:999px; background:var(--card-2); overflow:hidden; }
+.pf-bar i { display:block; height:100%; border-radius:inherit; background:var(--olive-light); }
+.pf-bar.is-thin { height:5px; }
+.pf-lib-foot { display:flex; flex-wrap:wrap; gap:4px 14px; margin-top:14px; padding-top:12px; border-top:1px solid var(--border); font:500 12px 'Manrope',var(--sans); color:var(--text-3); }
+.pf-lib-foot b { color:var(--text); font-weight:700; }
+/* Entertainment identity: who they are as a viewer — an emblem, the label, why, their top genres */
+.pf-idn { position:relative; overflow:hidden; isolation:isolate; }
+.pf-idn::before { content:''; position:absolute; z-index:-1; top:-90px; inset-inline-end:-80px; width:240px; aspect-ratio:1; border-radius:50%;
+  background:radial-gradient(circle, color-mix(in srgb, var(--olive-light) 20%, transparent) 0%, transparent 70%); pointer-events:none; }
+.pf-idn .pf-card-h { margin-bottom:10px; }
+.pf-idn-main { display:flex; align-items:center; gap:14px; }
+.pf-idn-emb { flex:none; width:58px; height:58px; border-radius:50%; display:grid; place-items:center; color:#fff;
+  background:linear-gradient(150deg, var(--olive-light) 0%, var(--olive) 100%); border:3px solid color-mix(in srgb, var(--olive-light) 35%, var(--card)); }
+.pf-idn-tx { min-width:0; }
+.pf-idn-name { display:block; font:600 27px/1.08 var(--serif); color:var(--text-heading); text-wrap:balance; }
+.pf-idn-why { margin:5px 0 0; font:500 12.5px/1.45 'Manrope',var(--sans); color:var(--text-2); }
+.pf-idn-tags { list-style:none; display:flex; flex-wrap:wrap; gap:6px; margin:14px 0 0; padding:0; }
+.pf-idn-tags li { display:inline-flex; align-items:baseline; gap:5px; padding:5px 10px; border-radius:999px; border:1px solid var(--border-olive); background:var(--olive-faint);
+  font:600 12px 'Manrope',var(--sans); color:var(--text-2); }
+.pf-idn-tags b { font-weight:800; color:var(--olive-light); }
+.pf-idn-traits { margin:12px 0 0; padding-top:10px; border-top:1px solid var(--border); font:800 10.5px/1.4 'Manrope',var(--sans); letter-spacing:.1em; text-transform:uppercase; color:var(--text-3); }
+.pf-idn.is-wait .pf-idn-emb { background:var(--card-2); color:var(--olive-light); border:2px dashed var(--border-olive); }
+.pf-idn.is-wait .pf-idn-name { font-size:22px; }
+.pf-idn-prog { display:block; height:5px; margin-top:14px; border-radius:3px; background:var(--card-2); overflow:hidden; }
+.pf-idn-prog i { display:block; height:100%; border-radius:inherit; background:var(--olive-light); }
+
+/* ── Editors (side panels / full pages) ── */
+.pf-edit { display:flex; flex-direction:column; gap:16px; }
+.pf-av { flex:none; width:56px; height:56px; border-radius:50%; overflow:hidden; display:grid; place-items:center; background:var(--olive); font:600 22px/1 var(--serif); color:var(--text-on-brand); }
+.pf-av img { width:100%; height:100%; object-fit:cover; }
+.pf-edit-photo { display:flex; align-items:center; gap:14px; padding:12px; border-radius:14px; background:var(--card); border:1px solid var(--border); }
+.pf-edit-photo > div { flex:1; min-width:0; }
+.pf-edit-photo b { display:block; font:700 14px 'Manrope',var(--sans); }
+.pf-edit-photo small { font:500 12px 'Manrope',var(--sans); color:var(--text-3); }
+.pf-edit-photo-acts { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:6px; }
+.pf-field { display:flex; flex-direction:column; gap:6px; }
+.pf-field-l { display:flex; justify-content:space-between; font:700 12.5px 'Manrope',var(--sans); color:var(--text); }
+.pf-count { font-weight:500; color:var(--text-3); }
+.pf-input { width:100%; box-sizing:border-box; resize:vertical; }
+.pf-field-hint { font:500 11.5px 'Manrope',var(--sans); color:var(--text-3); }
+.pf-edit-user { display:flex; align-items:center; justify-content:space-between; gap:10px; min-height:42px; padding:0 12px; border-radius:10px; background:var(--card-2); font:600 14px 'Manrope',var(--sans); }
+.pf-edit-go { display:flex; flex-direction:column; gap:8px; margin-top:4px; }
+.pf-go { display:flex; align-items:center; gap:12px; width:100%; padding:10px 12px; border-radius:14px; cursor:pointer; text-align:start; border:1px solid var(--border); background:var(--card); color:var(--text); }
+.pf-go:hover { border-color:var(--border-olive); }
+.pf-go > span:nth-child(2) { flex:1; min-width:0; }
+.pf-go b { display:block; font:700 14px 'Manrope',var(--sans); }
+.pf-go small { display:block; font:500 12px 'Manrope',var(--sans); color:var(--text-3); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.pf-go-thumb { flex:none; width:64px; height:40px; border-radius:8px; background:var(--card-2) center/cover; display:grid; place-items:center; color:var(--text-3); }
+.pf-go-thumb.is-ic { width:40px; }
+/* backdrop editor: the header, scaled down (profile-v2.js heroPv) */
+.pf-bn-pv { position:relative; overflow:hidden; border-radius:14px; margin-bottom:14px; background:var(--card-2); }
+.pf-bn-pv > .pf-pvwrap { position:absolute; top:0; inset-inline-start:0; transform-origin:0 0; }
+[dir="rtl"] .pf-bn-pv > .pf-pvwrap { transform-origin:100% 0; }
+.pf-pvwrap { padding:0 !important; pointer-events:none; }
+.pf-pvwrap .tv-hero { height:100%; min-height:0 !important; box-sizing:border-box; }
+.pf-bn-tools { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px 12px; min-height:36px; margin-bottom:18px; }
+.pf-bn-cur { display:inline-flex; align-items:center; gap:7px; font:600 13px 'Manrope',var(--sans); color:var(--text-2); min-width:0; }
+.pf-bn-cur b { color:var(--text); }
+.pf-bn-hits { margin:0; }
+/* the picker's search: search box, its results and the language box, evenly spaced; then the pictures two a row
+   (posters four a row) — the Edit page's own picker keeps its single column */
+.pf-bn-find { display:flex; flex-direction:column; gap:10px; padding-bottom:18px; border-bottom:1px solid var(--border); }
+.pf-bn-find #bpHits:empty, .pf-bn-find .pp-tools:has(.pp-lang:empty) { display:none; }
+.pf-bn .pp-sel { margin-top:18px; }
+.pf-bn #ppGrid { margin-top:8px; }
+.pf-bn .pp-group + .pp-group { margin-top:20px; }
+.pf-bn .pp-grid { gap:12px; padding-top:14px; }
+.pf-bn .pp-grid.is-wide { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+.pf-bn.is-poster .pp-grid { grid-template-columns:repeat(4, minmax(0, 1fr)); }
+@media (max-width:640px) { .pf-bn.is-poster .pp-grid { grid-template-columns:repeat(3, minmax(0, 1fr)); } }
+/* poster mode (MSSBackdropPicker.photo): the photo as the profile shows it — a 2:3 portrait — and a line on how it's used */
+.pf-bn-pv.is-photo { display:flex; align-items:center; gap:16px; padding:14px; border:1px solid var(--border); background:var(--card); }
+.pf-bn-photo { flex:none; width:88px; aspect-ratio:2/3; border-radius:var(--radius-sm); overflow:hidden; border:1px solid var(--border); background:var(--card-2);
+  display:grid; place-items:center; color:var(--text-3); }
+.pf-bn-photo img { width:100%; height:100%; object-fit:cover; display:block; }
+.pf-bn-photo-tx { display:flex; flex-direction:column; gap:4px; min-width:0; }
+.pf-bn-photo-tx b { font:700 14px 'Manrope',var(--sans); color:var(--text); }
+.pf-bn-photo-tx small { font:500 12.5px/1.5 'Manrope',var(--sans); color:var(--text-3); }
+/* stats editor: the preview, as the header shows them */
+.pf-st-pv { margin:0 0 18px; padding:14px; border-radius:var(--radius); background:#121613; color-scheme:dark; }
+.pf-st-pv .tp-tiles { grid-template-columns:repeat(3, minmax(0, 1fr)); }
+/* rows in pickers and the ranking editor */
+.pf-person { display:flex; align-items:center; gap:12px; width:100%; padding:8px 10px; border:0; border-radius:12px; background:none; cursor:pointer; text-align:start; color:var(--text); }
+.pf-person:hover, .pf-person:focus-visible { background:var(--card); }
+.pf-person .pf-t5-img { width:40px; }
+.pf-pick-hint { padding:18px 4px; text-align:center; }
+.pf-rk-list { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px; }
+.pf-rk-row { display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:14px; background:var(--card); border:1px solid var(--border); transition:box-shadow .15s; }
+.pf-rk-row.is-drag { position:relative; z-index:3; box-shadow:0 12px 30px rgba(0,0,0,.25); border-color:var(--border-olive); }
+.pf-rk-row.is-over { border-color:var(--olive-light); }
+.pf-rk-handle { flex:none; width:24px; height:36px; display:grid; place-items:center; color:var(--text-3); cursor:grab; touch-action:none; }
+.pf-rk-handle.is-off { cursor:default; }
+.pf-rk-main { flex:1; min-width:0; display:flex; align-items:center; gap:10px; padding:2px; border:0; background:none; cursor:pointer; text-align:start; color:inherit; }
+.pf-rk-main .pf-t5-img { width:40px; }
+.pf-rk-moves { display:flex; flex-direction:column; }
+.pf-rk-mv, .pf-rk-x { width:28px; height:22px; display:grid; place-items:center; border:0; border-radius:6px; background:none; cursor:pointer; color:var(--text-3); }
+.pf-rk-x { height:32px; width:32px; }
+.pf-rk-mv:disabled { opacity:.3; cursor:default; }
+.pf-rk-mv:not(:disabled):hover, .pf-rk-x:hover { background:var(--card-2); color:var(--text); }
+.pf-rk-note { margin-top:12px; }
+/* stats editor */
+.pf-st-list { list-style:none; margin:0 0 10px; padding:0; border-radius:14px; border:1px solid var(--border); overflow:hidden; }
+.pf-st-row { display:flex; align-items:center; gap:10px; padding:9px 10px 9px 12px; background:var(--card); }
+.pf-st-row + .pf-st-row { border-top:1px solid var(--border); }
+.pf-st-row.is-drag { position:relative; z-index:3; box-shadow:0 12px 30px rgba(0,0,0,.25); }
+.pf-st-row.is-over { box-shadow:inset 0 2px 0 var(--olive-light); }
+.pf-st-l { flex:1; min-width:0; display:flex; align-items:center; gap:12px; cursor:pointer; position:relative; }
+.pf-st-l input { position:absolute; opacity:0; pointer-events:none; }
+/* the Filter panel's check box (style.css .sf-check-mark), not the round tick (owner) */
+.pf-st-l input:checked + .sf-check-mark { background:var(--olive-light); border-color:var(--olive-light); }
+.pf-st-l input:checked + .sf-check-mark svg { opacity:1; }
+.pf-st-l input:focus-visible + .sf-check-mark { outline:2px solid var(--olive-light); outline-offset:2px; }
+.pf-st-tx { min-width:0; }
+.pf-st-tx b { display:block; font:700 13.5px 'Manrope',var(--sans); color:var(--text); }
+.pf-st-tx small { display:block; font:500 11.5px 'Manrope',var(--sans); color:var(--text-3); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.pf-st-v { flex:none; font:400 19px/1 var(--bebas); color:var(--text-2); }
+/* Show times as (the shared choice cards, style.css .mss-choice): each with your Total time as the example */
+.pf-st-time { grid-template-columns:minmax(0, 1fr); margin:0 0 18px; }   /* the panel is narrow: one card a row */
+.pf-st-time .mss-choice-v { min-width:84px; }
+#pfStTimeH { margin-top:18px; }
+.pf-st-lock { display:flex; align-items:center; gap:8px; padding:12px; border-radius:12px; border:1px solid var(--border); font:600 13px 'Manrope',var(--sans); color:var(--text-2); }
+
+/* the sign-up bar on a visitor's view */
+.pf-join { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px 16px; margin-bottom:16px; padding:12px 16px; border-radius:16px; background:var(--olive); color:var(--text-on-brand); }
+.pf-join-t { display:flex; flex-direction:column; gap:2px; }
+.pf-join b { font:700 14px 'Manrope',var(--sans); }
+.pf-join span { font:500 13px 'Manrope',var(--sans); opacity:.88; }
+.pf-join a { display:inline-flex; align-items:center; height:36px; padding:0 16px; border-radius:10px; background:#fff; color:var(--p-forest-800); font:800 13px 'Manrope',var(--sans); text-decoration:none; }
+
+/* ── Tablets ── */
+@media (max-width:1100px) {
+  .pf-ov { grid-template-columns:minmax(0, 1fr); grid-template-areas:"main" "t5" "t5p" "side"; }
+  .pf-side { display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); align-items:start; }
+  .pf-t5-rail { grid-auto-columns:calc((100% - 14px) / 2); }
+}
+@media (max-width:900px) and (min-width:701px) {
+  .pf-favs { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+  .pf-fav, .pf-fav.is-r2 { grid-column:span 1; }
+  .pf-fav.is-r1 { grid-column:1 / -1; }
+}
+
+/* ── Phones: a taller banner, photo top-left, name at the bottom; poster-first favourites; one Top 5 per screen ── */
+@media (max-width:700px) {
+  .pf-sec-t h2 { font-size:22px; }
+  .pf-sec-t { flex-direction:column; gap:2px; }
+  .pf-favs { grid-template-columns:repeat(2, minmax(0, 1fr)); gap:10px; }
+  .pf-fav { grid-column:span 1; height:200px; padding:12px; flex-direction:column; align-items:flex-start; justify-content:flex-end; gap:8px; border-radius:16px; }
+  .pf-fav.is-r1 { grid-column:1 / -1; height:232px; flex-direction:row; align-items:center; justify-content:flex-start; padding:16px; gap:16px; }
+  .pf-fav.is-r2 { height:200px; padding:12px; gap:8px; }
+  .pf-favs.is-n5 .pf-fav.is-r5:nth-child(odd):last-child, .pf-favs.is-n3 .pf-fav.is-r3:nth-child(odd):last-child { grid-column:span 1; }
+  .pf-fav-poster { display:block; }
+  .pf-fav-rank.cg-rank-badge { display:none; }
+  .pf-fav.is-r1 .pf-fav-poster { width:112px; box-shadow:0 10px 24px rgba(0,0,0,.45); }
+  .pf-fav.is-r1 .pf-fav-title { font-size:24px; }
+  .pf-fav-ring { inset-inline-end:12px; bottom:12px; }
+  .pf-fav-ring .tv-ring.is-s { width:46px; } .pf-fav-ring .tv-ring.is-s circle { stroke-width:9; } .pf-fav-ring .tv-ring.is-s b { font-size:17px; }
+  .pf-fav.is-r1 .pf-fav-ring { position:static; margin-inline-start:auto; align-self:center; }
+  .pf-fav.is-r1 .pf-fav-ring .tv-ring { width:74px; } .pf-fav.is-r1 .pf-fav-ring .tv-ring circle { stroke-width:8; } .pf-fav.is-r1 .pf-fav-ring .tv-ring b { font-size:26px; }
+  .pf-fav:has(.pf-fav-ring) .pf-fav-tx { padding-inline-end:52px; }
+  .pf-fav.is-r1:has(.pf-fav-ring) .pf-fav-tx { padding-inline-end:0; }
+  .pf-fav:not(.is-r1) .pf-fav-poster { position:absolute; inset:0; width:auto; aspect-ratio:auto; border-radius:0; box-shadow:none; z-index:-2; }
+  .pf-fav:not(.is-r1) .pf-fav-bg { display:none; }
+  .pf-fav:not(.is-r1) .pf-fav-shade { background:linear-gradient(0deg, rgba(4,19,10,.95) 0%, rgba(4,19,10,.45) 50%, rgba(4,19,10,0) 78%); }
+  .pf-fav:not(.is-r1) :is(.pf-fav-meta, .pf-fav-favs) { display:none; }
+  .pf-fav:not(.is-r1) .pf-fav-title { font-size:17px; }
+  .pf-fav:hover { translate:none; }
+  /* Top 5: a tab for each category, swipe between them */
+  .pf-t5-tabs { display:flex; gap:6px; margin:0 -18px 12px; padding:0 18px; overflow-x:auto; scrollbar-width:none; }
+  .pf-t5-tabs::-webkit-scrollbar { display:none; }
+  .pf-t5-tab { flex:none; height:32px; padding:0 14px; border-radius:999px; cursor:pointer; border:1px solid var(--border-2); background:var(--card); color:var(--text-2); font:700 12.5px 'Manrope',var(--sans); }
+  .pf-t5-tab.on { background:var(--olive); border-color:var(--olive); color:var(--text-on-brand); }
+  .pf-t5-nav { display:none; }
+  .pf-t5-rail { grid-auto-columns:100%; gap:12px; }
+  .pf-t5 { padding:14px 14px 8px; }
+  .pf-t5-row.is-lead .pf-t5-img { width:64px; }
+  .pf-side { grid-template-columns:minmax(0, 1fr); }
+}
+@media (max-width:380px) {
+  .pf-tp.is-phone .pf-hero .pf-name { font-size:25px; }
+  .pf-tp.is-phone .pf-ph .tp-tile b { font-size:22px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pf-fav-bg, .pf-fav-poster { transition:opacity .2s; }
+  .pf-fav:hover .pf-fav-bg { scale:1; } .pf-fav:hover .pf-fav-poster { translate:none; }
+}
+
+/* Top Favorites: the favourite character / episode / season (mssFavChipsHTML, the Watched podium's chips) — one line on the small tiles */
+.pf-fav-favs.lib-pod-favs { margin-top:8px; }
+.pf-fav:not(.is-r1):not(.is-r2) .pf-fav-favs.lib-pod-favs { max-height:1.3em; gap:2px 10px; }

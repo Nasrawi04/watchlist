@@ -7,28 +7,31 @@
 <script src="js/i18n.js"></script>
 <title>Blend — MyScreenFolio</title>
 <link rel="stylesheet" href="css/fonts.css">
+<link rel="stylesheet" href="css/theme.css">
 <link rel="stylesheet" href="css/style.css">
 <link rel="stylesheet" href="css/social.css">
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#1E5C26">
+  <meta name="theme-color" content="#F3EEDC">
+  <meta name="color-scheme" content="light dark">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="MyScreenFolio">
-  <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
-  <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <link rel="icon" type="image/svg+xml" sizes="any" href="icons/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
 </head>
 <body>
-<div class="page-wrap fr-page">
+<div class="page-wrap fr-page soc-page">
 
-  <div class="cat-page-header fade-up">
+  <div class="soc-bar" id="socStrip" role="navigation" aria-label="Social"></div>
+  <div class="cat-page-header soc-page-head fade-up">
     <div>
+      <div class="soc-kicker">People</div>
       <h1 class="cat-page-title">Blend</h1>
       <div class="cat-page-sub" id="socPageSub">A mix of picks you and a friend will both enjoy.</div>
     </div>
   </div>
-  <div class="pn-toggle soc-strip" id="socStrip" role="navigation" aria-label="People"></div>
 
   <section aria-label="Blend">
     <div class="fr-toolbar" id="frToolbar"></div>
@@ -42,7 +45,7 @@
 <script src="js/db.js"></script>
 <script src="js/nav.js"></script>
 <script src="js/info-popup.js"></script>
-<script src="js/rating-popup.js"></script>
+<script src="js/title-view.js"></script>
 <script src="js/easter-egg.js"></script>
 <script src="js/note-popup.js"></script>
 <script src="js/episode-ratings.js"></script>
@@ -55,13 +58,22 @@
 <script>
 function _blendCard(e, why, open) {
   const t = e.media_type || (e.tmdb_type === 'movie' || e.cat === 'movies' ? 'movie' : 'tv');
-  return MSSCard.poster({ cls: 'bl-card', onclick: open, title: e.title, year: e.year, poster: e.poster_url, type: t, age: [t, e.tmdb_id],
-    below: `<div class="bl-why">${why}</div>` });
+  return { h: MSSCard.tmdb({ id: e.tmdb_id, media_type: t, title: e.title, year: e.year, poster_url: e.poster_url, cat: e.cat }, { onclick: open, age: [t, e.tmdb_id],
+    sub: `<span class="bl-why">${why}</span>` }) };
 }
-function _blendRow(title, ic, cards, empty) {
-  return `<section class="bl-sec"><div class="bl-sec-head">${icon(ic, 14)}<span>${title}</span><b>${cards.length}</b></div>
-    ${cards.length ? `<div class="bl-row">${cards.join('')}</div>` : `<div class="bl-none">${empty}</div>`}</section>`;
+/* A Blend row: its name and count, See all on the right, the standard cards — one row of them
+   (5 on a computer, 3 on a phone); See all shows every card of that row */
+let _blendAll = null;
+function _blendRow(key, title, ic, cards, empty) {
+  if (_blendAll && _blendAll !== key) return '';
+  const all = _blendAll === key;
+  const shown = all ? cards : cards.slice(0, 10);
+  return `<section class="bl-sec${all ? ' is-all' : ''}">
+    <div class="bl-sec-head"><h2 class="fr-sec-title">${icon(ic, 15)} ${title}</h2><span class="fr-sec-sub">${cards.length} ${cards.length === 1 ? 'title' : 'titles'}</span>
+      ${cards.length > 5 && !all ? `<button type="button" class="bl-seeall" onclick="_blendSeeAll('${key}')">See all ${cards.length} ${icon('chevright', 13)}</button>` : ''}</div>
+    ${cards.length ? `<div class="msf-grid bl-grid${all ? ' is-all' : ''}">${shown.map(c => c.h).join('')}</div>` : `<div class="bl-none">${empty}</div>`}</section>`;
 }
+function _blendSeeAll(key) { _blendAll = key; _frRender(); window.scrollTo({ top: 0, behavior: 'instant' }); }
 let _blendNow = null;    // what's on screen: { d, picks }
 async function _frRenderBlend() {
   const c = document.getElementById('frContent');
@@ -69,10 +81,11 @@ async function _frRenderBlend() {
   if (!_cmpMine) { c.innerHTML = `<div class="page-loading"><div class="spinner"></div></div>`; await _cmpLoad(); if (_frTab !== 'blend') return; }
   _blendGroup = _blendGroup.filter(u => _frProfiles[u]);
   const g = _blendGroup;
-  const picker = `<section class="cp-pick">
-      <div class="cp-pick-head"><div class="fr-toolbar-title">Blend with</div><div class="cp-pick-hint">${g.length ? `${g.length} selected · up to 8` : 'Pick one friend — or a few for a group Blend'}</div></div>
-      <div class="cp-pick-row">${_frAccepted.map(f => { const on = g.includes(f.friendId);
-        return `<button type="button" class="cp-person${on ? ' on' : ''}" aria-pressed="${on}" onclick="_blendPick(${attrJSON(f.friendId)})">${_frAvHTML(f.friendProfile, 52)}<span translate="no">${escHTML(_frName(f.friendId))}</span>${on ? `<i>${icon('check', 11)}</i>` : ''}</button>`; }).join('')}</div>
+  const fr = _frAccepted.slice().sort((x, y) => (_frMatchPct(y.friendId) ?? -1) - (_frMatchPct(x.friendId) ?? -1) || _frName(x.friendId).localeCompare(_frName(y.friendId)));
+  const picker = _blendAll ? '' : `<section class="cp-pick" aria-label="Blend with">
+      <div class="cp-pick-head"><h2 class="cp-pick-title">Blend with</h2><span class="cp-pick-hint">${g.length ? `${g.length} selected · up to 8` : 'Pick one, or a few for a group Blend'}</span></div>
+      <div class="cp-pick-row">${fr.map(f => { const on = g.includes(f.friendId), mp = _frMatchPct(f.friendId);
+        return `<button type="button" class="cp-person${on ? ' on' : ''}" aria-pressed="${on}" onclick="_blendPick(${attrJSON(f.friendId)})">${_frAvHTML(f.friendProfile, 52)}${on ? `<i aria-hidden="true">${icon('check', 10)}</i>` : ''}<span translate="no">${escHTML(_frName(f.friendId))}</span><small>${mp != null ? mp + '%' : '—'}</small></button>`; }).join('')}</div>
     </section>`;
   if (!g.length) {
     c.innerHTML = picker + _frEmptyHTML('shuffle', 'Blend your taste with friends', 'Pick one friend, or a few for a group Blend — one list for all of you: what you all want to watch, what each of you loved that the others haven’t seen, and new picks you’ll all like. Then let us pick for your Movie Night.');
@@ -84,23 +97,23 @@ async function _frRenderBlend() {
   window._blendMine = Object.fromEntries((_cmpMine || []).map(e => [e.id, e]));
   const mineOpen = e => `MSSViews.open(window._blendMine[${attrJSON(e.id)}], { own: true, start: 'info' })`;
   const theirOpen = e => e.user_id === _fUser.id ? mineOpen(e) : `_frViews(window._frEntryMap[${attrJSON(e.id)}], 'rate')`;
-  const head = `<div class="bl-head">
-      <div class="bl-avs">${_frAvHTML(_cmpProfiles[_fUser.id] || {}, 52)}${g.slice(0, 4).map(u => _frAvHTML(_frProfiles[u], 52)).join('')}${g.length > 4 ? `<span class="bl-more">+${g.length - 4}</span>` : ''}</div>
+  const head = _blendAll ? `<button type="button" class="bl-back" onclick="_blendAll=null;_frRender()">${icon('back', 14)} You &amp; <span translate="no">${names}</span></button>` : `<div class="bl-head">
+      <div class="bl-avs">${_frAvHTML(_cmpProfiles[_fUser.id] || {}, 44)}${g.slice(0, 4).map(u => _frAvHTML(_frProfiles[u], 44)).join('')}${g.length > 4 ? `<span class="bl-more">+${g.length - 4}</span>` : ''}</div>
       <div class="bl-head-info">
         <div class="bl-head-title">You &amp; <span translate="no">${names}</span></div>
-        <div class="bl-head-sub">${m && m.pct != null ? `<b>${m.pct}%</b> taste match · ` : ''}${d.want.length + d.theyLoved.length + d.youLoved.length} titles so far${single ? '' : ` · ${g.length + 1} people`}</div>
+        <div class="bl-head-sub">${m && m.pct != null ? `<b>${m.pct}%</b> taste match · ` : ''}${d.want.length + d.theyLoved.length + d.youLoved.length} titles in this Blend${single ? '' : ` · ${g.length + 1} people`}</div>
       </div>
       <div class="bl-head-acts">
         <button type="button" class="btn-add-entry" onclick="_blendSurprise()">${icon('shuffle', 14)} Surprise us</button>
-        <button type="button" class="rec-btn" onclick="_blendNight(this)">${icon('film', 14)} Start a Movie Night</button>
-        <button type="button" class="rec-btn" onclick="_blendSave(this)">${icon('layers', 14)} Save as List</button>
+        <button type="button" class="fm-btn" onclick="_blendNight(this)">${icon('film', 14)} Movie Night</button>
+        <button type="button" class="fm-icon-btn" aria-label="More Blend actions" aria-haspopup="menu" onclick="_blendMore(this)">${icon('moreV', 15)}</button>
       </div>
     </div>`;
   const rows = [
-    _blendRow(single ? 'You both want to watch' : 'You want to watch together', 'bookmark', d.want.map(x => _blendCard(x.e, x.why, theirOpen(x.e))), single ? 'Nothing on both your watchlists yet.' : 'Nothing on two of your watchlists yet.'),
-    _blendRow(single ? `${first} loved, you haven’t seen` : 'Loved by a friend, new to you', 'heart', d.theyLoved.map(x => _blendCard(x.e, x.why, theirOpen(x.e))), single ? `Nothing yet — once ${first} rates titles you haven’t seen, they show up here.` : 'Nothing yet — once your friends rate titles you haven’t seen, they show up here.'),
-    _blendRow(single ? `You loved, ${first} hasn’t seen` : 'You loved, new to all of them', 'ratingStar', d.youLoved.map(x => _blendCard(x.e, x.why, mineOpen(x.e))), single ? `Rate a few favourites ${first} hasn’t seen and they’ll appear here.` : 'Rate a few favourites none of them have seen and they’ll appear here.'),
-    `<div id="blPicks">${_blendRow(single ? 'Picked for both of you' : 'Picked for all of you', 'sparkles', [], `<span class="bl-loading"><span class="spinner"></span> Finding picks you’ll all like…</span>`)}</div>`,
+    _blendRow('want', single ? 'You both want to watch' : 'You want to watch together', 'bookmark', d.want.map(x => _blendCard(x.e, x.why, theirOpen(x.e))), single ? 'Nothing on both your watchlists yet.' : 'Nothing on two of your watchlists yet.'),
+    _blendRow('theyLoved', single ? `${first} loved, you haven’t seen` : 'Loved by a friend, new to you', 'heart', d.theyLoved.map(x => _blendCard(x.e, x.why, theirOpen(x.e))), single ? `Nothing yet — once ${first} rates titles you haven’t seen, they show up here.` : 'Nothing yet — once your friends rate titles you haven’t seen, they show up here.'),
+    _blendRow('youLoved', single ? `You loved, ${first} hasn’t seen` : 'You loved, new to all of them', 'ratingStar', d.youLoved.map(x => _blendCard(x.e, x.why, mineOpen(x.e))), single ? `Rate a few favourites ${first} hasn’t seen and they’ll appear here.` : 'Rate a few favourites none of them have seen and they’ll appear here.'),
+    `<div id="blPicks">${_blendRow('picks', single ? 'Picked for both of you' : 'Picked for all of you', 'sparkles', [], `<span class="bl-loading"><span class="spinner"></span> Finding picks you’ll all like…</span>`)}</div>`,
   ];
   c.innerHTML = picker + head + rows.join('');
   const picks = await _blendLoadPicks(d);
@@ -108,11 +121,19 @@ async function _frRenderBlend() {
   _blendNow.picks = picks;
   window._blendPicksNow = Object.fromEntries(picks.map(p => [p.media_type + ':' + p.tmdb_id, p]));
   const box = document.getElementById('blPicks');
-  if (box) box.innerHTML = _blendRow(single ? 'Picked for both of you' : 'Picked for all of you', 'sparkles',
+  if (box) box.innerHTML = _blendRow('picks', single ? 'Picked for both of you' : 'Picked for all of you', 'sparkles',
     picks.map(p => _blendCard(p, escHTML(p._why), `MSSInfo.fromDiscover(window._blendPicksNow[${attrJSON(p.media_type + ':' + p.tmdb_id)}])`)),
     d.seeds.length ? 'No new picks right now — try again after you rate a few more titles.' : 'Rate a few titles and we’ll find picks for you.');
 }
+// ⋯ in the Blend's header
+async function _blendMore(btn) {
+  await mssLoadScript('js/panel.js');
+  MSSPopover.open(btn, { title: 'This Blend', label: 'More Blend actions', items: [
+    { label: 'Save as list', icon: 'layers', onSelect: () => _blendSave(btn) },
+  ] });
+}
 function _blendPick(uid) {
+  _blendAll = null;
   const i = _blendGroup.indexOf(uid);
   if (i >= 0) _blendGroup.splice(i, 1);
   else if (_blendGroup.length >= 8) { showToast('A Blend can have up to 8 friends.', 'err'); return; }
@@ -132,13 +153,13 @@ function _blendPool() {
 }
 // Surprise us: a random title from the Blend → make it tonight's Movie Night
 let _blSurprise = null;
-function _blendSurprise() {
+async function _blendSurprise() {
   const pool = _blendPool();
   if (!pool.length) { showToast('Nothing in this Blend yet — add titles to your watchlists or rate a few.', 'err'); return; }
   let x = pool[Math.floor(Math.random() * pool.length)];
   if (pool.length > 1 && _blSurprise && x.o.tmdb_id === _blSurprise.o.tmdb_id) x = pool.find(y => y !== x && y.o.tmdb_id !== _blSurprise.o.tmdb_id) || x;
   _blSurprise = x;
-  const ov = _socDialog('blSurpriseDlg', 'Surprise pick', () => MSSDialog.close(ov));
+  await _socDialog('blSurpriseDlg', 'Surprise pick');
   const poster = x.o.poster_path ? `https://image.tmdb.org/t/p/w342${x.o.poster_path}` : null;
   document.getElementById('blSurpriseDlgBody').innerHTML = `<div class="bl-surprise">
       <div class="bl-surprise-poster">${poster ? `<img src="${poster}" alt="">` : icon('film', 34)}</div>
@@ -152,7 +173,7 @@ function _blendSurprise() {
     </div>`;
   document.getElementById('blSurpriseDlgFoot').innerHTML = `<button type="button" class="sf-clear-btn" onclick="_blendSurprise()">${icon('shuffle', 14)} Spin again</button>
     <button type="button" class="sf-apply-btn" onclick="_blendSurpriseNight(this)">Make it a Movie Night</button>`;
-  MSSDialog.open(ov);
+
 }
 async function _blendSurpriseNight(btn) {
   const x = _blSurprise; if (!x) return;
@@ -160,7 +181,7 @@ async function _blendSurpriseNight(btn) {
   try {
     const id = await sb.rpc('create_movie_night', { p_title: `Movie Night with ${_blNames(_blendGroup)}`.slice(0, 80), p_when: null, p_friends: _blendGroup, p_options: [x.o] }).then(r => { if (r.error) throw r.error; return r.data; });
     await sb.rpc('decide_movie_night', { p_night: id, p_option: null }).then(r => { if (r.error) throw r.error; });
-    MSSDialog.close(document.getElementById('blSurpriseDlg'));
+    _socDialogClose('blSurpriseDlg');
     showToast(`Movie Night made — you’re watching ${x.o.title}!`);
     location.href = `movie-night.html?night=${encodeURIComponent(id)}`;
   } catch (err) { btn.disabled = false; showToast(err?.hint || 'Couldn’t make the Movie Night — try again.', 'err'); }
@@ -202,7 +223,7 @@ function _frRender() {
   if (_frGateAuth() || _frGateData()) return;
   _frRenderBlend();
 }
-MSSSocial.boot('blend', { friends: true, render: true });
+MSSSocial.boot('blend', { friends: true, render: true, start: (user, q) => { if (q.get('with')) _blendGroup = [q.get('with')]; } });
 </script>
 <script>
 if ('serviceWorker' in navigator) {

@@ -3,40 +3,38 @@
 <head>
 <meta charset="UTF-8">
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#1E5C26">
+  <meta name="theme-color" content="#F3EEDC">
+  <meta name="color-scheme" content="light dark">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="MyScreenFolio">
-  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <link rel="icon" type="image/svg+xml" sizes="any" href="icons/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script src="js/splash.js"></script>
 <script src="js/i18n.js"></script>
 <title>Library — MyScreenFolio</title>
 <link rel="stylesheet" href="css/fonts.css">
+<link rel="stylesheet" href="css/theme.css">
 <link rel="stylesheet" href="css/style.css">
-<style>
-
-/* ── Mobile (≤640px) ── */
-@media(max-width:640px) {
-  .sort-bar { padding:8px 12px 10px; gap:4px; }
-}
-</style>
 </head>
 <body>
-<div class="page-wrap">
+<div class="page-wrap lib-page">
 
-  <div class="cat-page-header fade-up">
-    <div>
+  <div class="cat-page-header lib-head fade-up">
+    <div class="lib-head-l">
+      <div class="lib-kicker" id="libKicker">Your collection</div>
       <h1 class="cat-page-title">Library</h1>
-      <div class="cat-page-sub" id="libPageSub"><span class="skel-txt">00 entries · 0 watching · 00 watched</span></div>
+      <div class="cat-page-sub" id="libPageSub"><span class="skel-txt">0 in progress · 00 queued · 00 watched</span></div>
     </div>
+    <div class="lib-head-r" id="libHeadTools"></div>
   </div>
 
-  <div id="libraryLoading"><div class="page-loading"><div class="spinner"></div></div></div>
+  <div id="libraryLoading"><div class="page-loading"></div></div>
   <div id="libraryContent" style="display:none"></div>
 
 </div>
-
 <script src="js/vendor/supabase-2.118.0.js"></script>
 <script src="js/config.js"></script>
 <script src="js/db.js"></script>
@@ -48,65 +46,14 @@
 <script src="js/create-card.js"></script>
 <script src="js/info-popup.js"></script>
 <script src="js/episode-ratings.js"></script>
-<script src="js/rating-popup.js"></script>
+<script src="js/title-view.js"></script>
 <script src="js/list-popup.js"></script>
-<script src="js/comments.js"></script>
 <script src="js/easter-egg.js"></script>
 <script src="js/note-popup.js"></script>
 <script>
-/* ── State ── */
+/* The Library (library-view.js): every type. Signed in → your titles, then the page draws itself. */
 var _pUser = null, _pProfile = null, _pEntries = [];
-
-/* ── Init ── */
-// Returning via browser back/forward can restore this page from the
-// bfcache with stale data (e.g. an entry just added/edited elsewhere
-// wouldn't show up here) instead of re-running this page's scripts.
-window.addEventListener('pageshow', (event) => {
-  if (event.persisted && mssDataChangedSince(window._mssPageAt)) location.reload();   // only if something changed since (config.js)
-});
-
-document.addEventListener('DOMContentLoaded', function() {
-  initPage(async function(user, profile) {
-    if (!user) {
-      document.querySelector('.page-wrap').innerHTML = mssGuestEmpty('library');
-      return;
-    }
-    _pUser = user;
-    _pProfile = profile;
-    _pEntries = await getEntries(user.id);
-
-    var _libSt = computeStats(_pEntries);
-    var subEl = document.getElementById('libPageSub');
-    if (subEl) {
-      subEl.textContent = _pEntries.length + ' entr' + (_pEntries.length !== 1 ? 'ies' : 'y')
-        + ' · ' + _libSt.watching + ' watching'
-        + ' · ' + _libSt.completed + ' watched';
-    }
-
-    renderLibrary();
-    _libResume();
-  });
-});
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// After a delete from either popup: drop it from this page and re-render
-
-
-// Your title: Info · Ratings · Note in one popup (MSSViews, info-popup.js). Opens on
-// Ratings once it's rated/watched, otherwise on Info.
-
+_libInitPage();
 </script>
 <script>
 if ('serviceWorker' in navigator) {

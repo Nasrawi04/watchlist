@@ -1,7 +1,8 @@
 /* ═══════════════════════════════════════════════════════════════
    sort-filter.js — Shared Sort & Filter system (v640)
 
-   One implementation of the Sort / Filter popups for every page.
+   One implementation of the Sort / Filter panels for every page (side panel S on
+   wide screens, a full page on phones — js/panel.js, loaded on first open).
    Each page registers a "scope" describing what's different about it
    (which sorts, which filters, where its entries come from, how to
    re-render), and gets the exact same popups, behavior and fixes.
@@ -62,7 +63,7 @@
    SF.searchHTML('cat', 'Search your TV Shows…')
                                  → the search box for a page (put it somewhere the
                                    page never redraws). Typing narrows every section
-                                   of the scope by title / year; cfg.onSearch(query)
+                                   of the scope by title / year (+ cfg.searchText(e)); cfg.onSearch(query)
                                    redraws the page (default: each section).
    SF.query('cat')               → what's typed ('' when not searching)
    SF.rank(entry, i)             → its #place in the full sorted list (true while searching)
@@ -161,7 +162,18 @@ const SF = (() => {
   }
   function getSort(scope, section) {
     const s = S(scope);
-    return s.sort[section] || s.cfg.defaultSort || 'newest';
+    return s.sort[section] || savedSort(s, section) || s.cfg.defaultSort || 'newest';
+  }
+  // A saved default for this section (cfg.savedSort — the Library pages' "Make this my default"), if it's one of its sorts
+  function savedSort(s, section) {
+    const v = s.cfg.savedSort?.get(section);
+    return v && (v.startsWith('rating:') ? showRating(s, section) : sortsFor(s, section).some(g => g.opts.some(([x]) => x === v))) ? v : '';
+  }
+  // "Added: Latest", "Story" (a specific rating) — a sort's full name, for the defaults list and the toolbar
+  function sortName(s, section, value) {
+    if (value.startsWith('rating:') && s.cfg.ratingSort) return s.cfg.ratingSort.label(value.slice(7));
+    for (const g of sortsFor(s, section)) for (const [v, l] of g.opts) if (v === value) return g.header === 'Added' ? `${l} added` : g.opts.length > 1 ? `${g.header}: ${l}` : l;
+    return value;
   }
   function getFilter(scope, section) {
     return S(scope).filter[section] || EMPTY_FILTER();
@@ -269,13 +281,14 @@ const SF = (() => {
   /* ── Search: every word typed must appear in the title (accents, case and
      punctuation ignored, so "spiderman" finds "Spider-Man") or be the year ── */
   const norm = t => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
-  function matches(e, words) {
-    const hay = norm(`${e.title || ''} ${e.ratings?._original_title || ''}`), flat = hay.replace(/ /g, ''), year = String(e.year || '').slice(0, 4);
+  // cfg.searchText(e) → more text to search as well (the Notes page: the note itself)
+  function matches(e, words, more) {
+    const hay = norm(`${e.title || ''} ${e.ratings?._original_title || ''} ${more ? more(e) || '' : ''}`), flat = hay.replace(/ /g, ''), year = String(e.year || '').slice(0, 4);
     return words.every(w => hay.includes(w) || flat.includes(w) || w === year);
   }
   function searchFilter(s, list) {
     const words = norm(s.query).split(' ').filter(Boolean);
-    return words.length ? list.filter(e => matches(e, words)) : list;
+    return words.length ? list.filter(e => matches(e, words, s.cfg.searchText)) : list;
   }
 
   function list(scope, section) {
@@ -355,13 +368,13 @@ const SF = (() => {
 
   /* A pick list (Status, Type, Format…): check rows; curV is the value, or the picked values (several-picks lists) */
   function choiceHTML(label, hint, options, curV, onchange) {
-    return `<div class="sf-section-label">${escHTML(label)}${hint ? ` <span class="sf-section-hint">${escHTML(hint)}</span>` : ''}</div><div class="sf-check-list">` +
+    return `<div class="lyr-sec"><h3 class="lyr-sec-h">${escHTML(label)}${hint ? ` <small>${escHTML(hint)}</small>` : ''}</h3><div class="sf-check-list" role="group" aria-label="${escHTML(label)}">` +
       options.map(([v, l]) => `
         <label class="sf-check-row">
           <input type="checkbox" ${(Array.isArray(curV) ? curV.includes(v) : curV === v) ? 'checked' : ''} onchange="${onchange(v)}">
           <span class="sf-check-mark">${CHECK_SVG}</span>
           <span>${escHTML(l)}</span>
-        </label>`).join('') + `</div>`;
+        </label>`).join('') + `</div></div>`;
   }
   // The Sort / Filter trigger button (also used for the page-wide Type filter)
   function buttonHTML(ico, label, active, onclick, aria) {
@@ -369,27 +382,80 @@ const SF = (() => {
         ${icon(ico, 15)}<span class="sf-icon-btn-label">${escHTML(label)}</span>
       </button>`;
   }
-
-  /* ── Page-wide Type filter popup — Library (the shared Type list, several picks) and the
-     Anime / Cartoons pages (Movies vs TV Shows). Same look as Filter.
+  /* ── Page-wide Type filter — Library (the shared Type list, several picks) and the Anime / Cartoons
+     pages (Movies vs TV Shows). The same Filter panel.
        SF.typeFilter({ groups: [{ key, label, options: [[value, label]] }],
-                       value: { key: value }, onApply(value) })
+                       value: { key: value }, onApply(value), count(value) → how many titles it shows })
        SF.typeFilterButton(onclick, label, active) → its trigger button ── */
   let tf = null;
-  function typeFilter(o) {
-    inject('sfTypeFilterOverlay', 'sfTypeFilterCard', 'Filter', 'sfTypeFilterBody', 'Clear', 'SF._typeClear()', 'SF._typeApply()', 'SF.closeTypeFilter()', closeTypeFilter);
-    tf = { o, staged: { ...o.value } };
-    typeBody();
-    MSSDialog.open(document.getElementById('sfTypeFilterOverlay'));
+  async function typeFilter(o) {
+    await mssLoadScript('js/panel.js');
+    tf = { o, staged: { ...o.value }, open: new Set() };
+    const h = MSSPanel.open({ size: 'S', kind: 'generic', title: o.title || 'Filter', body: typeBody(),
+      footer: { secondary: [{ label: 'Clear', onClick: typeClear }], primary: { label: o.count ? countLabel(o.count(tf.staged)) : 'Apply', onClick: typeApply } },
+      onClose: () => { if (tf?.h === h) tf = null; } });
+    tf.h = h;
   }
   function typeBody() {
     const st = tf.staged;
-    document.getElementById('sfTypeFilterBody').innerHTML = tf.o.groups.map(g => {
-      return choiceHTML(g.label, '', g.options, pickMany(g) ? (st[g.key] || '').split(',') : st[g.key], v => `SF._typeStage(${attrJSON(g.key)}, ${attrJSON(v)})`);
-    }).join('');
+    return tf.o.groups.map(g => g.tree ? treeHTML(g) : choiceHTML(g.label, '', g.options, pickMany(g) ? (st[g.key] || '').split(',') : st[g.key], v => `SF._typeStage(${attrJSON(g.key)}, ${attrJSON(v)})`)).join('')
+      + '<p class="sr-only" aria-live="polite" id="sfTypeLive"></p>';
   }
-  function closeTypeFilter() { MSSDialog.close(document.getElementById('sfTypeFilterOverlay')); }
-  const typeStage = (k, v) => { const g = tf.o.groups.find(x => x.key === k); tf.staged[k] = pickMany(g) ? toggled(tf.staged[k], v) : v; typeBody(); };
+  /* A Type list where a row can open into its parts (Anime → TV Shows · Movies), several picks.
+     group.tree = true; options [[value, label, [[childValue, childLabel], …]?]] — 'anime' means both parts,
+     'anime_show' one of them (typeIs). The parent's box is ticked for both, half-ticked for one. */
+  function treeHTML(g) {
+    const on = new Set(picks(tf.staged[g.key]));
+    tf.open = tf.open || new Set();
+    const row = (v, label, checked, mixed, cls = '', extra = '') => `<label class="sf-check-row${cls}">
+        <input type="checkbox" ${checked ? 'checked' : ''} ${mixed ? 'data-mixed="1"' : ''} aria-checked="${mixed ? 'mixed' : checked}" onchange="SF._treeStage(${attrJSON(g.key)}, ${attrJSON(v)})">
+        <span class="sf-check-mark${mixed ? ' is-mixed' : ''}">${mixed ? '<i></i>' : CHECK_SVG}</span><span>${escHTML(label)}</span>${extra}</label>`;
+    return `<div class="lyr-sec"><h3 class="lyr-sec-h">${escHTML(g.label)}</h3><div class="sf-check-list sf-tree" role="group" aria-label="${escHTML(g.label)}">` + g.options.map(([v, label, kids]) => {
+      if (!v) return row('', label, !on.size);
+      if (!kids) return row(v, label, on.has(v));
+      const picked = kids.filter(([k]) => on.has(v) || on.has(k)), open = tf.open.has(v) || (picked.length === 1);
+      const toggle = `<button type="button" class="sf-tree-x" aria-expanded="${open}" aria-label="${open ? 'Hide' : 'Show'} ${escHTML(label)} TV shows and movies" onclick="event.preventDefault();event.stopPropagation();SF._treeOpen(${attrJSON(v)})">${icon(open ? 'chevup' : 'chevdown', 15)}</button>`;
+      return row(v, label, picked.length === kids.length, picked.length === 1, ' is-parent', toggle)
+        + (open ? `<div class="sf-tree-kids">${kids.map(([k, kl]) => row(k, kl, on.has(v) || on.has(k), false, ' is-kid')).join('')}</div>` : '');
+    }).join('') + '</div></div>';
+  }
+  function treeStage(key, v) {
+    const g = tf.o.groups.find(x => x.key === key), on = new Set(picks(tf.staged[key]));
+    if (!v) on.clear();
+    else {
+      const parent = g.options.find(([p, , kids]) => kids && (p === v || kids.some(([k]) => k === v)));
+      if (!parent) { if (!on.delete(v)) on.add(v); }
+      else {
+        const [p, , kids] = parent, ks = kids.map(([k]) => k);
+        let sel = new Set(ks.filter(k => on.has(p) || on.has(k)));
+        if (v === p) sel = sel.size === ks.length ? new Set() : new Set(ks);           // the whole group on / off
+        else if (!sel.delete(v)) sel.add(v);
+        on.delete(p); ks.forEach(k => on.delete(k));
+        if (sel.size === ks.length) on.add(p); else sel.forEach(k => on.add(k));
+      }
+    }
+    tf.staged[key] = [...on].join(',');
+    typeRedraw();
+    tf.h.body.querySelector(`.sf-check-row input[onchange*='"${v}"']`)?.focus();
+  }
+  function treeOpen(v) {
+    tf.open = tf.open || new Set();
+    if (!tf.open.delete(v)) tf.open.add(v);
+    typeRedraw();
+    tf.h.body.querySelector(`.sf-tree-x[onclick*='"${v}"']`)?.focus();
+  }
+  function typeRedraw() {
+    const sc = tf.h.body.closest('.lyr-body').scrollTop;
+    tf.h.setBody(typeBody());
+    tf.h.body.closest('.lyr-body').scrollTop = sc;
+    if (tf.o.count) recountLater(() => tf.o.count(tf.staged), tf.h, 'sfTypeLive');
+  }
+  const typeStage = (k, v) => {
+    const g = tf.o.groups.find(x => x.key === k);
+    tf.staged[k] = pickMany(g) ? toggled(tf.staged[k], v) : v;
+    typeRedraw();
+    tf.h.body.querySelectorAll('.sf-check-row input')[g.options.findIndex(o => o[0] === v)]?.focus();
+  };
   // a pick on a several-picks list: "All" clears, anything else is ticked or unticked
   function toggled(cur, v) {
     if (!v) return '';
@@ -397,29 +463,22 @@ const SF = (() => {
     if (!on.delete(v)) on.add(v);
     return [...on].join(',');
   }
-  const typeClear = () => { tf.o.groups.forEach(g => { tf.staged[g.key] = g.options[0][0]; }); typeBody(); };
-  function typeApply() { const v = { ...tf.staged }, o = tf.o; closeTypeFilter(); o.onApply(v); }
+  const typeClear = () => { tf.o.groups.forEach(g => { tf.staged[g.key] = g.options[0][0]; }); typeRedraw(); };
+  function typeApply(h) { const v = { ...tf.staged }, o = tf.o; h.closeNow(); o.onApply(v); }
 
-  /* ── overlays (one shared pair for every scope) ── */
-  function inject(id, cardId, title, bodyId, clearLabel, clearFn, applyFn, closeFn, close) {
-    if (document.getElementById(id)) return;
-    const el = document.createElement('div');
-    el.id = id;
-    el.innerHTML = `<div id="${cardId}" role="dialog" aria-modal="true" aria-labelledby="${cardId}Title">
-      <div class="sf-header">
-        <div class="sf-title" id="${cardId}Title">${title}</div>
-        <button type="button" class="sf-close" onclick="${closeFn}" aria-label="Close">${icon('x', 18)}</button>
-      </div>
-      <div class="sf-body" id="${bodyId}"></div>
-      <div class="sf-footer">
-        <button type="button" class="sf-clear-btn" onclick="${clearFn}">${clearLabel}</button>
-        <button type="button" class="sf-apply-btn" onclick="${applyFn}">Apply</button>
-      </div>
-    </div>`;
-    MSSDialog.bind(el, close);
-    document.body.appendChild(el);
+  /* ── The live count on a Filter panel's button: "Show 311 titles", 200ms after a change ── */
+  let countTimer = null;
+  const countLabel = n => n == null ? 'Show titles' : `Show ${n} ${n === 1 ? 'title' : 'titles'}`;
+  function recountLater(fn, h, liveId, wait = 200) {
+    clearTimeout(countTimer);
+    countTimer = setTimeout(() => {
+      if (!h.body.isConnected) return;
+      const n = fn();
+      h.setPrimary({ label: countLabel(n) });
+      const live = document.getElementById(liveId);
+      if (live) live.textContent = n == null ? '' : `${n} ${n === 1 ? 'title matches' : 'titles match'}`;
+    }, wait);
   }
-
   // Type to narrow a dropdown: the first thing in its menu
   const ddSearch = ph => `<div class="sf-dd-search"><input type="search" placeholder="${escHTML(ph)}" aria-label="${escHTML(ph)}" autocomplete="off" onclick="event.stopPropagation()" oninput="SF._ddFilter(this)"></div>`;
   function _ddFilter(inp) {
@@ -435,85 +494,114 @@ const SF = (() => {
     </div>`;
   }
 
-  /* ── Sort popup ── */
-  function openSort(scope, section) {
-    inject('sfSortOverlay', 'sfSortCard', 'Sort', 'sfSortBody', 'Reset', 'SF._resetSort()', 'SF._applySort()', 'SF.closeSort()', closeSort);
+  /* ── Sort panel: one row per sort; the chosen row shows its direction (A → Z | Z → A …) ── */
+  let ph = null;      // the open Sort / Filter panel
+  let stagedDefault = false;   // "Make this my default for …" ticked (cfg.savedSort)
+  async function openSort(scope, section) {
+    await mssLoadScript('js/panel.js');
     cur = { scope, section };
     stagedSort = getSort(scope, section);
-    document.getElementById('sfSortBody').innerHTML = sortBodyHTML();
-    MSSDialog.open(document.getElementById('sfSortOverlay'));
+    stagedDefault = false;
+    const sv = S(scope).cfg.savedSort;
+    const h = MSSPanel.open({ size: 'S', kind: 'generic', title: 'Sort', subtitle: sv?.subtitle ? sv.subtitle(section) : undefined, body: sortBodyHTML(),
+      footer: { secondary: [{ label: 'Reset', onClick: _resetSort }], primary: { label: 'Apply', onClick: applySort } },
+      onClose: () => { if (ph === h) { ph = null; stagedSort = null; } } });
+    ph = h;
+    h.body.addEventListener('click', sortClick);
   }
-  function closeSort() {
-    MSSDialog.close(document.getElementById('sfSortOverlay'));
-    stagedSort = null;
+  function closeSort() { ph?.closeNow(); }
+  // [header, options] rows: the page's sorts, then "Specific rating" where the page has one
+  function sortRows() {
+    const s = S(cur.scope), rows = sortsFor(s, cur.section).map(g => ({ header: g.header, opts: g.opts }));
+    if (showRating(s, cur.section)) rows.push({ header: 'Specific Rating', rating: true });
+    return rows;
   }
+  const rowOn = (r, v) => r.rating ? v.startsWith('rating:') : r.opts.some(([x]) => x === v);
+  // each sort's icon on its tile
+  const SORT_ICON = { Alphabetical: 'list', Added: 'bookmark', 'Release Date': 'calendar', Episode: 'tv', Ratings: 'ratingStar', Runtime: 'clock',
+    'Season Count': 'layers', 'Episode Count': 'episodes', Rank: 'trophy', 'Specific Rating': 'star' };
   function sortBodyHTML() {
-    const s = S(cur.scope), section = cur.section, staged = stagedSort;
-    let html = `<div class="sf-section-label">Sort By</div><div class="sf-dd-stack">`;
-    sortsFor(s, section).forEach((g, i) => {
-      const active = g.opts.find(([v]) => v === staged);
-      const label = active ? `${g.header}: ${active[1]}` : g.header;
-      const menu = g.opts.map(([v, l]) => `<div class="td-dd-opt${staged === v ? ' active' : ''}" onclick="event.stopPropagation();SF._stageSort('${v}')">${l}</div>`).join('');
-      html += ddHTML(`sfSortDD-${i}`, label, !!active, menu);
-    });
-    html += `</div>`;
-    if (showRating(s, section)) {
-      const rs = s.cfg.ratingSort;
-      const isRating = staged.startsWith('rating:');
-      let menu = '', lastGroup = null;
-      rs.options().forEach(o => {
-        if (o.group !== lastGroup) { menu += `<div class="sf-dd-subgroup-label">${escHTML(o.group)}</div>`; lastGroup = o.group; }
-        menu += `<div class="td-dd-opt${isRating && staged.slice(7) === o.key ? ' active' : ''}" onclick="event.stopPropagation();SF._stageSort(${attrJSON('rating:' + o.key)})">${escHTML(o.label)}</div>`;
-      });
-      html += `<div class="sf-section-label">Rating</div>` +
-        ddHTML('sfSortDD-rating', `Specific Rating${isRating ? `: ${escHTML(rs.label(staged.slice(7)))}` : ''}`, isRating, menu);
-    }
-    return html;
+    const s = S(cur.scope), staged = stagedSort;
+    return `<div class="lyr-sec"><h3 class="lyr-sec-h" id="sfSortH">Sort by</h3><div class="lyr-choices is-tiles" role="radiogroup" aria-labelledby="sfSortH">${sortRows().map((r, i) => {
+      const on = rowOn(r, staged);
+      let extra = '';
+      if (on && r.rating) {
+        const rs = s.cfg.ratingSort; let menu = '', lastGroup = null;
+        rs.options().forEach(o => {
+          if (o.group !== lastGroup) { menu += `<div class="sf-dd-subgroup-label">${escHTML(o.group)}</div>`; lastGroup = o.group; }
+          menu += `<div class="td-dd-opt${staged.slice(7) === o.key ? ' active' : ''}" onclick="event.stopPropagation();SF._stageSort(${attrJSON('rating:' + o.key)})">${escHTML(o.label)}</div>`;
+        });
+        extra = ddHTML('sfSortDD-rating', escHTML(rs.label(staged.slice(7))), true, menu, ' is-inline');   // opens inline under the field, inside the card (not over the rows below)
+      } else if (on && r.opts.length > 1) extra = mssSegHTML({ label: `${r.header} order`, strong: true, value: staged, options: r.opts });
+      const hint = on ? 'Sorted by' : r.rating ? 'Pick a category' : r.opts.map(o => o[1]).join(' · ');
+      return `<div class="lyr-choice${on ? ' is-on' : ''}" data-row="${i}">
+          <button type="button" class="lyr-choice-main" role="radio" aria-checked="${on}" tabindex="${on ? 0 : -1}"><span class="lyr-tile-ic" aria-hidden="true">${icon(SORT_ICON[r.header] || 'sort', 18)}</span><span class="lyr-tile-txt">${on ? `<small>${escHTML(hint)}</small><b>${escHTML(r.header)}</b>` : `<b>${escHTML(r.header)}</b><small>${escHTML(hint)}</small>`}</span></button>${extra}</div>`;
+    }).join('')}</div></div>${savedSortHTML()}`;
   }
-  function _stageSort(v) { stagedSort = v; document.getElementById('sfSortBody').innerHTML = sortBodyHTML(); }
-  // Reset stages the default (still needs Apply) — Cancel/X/backdrop discard.
-  function _resetSort() { stagedSort = S(cur.scope).cfg.defaultSort || 'newest'; document.getElementById('sfSortBody').innerHTML = sortBodyHTML(); }
-  async function _applySort() {
-    if (!cur || !stagedSort) { closeSort(); return; }
+  /* "Make this my default for Watched" + a read-only list of every status's default (cfg.savedSort) */
+  function savedSortHTML() {
+    const s = S(cur.scope), sv = s.cfg.savedSort;
+    if (!sv) return '';
+    const name = sv.label(cur.section), base = s.cfg.defaultSort || 'newest';
+    return `<div class="lyr-sec sf-def">
+        <label class="sf-check-row sf-def-row"><input type="checkbox" ${stagedDefault ? 'checked' : ''} onchange="SF._stageDefault(this.checked)">
+          <span class="sf-check-mark">${CHECK_SVG}</span>
+          <span class="sf-def-txt"><b>Make this my default for ${escHTML(name)}</b><small>Used every time you open ${escHTML(name)}. Each status keeps its own default.</small></span></label>
+        <h3 class="lyr-sec-h" id="sfDefH">Your defaults</h3>
+        <ul class="sf-def-list" aria-labelledby="sfDefH">${sv.sections.map(([k, l]) => `<li${k === cur.section ? ' class="is-cur" aria-current="true"' : ''}><span>${escHTML(l)}</span><span>${escHTML(sortName(s, k, savedSort(s, k) || base))}</span></li>`).join('')}</ul>
+      </div>`;
+  }
+  function _stageDefault(on) { stagedDefault = !!on; }
+  function sortRedraw(focusRow) {
+    ph.setBody(sortBodyHTML());
+    if (focusRow != null) ph.body.querySelector(`[data-row="${focusRow}"] .lyr-choice-main`)?.focus();
+  }
+  function sortClick(ev) {
+    const seg = ev.target.closest('.lyr-seg-opt');
+    if (seg) { stagedSort = mssSegPick(seg); return; }
+    const row = ev.target.closest('.lyr-choice'); if (!row || ev.target.closest('.sf-dd')) return;
+    const i = Number(row.dataset.row), r = sortRows()[i];
+    if (rowOn(r, stagedSort)) return;
+    stagedSort = r.rating ? 'rating:' + S(cur.scope).cfg.ratingSort.options()[0].key : r.opts[0][0];
+    sortRedraw(i);
+  }
+  function _stageSort(v) { stagedSort = v; closeAllDD(); sortRedraw(sortRows().findIndex(r => rowOn(r, v))); }
+  // Reset stages the default (still needs Apply); closing the panel discards it
+  function _resetSort() { stagedSort = S(cur.scope).cfg.defaultSort || 'newest'; sortRedraw(); }
+  async function applySort(h) {
     const { scope, section } = cur, value = stagedSort, s = S(scope);
     // Episode sort needs each show's latest-aired-episode date — fetched on
     // demand (and saved) the first time, so the sort works immediately.
-    const needsEpisodes = value === 'episodeNewest' || value === 'episodeOldest';
-    if (needsEpisodes || s.cfg.beforeSort) {
-      const btn = document.querySelector('#sfSortCard .sf-apply-btn');
-      if (btn) { btn.textContent = 'Loading…'; btn.disabled = true; }
-      try {
-        if (needsEpisodes) await Promise.all((s.cfg.base(section) || []).map(e => fetchLastEpisodeDate(s, e)));
-        if (s.cfg.beforeSort) await s.cfg.beforeSort(section, value);
-      } finally {
-        if (btn) { btn.textContent = 'Apply'; btn.disabled = false; }
-      }
+    if (value === 'episodeNewest' || value === 'episodeOldest') await Promise.all((s.cfg.base(section) || []).map(e => fetchLastEpisodeDate(s, e)));
+    if (s.cfg.beforeSort) await s.cfg.beforeSort(section, value);
+    if (stagedDefault && s.cfg.savedSort) {
+      try { await s.cfg.savedSort.set(section, value); } catch (err) { console.warn('Saving the default sort:', err); }
     }
     setSort(scope, section, value);
-    closeSort();
+    h.closeNow();
   }
 
-  /* ── Filter popup ── */
-  function openFilter(scope, section) {
-    inject('sfFilterOverlay', 'sfFilterCard', 'Filter', 'sfFilterBody', 'Clear', 'SF._clearFilter()', 'SF._applyFilter()', 'SF.closeFilter()', closeFilter);
+  /* ── Filter panel ── */
+  async function openFilter(scope, section) {
+    await mssLoadScript('js/panel.js');
     cur = { scope, section };
     const f = getFilter(scope, section);
     stagedFilter = { ...EMPTY_FILTER(), ...f, genres: [...(f.genres || [])], choice: { ...(f.choice || {}) } };
     delete stagedFilter._personMatchIds;
-    document.getElementById('sfFilterBody').innerHTML = filterBodyHTML();
-    MSSDialog.open(document.getElementById('sfFilterOverlay'));
+    const h = MSSPanel.open({ size: 'S', kind: 'generic', title: 'Filter', body: filterBodyHTML(),
+      footer: { secondary: [{ label: 'Reset', onClick: _clearFilter }], primary: { label: countLabel(liveCount()), onClick: applyFilter_ } },
+      onClose: () => { if (ph === h) { ph = null; stagedFilter = null; closeAllDD(); } } });
+    ph = h;
   }
-  function closeFilter() {
-    MSSDialog.close(document.getElementById('sfFilterOverlay'));
-    stagedFilter = null;
-  }
-  function rangeRow(idMin, idMax, vMin, vMax, phMin, phMax, attrs = '') {
-    return `<div class="sf-range-row">
-      <input type="number" ${attrs} class="sf-range-input" id="${idMin}" placeholder="${phMin}" value="${escHTML(vMin)}" oninput="SF._stageRanges()">
-      <span class="sf-range-to">to</span>
-      <input type="number" ${attrs} class="sf-range-input" id="${idMax}" placeholder="${phMax}" value="${escHTML(vMax)}" oninput="SF._stageRanges()">
+  function closeFilter() { ph?.closeNow(); }
+  function rangeRow(label, idMin, idMax, vMin, vMax, phMin, phMax, attrs = '') {
+    return `<div class="lyr-range" role="group" aria-label="${escHTML(label)}">
+      <input type="number" ${attrs} class="lyr-field" id="${idMin}" placeholder="${phMin}" aria-label="${escHTML(label)}: ${phMin}" value="${escHTML(vMin)}" oninput="SF._stageRanges()">
+      <span class="lyr-range-to" aria-hidden="true">to</span>
+      <input type="number" ${attrs} class="lyr-field" id="${idMax}" placeholder="${phMax}" aria-label="${escHTML(label)}: ${phMax}" value="${escHTML(vMax)}" oninput="SF._stageRanges()">
     </div>`;
   }
+  const sec = (label, hint, inner) => `<div class="lyr-sec"><h3 class="lyr-sec-h">${escHTML(label)}${hint ? ` <small>${escHTML(hint)}</small>` : ''}</h3>${inner}</div>`;
   function filterBodyHTML() {
     const s = S(cur.scope), section = cur.section, f = stagedFilter;
     const on = new Set(filtersFor(s, section));
@@ -530,38 +618,59 @@ const SF = (() => {
           <span class="sf-check-mark">${CHECK_SVG}</span>
           <span>${escHTML(g)}</span>
         </label>`).join('');
-      html += `<div class="sf-section-label">Genre</div>` +
-        ddHTML('sfGenreDD', f.genres.length ? escHTML(f.genres.join(', ')) : 'Any Genre', f.genres.length > 0, ddSearch('Search genres…') + menu, ' sf-check-menu');
+      html += sec('Genre', '', ddHTML('sfGenreDD', f.genres.length ? escHTML(f.genres.join(', ')) : 'Any Genre', f.genres.length > 0, ddSearch('Search genres…') + menu, ' sf-check-menu'));
     }
-    if (on.has('year')) {
-      html += `<div class="sf-section-label">Release Year</div>` + rangeRow('sfYearMin', 'sfYearMax', f.yearMin, f.yearMax, 'From', 'To', 'inputmode="numeric"');
-    }
-    if (on.has('watched')) {
-      html += `<div class="sf-section-label">Year Watched</div>` + rangeRow('sfWatchedMin', 'sfWatchedMax', f.watchedMin, f.watchedMax, 'From', 'To', 'inputmode="numeric"');
-    }
-    if (on.has('score')) {
-      html += `<div class="sf-section-label">${escHTML(s.cfg.scoreLabel || 'MyScreenFolio')} <span class="sf-section-hint">(rated items only)</span></div>` +
-        rangeRow('sfScoreMin', 'sfScoreMax', f.scoreMin, f.scoreMax, 'Min', 'Max', 'step="0.1" min="0" max="10"');
-    }
+    if (on.has('year')) html += sec('Release Year', '', rangeRow('Release year', 'sfYearMin', 'sfYearMax', f.yearMin, f.yearMax, 'From', 'To', 'inputmode="numeric"'));
+    if (on.has('watched')) html += sec('Year Watched', '', rangeRow('Year watched', 'sfWatchedMin', 'sfWatchedMax', f.watchedMin, f.watchedMax, 'From', 'To', 'inputmode="numeric"'));
+    if (on.has('score')) html += sec(s.cfg.scoreLabel || 'MyScreenFolio', '(rated items only)', rangeRow(`${s.cfg.scoreLabel || 'MyScreenFolio'} score`, 'sfScoreMin', 'sfScoreMax', f.scoreMin, f.scoreMax, 'Min', 'Max', 'step="0.1" min="0" max="10" inputmode="decimal"'));
     if (on.has('length')) {
       const kind = s.cfg.lengthKind ? s.cfg.lengthKind(section) : 'mixed', mixed = kind === 'mixed';
-      const hint = t => mixed ? ` <span class="sf-section-hint">(${t})</span>` : '';
-      if (kind !== 'show') html += `<div class="sf-section-label">Runtime <span class="sf-section-hint">(minutes${mixed ? ' · movies' : ''})</span></div>`
-        + rangeRow('sfLengthMin', 'sfLengthMax', f.lengthMin, f.lengthMax, 'Min', 'Max', 'min="0"');
-      if (kind !== 'movie') html += `<div class="sf-section-label">Seasons${hint('shows')}</div>` + rangeRow('sfSeasonsMin', 'sfSeasonsMax', f.seasonsMin, f.seasonsMax, 'Min', 'Max', 'min="0"')
-        + `<div class="sf-section-label">Episodes${hint('shows')}</div>` + rangeRow('sfEpsMin', 'sfEpsMax', f.epsMin, f.epsMax, 'Min', 'Max', 'min="0"');
+      if (kind !== 'show') html += sec('Runtime', `(minutes${mixed ? ' · movies' : ''})`, rangeRow('Runtime in minutes', 'sfLengthMin', 'sfLengthMax', f.lengthMin, f.lengthMax, 'Min', 'Max', 'min="0" inputmode="numeric"'));
+      if (kind !== 'movie') html += sec('Seasons', mixed ? '(shows)' : '', rangeRow('Seasons', 'sfSeasonsMin', 'sfSeasonsMax', f.seasonsMin, f.seasonsMax, 'Min', 'Max', 'min="0" inputmode="numeric"'))
+        + sec('Episodes', mixed ? '(shows)' : '', rangeRow('Episodes', 'sfEpsMin', 'sfEpsMax', f.epsMin, f.epsMax, 'Min', 'Max', 'min="0" inputmode="numeric"'));
     }
     if (on.has('person')) {
-      html += `<div class="sf-section-label">Actor / Director</div>
-      <div class="td-dd sf-dd sf-dd-wide" id="sfPersonDD">
-        <input type="text" class="sf-range-input sf-text-input sf-dd-trigger" id="sfPerson" placeholder="Search by name, e.g. Tom Hanks…" autocomplete="off"
+      html += sec('Actor / Director', '', `<div class="td-dd sf-dd sf-dd-wide" id="sfPersonDD">
+        <input type="text" class="lyr-field sf-dd-trigger" id="sfPerson" placeholder="Search by name, e.g. Tom Hanks…" autocomplete="off" aria-label="Actor or director"
           value="${escHTML(f.person || '')}" oninput="SF._personInput(event.target.value)" onfocus="event.stopPropagation();SF._openPersonDD()" onclick="event.stopPropagation();">
         <div class="td-dd-menu" id="sfPersonMenu"></div>
       </div>
-      <div class="sf-section-hint sf-person-hint">Names are pulled from each title's cast &amp; crew the first time you search a section — may take a moment to load initially, then it's instant.</div>`;
+      <p class="lyr-hint">Names are pulled from each title's cast &amp; crew the first time you search a section — may take a moment to load initially, then it's instant.</p>`);
     }
-    return html;
+    return html + '<p class="sr-only" aria-live="polite" id="sfFilterLive"></p>';
   }
+  function filterRedraw() {
+    const box = ph.body.closest('.lyr-body'), sc = box.scrollTop, focusId = document.activeElement?.id;
+    ph.setBody(filterBodyHTML());
+    box.scrollTop = sc;
+    if (focusId) document.getElementById(focusId)?.focus();
+    recount();
+  }
+  // How many titles the staged filter shows (with the page's search). null while an actor / director
+  // filter is waiting on cast lists that haven't loaded yet.
+  function liveCount() {
+    const s = S(cur.scope), section = cur.section, f = { ...stagedFilter };
+    const bad = v => v && !(/^\d{4}$/.test(v) && +v >= 1880 && +v <= new Date().getFullYear() + 10);
+    ['yearMin', 'yearMax', 'watchedMin', 'watchedMax'].forEach(k => { if (bad(f[k])) f[k] = ''; });
+    const base = s.cfg.base(section) || [];
+    if (f.person && f.person.trim()) {
+      const q = f.person.trim().toLowerCase(), ids = [];
+      for (const e of base) {
+        const c = creditsNow(e);
+        if (c === undefined) return null;
+        if (c && (c.director.toLowerCase().includes(q) || c.cast.some(n => n.toLowerCase().includes(q)))) ids.push(e.id);
+      }
+      f._personMatchIds = ids;
+    }
+    return searchFilter(s, applyFilter(s, section, base, f)).length;
+  }
+  // an entry's cast list if it's already known: { director, cast } · null (not on TMDB) · undefined (not loaded yet)
+  function creditsNow(e) {
+    if (e.ratings?._director != null || e.ratings?._cast_names) return { director: e.ratings._director || '', cast: e.ratings._cast_names || [] };
+    if (!e.tmdb_id || !e.tmdb_type) return null;
+    return creditsCache[`${e.tmdb_type}:${e.tmdb_id}`];
+  }
+  const recount = () => { if (ph && stagedFilter) recountLater(liveCount, ph, 'sfFilterLive'); };
   function _stageGenre(genre) {
     const g = stagedFilter.genres;
     stagedFilter.genres = g.includes(genre) ? g.filter(x => x !== genre) : [...g, genre];
@@ -569,16 +678,11 @@ const SF = (() => {
     const trigger = document.querySelector('#sfGenreDD .sf-dd-trigger');
     trigger.querySelector('.td-dd-label').textContent = stagedFilter.genres.length ? stagedFilter.genres.join(', ') : 'Any Genre';
     trigger.classList.toggle('active', stagedFilter.genres.length > 0);
+    recount();
   }
-  function _stageChoice(key, value) {
-    stagedFilter.choice[key] = value;
-    document.getElementById('sfFilterBody').innerHTML = filterBodyHTML();
-  }
+  function _stageChoice(key, value) { stagedFilter.choice[key] = value; filterRedraw(); }
   // multi: true → several can be ticked; test(item, 'a,b') gets them comma-joined
-  function _stageChoiceToggle(key, value) {
-    stagedFilter.choice[key] = toggled(stagedFilter.choice[key], value);
-    document.getElementById('sfFilterBody').innerHTML = filterBodyHTML();
-  }
+  function _stageChoiceToggle(key, value) { stagedFilter.choice[key] = toggled(stagedFilter.choice[key], value); filterRedraw(); }
   function _stageRanges() {
     const v = id => document.getElementById(id)?.value ?? '';
     Object.assign(stagedFilter, {
@@ -589,11 +693,10 @@ const SF = (() => {
       seasonsMin: v('sfSeasonsMin'), seasonsMax: v('sfSeasonsMax'),
       epsMin: v('sfEpsMin'), epsMax: v('sfEpsMax'),
     });
+    ['sfYearMin', 'sfWatchedMin'].forEach(id => { const el = document.getElementById(id); if (el?.classList.contains('is-invalid')) ph.fieldError(el.closest('.lyr-range'), ''); });
+    recount();
   }
-  function _clearFilter() {
-    stagedFilter = EMPTY_FILTER();
-    document.getElementById('sfFilterBody').innerHTML = filterBodyHTML();
-  }
+  function _clearFilter() { stagedFilter = EMPTY_FILTER(); filterRedraw(); }
   // Years typed into the filter: 4 digits that make sense, and From before To
   function checkYears(f) {
     const bad = v => v && !(/^\d{4}$/.test(v) && +v >= 1880 && +v <= new Date().getFullYear() + 10);
@@ -602,44 +705,32 @@ const SF = (() => {
     pairs.forEach(([a, b]) => { if (f[a] && f[b] && +f[a] > +f[b]) [f[a], f[b]] = [f[b], f[a]]; });
     return true;
   }
-  async function _applyFilter() {
-    if (!cur || !stagedFilter) { closeFilter(); return; }
+  async function applyFilter_(h) {
     const { scope, section } = cur, s = S(scope);
     const staged = { ...stagedFilter };
     if (!checkYears(staged)) {
-      const body = document.getElementById('sfFilterBody');
-      let hint = document.getElementById('sfYearHint');
-      if (!hint) { hint = document.createElement('div'); hint.id = 'sfYearHint'; hint.className = 'mss-rename-hint bad'; hint.setAttribute('role', 'alert'); (document.getElementById('sfYearMin') || document.getElementById('sfWatchedMin')).closest('.sf-range-row').after(hint); }
-      hint.textContent = 'Use a 4-digit year, like 2004.';
-      hint.scrollIntoView({ block: 'nearest' });
+      const range = (document.getElementById('sfYearMin') || document.getElementById('sfWatchedMin')).closest('.lyr-range');
+      h.fieldError(range, 'Use a 4-digit year, like 2004.');
+      range.scrollIntoView({ block: 'nearest' });
       return;
     }
-    if (s.cfg.beforeFilter) {
-      const btn = document.querySelector('#sfFilterCard .sf-apply-btn');
-      if (btn) { btn.textContent = 'Loading…'; btn.disabled = true; }
-      try { await s.cfg.beforeFilter(section, staged); }
-      finally { if (btn) { btn.textContent = 'Apply'; btn.disabled = false; } }
-    }
+    if (s.cfg.beforeFilter) await s.cfg.beforeFilter(section, staged);
     // Actor/director needs each entry's credits (fetched once, then cached).
     if (staged.person && staged.person.trim()) {
       const q = staged.person.trim().toLowerCase();
-      const btn = document.querySelector('#sfFilterCard .sf-apply-btn');
-      if (btn) { btn.textContent = 'Searching…'; btn.disabled = true; }
       const matches = new Set();
       await Promise.all((s.cfg.base(section) || []).map(async e => {
         const c = await fetchCredits(s, e);
         if (c && (c.director.toLowerCase().includes(q) || c.cast.some(n => n.toLowerCase().includes(q)))) matches.add(e.id);
       }));
       staged._personMatchIds = [...matches];
-      if (btn) { btn.textContent = 'Apply'; btn.disabled = false; }
     } else {
       staged._personMatchIds = null;
     }
     s.filter[section] = staged;
     refresh(scope, section);
-    closeFilter();
+    h.closeNow();
   }
-
   /* ── Actor / Director suggestions ── */
   async function _openPersonDD() {
     const { scope, section } = cur, s = S(scope);
@@ -652,9 +743,9 @@ const SF = (() => {
       c.cast.forEach(n => names.add(n));
     }));
     s.personNames[section] = [...names].sort((a, b) => a.localeCompare(b));
-    if (cur && cur.scope === scope && cur.section === section) renderPersonMenu();
+    if (cur && cur.scope === scope && cur.section === section && stagedFilter) { renderPersonMenu(); recount(); }
   }
-  function _personInput(v) { stagedFilter.person = v; renderPersonMenu(); }
+  function _personInput(v) { stagedFilter.person = v; renderPersonMenu(); recount(); }
   function renderPersonMenu() {
     const dd = document.getElementById('sfPersonDD');
     const menu = document.getElementById('sfPersonMenu');
@@ -678,19 +769,22 @@ const SF = (() => {
     document.getElementById('sfPerson').value = name;
     document.getElementById('sfPersonDD').classList.remove('open');
     document.getElementById('sfPersonMenu').style.cssText = '';
+    recount();
   }
 
   /* ── dropdown positioning ──
-     position:fixed so menus escape .sf-body's overflow clipping. */
+     in a panel: inline; elsewhere position:fixed so menus escape .sf-body's overflow clipping. */
   function positionDD(target) {
     const trigger = target.querySelector('.sf-dd-trigger');
     const menu = target.querySelector('.td-dd-menu');
+    // inside a panel (Sort / Filter): the list opens in place, under its field, and scrolls with the panel
+    if (target.closest('.lyr')) { menu.style.cssText = ''; menu.classList.add('is-inline'); return; }
     const r = trigger.getBoundingClientRect();
     const margin = 12;
     const below = window.innerHeight - r.bottom - margin, above = r.top - margin;
     const up = below < 140 && above > below;
     const h = Math.max(110, Math.min(up ? above : below, 150));
-    menu.style.cssText = `position:fixed; left:${r.left}px; width:${r.width}px; z-index:1400; display:block; max-height:${h}px; overflow-y:auto; ` +
+    menu.style.cssText = `position:fixed; left:${r.left}px; width:${r.width}px; z-index:${target.closest('.lyr') ? 2060 : 1400}; display:block; max-height:${h}px; overflow-y:auto; ` +
       (up ? `bottom:${window.innerHeight - r.top}px; top:auto; border-radius:var(--radius-sm) var(--radius-sm) 0 0; border-top:0.5px solid var(--olive-light); border-bottom:none;`
           : `top:${r.bottom}px; bottom:auto;`);
   }
@@ -771,10 +865,10 @@ const SF = (() => {
   }
 
   return {
-    register, list, refresh, bar, setSort, getSort, invalidate, clearFilters, restoreState, searchHTML,
+    register, list, refresh, bar, setSort, getSort, sortName: (scope, section, v) => sortName(S(scope), section, v), invalidate, clearFilters, restoreState, searchHTML,
     query: scope => S(scope).query, _search: search,
     rank: (e, i) => e._sfRank || i + 1,           // a title's place in its ranked list (search or not)
-    openSort, closeSort, openFilter, closeFilter, typeFilter, closeTypeFilter,
+    openSort, closeSort, openFilter, closeFilter, typeFilter,
     picks, only, TYPES, typeChoice, typeIs, typeMovies, typeShows, typeCat, typeLabel,
     typeFilterButton: (onclick, label, active) => buttonHTML('filter', label, active, onclick, 'Filter'),
     filterCount: (scope, section) => filterCount(getFilter(scope, section)),
@@ -782,8 +876,8 @@ const SF = (() => {
     isMovie, GENRES,
     dd: ddHTML, ddSearch, _ddFilter, closeDD: closeAllDD,              // the filter dropdown, for other popups (Challenges genre)
     // internal — used by the popup markup's inline handlers
-    _stageSort, _resetSort, _applySort, _stageGenre, _stageChoice, _stageChoiceToggle, _stageRanges, _clearFilter, _applyFilter,
+    _stageSort, _stageDefault, _stageGenre, _stageChoice, _stageChoiceToggle, _stageRanges,
     _openPersonDD, _personInput, _pickPerson, _toggleDD,
-    _typeStage: typeStage, _typeClear: typeClear, _typeApply: typeApply,
+    _typeStage: typeStage, _typeClear: typeClear, _typeApply: typeApply, _treeStage: treeStage, _treeOpen: treeOpen,
   };
 })();

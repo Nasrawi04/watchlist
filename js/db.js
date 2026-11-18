@@ -38,7 +38,8 @@ async function getEntries(userId, filters = {}) {
   if (filters.status) q = q.eq('status', filters.status);
   const { data, error } = await q.order('created_at', { ascending: false });
   if (error) { console.error('getEntries:', error); return []; }
-  return mssWithPrivateNotes(data || []);
+  const gone = MSSPendingDelete.ids();                 // deleted, with Undo still on screen
+  return mssWithPrivateNotes((data || []).filter(e => !gone.has(e.id)));
 }
 
 async function getPublicEntries(userId) {
@@ -155,6 +156,205 @@ async function updateProgress(id, userId, updates) {
   return _mssWatched(data);
 }
 
+/* ── One episode forward (+1) or back (−1) — the same steps everywhere (category cards, the
+   header's Library menu). A season breakdown steps season by season; at the last aired episode
+   TMDB is asked once for a newer one first. Saves it (the Diary logs it by itself, 112) and
+   updates `entry` in place. Returns:
+     'progress'   — saved; a step forward also asks for the episode's rating (MSSEp, when loaded)
+     'movie_done' — a movie ran out of minutes/parts → marked Watched today
+     'finish'     — a show's last episode: progress saved, the caller asks Watched or To Be Continued
+                    (then mssFinishShow) */
+async function mssStepEpisode(entry, delta, userId, rechecked) {
+  const breakdown = Array.isArray(entry.ratings?._season_breakdown)
+    ? entry.ratings._season_breakdown.filter(n => parseInt(n) > 0).map(Number) : [];
+  let season = entry.season || 1, ep = entry.episode ?? 0, watched, finished = false;
+  if (breakdown.length) {
+    if (delta > 0) {
+      const max = breakdown[season - 1] || 0;
+      if (max > 0 && ep >= max) { if (season < breakdown.length) { season++; ep = 0; } else finished = true; }   // end of a season / the series
+      else ep++;
+    } else if (ep > 0) ep--;
+    else if (season > 1) { season--; ep = breakdown[season - 1] || 0; }
+    watched = breakdown.slice(0, season - 1).reduce((a, b) => a + b, 0) + ep;   // from the season positions
+    entry.total_eps = breakdown.reduce((a, b) => a + b, 0);
+  } else {
+    watched = Math.max(0, (entry.watched || 0) + delta);
+    ep = Math.max(0, (entry.episode ?? 0) + delta);
+    if (entry.total_eps && watched >= entry.total_eps && delta > 0) finished = true;
+  }
+  // At the end of what's aired: a new episode may have come out since (counts only include aired ones)
+  if (finished && !rechecked && entry.tmdb_id && entry.tmdb_type === 'tv' && typeof _refreshTmdbSeasonData === 'function') {
+    const before = JSON.stringify(entry.ratings?._season_breakdown || []);
+    await _refreshTmdbSeasonData(entry, userId);
+    if (JSON.stringify(entry.ratings?._season_breakdown || []) !== before) return mssStepEpisode(entry, delta, userId, true);
+  }
+  const pos = { watched, episode: ep, season };
+  if (!finished) {
+    await updateProgress(entry.id, userId, pos);
+    Object.assign(entry, pos);
+    if (delta > 0 && ep > 0 && typeof MSSEp !== 'undefined') MSSEp.afterWatch(entry, season, ep);
+    return 'progress';
+  }
+  if (entry.cat === 'movies' || entry.ratings?._media_type === 'movie') {
+    const done = { ...pos, status: 'completed', completed_date: mssToday() };
+    await updateProgress(entry.id, userId, done);
+    Object.assign(entry, done);
+    return 'movie_done';
+  }
+  try { await updateProgress(entry.id, userId, pos); Object.assign(entry, pos); } catch { /* the finish choice saves it again */ }
+  return 'finish';
+}
+// A show's last episode: Watched ('completed') or To Be Continued ('ongoing'), today
+async function mssFinishShow(entry, userId, status) {
+  const done = { status, watched: entry.watched, episode: entry.episode, season: entry.season, completed_date: mssToday() };
+  await updateProgress(entry.id, userId, done);
+  Object.assign(entry, done);
+}
+function mssToday() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/* ── A title's progress actions, in one place ──
+   Start · Up Next · Back to Watchlist · Taking a Break · Resume · ±1 episode · Mark as done (a movie) ·
+   finish a show (Watched / To Be Continued). The category pages' buttons under a card and the title
+   panel / page (title-view.js) both use these. Each changes the entry object in place, then calls
+   onChange(entry) — the page re-draws what it shows. Just finished → "Rate it" (mssWatchedPopup). */
+const MSSProgress = (() => {
+  const uid = async () => window._navUser?.id || (await getCurrentUser())?.id;
+  const here = () => location.pathname.split('/').pop() || 'index.html';
+  async function set(e, updates, msg, onChange) {
+    try {
+      await updateProgress(e.id, await uid(), updates);
+      Object.assign(e, updates);
+      onChange?.(e);
+      if (msg) showToast(msg);
+      return true;
+    } catch (err) { console.error(err); showToast('Error updating. Please try again.', 'err'); return false; }
+  }
+  const refresh = async (e, onChange) => { if (typeof _refreshTmdbSeasonData === 'function') _refreshTmdbSeasonData(e, await uid(), () => onChange?.(e)); };
+  // Watchlist → Watching (a show starts from its first episode); Up Next → Watching where it was
+  async function start(e, onChange) {
+    if (e.status === 'up_next') return resume(e, onChange);
+    const u = { status: 'watching' };
+    if (!mssIsMovieEntry(e)) Object.assign(u, { season: e.season || 1, episode: 0, watched: 0 });
+    if (await set(e, u, 'Moved to Currently Watching!', onChange)) refresh(e, onChange);
+  }
+  async function resume(e, onChange) {
+    const was = e.status;
+    if (await set(e, { status: 'watching' }, was === 'up_next' || was === 'ongoing' ? 'Started watching!' : 'Resumed!', onChange)) refresh(e, onChange);
+  }
+  const upNext = (e, onChange) => set(e, { status: 'up_next' }, 'Added to Up Next!', onChange);
+  // To Be Continued → Watched: the show has ended after all (keeps the date it was finished)
+  const ended = (e, onChange) => set(e, { status: 'completed' }, 'Moved to Watched.', onChange);
+  const toWatchlist = (e, onChange) => set(e, { status: 'queue' }, 'Back on your Watchlist.', onChange);
+  const pause = (e, onChange) => set(e, { status: 'paused' }, 'Taking a break!', onChange);
+  async function step(e, delta, onChange) {
+    let r;
+    try { r = await mssStepEpisode(e, delta, await uid()); }
+    catch { showToast('Error updating progress.', 'err'); return; }
+    if (r === 'progress') { onChange?.(e); showToast('Progress updated'); }
+    else if (r === 'movie_done') { onChange?.(e); showToast(`"${e.title}" marked as watched!`); }
+    else if (await stillRunning(e)) {
+      // Caught up on a show that's still airing → back to To Be Continued without asking (it waits in Watched)
+      try { await mssFinishShow(e, await uid(), 'ongoing'); } catch { showToast('Error updating.', 'err'); return; }
+      onChange?.(e);
+      showToast(`${e.title}: all caught up — it waits in Watched until new episodes air.`);
+    }
+    else finishShow(e, onChange);
+  }
+  // Is a show still running on TMDB (in production / Returning Series)? Its schedule's details (tv-schedule.js,
+  // kept 12 h on the device). Ended, cancelled, not on TMDB or unknown → false (the Watched / TBC question).
+  async function stillRunning(e) {
+    if (!e.tmdb_id || e.tmdb_type !== 'tv' || mssIsMovieEntry(e)) return false;
+    try {
+      if (typeof MSSSchedule === 'undefined') await mssLoadScript('js/tv-schedule.js');
+      const d = await MSSSchedule.details(e.tmdb_id);
+      return !!d && !['Ended', 'Canceled'].includes(d.status) && (d.inProd || d.status === 'Returning Series');
+    } catch { return false; }
+  }
+  async function doneMovie(e, onChange) {
+    if (await set(e, { status: 'completed', completed_date: mssToday() }, '', onChange)) rateNow(e);
+  }
+  // Finished a show: Watched or To Be Continued? — the shared confirm with two choices
+  async function finishShow(e, onChange) {
+    const status = await showConfirm({ title: `Finished "${e.title}"`, message: 'Is the show fully finished, or are there more seasons coming?',
+      choices: [['completed', 'Watched', 'The show has ended'], ['ongoing', 'To Be Continued', 'More seasons coming']],
+      confirmText: 'Save', iconName: 'trophy', danger: false });
+    if (!status) return;
+    try { await mssFinishShow(e, await uid(), status); } catch { showToast('Error updating.', 'err'); return; }
+    onChange?.(e);
+    rateNow(e);
+  }
+  // Just finished → "Added to Watched" with Rate it (straight to the ratings on its Edit page) · Later.
+  // Already rated (e.g. a rewatch) → just a toast.
+  function rateNow(e) {
+    if (liveScore(e) != null) { showToast(`Added to ${e.status === 'ongoing' ? 'To Be Continued' : 'Watched'}.`); return; }
+    mssWatchedPopup(e, { onRate: () => {
+      sessionStorage.setItem('detailId', e.id);
+      sessionStorage.setItem('detailFrom', here() + location.search);
+      sessionStorage.setItem('detailScrollTo', 'ratings');
+      window.location.href = 'detail.html';
+    } });
+  }
+  return { start, resume, upNext, toWatchlist, pause, step, doneMovie, finishShow, ended };
+})();
+
+/* ── A title's ⋯ Actions on the Library / category page cards ──
+   mssEntryActions(e, { onChange, onDelete, open, newEp, skip }) → MSSPopover items (panel.js).
+   Every item runs an action that already exists (MSSProgress, MSSDrop, MSSEp, MSSList, rewatch,
+   the shared delete with Undo) — nothing new happens here. skip: keys already on the card as
+   buttons ('start', 'resume', 'done', 'pause', 'minus', 'pickup'), so nothing shows twice.
+   newEp: a To Be Continued show with a new episode out (it's in Up next: Start / Rate episodes). */
+function mssEntryActions(e, o = {}) {
+  const items = [], skip = new Set(o.skip || []), ch = o.onChange, st = e.status, show = !mssIsMovieEntry(e);
+  const add = (key, label, ic, fn, danger) => { if (!skip.has(key)) items.push({ label, icon: ic, onSelect: fn, danger }); };
+  const eps = show && typeof MSSEp !== 'undefined';
+  const rate = label => add('rate', label, 'ratingStar', () => MSSEp.rate(e, e.season || 1, Math.max(1, e.episode || 1)));
+  if (st === 'watching') {
+    if (show) {
+      if (eps) rate('Rate episode');
+      add('minus', '−1 episode', 'minus', () => MSSProgress.step(e, -1, ch));
+      add('pause', 'Taking a break', 'pause', () => MSSProgress.pause(e, ch));
+      add('done', 'Mark watched', 'check', () => MSSProgress.finishShow(e, ch));
+    } else {
+      add('done', 'Mark watched', 'check', () => MSSProgress.doneMovie(e, ch));
+      add('watchlist', 'Back to Watchlist', 'bookmark', () => MSSProgress.toWatchlist(e, ch));
+    }
+  } else if (st === 'up_next') {
+    add('start', 'Start watching', 'play', () => MSSProgress.start(e, ch));
+    if (!show) add('done', 'Mark watched', 'check', () => MSSProgress.doneMovie(e, ch));
+    add('watchlist', 'Back to Watchlist', 'bookmark', () => MSSProgress.toWatchlist(e, ch));
+  } else if (st === 'paused') {
+    add('resume', 'Resume', 'play', () => MSSProgress.resume(e, ch));
+    if (eps) rate('Rate episodes');
+  } else if (st === 'ongoing') {
+    add(o.newEp ? 'start' : 'continue', o.newEp ? 'Start watching' : 'Continue watching', 'play', () => MSSProgress.resume(e, ch));
+    if (eps) rate('Rate episodes');
+    add('ended', 'Mark as fully watched', 'check', () => MSSProgress.ended(e, ch));
+  } else if (st === 'queue') {
+    add('start', 'Start watching', 'play', () => MSSProgress.start(e, ch));
+    add('upnext', 'Up next', 'skipForward', () => MSSProgress.upNext(e, ch));
+  } else if (st === 'dropped') {
+    add('pickup', 'Pick back up', 'play', () => MSSDrop.pickUp(e, { onChange: ch }));
+  } else if (st === 'completed' && typeof rewatchEntry === 'function') {
+    add('rewatch', 'Rewatch', 'refresh-cw', () => rewatchEntry(e.id));
+  }
+  if (typeof MSSList !== 'undefined') add('list', 'Add to list', 'layers', () => MSSList.addTo(e));
+  if (st === 'queue' && e.tmdb_id && typeof mssRecommend === 'function')
+    add('recommend', 'Recommend', 'send', () => mssRecommend({ tmdb_id: e.tmdb_id, media_type: e.tmdb_type || (show ? 'tv' : 'movie'), title: e.title, poster_url: e.poster_url, year: e.year }));
+  if (o.open) add('open', 'Open title', 'info', () => o.open(e));
+  if (['watching', 'up_next', 'paused'].includes(st)) add('drop', 'Drop', 'drop', () => MSSDrop.drop(e, { onChange: ch }));
+  items.push({ divider: true });
+  add('delete', 'Delete', 'trash', async () => {
+    const diary = await mssConfirmDelete(e);
+    if (!diary) return;
+    try { await MSSPendingDelete.run(e, { diary, onHide: x => o.onDelete?.(x) }); }
+    catch (err) { console.error(err); showToast('Error deleting entry.', 'err'); }
+  }, true);
+  return items;
+}
+
 /* ── Lists that keep an order stay in it ──
    A list set to an order (sort_mode: Ratings Highest / Lowest, a specific rating, Date
    Watched, Release Date, A–Z) used to sort itself only when a title was added — change a
@@ -185,8 +385,10 @@ async function mssResortLists(userId, entryId) {
 }
 
 /* ── Dropped (071): drop a title / pick it back up ──
-   MSSDrop.drop(e, { onChange })   asks first ("Drop it?"; a movie can note where you
-                                    stopped, optional), saves, Undo in the toast
+   MSSDrop.drop(e, { onChange, onDropped })  asks first ("Drop it?"; a movie can note where you
+                                    stopped, optional) on top of whatever is open, saves from inside the
+                                    confirm (a failed save shows there with the buttons kept), then
+                                    onDropped() and a toast with Undo
    MSSDrop.pickUp(e, { onChange }) back to Watching, right where you stopped */
 const MSSDrop = (() => {
   let ov = null;
@@ -194,10 +396,13 @@ const MSSDrop = (() => {
     if (ov) return ov;
     ov = document.createElement('div');
     ov.className = 'confirm-overlay'; ov.id = 'mssDropOverlay';
-    ov.innerHTML = `<div class="confirm-card drop-card" role="dialog" aria-modal="true" aria-labelledby="mssDropTitle" aria-describedby="mssDropMsg">
-        <div class="confirm-icon" aria-hidden="true">${icon('drop', 36)}</div>
-        <div class="confirm-title" id="mssDropTitle"></div>
-        <div class="confirm-msg" id="mssDropMsg"></div>
+    ov.innerHTML = `<div class="confirm-card is-confirm is-safe" role="alertdialog" aria-modal="true" aria-labelledby="mssDropTitle" aria-describedby="mssDropMsg">
+        <span class="cf-handle" aria-hidden="true"></span>
+        <div class="cf-head">
+          <div class="confirm-icon" aria-hidden="true">${icon('drop', 20)}</div>
+          <div class="cf-text"><div class="confirm-title" id="mssDropTitle"></div><div class="confirm-msg" id="mssDropMsg"></div></div>
+        </div>
+        <div class="cf-banner" id="mssDropErr" role="alert" hidden></div>
         <fieldset class="drop-at" id="mssDropAt" hidden>
           <legend>Where did you stop? <small>optional</small></legend>
           <label><input type="number" id="mssDropH" min="0" max="9" inputmode="numeric" placeholder="0"><span>h</span></label>
@@ -209,10 +414,11 @@ const MSSDrop = (() => {
         </div>
       </div>`;
     document.body.appendChild(ov);
+    ov.addEventListener('click', ev => { if (ev.target === ov) ov._mssClose?.(); });
     return ov;
   }
-  // → { at: minutes | null } or null when you change your mind
-  function ask(e) {
+  // Asks, and saves when you say Drop it (still inside the confirm) → true once dropped, false if not
+  function ask(e, o) {
     return new Promise(resolve => {
       const el = dialog(), $ = id => el.querySelector('#' + id), movie = mssIsMovieEntry(e);
       const at = mssDroppedAt(e);
@@ -221,17 +427,37 @@ const MSSDrop = (() => {
         ? 'It moves to Dropped. You can still rate it — that score won’t count toward your averages.'
         : `It moves to Dropped${at ? `, at ${at}` : ''}. You can pick it back up any time — a score you give it won’t count toward your averages.`;
       $('mssDropAt').hidden = !movie;
+      $('mssDropErr').hidden = true;
       const m0 = Number(e.ratings?._dropped_at) || 0;
       $('mssDropH').value = m0 ? Math.floor(m0 / 60) : ''; $('mssDropM').value = m0 ? m0 % 60 : '';
-      const done = v => { MSSDialog.close(el); el._mssClose = null; resolve(v); };
-      $('mssDropNo').onclick = () => done(null);
-      $('mssDropYes').onclick = () => {
+      let busy = false;
+      const done = v => { el._mssClose = null; mssConfirmClose(el, () => resolve(v)); };
+      $('mssDropNo').onclick = () => { if (!busy) done(false); };
+      $('mssDropYes').onclick = async () => {
+        if (busy) return;
         const h = Math.max(0, Math.min(9, parseInt($('mssDropH').value) || 0)), m = Math.max(0, Math.min(59, parseInt($('mssDropM').value) || 0));
-        done({ at: movie && (h || m) ? h * 60 + m : null });
+        const ratings = { ...(e.ratings || {}) };
+        if (movie && (h || m)) ratings._dropped_at = h * 60 + m; else delete ratings._dropped_at;
+        busy = true; $('mssDropErr').hidden = true;
+        const yes = $('mssDropYes'), no = $('mssDropNo');
+        yes.classList.add('btn-busy'); yes.setAttribute('aria-busy', 'true'); no.disabled = true;
+        try {
+          const { uid, prev } = await save(e, 'dropped', ratings, o);
+          done(true);
+          showUndoToast('Moved to Dropped', async () => {
+            await updateProgress(e.id, uid, prev);
+            Object.assign(e, prev);
+            o.onChange?.(e);
+          });
+        } catch (err) {
+          console.error('MSSDrop.drop:', err);
+          $('mssDropErr').innerHTML = `${icon('info', 16)}<span>Couldn’t drop it — check your connection and try again.</span>`;
+          $('mssDropErr').hidden = false;
+          yes.animate?.([{ transform: 'translateX(0)' }, { transform: 'translateX(2px)' }, { transform: 'translateX(-2px)' }, { transform: 'translateX(0)' }], { duration: 150, iterations: 2 });
+        } finally { busy = false; yes.classList.remove('btn-busy'); yes.removeAttribute('aria-busy'); no.disabled = false; }
       };
-      el._mssClose = () => done(null);
-      if (!el._mssBound) { el._mssBound = true; el.addEventListener('click', ev => { if (ev.target === el) el._mssClose?.(); }); }
-      MSSDialog.open(el, { focus: movie ? '#mssDropH' : '#mssDropNo' });
+      el._mssClose = () => { if (!busy) done(false); };
+      mssConfirmOpen(el, { focus: movie ? '#mssDropH' : '#mssDropNo' });
     });
   }
   async function save(e, status, ratings, o) {
@@ -243,19 +469,9 @@ const MSSDrop = (() => {
     return { uid, prev };
   }
   async function drop(e, o = {}) {
-    const a = await ask(e);
-    if (!a) return false;
-    const ratings = { ...(e.ratings || {}) };
-    if (a.at) ratings._dropped_at = a.at; else delete ratings._dropped_at;
-    try {
-      const { uid, prev } = await save(e, 'dropped', ratings, o);
-      showUndoToast(`Dropped “${e.title}”`, async () => {
-        await updateProgress(e.id, uid, prev);
-        Object.assign(e, prev);
-        o.onChange?.(e);
-      });
-      return true;
-    } catch (err) { console.error('MSSDrop.drop:', err); showToast('Couldn’t drop it — try again.', 'err'); return false; }
+    const ok = await ask(e, o);
+    if (ok) o.onDropped?.();
+    return ok;
   }
   async function pickUp(e, o = {}) {
     const ratings = { ...(e.ratings || {}) };
@@ -433,9 +649,15 @@ function compressImage(file, maxWidth = 800, quality = 0.85) {
 }
 
 /* ── Profile helpers ── */
+// What anyone may read of someone's profile — the columns a profile page shows. Signed out, it's all there is (131:
+// account settings like time zone, language and notification choices are private to signed-out visitors).
+const MSS_PUBLIC_PROFILE = 'id, username, display_name, bio, avatar_url, quote, is_public, is_private, is_official, created_at, updated_at, '
+  + 'top_picks, recommended, fav_tv, fav_movies, fav_anime, fav_cartoons, fav_actors, fav_directors, showcase, profile_layout, pinned_note_id';
+// every column when signed in (your own settings), the public ones when signed out
+const _profileCols = async () => (await sb.auth.getSession()).data?.session ? '*' : MSS_PUBLIC_PROFILE;
 async function getProfileByUsername(username) {
   const { data, error } = await sb.from('profiles')
-    .select('*')
+    .select(await _profileCols())
     .eq('username', username)
     .single();
   if (error) return null;
@@ -444,7 +666,7 @@ async function getProfileByUsername(username) {
 
 async function getProfile(userId) {
   const { data, error } = await sb.from('profiles')
-    .select('*')
+    .select(await _profileCols())
     .eq('id', userId)
     .single();
   if (error) return null;
@@ -502,7 +724,7 @@ async function getFriendships(userId) {
 
   // Collect all friend user IDs
   const friendIds = rows.map(f => f.requester_id === userId ? f.addressee_id : f.requester_id);
-  const { data: profiles } = await sb.from('profiles').select('id,username,display_name,avatar_url,top_picks').in('id', friendIds);
+  const { data: profiles } = await sb.from('profiles').select('id,username,display_name,avatar_url,top_picks,profile_layout').in('id', friendIds);
 
   return rows.map(f => ({
     ...f,
@@ -526,10 +748,38 @@ function blockUser(userId)                { return _rpcOr('block_user', { p_user
 function unblockUser(userId)              { return _rpcOr('unblock_user', { p_user: userId }); }
 function getMyBlocks()                    { return _rpcOr('my_blocks', {}); }
 function setAccountPrivate(on)            { return _rpcOr('set_account_private', { p_on: !!on }); }
+// Members by @username or display name (135) — the header search. Leaves out you, blocks either way, banned accounts.
+// Until sql/135 runs: profiles directly, leaving out only the people you've blocked.
+// → [{ id, username, display_name, avatar_url, is_private, is_official }]
+async function searchUsers(q, limit = 8) {
+  const s = String(q || '').trim().replace(/^@/, '').toLowerCase();
+  if (s.length < 2) return [];
+  const { data, error } = await sb.rpc('search_users', { p_q: s, p_limit: limit });
+  if (!error) return data || [];
+  if (error.code !== 'PGRST202' && error.code !== '42883') throw error;
+  const me = window._navUser?.id, safe = s.replace(/[^a-z0-9_ -]/g, '');   // keeps the PostgREST or() filter well-formed
+  if (safe.length < 2) return [];
+  let qy = sb.from('profiles').select('id, username, display_name, avatar_url, is_private, is_official')
+    .or(`username.ilike."*${safe}*",display_name.ilike."*${safe}*"`).not('username', 'is', null).limit(limit);
+  if (me) qy = qy.neq('id', me);
+  const [{ data: rows }, blocks] = await Promise.all([qy, me ? getMyBlocks().catch(() => []) : []]);
+  const out = new Set((blocks || []).map(b => b.id)), rank = p => { const u = p.username.toLowerCase(); return u === s ? 0 : u.startsWith(s) ? 1 : 2; };
+  return (rows || []).filter(p => !out.has(p.id)).sort((a, b) => rank(a) - rank(b) || a.username.localeCompare(b.username));
+}
 // { i_follow, follows_me ('none'|'pending'|'accepted'), is_private, can_see, followers, following, friends, requests (yours) }
 function getFollowState(userId)           { return _rpcOr('get_follow_state', { p_user: userId }); }
 // kind: 'followers' | 'following' | 'friends' | 'requests' (yours) | 'sent' (yours)
-async function getFollowList(userId, kind, offset = 0) { return (await _rpcOr('get_follow_list', { p_user: userId, p_kind: kind, p_offset: offset })) || []; }
+// → the people; someone else's list they keep private (130) → an empty list with .hidden = 'friends' | 'nobody'.
+// Until sql/130 runs, the older get_follow_list (no privacy setting).
+async function getFollowList(userId, kind, offset = 0) {
+  const args = { p_user: userId, p_kind: kind, p_offset: offset };
+  const { data, error } = await sb.rpc('get_follow_list_v2', args);
+  if (error) {
+    if (error.code !== 'PGRST202' && error.code !== '42883') throw error;
+    return (await _rpcOr('get_follow_list', args)) || [];
+  }
+  return data?.hidden ? Object.assign([], { hidden: data.hidden }) : (data || []);
+}
 // How you and someone stand, as one word — for buttons
 function followRelation(st) {
   if (!st) return 'none';
@@ -567,37 +817,13 @@ async function getFriendEntries(friendUserId) {
 }
 
 /* ── Comments ── */
-async function getInboxComments(userId, limit = 10) {
-  const { data: entries } = await sb
-    .from('entries').select('id, title, cat, poster_url').eq('user_id', userId);
-  if (!entries?.length) return [];
-  const entryMap = Object.fromEntries(entries.map(e => [e.id, e]));
-  const { data, error } = await sb
-    .from('comments')
-    .select('id, content, created_at, author_id, entry_id, profiles(username, avatar_url)')
-    .in('entry_id', entries.map(e => e.id))
-    .neq('author_id', userId)
-    .order('created_at', { ascending: false })
-    .limit(limit);
-  if (error) { console.error('getInboxComments:', error); return []; }
-  return (data || []).map(c => ({ ...c, entry: entryMap[c.entry_id] }));
-}
-
-async function getComments(entryId) {
-  const { data, error } = await sb
-    .from('comments')
-    .select('id, content, created_at, author_id, reply_to, profiles(username, avatar_url)')
-    .eq('entry_id', entryId)
-    .order('created_at', { ascending: true });
-  if (error) { console.error('getComments:', error); return []; }
-  return data || [];
-}
-
-async function addComment(entryId, content, replyTo = null) {
+// ext: a reply to an item from another source in a title's Comments tab — { src: 'note' | 'list' | 'ep', id } (120)
+async function addComment(entryId, content, replyTo = null, ext = null) {
   const user = await getCurrentUser();
   if (!user) throw new Error('Not authenticated');
   const record = { entry_id: entryId, author_id: user.id, content: content.trim() };
   if (replyTo) record.reply_to = replyTo;
+  if (ext) { record.reply_src = ext.src; record.reply_ext = ext.id; }
   const { data, error } = await sb
     .from('comments')
     .insert(record)
@@ -605,11 +831,6 @@ async function addComment(entryId, content, replyTo = null) {
     .single();
   if (error) throw error;
   return data;
-}
-
-async function deleteComment(commentId) {
-  const { error } = await sb.from('comments').delete().eq('id', commentId);
-  if (error) throw error;
 }
 
 /* ══════════════════════════════════════════
@@ -734,18 +955,45 @@ function computeStats(entries) {
   const avgScore  = rated.length
     ? (rated.reduce((s, e) => s + Number(liveScore(e)), 0) / rated.length).toFixed(2)
     : null;
-  const totalEps  = entries
-    .filter(e => e.cat !== 'movies' && e.status !== 'queue' && (e.ratings?._type || 'show') !== 'movie')
-    .reduce((sum, e) => {
-      if (e.status === 'completed' || e.status === 'ongoing') return sum + (Number(e.total_eps) || Number(e.watched) || 0);
-      return sum + (Number(e.watched) || 0);
-    }, 0);
+  // a film is a film in any category (an anime or cartoon film too: mssIsMovieEntry)
+  const isFilm = e => mssIsMovieEntry(e);
+  const epsOf = e => (e.status === 'completed' || e.status === 'ongoing') ? (Number(e.total_eps) || Number(e.watched) || 0) : (Number(e.watched) || 0);
+  const shows = entries.filter(e => !isFilm(e) && e.status !== 'queue' && e.status !== 'up_next');
+  const totalEps  = shows.reduce((sum, e) => sum + epsOf(e), 0);
+  // episode time: the episodes you've watched × the show's usual episode length (TMDB's, kept as ratings._ep_runtime)
+  const epMins = shows.reduce((sum, e) => sum + epsOf(e) * (Number(e.ratings?._ep_runtime) || 0), 0);
+  const epUnknown = shows.filter(e => epsOf(e) > 0 && !(Number(e.ratings?._ep_runtime) > 0)).length;   // shows without a length yet
   const movieMins = entries
-    .filter(e => (e.status === 'completed' || e.status === 'ongoing') && (e.cat === 'movies' || (e.ratings?._type === 'movie')))
+    .filter(e => (e.status === 'completed' || e.status === 'ongoing') && isFilm(e))
     .reduce((sum, e) => sum + (Number(e.runtime_h)||0)*60 + (Number(e.runtime_m)||0), 0);
   const wtH = Math.floor(movieMins / 60);
   const wtM = movieMins % 60;
   const watchTime = movieMins ? (wtH ? `${wtH}h ${wtM}m` : `${wtM}m`) : null;
   const dropped = entries.filter(e => e.status === 'dropped').length;
-  return { total: entries.length, completed: completed.length, watching: watching.length, queue: queue.length, dropped, avgScore, totalEps: totalEps || 0, watchTime, movieMins };
+  return { total: entries.length, completed: completed.length, watching: watching.length, queue: queue.length, dropped, avgScore, totalEps: totalEps || 0, watchTime, movieMins, epMins, epUnknown };
+}
+
+/* Episode lengths for Episode time / Total time: each show you've watched episodes of keeps TMDB's usual episode
+   length in ratings._ep_runtime (0 = TMDB doesn't say). New and refreshed shows get it from _refreshTmdbSeasonData
+   (nav.js); this fills in the ones from before, up to `max` per call, a few at a time. Your own entries only.
+   Resolves to how many it filled (the caller counts again when it's > 0). */
+async function mssFillEpRuntimes(entries, userId, max = 40) {
+  if (!userId || typeof tmdbFetch !== 'function') return 0;
+  const todo = (entries || []).filter(e => e.user_id === userId && e.tmdb_id && e.tmdb_type === 'tv' && !mssIsMovieEntry(e)
+    && e.status !== 'queue' && e.status !== 'up_next' && e.ratings?._ep_runtime == null).slice(0, max);
+  let filled = 0;
+  for (let i = 0; i < todo.length; i += 5) {
+    await Promise.all(todo.slice(i, i + 5).map(async e => {
+      try {
+        const res = await tmdbFetch(`${TMDB_BASE}/tv/${e.tmdb_id}?language=en-US`);
+        if (!res.ok) return;
+        const d = await res.json(), len = Number(d.episode_run_time?.[0] || d.last_episode_to_air?.runtime || 0) || 0;
+        const ratings = { ...(e.ratings || {}), _ep_runtime: len };
+        const { error } = await sb.from('entries').update({ ratings }).eq('id', e.id).eq('user_id', userId);
+        if (error) return;
+        e.ratings = ratings; if (len) filled++;
+      } catch {}
+    }));
+  }
+  return filled;
 }

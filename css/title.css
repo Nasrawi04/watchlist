@@ -1,0 +1,491 @@
+/* ═══════════════════════════════════════════════════════════════
+   title.css — the title page and its season / episode pages (moved out of title.html, 16 Nov 2026)
+
+   1. The title page (title page redesign, 13 Nov 2026) — a place to explore a title.
+   The title view's hero, ring, chips, buttons, tab bar and slim bar (.tv-*, the Edit page's .de-* sticky
+   behaviour), with Overview · Episodes · Cast & crew · Community. The hero's glass is darker than the
+   panel's so its controls read on any backdrop. Personal bits: your score, friends, your episode ratings
+   beside TMDB's, and Will you like it?
+═══════════════════════════════════════════════════════════════ */
+.td-wrap { max-width:none; position:relative; }
+.td-back-loading { display:inline-flex; align-items:center; gap:6px; font-size:13px; color:var(--text-3); text-decoration:none; margin-bottom:1rem; }
+.td-back-loading:hover { color:var(--olive-light); }
+/* while the skeleton shows, the working Back sits where the hero's will be */
+.td-wrap:has(> #tdLoading.has-skel:not([style*="none"])) > .td-back-loading { position:absolute; z-index:4; top:22px; inset-inline-start:26px; margin:0; color:#fff; }
+#tdLoading .tp-top { visibility:hidden; }
+
+.tp-refresh.busy svg { animation:td-spin .8s linear infinite; }
+@keyframes td-spin { to { transform:rotate(360deg); } }
+.tp-refresh:disabled { opacity:.65; }
+.tp-status { gap:7px; }
+.tp-status i { width:7px; height:7px; border-radius:50%; background:#10230c; flex:none; }
+.tp-status.is-off { background:rgba(0,0,0,.55); color:#fff; border:1px solid rgba(255,255,255,.26); -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); }
+.tp-status.is-off i { background:rgba(255,255,255,.7); }
+.tp-wtw-logos { display:inline-flex; }
+.tp-wtw-logos img { width:20px; height:20px; border-radius:5px; object-fit:cover; box-shadow:0 0 0 1.5px rgba(0,0,0,.45); }
+.tp-wtw-logos img + img { margin-inline-start:-6px; }
+.tp-hero .td-wall-nudge { margin:6px 0 0; background:rgba(0,0,0,.6); border-color:rgba(255,255,255,.2); color:#fff; }
+.tp-hero .td-wall-nudge-tx small { color:rgba(255,255,255,.75); }
+
+/* the scores: your ring (or Will you like it?) over MSF · TMDB · Friends */
+.tp-scores { flex:none; display:flex; flex-direction:column; align-items:center; gap:14px; align-self:flex-end; }
+.tp-mine { display:flex; flex-direction:column; align-items:center; gap:8px; }
+.tp-mine small { font:800 10.5px/1 'Manrope',var(--sans); letter-spacing:.16em; text-transform:uppercase; color:rgba(255,255,255,.85); }
+.tp-like { width:256px; padding:14px 16px; border-radius:var(--radius); border:1px solid rgba(255,255,255,.2); background:rgba(0,0,0,.6); -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); color:#fff; text-align:center; }
+.tp-like h3 { margin:0; font:800 10px/1.2 'Manrope',var(--sans); letter-spacing:.16em; text-transform:uppercase; color:var(--tv-green); }
+.tp-like b { display:block; margin:6px 0 4px; font:600 30px/1.05 var(--serif); color:#fff; }
+.tp-like b.is-most { color:var(--tv-gold); }
+.tp-like p { margin:0; font:500 12px/1.45 'Manrope',var(--sans); color:rgba(255,255,255,.8); }
+.tp-like p em { font-style:normal; font-weight:800; color:#fff; }
+.tp-like.is-thin b { font-size:20px; }
+.tp-like.is-loading b { color:rgba(255,255,255,.4); }
+
+.tp-page.is-phone .tp-scores { position:absolute; top:58px; inset-inline-end:14px; }
+.tp-page.is-phone .tp-scores .tv-ring { width:84px; }
+.tp-page.is-phone .tp-scores .tv-ring b { font-size:30px; }
+.tp-page.is-phone .tp-mine small { font-size:8.5px; letter-spacing:.12em; }
+.tp-page.is-phone .tp-like { width:150px; padding:9px 10px; }
+.tp-page.is-phone .tp-like b { font-size:20px; margin:3px 0 2px; }
+.tp-page.is-phone .tp-like p { font-size:10.5px; }
+.tp-page.is-phone .tp-refresh-l { display:none; }
+
+
+.tp-full .td-related { margin-top:0; }
+.tp-links { display:flex; flex-wrap:wrap; gap:4px 16px; }
+.tp-links .td-ep-graph-link { font-size:12.5px; font-weight:700; }
+.tv-sec .td-season-row, .tv-sec .td-episode-row { margin:0 -4px; padding-inline:4px; }
+a.td-season-block { display:block; text-decoration:none; color:inherit; }
+a.td-season-block:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
+.tp-season-cur { border-color:var(--olive-light); }
+.tp-page .td-season-block { width:clamp(128px, 11vw + 20px, 168px); }
+.tp-page .td-episode-card { width:clamp(230px, 17vw + 40px, 280px); }
+.tp-page.is-phone .td-season-block { width:118px; }
+.tp-page.is-phone .td-episode-card { width:min(74vw, 260px); }
+.tp-sub { margin:-4px 0 12px; font:600 13px 'Manrope',var(--sans); color:var(--text-3); }
+.tp-sub b { color:var(--text); }
+
+/* Overview: key facts, the movie runtime, cast */
+.tp-more { display:flex; justify-content:center; gap:10px; margin-top:16px; }
+.tp-more .tv-btn { min-height:38px; }
+
+/* side cards: friends, fan favourites */
+.tp-friends-avg { display:flex; align-items:baseline; gap:8px; margin:-2px 0 12px; font:600 12.5px 'Manrope',var(--sans); color:var(--text-3); }
+.tp-friends-avg b { font:400 30px/1 var(--bebas); color:var(--st, var(--score-mine)); }
+.tp-frow { display:flex; align-items:center; gap:10px; min-height:52px; padding:6px 0; border-top:1px solid var(--border); }
+.tp-frow:first-child { border-top:none; }
+.tp-frow .tv-av { width:38px; height:38px; }
+.tp-frow-b { flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; }
+.tp-frow-b .mss-user-link, .tp-frow-b > b { font:700 13.5px 'Manrope',var(--sans); color:var(--text); text-decoration:none; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.tp-frow-b .mss-user-link:hover { text-decoration:underline; }
+.tp-frow-b small { font:500 12px 'Manrope',var(--sans); color:var(--text-3); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.tp-frow-v { flex:none; display:inline-flex; align-items:center; gap:4px; min-height:32px; padding:0 8px; border:1px solid transparent; border-radius:var(--radius-sm); background:none; color:var(--text); cursor:pointer; font:inherit; }
+.tp-frow-v:hover { border-color:var(--border-2); background:var(--raised); }
+.tp-frow-v:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
+.tp-frow-v b { font:400 22px/1 var(--bebas); color:var(--st, var(--score-mine)); }
+.tp-frow-v .td-ep-badge, .tp-frow-v .w-ep-badge { font-size:11px; }
+.tp-frow-v svg { color:var(--text-3); }
+.tp-friends-foot { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+.tp-friends-foot .tv-btn { flex:1; min-height:38px; }
+.tp-fan { display:flex; align-items:center; gap:12px; padding:8px 0; border-top:1px solid var(--border); color:inherit; text-decoration:none; }
+.tp-fan:first-child { border-top:none; }
+.tp-fan[href]:hover b, button.tp-fan:hover b { text-decoration:underline; }
+button.tp-fan { width:100%; border-inline:none; border-bottom:none; background:none; font:inherit; text-align:start; cursor:pointer; padding-inline:0; }
+.tp-fan:first-child { border-top:none; }
+.tp-fan:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
+.tp-fan-img { flex:none; width:44px; aspect-ratio:2/3; border-radius:6px; overflow:hidden; background:var(--raised); display:grid; place-items:center; font:600 16px var(--serif); color:var(--olive-light); }
+.tp-fan-img.is-wide { width:72px; aspect-ratio:16/9; }
+.tp-fan-img.is-face { width:44px; aspect-ratio:1; border-radius:50%; }
+.tp-fan-img img { width:100%; height:100%; object-fit:cover; display:block; }
+.tp-fan-b { flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; }
+.tp-fan-b small { font:800 9.5px/1.2 'Manrope',var(--sans); letter-spacing:.14em; text-transform:uppercase; color:var(--text-3); }
+.tp-fan-b b { font:700 13.5px/1.3 'Manrope',var(--sans); color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.tp-fan-b span { font:500 12px 'Manrope',var(--sans); color:var(--text-3); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.tp-fan-n { flex:none; font:400 20px/1 var(--bebas); color:var(--olive-light); }
+.tp-fan-n small { font:700 10px 'Manrope',var(--sans); color:var(--text-3); margin-inline-start:3px; }
+
+/* the wider side column (as on a title's own page): bigger friends, fan favourites and details */
+.tp-page:not(.is-phone) .tv-side .tp-frow { gap:12px; min-height:60px; }
+.tp-page:not(.is-phone) .tv-side .tp-frow .tv-av { width:46px; height:46px; font-size:16px; }
+.tp-page:not(.is-phone) .tv-side .tp-frow-b .mss-user-link { font-size:15px; }
+.tp-page:not(.is-phone) .tv-side .tp-frow-b small { font-size:13px; }
+.tp-page:not(.is-phone) .tv-side .tp-frow-v b { font-size:26px; }
+.tp-page:not(.is-phone) .tv-side .tp-friends-avg b { font-size:36px; }
+.tp-page:not(.is-phone) .tv-side .tp-fan { gap:14px; padding:10px 0; }
+.tp-page:not(.is-phone) .tv-side .tp-fan-img { width:56px; }
+.tp-page:not(.is-phone) .tv-side .tp-fan-img.is-face { width:60px; }
+.tp-page:not(.is-phone) .tv-side .tp-fan-img.is-wide { width:116px; }
+.tp-page:not(.is-phone) .tv-side .tp-fan-b small { font-size:10px; }
+.tp-page:not(.is-phone) .tv-side .tp-fan-b b { font-size:16px; white-space:normal; display:-webkit-box; -webkit-line-clamp:2; line-clamp:2; -webkit-box-orient:vertical; }
+.tp-page:not(.is-phone) .tv-side .tp-fan-b span { font-size:13px; }
+.tp-page:not(.is-phone) .tv-side .tp-fan-n { font-size:24px; }
+.tp-page:not(.is-phone) .tv-side .tv-dl dt, .tp-page:not(.is-phone) .tv-side .tv-dl dd { font-size:14px; }
+.tp-page:not(.is-phone) .tv-side .tv-dl > div { padding:11px 0; }
+/* Seasons & Episodes tab: the seasons as posters, the season you picked, its episodes */
+.tp-se { gap:20px; }
+.tp-srail { display:flex; gap:14px; overflow-x:auto; padding:4px 4px 12px; margin:0 -4px; scroll-snap-type:x proximity; scrollbar-width:thin; scrollbar-color:var(--border-olive) transparent; }
+.tp-scard { flex:none; width:132px; display:flex; flex-direction:column; gap:4px; padding:0; border:none; background:none; color:var(--text); font:inherit; text-align:start; cursor:pointer; scroll-snap-align:start; }
+.tp-scard-p { position:relative; display:grid; place-items:center; aspect-ratio:2/3; border-radius:var(--radius-sm); overflow:hidden; background:var(--raised); border:1px solid var(--border); margin-bottom:4px;
+  transition:transform .15s var(--ease, ease), box-shadow .15s; }
+.tp-scard-p img { width:100%; height:100%; object-fit:cover; display:block; }
+.tp-scard-p i { font:400 34px var(--bebas); font-style:normal; color:var(--text-3); }
+.tp-scard-p::after { content:''; position:absolute; inset:0; border-radius:inherit; pointer-events:none; }
+.tp-scard-p em { position:absolute; inset:auto 6px 6px; padding:3px 6px; border-radius:5px; background:var(--olive); color:var(--text-on-brand); font:800 9px/1.2 'Manrope',var(--sans); font-style:normal; letter-spacing:.08em; text-transform:uppercase; text-align:center; }
+.tp-scard b { font:700 13px/1.25 'Manrope',var(--sans); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.tp-scard small { font:600 11.5px 'Manrope',var(--sans); color:var(--text-3); }
+.tp-scard:hover .tp-scard-p { transform:translateY(-2px); box-shadow:0 6px 16px rgba(0,0,0,.14); }
+.tp-scard.is-on .tp-scard-p::after { box-shadow:inset 0 0 0 3px var(--olive-light); }
+.tp-scard.is-on b { color:var(--olive-light); }
+.tp-scard:focus-visible { outline:none; }
+.tp-scard:focus-visible .tp-scard-p { outline:2px solid var(--olive-light); outline-offset:3px; }
+.tp-page.is-phone .tp-scard { width:104px; }
+/* the picked season */
+.tp-shead-in { display:flex; gap:24px; align-items:flex-start; }
+.tp-shead-p { flex:none; width:150px; aspect-ratio:2/3; padding:0; border-radius:var(--radius-sm); overflow:hidden; border:1px solid var(--border); background:var(--raised); cursor:pointer; }
+.tp-shead-p img { width:100%; height:100%; object-fit:cover; display:block; }
+.tp-shead-p:focus-visible { outline:2px solid var(--olive-light); outline-offset:3px; }
+.tp-shead-b { flex:1; min-width:0; display:flex; flex-direction:column; gap:10px; }
+.tp-eyebrow { font:800 10.5px/1.3 'Manrope',var(--sans); letter-spacing:.16em; text-transform:uppercase; color:var(--olive-light); }
+.tp-shead-b h3 { margin:-4px 0 0; font:600 30px/1.1 var(--serif); color:var(--text-heading); }
+.tp-shead-o { margin:0; font:500 14px/1.6 'Manrope',var(--sans); color:var(--text-2); display:-webkit-box; -webkit-line-clamp:3; line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
+.tp-stiles { display:grid; grid-template-columns:repeat(auto-fill, minmax(118px, 1fr)); gap:8px; }
+.tp-stile { display:flex; flex-direction:column; gap:4px; padding:10px 12px; border-radius:var(--radius-sm); border:1px solid var(--border); background:var(--raised); min-width:0; }
+.tp-stile small { font:800 9.5px/1.2 'Manrope',var(--sans); letter-spacing:.14em; text-transform:uppercase; color:var(--text-3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.tp-stile b { font:400 22px/1 var(--bebas); letter-spacing:.02em; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.tp-stile.is-mine b { color:var(--score-mine); }
+.tp-stile.is-text b { font:700 13.5px/22px 'Manrope',var(--sans); letter-spacing:0; }
+.tp-shead-a { display:flex; flex-wrap:wrap; gap:8px; margin-top:2px; }
+.tp-shead-a .tv-btn { text-decoration:none; }
+.tp-page.is-phone .tp-shead-in { gap:14px; }
+.tp-page.is-phone .tp-shead-p { width:92px; }
+.tp-page.is-phone .tp-shead-b h3 { font-size:22px; }
+.tp-page.is-phone .tp-shead-o { -webkit-line-clamp:4; line-clamp:4; }
+.tp-page.is-phone .tp-shead-in { flex-wrap:wrap; }
+.tp-page.is-phone .tp-stiles, .tp-page.is-phone .tp-shead-a, .tp-page.is-phone .tp-shead-o { flex-basis:100%; }
+.tp-page.is-phone .tp-shead-b { display:contents; }
+.tp-page.is-phone .tp-shead-in > .tp-shead-p + .tp-shead-b > .tp-eyebrow { margin-top:4px; }
+.tp-page.is-phone .tp-stiles { grid-template-columns:repeat(3, minmax(0, 1fr)); }
+.tp-page.is-phone .tp-stile { padding:9px 10px; }
+.tp-page.is-phone .tp-stile small { letter-spacing:.1em; }
+.tp-page.is-phone .tp-shead-a .tv-btn { flex:1; }
+/* the side panels (a season, an episode) */
+.tp-pn-tiles { display:grid; grid-template-columns:repeat(auto-fill, minmax(110px, 1fr)); gap:8px; margin-bottom:16px; }
+.tp-pn-tiles .tv-tile b { font:400 22px/1 var(--bebas); }
+.tp-pn-h { margin:20px 0 8px; font:800 10.5px/1.3 'Manrope',var(--sans); letter-spacing:.16em; text-transform:uppercase; color:var(--olive-light); }
+.tp-pn-seen { display:inline-flex; align-items:center; gap:4px; min-height:24px; padding:0 8px; border-radius:6px; background:var(--olive); color:var(--text-on-brand); font:800 10px/1 'Manrope',var(--sans); letter-spacing:.08em; text-transform:uppercase; }
+.ep-popup-meta-row .eg-chip { padding:4px 8px; font-size:16px; }
+/* score chips (the Episodes page's) */
+.tp-eps { display:flex; flex-direction:column; }
+.tp-ep { position:relative; display:flex; gap:16px; align-items:center; padding:12px 0; border-top:1px solid var(--border); color:inherit; text-decoration:none; }
+.tp-ep:first-child { border-top:none; padding-top:0; }
+.tp-ep-link { position:absolute; inset:0; z-index:0; border-radius:var(--radius-sm); }
+.tp-ep-link:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
+.tp-ep:hover .tp-ep-t { text-decoration:underline; text-underline-offset:3px; }
+.tp-ep-still { position:relative; flex:none; width:176px; aspect-ratio:16/9; border-radius:var(--radius-sm); overflow:hidden; background:var(--raised); }
+.tp-ep-still img { width:100%; height:100%; object-fit:cover; display:block; }
+.tp-ep-seen { position:absolute; top:6px; inset-inline-start:6px; display:inline-flex; align-items:center; gap:4px; min-height:22px; padding:0 7px 0 5px; border-radius:6px; background:var(--olive); color:var(--text-on-brand);
+  font:800 9.5px/1 'Manrope',var(--sans); letter-spacing:.08em; text-transform:uppercase; box-shadow:0 1px 3px rgba(0,0,0,.35); }
+.tp-ep-seen svg { width:12px; height:12px; }
+/* an episode's text: the number badge and title, two lines of description, runtime and date as small tags */
+.tp-ep-b { flex:1; min-width:0; display:flex; flex-direction:column; gap:7px; }
+.tp-ep-h { display:flex; align-items:center; gap:10px; min-width:0; }
+.tp-ep-n { flex:none; display:inline-grid; place-items:center; min-width:34px; height:24px; padding:0 7px; border-radius:6px; background:var(--olive-faint); border:1px solid var(--border-olive);
+  font:400 15px/1 var(--bebas); letter-spacing:.04em; color:var(--olive-light); }
+.tp-ep-t { margin:0; min-width:0; font:600 19px/1.25 var(--serif); color:var(--text-heading); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.tp-ep-d { margin:0; max-width:92ch; font:500 13.5px/1.6 'Manrope',var(--sans); color:var(--text-2); display:-webkit-box; -webkit-line-clamp:2; line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.tp-ep-d.is-none { color:var(--text-3); font-style:italic; }
+.tp-ep-m { display:flex; flex-wrap:wrap; align-items:center; gap:4px 16px; }
+.tp-ep-tag { display:inline-flex; align-items:center; gap:5px; font:600 12px 'Manrope',var(--sans); color:var(--text-3); white-space:nowrap; }
+.tp-ep-tag svg { width:12px; height:12px; color:var(--olive-light); flex:none; }
+.tp-ep-tag.is-soon { color:var(--olive-light); }
+.tp-ep-r { position:relative; z-index:1; flex:none; display:flex; align-items:center; gap:6px; }
+.tp-ep-r .eg-chip { min-width:56px; border:none; cursor:default; }
+.tp-chip-rate { background:var(--olive-faint); color:var(--olive-light); box-shadow:inset 0 0 0 1px var(--border-olive); }
+.tp-rate-btn { min-height:28px; padding:0 10px; border-radius:6px; border:1px dashed var(--border-olive); background:none; color:var(--olive-light); font:700 11.5px 'Manrope',var(--sans); cursor:pointer; }
+.tp-rate-btn:hover { background:var(--olive-faint); }
+.tp-rate-btn:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
+/* rating an episode in place */
+.tp-rate { position:relative; z-index:1; display:flex; flex-wrap:wrap; align-items:center; gap:10px 14px; margin:-2px 0 12px; padding:12px 14px; border-radius:var(--radius-sm); border:1px solid var(--border-olive); background:var(--olive-faint); }
+.tp-rate-v { min-width:64px; padding:6px 8px; border-radius:6px; text-align:center; font:400 26px/1 var(--bebas); }
+.tp-rate input[type=range] { flex:1; min-width:160px; accent-color:var(--toggle-track-on); }
+.tp-rate-acts { display:flex; gap:8px; margin-inline-start:auto; }
+.tp-rate-acts .tv-btn { min-height:36px; }
+.tp-page.is-phone .tp-ep { flex-wrap:wrap; gap:10px 12px; }
+.tp-page.is-phone .tp-ep-still { width:120px; }
+.tp-page.is-phone .tp-ep-b { flex-basis:calc(100% - 132px); }
+.tp-page.is-phone .tp-ep-b { gap:6px; }
+.tp-page.is-phone .tp-ep-h { align-items:flex-start; gap:8px; }
+.tp-page.is-phone .tp-ep-n { min-width:28px; height:21px; font-size:13px; padding:0 5px; }
+.tp-page.is-phone .tp-ep-t { font-size:15px; white-space:normal; display:-webkit-box; -webkit-line-clamp:2; line-clamp:2; -webkit-box-orient:vertical; }
+.tp-page.is-phone .tp-ep-tag { font-size:11.5px; }
+.tp-page.is-phone .tp-ep-d { display:none; }
+.tp-page.is-phone .tp-ep-r { flex-basis:100%; margin-inline-start:132px; gap:6px; }
+.tp-page.is-phone .tp-ep-r .eg-chip { min-width:52px; padding:5px 6px; font-size:16px; }
+.tp-page.is-phone .tp-rate-acts { width:100%; }
+.tp-page.is-phone .tp-rate-acts .tv-btn { flex:1; }
+.tp-loading { padding:24px 0; text-align:center; font:600 13px 'Manrope',var(--sans); color:var(--text-3); }
+
+/* Cast & crew tab */
+.tp-people { display:grid; grid-template-columns:repeat(var(--cols, 6), minmax(0, 1fr)); gap:22px 14px; }
+.tp-people .td-cast-card, .tp-people .td-cast-photo { width:100%; }
+.tp-people .td-cast-card.is-static { cursor:default; }
+.tp-people .td-cast-card.is-static:hover { opacity:1; }   /* a crew role that isn't a link: just to read */
+.tp-people .td-cast-photo { width:min(120px, 100%); height:auto; aspect-ratio:1; margin-inline:auto; }
+.tp-page.is-phone .tp-people { grid-template-columns:repeat(3, minmax(0, 1fr)); gap:16px 10px; }
+.tp-page.is-phone .tp-people .td-cast-name { font-size:12.5px; }
+.tp-page.is-phone .tp-people .td-cast-char { font-size:11px; }
+
+/* Community tab: Notes and Lists, four of each */
+.tp-comm-h { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px; margin-bottom:14px; }
+.tp-comm-h h3 { margin:0; display:flex; align-items:baseline; gap:8px; font:600 22px/1.2 var(--serif); color:var(--text-heading); }
+.tp-comm-h h3 span { font:400 18px/1 var(--bebas); color:var(--text-3); }
+.td-notes-controls { display:flex; gap:6px; }
+.td-notes-sort-btn { min-height:32px; padding:0 12px; border-radius:var(--radius-sm); font:600 12.5px 'Manrope',var(--sans); background:var(--raised); border:1px solid var(--border); color:var(--text-3); cursor:pointer; }
+.td-notes-sort-btn:hover { border-color:var(--border-olive); color:var(--text); }
+.td-notes-sort-btn.active { background:var(--olive-faint); border-color:var(--border-olive); color:var(--olive-light); }
+.td-notes-loading, .td-notes-empty { padding:2rem 0; text-align:center; color:var(--text-3); font-size:13.5px; }
+/* lists: the Lists page's own grid — three across (two on tablets, one on phones) */
+.tp-page.is-phone .tp-comm .nc-grid, .tp-page.is-phone .tp-comm .lc-grid { grid-template-columns:minmax(0, 1fr); }
+.td-list-pos { margin-inline-start:8px; padding:1px 8px; border-radius:4px; background:var(--olive-faint); color:var(--olive-light); font-size:11px; font-weight:700; }
+.tp-comm .tp-more .tv-btn { text-decoration:none; }
+
+
+/* ── Where to watch (side panel) — unchanged ── */
+.wtw-ticket { display:flex; margin-bottom:20px; border-radius:14px; background:var(--olive); color:var(--text-on-brand); position:relative; overflow:hidden; }
+.wtw-ticket.past { background:var(--bg-3); color:var(--text); }
+.wtw-stub { flex-shrink:0; width:84px; padding:14px 0; text-align:center; position:relative; border-inline-end:2px dashed rgba(255,255,255,.35); }
+.wtw-ticket.past .wtw-stub { border-color:var(--border-2); }
+.wtw-stub::before, .wtw-stub::after { content:''; position:absolute; inset-inline-end:-9px; width:16px; height:16px; border-radius:50%; background:var(--panel); }
+.wtw-stub::before { top:-8px; } .wtw-stub::after { bottom:-8px; }
+.wtw-stub-month { font-size:12px; font-weight:700; letter-spacing:.5px; opacity:.85; }
+.wtw-stub-day { font-family:var(--bebas); font-size:44px; line-height:.95; margin:2px 0; }
+.wtw-stub-year { font-size:12px; opacity:.75; }
+.wtw-ticket-main { flex:1; min-width:0; padding:14px 16px; display:flex; flex-direction:column; justify-content:center; gap:4px; }
+.wtw-ticket-title { font-family:var(--serif); font-size:19px; font-weight:500; display:flex; align-items:center; gap:8px; }
+.wtw-ticket-sub { font-size:13px; opacity:.8; }
+.wtw-live { width:8px; height:8px; border-radius:50%; background:#B8F09A; box-shadow:0 0 0 0 rgba(184,240,154,.7); animation:wtwPulse 2s infinite; }
+@keyframes wtwPulse { 70% { box-shadow:0 0 0 8px rgba(184,240,154,0); } 100% { box-shadow:0 0 0 0 rgba(184,240,154,0); } }
+.wtw-group + .wtw-group { margin-top:18px; }
+.wtw-group-title { display:flex; align-items:baseline; gap:6px; margin:0 0 10px; font:800 10.5px/1.3 'Manrope',var(--sans); letter-spacing:.14em; text-transform:uppercase; color:var(--text-3); }
+.wtw-group-title small { font-weight:600; font-size:11.5px; letter-spacing:.02em; text-transform:none; }
+.wtw-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(76px, 1fr)); gap:14px 10px; }
+.wtw-provider { display:flex; flex-direction:column; align-items:center; gap:7px; text-align:center; cursor:default; -webkit-user-select:none; user-select:none; }
+.wtw-provider img, .wtw-provider-letter { width:56px; height:56px; border-radius:14px; object-fit:cover; background:var(--bg-3); box-shadow:inset 0 0 0 0.5px rgba(255,255,255,.08); }
+.wtw-provider-letter { display:flex; align-items:center; justify-content:center; font-weight:700; font-size:20px; color:var(--olive-light); }
+.wtw-provider span { font-size:12px; line-height:1.3; color:var(--text-2); display:-webkit-box; -webkit-line-clamp:2; line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.wtw-empty { display:flex; flex-direction:column; align-items:center; gap:8px; padding:18px 8px 6px; text-align:center; }
+.wtw-empty svg { color:var(--text-3); }
+.wtw-empty b { font-size:14.5px; font-weight:600; }
+.wtw-empty span { font-size:13px; color:var(--text-3); max-width:34ch; line-height:1.5; }
+.wtw-where { margin-bottom:18px; }
+.wtw-where .mss-pick-trigger { min-height:44px; }
+.wtw-credit { margin-top:22px; }
+@media(max-width:640px) { .wtw-grid { grid-template-columns:repeat(auto-fill, minmax(68px, 1fr)); } .wtw-provider img, .wtw-provider-letter { width:50px; height:50px; border-radius:13px; } }
+/* Episode detail panel (Fan favourites) */
+.ep-popup-meta-row { display:flex; flex-wrap:wrap; gap:8px 16px; font-size:13px; color:var(--text-3); margin-bottom:1.25rem; }
+.ep-popup-meta-row span { display:inline-flex; align-items:center; gap:5px; }
+.ep-popup-rating { font-family:var(--bebas); color:var(--olive-light); font-weight:400; font-size:18px; letter-spacing:.3px; }
+.ep-popup-overview { font-size:14.5px; color:var(--text-2); line-height:1.75; white-space:pre-line; }
+@media(prefers-reduced-motion:reduce) { .wtw-live, .tp-refresh.busy svg { animation:none; } button.eg-chip { transition:none; } }
+
+/* ═══════════════════════════════════════════════════════════════
+   2. Season & Episode pages (season.html, episode.html — show-pages.js; Season & Episode redesign, 16 Nov 2026).
+   The title page's hero, tiles, cards and columns (above and style.css "Hero pages"); only what they add is here.
+═══════════════════════════════════════════════════════════════ */
+.sp-crumb + .tv-hero { margin-top:0; }
+.sp-page > .tv-sec, .sp-page > .tv-cols, .sp-page > .sp-all, .sp-page > .sp-steps.is-ph { margin-top:20px; }
+/* the trail above the hero is the Episodes page's (style.css .tv-crumb); Previous / Next sit on the hero's top line */
+.sp-crumb [aria-current] { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.tp-page.is-phone .sp-crumb { flex-wrap:nowrap; margin-bottom:8px; overflow:hidden; }
+.tp-page.is-phone .sp-crumb a { flex:none; }
+.sp-steps { display:flex; gap:8px; }
+.sp-step { display:inline-flex; align-items:center; gap:10px; min-width:0; max-width:240px; min-height:48px; padding:6px 12px; border-radius:var(--radius-sm); text-decoration:none;
+  border:1px solid rgba(255,255,255,.28); background:rgba(0,0,0,.6); -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); color:#fff; }
+a.sp-step:hover { background:rgba(0,0,0,.78); border-color:rgba(255,255,255,.45); }
+a.sp-step:focus-visible { outline:2px solid var(--tv-green); outline-offset:2px; }
+.sp-step > svg { flex:none; color:var(--tv-green); }
+.sp-step-img { flex:none; width:56px; aspect-ratio:16/9; border-radius:5px; overflow:hidden; background:#232824; }
+.sp-step-img img { width:100%; height:100%; object-fit:cover; display:block; }
+.sp-step-t { flex:1 1 auto; display:flex; flex-direction:column; gap:2px; min-width:0; }
+.sp-step-t small { max-width:100%; font:800 9.5px/1.2 'Manrope',var(--sans); letter-spacing:.12em; text-transform:uppercase; color:rgba(255,255,255,.7); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.sp-step-t b { max-width:100%; font:700 13px/1.25 'Manrope',var(--sans); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.sp-step.is-next { text-align:end; }
+.sp-step.is-off { border-style:dashed; color:rgba(255,255,255,.8); }
+.sp-step.is-off > svg { color:rgba(255,255,255,.45); }
+/* under the hero on a phone (the top line keeps only the path) */
+.sp-steps.is-ph { display:none; }
+.tp-page.is-phone .sp-steps.is-top { display:none; }
+.tp-page.is-phone .sp-steps.is-ph { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); margin-top:10px; }
+.tp-page.is-phone .sp-steps.is-ph .sp-step { max-width:none; border-color:var(--border); background:var(--panel); color:var(--text); -webkit-backdrop-filter:none; backdrop-filter:none; }
+.tp-page.is-phone .sp-steps.is-ph .sp-step > svg { color:var(--olive-light); }
+.tp-page.is-phone .sp-steps.is-ph .sp-step-t small { color:var(--text-3); }
+.tp-page.is-phone .sp-steps.is-ph .sp-step.is-next { grid-column:2; }
+.tp-page.is-phone .sp-steps.is-ph .sp-step-img { width:48px; }
+
+/* the show above the title: its logo (TMDB artwork, as on the title page), else its name */
+.sp-show { align-self:flex-start; max-width:100%; color:#fff; text-decoration:none; border-radius:4px; }
+.sp-show:focus-visible { outline:2px solid var(--tv-green); outline-offset:4px; }
+.sp-show-t { display:block; font:800 12px/1.3 'Manrope',var(--sans); letter-spacing:.16em; text-transform:uppercase; color:var(--tv-green); }
+.sp-show-t.mss-logo-title:not(.mss-logo-failed) { line-height:0; }
+.sp-show-t .mss-logo { max-width:min(100%, 260px); max-height:56px; }
+.sp-show-t.mss-logo-tall .mss-logo { max-height:76px; }
+.sp-show:hover .sp-show-t:not(.mss-logo-title) { text-decoration:underline; text-underline-offset:3px; }
+.tp-page.is-phone .sp-show-t .mss-logo { max-width:min(100%, 170px); max-height:40px; }
+.sp-kicker { font:800 10.5px/1.3 'Manrope',var(--sans); letter-spacing:.16em; text-transform:uppercase; color:var(--tv-green); }
+.sp-overview { margin:0; max-width:72ch; font:500 14.5px/1.6 'Manrope',var(--sans); color:var(--tv-on-2); display:-webkit-box; -webkit-line-clamp:3; line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
+.sp-acts .tv-btn { text-decoration:none; }
+/* Up next / Mark watched: the main (green) button */
+.tv-btn.sp-next, .tp-hero .tv-btn.sp-next { background:var(--action-primary-bg); border-color:var(--action-primary-bg); color:var(--text-on-primary); -webkit-backdrop-filter:none; backdrop-filter:none; }
+.tv-btn.sp-next:hover, .tp-hero .tv-btn.sp-next:hover { background:color-mix(in srgb, var(--action-primary-hover) 85%, #fff); }
+.tv-btn.sp-next span { overflow:hidden; text-overflow:ellipsis; }
+/* the four numbers: Your average · TMDB · Progress · Best episode (2 × 2; a row of four on phones) */
+.tp-tiles.sp-tiles { grid-template-columns:repeat(2, 136px); }
+.sp-tile { min-height:88px; gap:4px; padding:10px 8px; text-decoration:none; }
+.sp-tile b { font-size:32px; }
+.sp-tile em { max-width:100%; font:600 10.5px/1.2 'Manrope',var(--sans); font-style:normal; color:rgba(255,255,255,.68); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.sp-tile.is-mine:not(.is-none) b { color:var(--tv-green); }
+a.sp-tile:hover { border-color:rgba(255,255,255,.45); background:rgba(0,0,0,.72); }
+a.sp-tile:focus-visible { outline:2px solid var(--tv-green); outline-offset:2px; }
+.tp-page.is-phone .tp-tiles-ph.sp-tiles { grid-template-columns:repeat(4, minmax(0, 1fr)); }
+.tp-page.is-phone .sp-tile { min-height:62px; padding:8px 4px; }
+.tp-page.is-phone .sp-tile b { font-size:24px; }
+.tp-page.is-phone .sp-tile small { font-size:8px; letter-spacing:.08em; }
+.tp-page.is-phone .sp-tile em { display:none; }
+/* phones: the poster beside the show, title and chips; the rating box and the buttons the full width under them */
+.tp-page.is-phone .sp-hero .tv-hero-main { display:grid; grid-template-columns:96px minmax(0, 1fr); column-gap:14px; row-gap:8px; align-items:end; margin-top:96px; }
+.tp-page.is-phone .sp-hero.is-ep .tv-hero-main { grid-template-columns:minmax(0, 1fr); margin-top:118px; }
+.tp-page.is-phone .sp-hero .tv-hero-txt { display:contents; }
+.tp-page.is-phone .sp-hero .tv-poster { grid-column:1; grid-row:1 / span 4; align-self:end; }
+.tp-page.is-phone .sp-hero .tv-hero-txt > * { grid-column:2; justify-self:start; min-width:0; max-width:100%; }
+.tp-page.is-phone .sp-hero.is-ep .tv-hero-txt > * { grid-column:1; }
+.tp-page.is-phone .sp-hero .tv-hero-txt > .sp-box, .tp-page.is-phone .sp-hero .tv-hero-txt > .sp-acts { grid-column:1 / -1; justify-self:stretch; }
+.tp-page.is-phone .sp-overview { display:none; }
+.tp-page.is-phone .sp-acts { display:flex; flex-wrap:wrap; gap:6px; margin-top:4px; }
+.tp-page.is-phone .sp-acts .tv-btn { flex:1 1 calc(50% - 3px); min-width:0; min-height:44px; padding:0 10px; font-size:12.5px; }
+.tp-page.is-phone .sp-acts .tv-btn.sp-next { flex-basis:100%; }
+
+/* the seasons as posters: yours under each, and a progress bar */
+a.tp-scard { text-decoration:none; }
+.sp-scard-m { display:flex; align-items:baseline; justify-content:space-between; gap:6px; }
+.sp-scard-v { font:400 17px/1 var(--bebas); letter-spacing:.02em; color:var(--st, var(--score-mine)); }
+.sp-scard-v.is-none { color:var(--text-3); }
+.sp-bar { display:block; height:4px; margin-top:4px; border-radius:2px; background:var(--olive-faint); overflow:hidden; }
+.sp-bar i { display:block; height:100%; border-radius:inherit; background:var(--olive-light); }
+.sp-seasons .tp-srail { margin-bottom:-12px; }
+
+/* every episode, in one list (the title page's rows): the filters, your up next outlined */
+.sp-eps .tv-sec-h, .sp-notes .tv-sec-h { align-items:center; flex-wrap:wrap; }
+.sp-filter { margin:0; }
+.sp-filter .pn-toggle-btn { min-height:36px; padding:0 14px; }
+.sp-filter-n { font-weight:600; opacity:.75; }
+.tp-ep.sp-ep.is-next { margin:4px 0; padding:12px; border:1px solid var(--border-olive); border-radius:var(--radius-sm); background:var(--olive-faint); }
+.tp-ep.sp-ep.is-next + .tp-ep { border-top:none; }
+.sp-ep-k { font:800 10px/1.2 'Manrope',var(--sans); letter-spacing:.14em; text-transform:uppercase; color:var(--olive-light); }
+.sp-ep .tp-ep-r { flex-wrap:wrap; justify-content:flex-end; }
+.sp-mark { min-height:36px; }
+.tp-page.is-phone .tp-ep.sp-ep.is-next { padding:10px; }
+/* phones: the scores sit under the text, beside the still's width — never wider than the row */
+.tp-page.is-phone .sp-ep .tp-ep-r { flex:0 1 auto; width:calc(100% - 132px); justify-content:flex-start; }
+
+/* the season, episode by episode (MSSCurve.series): the curve's bars, inside the section */
+.sp-chart .rc-box { --rc-h:128px; margin:0; padding:0; border:none; background:none; }
+.sp-chart-sw { margin:0; }
+.sp-chart-sw .pn-toggle-btn { min-height:32px; padding:0 12px; font-size:12px; }
+.rc-series .rc-col.rc-on .rc-bar { background:var(--tv-green, var(--p-forest-300)); }   /* the peak: MSF's bright green, in both themes (not gold — owner) */
+.sp-insight { margin:12px 0 0; font:500 13px/1.55 'Manrope',var(--sans); color:var(--text-2); }
+.sp-insight b { color:var(--text); }
+
+/* reviews / notes: one line when there are none; the cast three to a row in the side column */
+.sp-notes-sort { margin:0 0 12px; }
+.sp-notes-sort[hidden] { display:none; }
+.sp-oneline-t { display:flex; align-items:center; gap:8px; margin:0; font:500 13.5px/1.5 'Manrope',var(--sans); color:var(--text-2); }
+.sp-oneline-t svg { flex:none; color:var(--olive-light); }
+.tv-side .sp-notes .nc-grid { grid-template-columns:minmax(0, 1fr); }
+.sp-note-write.tv-btn { min-height:36px; }
+.tv-side .tp-cast.sp-cast { grid-template-columns:repeat(3, minmax(0, 1fr)); }
+.tv-page:not(.is-phone) .tv-side .sp-cast .tv-face { width:min(72px, 100%); }
+
+/* the episode's rating box: yours (or Rate) · TMDB · MSF — or, not watched yet, Mark watched */
+.sp-box { display:flex; flex-direction:column; gap:10px; max-width:100%; padding:12px 14px; border-radius:var(--radius); border:1px solid rgba(255,255,255,.2);
+  background:rgba(0,0,0,.6); -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); }
+.sp-box-h { display:flex; align-items:center; gap:6px; font:800 10px/1.2 'Manrope',var(--sans); letter-spacing:.14em; text-transform:uppercase; color:rgba(255,255,255,.75); }
+.sp-box-row { display:flex; flex-wrap:wrap; align-items:center; gap:10px 22px; }
+.sp-box-c { display:flex; flex-direction:column; gap:3px; min-width:0; padding:0; border:0; background:none; color:#fff; font:inherit; text-align:start; }
+.sp-box-c small { font:800 9.5px/1.2 'Manrope',var(--sans); letter-spacing:.12em; text-transform:uppercase; color:rgba(255,255,255,.7); white-space:nowrap; }
+.sp-box-c b { font:400 32px/1 var(--bebas); letter-spacing:.02em; color:#fff; }
+.sp-box-c.is-mine b { color:var(--tv-green); }
+button.sp-box-c { cursor:pointer; }
+button.sp-box-c:hover b { text-decoration:underline; text-underline-offset:4px; }
+button.sp-box-c:focus-visible { outline:2px solid var(--tv-green); outline-offset:3px; border-radius:4px; }
+.sp-box-a { display:flex; flex-wrap:wrap; gap:8px; }
+.sp-box-a .tv-btn { min-height:40px; }
+.tp-page.is-phone .sp-box { width:100%; }
+.tp-page.is-phone .sp-box-a { width:100%; }
+.tp-page.is-phone .sp-box-a .tv-btn { flex:1; }
+.tv-mini-poster.is-wide { width:64px; height:36px; }
+
+/* the overview (Hide spoilers blurs it until you ask), director and writer */
+.sp-ov { margin:0; transition:filter .2s; }
+.sp-ov.is-hidden { filter:blur(6px); -webkit-user-select:none; user-select:none; }
+.sp-ov-sec .tv-link { margin-top:10px; }
+.sp-credits { display:flex; flex-wrap:wrap; gap:6px 22px; margin:14px 0 0; font:500 13.5px 'Manrope',var(--sans); color:var(--text-3); }
+.sp-credits b { font-weight:700; color:var(--text); }
+@media (prefers-reduced-motion:reduce) { .sp-ov { transition:none; } }
+/* your note — or one line to write it */
+.sp-sec-note { font:600 12px 'Manrope',var(--sans); color:var(--text-3); }
+.sp-oneline { display:flex; align-items:center; gap:12px; }
+.sp-oneline > svg { flex:none; color:var(--olive-light); }
+.sp-oneline > span { flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; }
+.sp-oneline b { font:700 14px 'Manrope',var(--sans); color:var(--text); }
+.sp-oneline small { font:500 12.5px 'Manrope',var(--sans); color:var(--text-3); }
+.sp-oneline .tv-btn { min-height:36px; }
+
+/* Up next for you: a small hero of its own */
+.sp-upnext { --tv-green:var(--p-forest-300); position:relative; isolation:isolate; overflow:hidden; display:flex; flex-direction:column; justify-content:flex-end; gap:6px;
+  min-height:190px; padding:18px; border-radius:var(--radius); border:1px solid var(--border); background:#121613; color:#fff; color-scheme:dark; }
+.sp-upnext .tv-hero-bg { opacity:1; background-position:center; }
+.sp-upnext .tv-hero-shade { background:linear-gradient(180deg, rgba(0,0,0,.25) 0%, rgba(0,0,0,.82) 100%); }
+.sp-upnext h3 { margin:0; font:600 24px/1.15 var(--serif); color:#fff; overflow-wrap:anywhere; }
+.sp-upnext p { margin:0; font:600 12.5px 'Manrope',var(--sans); color:rgba(255,255,255,.78); }
+.sp-upnext-a { display:flex; flex-wrap:wrap; gap:8px; margin-top:6px; }
+.sp-upnext .tv-btn:not(.sp-next) { border-color:rgba(255,255,255,.26); background:rgba(0,0,0,.55); color:#fff; text-decoration:none; }
+.sp-upnext .tv-btn:not(.sp-next):hover { background:rgba(0,0,0,.75); }
+.sp-upnext .tv-btn:focus-visible { outline-color:var(--tv-green); }
+/* the season as a short list: this one marked, yours or TMDB's score */
+.sp-mlist { position:relative; margin:0 -6px; padding:0; list-style:none; max-height:440px; overflow-y:auto; scrollbar-width:thin; }
+.sp-ml { display:flex; align-items:center; gap:10px; min-height:40px; padding:0 8px; border-radius:var(--radius-sm); color:var(--text); text-decoration:none; }
+.sp-ml:hover { background:var(--raised); }
+.sp-ml:focus-visible { outline:2px solid var(--olive-light); outline-offset:-2px; }
+.sp-ml.is-on { background:var(--olive); color:var(--text-on-brand); }
+.sp-ml-n { flex:none; width:22px; font:400 16px/1 var(--bebas); color:var(--text-3); }
+.sp-ml-t { flex:1; min-width:0; font:600 13.5px/1.3 'Manrope',var(--sans); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.sp-ml-seen { flex:none; display:grid; color:var(--olive-light); }
+.sp-ml-v { flex:none; min-width:36px; padding:3px 6px 2px; border-radius:5px; text-align:center; font:400 16px/1 var(--bebas); letter-spacing:.02em; }
+.sp-ml-v.is-tmdb { color:var(--text-3); }
+.sp-ml-v.is-next { min-width:0; font:800 9.5px/1.2 'Manrope',var(--sans); letter-spacing:.1em; text-transform:uppercase; color:var(--olive-light); }
+.sp-ml.is-on .sp-ml-n, .sp-ml.is-on .sp-ml-seen, .sp-ml.is-on .sp-ml-v.is-tmdb { color:#fff; }
+.sp-ml-all { display:inline-flex; align-items:center; gap:6px; margin-top:12px; }
+/* phones: one column — on an episode, Up next comes first after the hero (the PDF's order) */
+.tp-page.is-phone .sp-cols { display:flex; flex-direction:column; align-items:stretch; gap:20px; }
+.tp-page.is-phone .sp-cols > .tv-main, .tp-page.is-phone .sp-cols > .tv-side { display:contents; }
+.tp-page.is-phone .sp-upnext { order:-1; }
+
+/* All seasons (a grid) / All episodes (each season's list) — season.html?show=…&all=… */
+.sp-all { display:flex; flex-direction:column; gap:20px; }
+/* the season bar stays in view as you scroll (owner): under the site's header, then under the slim bar once it's in */
+.sp-jump { position:sticky; top:calc(var(--de-top, 0px) + 8px); z-index:6; padding:8px; border-radius:var(--radius); border:1px solid var(--border);
+  background:color-mix(in srgb, var(--panel) 94%, transparent); -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); transition:top .2s var(--layer-in, ease); }
+.sp-page.is-scrolled .sp-jump { top:calc(var(--de-top, 0px) + 84px); }
+.tp-page.is-phone.is-scrolled .sp-jump { top:calc(var(--de-top, 0px) + 80px); }
+@media (prefers-reduced-motion:reduce) { .sp-jump { transition:none; } }
+.sp-jump-in { display:flex; gap:8px; overflow-x:auto; scrollbar-width:none; padding:2px; }
+.sp-jump-in::-webkit-scrollbar { display:none; }
+.sp-jump-btn { flex-shrink:0; display:inline-flex; align-items:baseline; gap:6px; min-height:40px; padding:9px 16px; border-radius:var(--radius-sm); text-decoration:none;
+  background:var(--card); border:1px solid var(--border); color:var(--text); transition:background-color .15s, border-color .15s, color .15s; }
+.sp-jump-btn b { font:600 14px 'Manrope',var(--sans); }
+.sp-jump-btn small { font-size:11.5px; color:var(--text-2); }
+.sp-jump-btn:hover { border-color:var(--border-olive); }
+.sp-jump-btn:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
+.sp-jump-btn.on { background:var(--olive); border-color:var(--olive); color:var(--text-on-brand); }
+.sp-jump-btn.on small { color:rgba(255,255,255,.85); }
+.sp-all-sec { scroll-margin-top:calc(var(--de-top, 0px) + 150px); }   /* below the slim bar and the season bar */
+.tp-page.is-phone .sp-jump-btn { padding:8px 14px; }

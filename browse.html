@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="js/splash.js"></script>
+<script src="js/i18n.js"></script>
+<title>Browse — MyScreenFolio</title>
+<link rel="stylesheet" href="css/fonts.css">
+<link rel="stylesheet" href="css/theme.css">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/discover.css">
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#F3EEDC">
+  <meta name="color-scheme" content="light dark">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="MyScreenFolio">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <link rel="icon" type="image/svg+xml" sizes="any" href="icons/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+</head>
+<body>
+<div class="page-wrap bx-wrap">
+  <!-- Browse Results (Discover redesign): your own search, so no cinematic backdrop — a clean header that says
+       what you picked (a sentence and removable chips), how many titles match, Edit filters and Clear all; then
+       the same Sort · List / Grid and the same rows and cards as the Discover lists. -->
+  <div class="lh-crumb" role="navigation" aria-label="Breadcrumb"><a href="discover.html">‹ Discover</a><span class="dh-crumb-sep" aria-hidden="true">/</span><span>Browse</span></div>
+  <header class="bx-head">
+    <div class="bx-head-main">
+      <div class="bx-eyebrow">Browse results</div>
+      <h1 class="bx-title">Your Discovery</h1>
+      <p class="bx-desc" id="bxDesc"></p>
+      <div class="bx-chips" id="bxChips"></div>
+    </div>
+    <div class="bx-head-side">
+      <div class="bx-count" id="bxCount" aria-live="polite"><b>…</b><span>matching titles</span></div>
+      <div class="bx-acts">
+        <button type="button" class="bx-btn is-main" id="bxEdit" onclick="_bxEdit()"></button>
+        <button type="button" class="bx-btn" id="bxClear" onclick="_bxClear()">Clear all</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="lv-bar dl-bar">
+    <div class="lv-bar-l"><span class="dl-count" id="bxShowing"></span></div>
+    <div class="lv-bar-r">
+      <button type="button" class="sf-icon-btn" id="bxSort" onclick="_bxSortMenu(this)" aria-haspopup="menu"></button>
+      <div class="view-toggle" id="bxView"></div>
+    </div>
+  </div>
+  <div class="bx-load" id="bxLoad" role="status" aria-live="polite" hidden><span class="bx-load-bar" aria-hidden="true"><i></i></span><span class="bx-load-t" id="bxLoadT"></span></div>
+  <div id="bxGrid"></div>
+  <div id="bxMore"></div>
+</div>
+
+<script src="js/vendor/supabase-2.118.0.js"></script>
+<script src="js/config.js"></script>
+<script src="js/db.js"></script>
+<script src="js/nav.js"></script>
+<script src="js/info-popup.js"></script>
+<script src="js/title-view.js"></script>
+<script src="js/discover-categories.js"></script>
+<script src="js/discover-results.js"></script>
+<script src="js/browse.js"></script>
+<script>
+const $bx = id => document.getElementById(id);
+let _bxQ = MSSBrowse.fromURL();
+let _bxS = null, _bxSeq = 0;
+let _bxView = 'grid';   // always opens in Grid, like the Discover lists (owner)
+const _BX_STATE = 'mss_browse_results_v2';
+
+const _bxItemHTML = it => _bxView === 'list' ? MSSResults.row(it, { type: _bxQ.type === 'movie' || _bxQ.type === 'tv' ? false : undefined, overview: true })
+  : MSSResults.card(it, { type: _bxQ.type === 'movie' || _bxQ.type === 'tv' ? false : undefined });
+
+/* ── The header: what you picked, in words and as chips you can take off one by one ── */
+function _bxHead(loading) {
+  const q = _bxQ, n = MSSBrowse.count(q);
+  $bx('bxDesc').textContent = MSSBrowse.sentence(q);
+  $bx('bxChips').innerHTML = MSSBrowse.parts(q).map(p => `<button type="button" class="bx-chip" onclick="_bxRemove(${attrJSON(p.k)})" aria-label="Remove ${escHTML(p.label)}">
+      <span translate="no">${escHTML(p.label)}</span>${icon('x', 12)}</button>`).join('');
+  $bx('bxChips').hidden = !n;
+  $bx('bxEdit').innerHTML = `${icon('filter', 15)}<span>Edit filters</span>${n ? `<b class="bw-count">${n}</b>` : ''}`;
+  $bx('bxClear').hidden = !n && !q.sort;
+  const S = _bxS, total = S && !loading ? S.total : null;
+  $bx('bxCount').innerHTML = total == null ? `<b class="is-skel">…</b><span>matching titles</span>`
+    : `<b>${total.toLocaleString(MSSI18n.locale)}${S.fuzzy ? '+' : ''}</b><span>${total === 1 ? 'matching title' : 'matching titles'}</span>`;
+  $bx('bxShowing').textContent = S && !loading && S.items.length ? `Showing ${_bxShown} of ${S.total.toLocaleString(MSSI18n.locale)}${S.fuzzy ? '+' : ''}` : '';
+  $bx('bxSort').innerHTML = `${icon('sort', 15)}<span class="sf-icon-btn-label">${escHTML(MSSBrowse.SORTS.find(s => s[0] === (q.sort || ''))[1])}</span>`;
+  $bx('bxSort').classList.toggle('active', !!q.sort);
+}
+/* Whole rows, the Library's system: the grid starts with 5 rows and Show more adds 3; the list starts with 10 and
+   adds 5 (a grid row = as many cards as fit right now). TMDB is asked for more as the rows need them. */
+const _BX_ROWS = { grid: [5, 3], list: [10, 5] };
+let _bxRowsN = _BX_ROWS.grid[0], _bxShown = 0;
+function _bxCols() {
+  if (_bxView === 'list') return 1;
+  const g = $bx('bxGrid');
+  const n = g.classList.contains('msf-grid') ? getComputedStyle(g).gridTemplateColumns.split(' ').filter(t => /^[\d.]+px$/.test(t)).length : 0;
+  return Math.max(1, n || 5);
+}
+async function _bxFill(onEach) {
+  const S = _bxS; let guard = 0;
+  while (S && !S.end && S.items.length < _bxRowsN * _bxCols() && guard++ < 30) { await S.more(); onEach?.(); }
+}
+/* While Browse searches (it can take a while: many TMDB pages, and every show's length when you filter by seasons):
+   a line that says what it's doing and how far it's got, and the titles found so far appear straight away with
+   grey cards after them for the rest (owner, 16 Nov 2026: "better loader") */
+function _bxProgress(S) {
+  const box = $bx('bxLoad'); if (!box || S !== _bxS) return;
+  const n = S.items.length, pages = S.checked || 0;
+  $bx('bxLoadT').textContent = S.phase === 'sizes' ? `Checking each show’s seasons and episodes… ${n ? `${n} found so far` : ''}`
+    : !pages ? 'Searching TMDB…' : n ? `Searching TMDB… ${n} found so far · ${pages} ${pages === 1 ? 'page' : 'pages'} checked`
+    : `Searching TMDB… ${pages} ${pages === 1 ? 'page' : 'pages'} checked`;
+}
+function _bxLoading(on) {
+  $bx('bxLoad').hidden = !on;
+  if (on) $bx('bxLoadT').textContent = 'Searching TMDB…';
+}
+let _bxReady = false;      // your library is loaded (the cards mark what's yours), so titles can be drawn as they come
+function _bxPartial() {
+  const S = _bxS; if (!_bxReady || !S?.items.length || _bxView !== 'grid') return;
+  const want = _bxRowsN * _bxCols(), grid = $bx('bxGrid');
+  grid.className = MSSResults.wrap(_bxView, '').cls;
+  grid.innerHTML = S.items.slice(0, want).map(_bxItemHTML).join('') + MSSCard.skel(Math.max(0, Math.min(want, 10) - S.items.length));
+}
+function _bxMoreHTML(count) {
+  const S = _bxS;
+  if (!S || !S.items.length || (S.end && S.items.length <= count)) return '';
+  const left = Math.max(0, (S.end ? S.items.length : S.total) - count), step = _BX_ROWS[_bxView][1] * _bxCols();
+  return `<div class="msf-more"><button type="button" class="msf-more-btn" id="bxMoreBtn" onclick="_bxLoadMore()">Show ${left ? Math.min(left, step) : step} more${left ? ` <small>· ${left.toLocaleString(MSSI18n.locale)}${S.fuzzy ? '+' : ''} left</small>` : ''}</button></div>`;
+}
+function _bxDraw() {
+  const S = _bxS, grid = $bx('bxGrid');
+  if (!S.items.length) {
+    grid.className = '';
+    grid.innerHTML = mssEmpty({ art: 'filter', title: 'Nothing matches all of these', text: 'That’s a very specific mood. Take a filter off, or widen the years or genres.',
+      actions: [{ label: 'Edit filters', icon: 'filter', onclick: '_bxEdit()', primary: true }, ...(MSSBrowse.count(_bxQ) ? [{ label: 'Clear all', icon: 'x', onclick: '_bxClear()' }] : [])] });
+    _bxShown = 0;
+    $bx('bxMore').innerHTML = '';
+  } else {
+    grid.className = MSSResults.wrap(_bxView, '').cls;             // the real grid first, so its columns can be counted
+    const count = Math.min(S.items.length, _bxRowsN * _bxCols());
+    _bxShown = count;
+    grid.innerHTML = S.items.slice(0, count).map(_bxItemHTML).join('');
+    $bx('bxMore').innerHTML = _bxMoreHTML(count);
+  }
+  _bxHead();
+}
+
+async function _bxRun() {
+  const qs = MSSBrowse.toQuery(_bxQ);
+  history.replaceState(history.state, '', 'browse.html' + (qs ? '?' + qs : ''));
+  MSSBrowse.remember(_bxQ);
+  const my = ++_bxSeq;
+  _bxS = MSSBrowse.results(_bxQ);
+  _bxS.onStep = _bxProgress;
+  _bxHead(true);
+  _bxLoading(true);
+  const w = MSSResults.wrap(_bxView, '');
+  $bx('bxGrid').className = w.cls;
+  $bx('bxGrid').innerHTML = _bxView === 'list' ? '' : MSSCard.skel(10);
+  $bx('bxMore').innerHTML = '';
+  _bxRowsN = _BX_ROWS[_bxView][0];
+  try {
+    await Promise.all([_bxFill(() => { if (my === _bxSeq) { _bxPartial(); _bxProgress(_bxS); } }), MSSResults.ready().then(() => { _bxReady = true; }),
+      _bxQ.svc.length ? MSSBrowse.providersFor(MSSBrowse.region(_bxQ)) : null]);
+  } catch (e) {
+    if (my !== _bxSeq) return;
+    _bxLoading(false);
+    console.error('Browse:', e);
+    $bx('bxGrid').className = '';
+    $bx('bxGrid').innerHTML = '<div></div>';
+    mssErrorPage(mssTmdbErrorKind(e, 'tmdb'), { in: $bx('bxGrid').firstElementChild, error: e });
+    return;
+  }
+  if (my !== _bxSeq) return;
+  _bxLoading(false);
+  _bxDraw();
+}
+// Show more: the next rows come in under the ones you've seen — the page stays where you are
+async function _bxLoadMore() {
+  const btn = $bx('bxMoreBtn'), from = _bxShown, my = _bxSeq, y = scrollY;
+  if (btn) { btn.disabled = true; btn.textContent = 'Loading…'; }
+  _bxRowsN += _BX_ROWS[_bxView][1];
+  _bxS.onStep = S => { _bxProgress(S); if (btn) btn.textContent = $bx('bxLoadT').textContent; };
+  try { await _bxFill(); } catch (e) { console.error('Browse:', e); showToast(isRateLimitError(e) ? 'TMDB is busy right now — try again in a moment.' : 'Couldn’t load more — try again.', 'err'); }
+  if (my !== _bxSeq) return;
+  _bxDraw();
+  scrollTo({ top: y, behavior: 'instant' });
+  // keyboard users carry on from the first new title
+  const first = $bx('bxGrid').children[from];
+  (first?.matches('[role="button"]') ? first : first?.querySelector('[role="button"]'))?.focus({ preventScroll: true });
+}
+
+/* ── Changing the choice ── */
+function _bxEdit() { MSSBrowse.open({ q: _bxQ, onApply: q => { _bxQ = q; _bxRun(); scrollTo({ top: 0, behavior: 'smooth' }); } }); }
+function _bxClear() { const v = _bxQ; _bxQ = MSSBrowse.EMPTY(); _bxRun(); showUndoToast('Filters cleared', () => { _bxQ = v; _bxRun(); }); }
+function _bxRemove(k) {
+  const q = MSSBrowse.clone(_bxQ);
+  if (k === 'type') q.type = '';
+  else if (k === 'years') { q.up = false; q.from = ''; q.to = ''; }
+  else if (k.startsWith('g:')) q.genres = q.genres.filter(g => g !== k.slice(2));
+  else if (k === 'country') q.country = '';
+  else if (k === 'where') q.cin = '';
+  else if (k.startsWith('s:')) q.svc = q.svc.filter(s => s !== k.slice(2));
+  else if (k === 'score') { q.smin = ''; q.smax = ''; }
+  else if (k === 'len') { q.lmin = ''; q.lmax = ''; }
+  else if (k === 'sn') { q.snmin = ''; q.snmax = ''; }
+  else if (k === 'eps') { q.emin = ''; q.emax = ''; }
+  else if (k === 'hide') q.hide = [];
+  _bxQ = q; _bxRun();
+}
+async function _bxSortMenu(btn) {
+  await mssLoadScript('js/panel.js');
+  MSSPopover.open(btn, { title: 'Sort by', label: 'Sort by', align: 'end',
+    items: MSSBrowse.SORTS.map(([v, l]) => ({ label: l, on: (_bxQ.sort || '') === v, onSelect: () => { if ((_bxQ.sort || '') === v) return; _bxQ = { ..._bxQ, sort: v }; _bxRun(); } })) });
+}
+function _bxSetView(v) {
+  if (v === _bxView) return;
+  _bxView = v;
+  _bxRowsN = _BX_ROWS[v][0];
+  $bx('bxView').innerHTML = MSSResults.toggleHTML(_bxView, '_bxSetView');
+  if (!_bxS) return;
+  $bx('bxGrid').className = MSSResults.wrap(v, '').cls;
+  _bxFill().then(_bxDraw).catch(() => _bxDraw());
+}
+// a wider or narrower window changes how many fit in a row: whole rows again
+let _bxResizeT = 0, _bxColsWas = 0;
+addEventListener('resize', () => { clearTimeout(_bxResizeT); _bxResizeT = setTimeout(() => {
+  if (!_bxS || _bxView !== 'grid') return;
+  const c = _bxCols(); if (c === _bxColsWas) return; _bxColsWas = c;
+  _bxFill().then(_bxDraw).catch(() => {});
+}, 200); }, { passive: true });
+
+/* ── Back to these results lands where you were: what was loaded and the scroll, for 30 minutes ── */
+if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+window.MSS_OWN_SCROLL = true;
+window.addEventListener('pagehide', () => {
+  if (!_bxS?.items?.length) return;
+  try { sessionStorage.setItem(_BX_STATE, JSON.stringify({ t: Date.now(), key: location.search, y: scrollY, S: { ..._bxS, q: undefined, more: undefined }, rows: _bxRowsN, view: _bxView })); } catch {}
+});
+function _bxRestore() {
+  if ((performance.getEntriesByType('navigation')[0] || {}).type !== 'back_forward') return false;
+  try {
+    const st = JSON.parse(sessionStorage.getItem(_BX_STATE) || 'null');
+    if (!st || st.key !== location.search || Date.now() - st.t > 30 * 60 * 1000 || !st.S?.items?.length) return false;
+    _bxS = MSSBrowse.results(_bxQ, st.S);
+    if (st.view) { _bxView = st.view; $bx('bxView').innerHTML = MSSResults.toggleHTML(_bxView, '_bxSetView'); }
+    _bxRowsN = st.rows || _BX_ROWS[_bxView][0];
+    _bxDraw();
+    mssJumpTo(st.y || 0);
+    return true;
+  } catch { return false; }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  $bx('bxView').innerHTML = MSSResults.toggleHTML(_bxView, '_bxSetView');
+  _bxHead(true);
+  initPageGuest(async () => {
+    if (_bxRestore()) { MSSResults.ready().then(() => _bxDraw()); return; }
+    _bxRun();
+  });
+  document.addEventListener('mss:library-changed', () => { if (!window._navUser || !_bxS) return; MSSResults.refresh().then(() => _bxDraw()).catch(() => {}); });
+});
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js')
+      .then(r => console.log('SW registered:', r.scope))
+      .catch(e => console.warn('SW failed:', e));
+  });
+}
+</script>
+</body>
+</html>

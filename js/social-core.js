@@ -43,11 +43,8 @@ function _frOpenEvent(id, type) {
   const e = window._frEntryMap[id]; if (!e) return;
   _frViews(e, type === 'note' ? 'note' : 'info');
 }
-const _frListItem = id => window._frEntryMap[id] || MSSList.tmdb(id);
-function _frOpenList(id) {
-  const l = _frLists.find(x => x.id === id);
-  if (l) MSSList.open(l, { resolve: _frListItem, owner: _frProfiles[l.user_id] || {}, social: true });
-}
+// A friend's list: its page (Lists redesign — no popup)
+function _frOpenList(id) { location.href = `list-view.html?list=${encodeURIComponent(id)}`; }
 // Loading skeletons: these stay readable while the rest is masked
 const _frSkelKeep = h => h.replace(/class="(fr-toolbar-title|sort-bar[^"]*|fm-btn[^"]*|pn-toggle-btn[^"]*|fr-people-title|ns-back)"/g, 'class="$1" data-skel-keep');
 function _frFriendOptions() { return [['', 'Everyone'], ..._frAccepted.map(f => [f.friendId, _frName(f.friendId)])]; }
@@ -79,9 +76,12 @@ async function loadFriends() {
   const extraFavs = missing.length ? await sb.from('entries').select('*').in('id', missing).then(r => r.data || [], () => []) : [];
   const favMap = Object.fromEntries(extraFavs.map(e => [e.id, e]));
   _frStats = {};
+  const cards = typeof MSSProfileStats !== 'undefined';
+  const extras = cards ? await _frStatExtras(_frAccepted.map(f => ({ ...(f.friendProfile || {}), id: f.friendId })), { lists: false }) : {};   // their lists are loaded above
   _frAccepted.forEach(f => {
     const mine = _frEntries.filter(e => e.user_id === f.friendId);
-    _frStats[f.friendId] = { ...computeStats(mine), recent: mine[0]?.updated_at || null,
+    const ex = { ...(extras[f.friendId] || {}), lists: _frLists.filter(l => l.user_id === f.friendId).length };
+    _frStats[f.friendId] = { ...computeStats(mine), show: cards ? _frStatsOf(f.friendProfile, mine, ex) : null, recent: mine[0]?.updated_at || null,
       watchingNow: mine.find(e => e.status === 'watching') || null,
       posters: _frCoverPosters(f.friendProfile || {}, mine, favMap),
       latest: null };
@@ -130,6 +130,25 @@ function _frGateData() {
   }
   return false;
 }
+// A person's card (friends.html) shows the first 3 stats they chose for their profile (Edit profile › Profile stats;
+// profile-stats.js, loaded on the Friends page only — elsewhere the cards aren't drawn, so nothing is counted)
+const _frStatKeys = prof => MSSProfileStats.keys(prof || {}).slice(0, 3);
+function _frStatsOf(prof, entries, extra = {}) {
+  return { keys: _frStatKeys(prof), vals: MSSProfileStats.values(entries, { lists: extra.lists, diary: extra.diary, time: MSSProfileStats.timeOf(prof || {}) }) };
+}
+// Lists / Diary watches need their own counts — only fetched for the people who show them
+async function _frStatExtras(profs, o = {}) {
+  const want = k => profs.filter(p => _frStatKeys(p).includes(k)).map(p => p.id);
+  const [lw, dw] = [o.lists === false ? [] : want('lists'), want('diary')];
+  const [lists, diary] = await Promise.all([
+    lw.length ? sb.from('favorite_lists').select('user_id').in('user_id', lw).eq('cat', 'custom').then(r => r.data || [], () => []) : [],
+    Promise.all(dw.map(id => sb.rpc('get_profile_diary_count', { p_user: id }).then(r => [id, r.error ? null : r.data], () => [id, null]))),
+  ]);
+  const out = {};
+  lw.forEach(id => { out[id] = { lists: lists.filter(l => l.user_id === id).length }; });
+  diary.forEach(([id, n]) => { (out[id] = out[id] || {}).diary = n; });
+  return out;
+}
 function _frEmptyHTML(ic, title, text) {
   const ART = { users: 'friends', activity: 'friends', layers: 'lists', edit: 'notes', compare: 'compare', search: 'search', shuffle: 'blend' };
   return mssEmpty({ art: ART[ic] || 'friends', title, text });
@@ -148,7 +167,7 @@ function _frCoverPosters(p, mine, extra = {}) {
 }
 
 const _FR_ACT = {
-  finished:  { verb: 'watched',                  color: '#1e5c26', ic: 'check',   label: 'Watched' },
+  finished:  { verb: 'watched',                  color: '#2E6B45', ic: 'check',   label: 'Watched' },
   logged:    { verb: 'logged',                   color: '#55705a', ic: 'notebook', label: 'Logged' },
   caught_up: { verb: 'is caught up on',          color: '#8a5a1c', ic: 'clock',   label: 'Caught Up' },
   started:   { verb: 'started watching',         color: '#2f7a3a', ic: 'play',    label: 'Started' },
@@ -219,7 +238,7 @@ function _cmpMatch(uid) {
   const rated = t.rated, avgDiff = t.avgDiff, pct = t.pct, pairs = t.pairs;
   const loved = rated.slice().sort((x, y) => (y.a + y.b) - (x.a + x.b))[0];
   const split = rated.slice().sort((x, y) => Math.abs(y.a - y.b) - Math.abs(x.a - x.b))[0];
-  return (_frMatchMemo[uid] = { shared: pairs.length, rated: rated.length, pct, avgDiff, loved, split: split && Math.abs(split.a - split.b) >= 1 ? split : null });
+  return (_frMatchMemo[uid] = { shared: pairs.length, rated: rated.length, list: rated, pct, avgDiff, loved, split: split && Math.abs(split.a - split.b) >= 1 ? split : null });
 }
 // A friend's match % once your own titles are in (null: not enough rated by both yet)
 const _frMatchPct = uid => _cmpMine ? _cmpMatch(uid).pct : null;
@@ -255,11 +274,11 @@ function _blendFor(uids) {
   // loved by a friend (8+), not in your library
   const theyLoved = all.filter(x => !x.by[me]).map(x => ({ x, who: friendsWith(x, e => _blDone(e) && _frScore(e) >= 8) })).filter(y => y.who.length)
     .sort((a, b) => b.who.length - a.who.length || Math.max(...b.who.map(u => _frScore(b.x.by[u]))) - Math.max(...a.who.map(u => _frScore(a.x.by[u]))))
-    .slice(0, 24).map(({ x, who }) => ({ e: x.by[who[0]], why: who.length === 1 ? `${escHTML(_frName(who[0]))} rated it <b>${_frScore(x.by[who[0]]).toFixed(1)}</b>` : `Loved by ${escHTML(_blNames(who))}` }));
+    .slice(0, 24).map(({ x, who }) => ({ e: x.by[who[0]], why: who.length === 1 ? `${escHTML(_frName(who[0]))} rated it <b>${mssR1(_frScore(x.by[who[0]]))}</b>` : `Loved by ${escHTML(_blNames(who))}` }));
   // you loved it (8+), and it's new to every friend in the group
   const youLoved = all.filter(x => x.by[me] && _blDone(x.by[me]) && _frScore(x.by[me]) >= 8 && uids.every(u => !x.by[u]))
     .sort((a, b) => _frScore(b.by[me]) - _frScore(a.by[me])).slice(0, 24)
-    .map(x => ({ e: x.by[me], why: `You rated it <b>${_frScore(x.by[me]).toFixed(1)}</b>` }));
+    .map(x => ({ e: x.by[me], why: `You rated it <b>${mssR1(_frScore(x.by[me]))}</b>` }));
   // seeds: rated 7.5+ by 2+ of you (best first), else each person's favourite
   const shared = all.filter(x => x.e.tmdb_id).map(x => ({ x, r: people.filter(u => x.by[u] && _frScore(x.by[u]) >= 7.5) })).filter(y => y.r.length >= 2)
     .sort((a, b) => b.r.length - a.r.length).map(y => y.x.e);

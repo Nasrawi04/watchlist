@@ -3,364 +3,61 @@
 <head>
 <meta charset="UTF-8">
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#1E5C26">
+  <meta name="theme-color" content="#F3EEDC">
+  <meta name="color-scheme" content="light dark">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="MyScreenFolio">
-  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script src="js/splash.js"></script>
 <script src="js/i18n.js"></script>
 <title>Profile — MyScreenFolio</title>
 <link rel="stylesheet" href="css/fonts.css">
+<link rel="stylesheet" href="css/theme.css">
 <link rel="stylesheet" href="css/style.css">
-<style>@media(max-width:400px) {
-  .prof-header { padding:.85rem 0; }
-  .prof-header-top { flex-direction:column; align-items:center; gap:.5rem; margin-bottom:10px; }
-  .prof-header-info { align-items:center; text-align:center; width:100%; }
-  .prof-avatar { width:78px; height:78px; font-size:30px; }
-  .prof-username { font-size:27px; }
-  .prof-displayname { font-size:13px; }
-  .prof-stat-box-num { font-size:15px; }
-  .prof-stat-box { padding:.3rem .35rem; min-width:0; }
-  .prof-stat-box-label { font-size:7px; letter-spacing:.5px; }
-  .prof-header-actions { gap:6px; }
-}
-
-
-.pv-section { margin-bottom:2.5rem; }
-
-.pv-eyebrow { font-size:10px; letter-spacing:2px; text-transform:uppercase; color:var(--olive-light); margin-bottom:4px; }
-
-.pv-title { font-family:var(--serif); font-size:22px; font-weight:500; margin-bottom:1rem; }
-
-.pv-empty { text-align:center; padding:2rem; color:var(--text-3); font-size:13px; }
-
-.fav-edit-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:var(--radius-sm);border:0.5px solid var(--border-olive);background:transparent;color:var(--olive-light);font-size:12px;cursor:pointer;transition:background .15s;}
-
-.fav-edit-btn:hover{background:var(--olive-faint);}
-
-
-
-
-
-/* ══ Profile Header — Instagram style ══ */
-.prof-header {
-  display:flex;
-  flex-direction:column;
-  align-items:stretch;
-  gap:0;
-  padding:1.75rem 0 1.5rem;
-  position:relative;
-  margin-bottom:1.5rem;
-}
-.prof-header::after {
-  content:'';
-  position:absolute;
-  bottom:0;
-  inset-inline-start:calc(-50vw + 50%);
-  width:100vw;
-  height:0.5px;
-  background:var(--border);
-}
-/* Top row: avatar left + info right */
-.prof-header-top {
-  display:flex;
-  flex-direction:row;
-  align-items:flex-start;
-  gap:1.5rem;
-  margin-bottom:14px;
-}
-.prof-avatar {
-  width:110px; height:110px; border-radius:50%; flex-shrink:0;
-  background:var(--olive-faint); border:2.5px solid var(--olive-light);
-  font-family:var(--serif); font-size:44px; color:var(--olive-light);
-  display:flex; align-items:center; justify-content:center; overflow:hidden;
-}
-.prof-avatar img { width:100%; height:100%; object-fit:cover; border-radius:50%; }
-.prof-header-info {
-  flex:1; min-width:0;
-  display:flex; flex-direction:column; justify-content:center;
-  padding-top:4px;
-}
-.prof-username {
-  font-family:var(--serif); font-size:30px; font-weight:600;
-  color:var(--text); line-height:1.1; margin-bottom:5px;
-}
-.prof-displayname { font-size:15px; color:var(--text-2); margin-bottom:10px; font-weight:400; }
-.prof-bio { font-size:14px; color:var(--text); line-height:1.6; margin-bottom:8px; }
-.prof-quote {
-  font-family:var(--sans); font-style:italic;
-  font-size:14px; font-weight:400; color:var(--text-2);
-  padding-inline-start:14px; border-inline-start:3px solid var(--olive-light);
-  margin-bottom:0; line-height:1.6;
-}
-/* Stat boxes — full width below avatar+info */
-.prof-stat-boxes {
-  width:100%;
-  display:grid;
-  grid-template-columns:repeat(6,1fr);
-  gap:6px;
-}
-.prof-stat-box {
-  background:var(--card); border:0.5px solid var(--border-olive); border-radius:var(--radius);
-  padding:.5rem .6rem; display:flex; flex-direction:column; align-items:center; justify-content:center;
-  transition:border-color var(--trans) var(--ease);
-  grid-column:span 2; min-width:0; overflow:hidden;
-}
-.prof-stat-box:hover { border-color:var(--border-olive); }
-.prof-stat-box-num { font-family:var(--serif); font-size:22px; font-weight:500; color:var(--olive-light); line-height:1.15; text-align:center; }
-.prof-stat-box-label { font-size:8px; color:var(--text-3); text-transform:uppercase; letter-spacing:1px; margin-top:3px; white-space:nowrap; text-align:center; }
-/* Action buttons — full width, centered */
-.prof-header-actions {
-  display:flex; gap:8px; flex-wrap:wrap; align-items:center;
-  justify-content:center; padding-top:10px; width:100%;
-}
-.prof-edit-btn {
-  padding:7px 18px; border-radius:var(--radius-sm);
-  border:0.5px solid var(--border-olive); background:transparent;
-  color:var(--olive-light); font-size:12px; font-weight:500; cursor:pointer;
-  text-decoration:none; display:inline-flex; align-items:center; justify-content:center; gap:5px; line-height:1.2; transition:background .15s;
-}
-.prof-edit-btn:hover { background:var(--olive-faint); }
-.prof-share-btn {
-  padding:7px 18px; border-radius:var(--radius-sm);
-  border:0.5px solid var(--border-2); background:transparent;
-  color:var(--text-2); font-size:12px; font-weight:500; cursor:pointer;
-  display:inline-flex; align-items:center; justify-content:center; gap:5px; line-height:1.2; transition:all .15s;
-}
-.prof-share-btn:hover { border-color:var(--border-olive); color:var(--olive-light); }
-/* Share popup */
-.prof-share-popup {
-  position:fixed; inset:0; z-index:1200; background:rgba(0,0,0,0.72);
-  display:flex; align-items:center; justify-content:center; padding:16px;
-  opacity:0; pointer-events:none; transition:opacity .2s var(--ease);
-}
-.prof-share-popup.open { opacity:1; pointer-events:auto; }
-.prof-share-card {
-  background:var(--bg-2); border:1.5px solid var(--olive-light);
-   border-radius:var(--radius-lg);
-  padding:24px; width:100%; max-width:400px;
-  transform:translateY(16px); transition:transform .24s var(--ease);
-}
-.prof-share-popup.open .prof-share-card { transform:translateY(0); }
-.prof-share-title { font-family:var(--serif); font-size:20px; font-weight:500; margin-bottom:6px; }
-.prof-share-sub { font-size:12px; color:var(--text-3); margin-bottom:16px; }
-.prof-share-link {
-  display:flex; align-items:center; gap:8px;
-  background:var(--bg-3); border:0.5px solid var(--border-2);
-  border-radius:var(--radius-sm); padding:10px 14px;
-  font-size:12px; color:var(--text-2); word-break:break-all;
-  cursor:pointer; transition:border-color .15s; margin-bottom:14px;
-}
-.prof-share-link:hover { border-color:var(--border-olive); }
-.prof-share-link svg { flex-shrink:0; }
-.prof-share-actions { display:flex; gap:8px; }
-.prof-share-copy { flex:1; padding:10px; background:var(--olive); border:none; color:#fff; border-radius:var(--radius-sm); font-size:13px; font-weight:500; cursor:pointer; }
-.prof-share-copy:hover { background:var(--olive-2); }
-.prof-share-close { padding:10px 16px; background:transparent; border:0.5px solid var(--border-2); color:var(--text-2); border-radius:var(--radius-sm); font-size:13px; cursor:pointer; }
-
-/* ══════════════════════════════════════════
-   RESPONSIVE — full scaling for all screens
-   ══════════════════════════════════════════ */
-
-/* ── Large desktop (≥1280px) ── */
-@media(min-width:1280px) {
-  .prof-stat-box-num { font-size:28px; }
-}
-
-/* ── Tablet (≤900px) ── */
-@media(max-width:900px) {
-  .prof-header-top { gap:1.25rem; }
-  .prof-stat-box-num { font-size:24px; }
-  .prof-stat-box { padding:.45rem .6rem; min-width:0; }
-  .prof-bio { font-size:13px; } .prof-quote { font-size:14px; }
-  
-  
-  
-  
-  
-  
-}
-
-/* ── Mobile (≤640px) ── */
+<link rel="stylesheet" href="css/profile.css">
+<link rel="stylesheet" href="css/showcase.css">
+<style>
+/* phones: the pickers and sort bars these pages open */
 @media(max-width:640px) {
-  .prof-header { padding:1rem 0; }
-  .prof-header-top { gap:1rem; margin-bottom:10px; }
-  .prof-avatar { width:82px; height:82px; font-size:32px; }
-  .prof-username { font-size:25px; }
-  .prof-displayname { font-size:14px; margin-bottom:8px; }
-  .prof-bio { font-size:13px; } .prof-quote { font-size:14px; }
-  .prof-stat-box-num { font-size:18px; }
-  .prof-stat-box { padding:.4rem .5rem; min-width:0; }
-  .prof-header-identity { margin-bottom:10px; }
-  .prof-username { font-size:22px; }
-  .prof-displayname { font-size:13px; margin-bottom:8px; }
-  .prof-stat-boxes { gap:4px; }
-  .prof-stat-box { padding:.3rem .4rem; }
-  .prof-stat-box-num { font-size:18px; }
-  .prof-stat-box-label { font-size:7px; letter-spacing:0.8px; }
-  .prof-bio { font-size:12px; }
-  .prof-quote { font-size:13px; }
-  .prof-edit-btn, .prof-share-btn, .pv-friend-btn { font-size:11px; padding:6px 14px; }
-  
-  
-  
-  
-  
-  
-  
-  
-  .note-row { padding:12px 14px; gap:12px; border-radius:var(--radius); }
-  .note-poster { width:64px; height:90px; font-size:20px; }
-  .note-title { font-size:15px; }
-  .note-tags { gap:3px; margin-bottom:3px; }
-  .note-text { font-size:11px; margin-top:4px; }
-  .note-score { font-size:20px; }
-  .note-date { font-size:10px; }
-  .fav-slot { padding:10px 12px; min-height:64px; gap:10px; }
-  .fav-slot-title { font-size:13px; }
-  .fav-slot-num { font-size:20px; }
-  .fav-slot-score { font-size:15px; }
-  .fav-slot-poster { width:40px; height:56px; font-size:16px; }
-  .fav-edit-btn { font-size:11px; padding:6px 12px; }
   .fav-picker-item { padding:11px 16px; gap:12px; }
   .fav-picker-poster { width:44px; height:62px; font-size:17px; }
   .fav-picker-name { font-size:14px; }
   .fav-picker-sub { font-size:11px; }
   .fav-picker-score { font-size:17px; }
   .fav-picker-check { width:24px; height:24px; }
-  #favPickerSheet { max-height:88dvh; }
-
-  .prof-share-card { padding:18px; }
-  .prof-share-title { font-size:18px; }
   .sort-bar { padding:8px 12px 10px; gap:4px; }
   .sort-btn { font-size:10px; padding:4px 8px; }
-  .cf-btn { font-size:10px; padding:4px 9px; }
   .section-block-title { font-size:12px; }
 }
-
-/* ── Small mobile (≤400px) ── */
 @media(max-width:400px) {
-  .prof-header { padding:.85rem 0; }
-  .prof-header-top { flex-direction:column; align-items:center; gap:.6rem; }
-  .prof-header-info { align-items:center; text-align:center; }
-  .prof-avatar { width:80px; height:80px; font-size:32px; }
-  .prof-username { font-size:22px; }
-  .prof-displayname { font-size:13px; }
-  .prof-stat-box-num { font-size:14px; }
-  .prof-stat-box { padding:.3rem .35rem; }
-  .prof-stat-box-label { font-size:7px; letter-spacing:.5px; }
-  .prof-header-actions { gap:6px; }
-  .prof-header-identity { margin-bottom:8px; }
-  .fav-slot { padding:8px 10px; gap:8px; min-height:56px; }
-  .fav-slot-poster { width:36px; height:50px; font-size:14px; }
-  .fav-slot-title { font-size:12px; }
-  .fav-slot-num { font-size:17px; }
-
   .fav-picker-item { padding:9px 12px; gap:10px; }
   .fav-picker-poster { width:38px; height:54px; font-size:15px; }
   .fav-picker-name { font-size:13px; }
   .fav-picker-sub { font-size:10px; }
   .fav-picker-score { font-size:15px; }
   .fav-picker-check { width:22px; height:22px; }
-  .prof-username { font-size:20px; }
-  .prof-stat-boxes { gap:3px; }
-  .prof-stat-box { padding:.25rem .3rem; }
-  .prof-stat-box-num { font-size:13px; }
-  .prof-stat-box-label { font-size:7px; letter-spacing:0.5px; }
-  .prof-header-actions { gap:6px; }
-  .prof-edit-btn, .prof-share-btn, .pv-friend-btn { font-size:10px; padding:5px 11px; }
-  
-  
-  
-  
-  
-  
   .sort-btn { font-size:9px; padding:3px 6px; }
-  .cf-btn { font-size:9px; padding:3px 7px; }
-  .note-row { padding:10px 12px; gap:10px; }
-  .note-poster { width:54px; height:76px; font-size:18px; }
-  .note-title { font-size:13px; }
-  .note-text { font-size:10px; }
-  .note-score { font-size:17px; }
 }
-
-.prof-ov-grid {
-  display:grid; grid-template-columns:repeat(5,1fr); gap:12px;
-}
-.prof-ov-grid .q-card { width:100% !important; max-width:100% !important; min-width:0 !important; }
-@media(max-width:900px)  { .prof-ov-grid { grid-template-columns:repeat(4,1fr); gap:10px; } }
-@media(max-width:640px)  { .prof-ov-grid { grid-template-columns:repeat(3,1fr); gap:8px; } }
-@media(max-width:400px)  { .prof-ov-grid { grid-template-columns:repeat(2,1fr); gap:6px; } }
-
-
 </style>
 </head>
 <body>
-<div class="page-wrap">
+<div class="page-wrap pf-page">
 
-    <div class="page-loading" id="profHeadSkel" data-skel="profhead"></div>
-    <div class="prof-header fade-up" id="profHeader" style="display:none">
-      <div class="prof-header-top">
-        <div class="prof-avatar" id="profAvatar">?</div>
-        <div class="prof-header-info">
-          <div class="prof-username" id="profUsername" translate="no"></div>
-          <div class="prof-displayname" id="profDisplayName" translate="no"></div>
-          <div class="prof-bio" id="profBio" translate="no" style="display:none"></div>
-          <div class="prof-quote" id="profQuote" translate="no" style="display:none"></div>
-        </div>
-      </div>
-      <div id="profCounts"></div>
-      <div class="prof-stat-boxes" id="profStats"></div>
-      <div class="prof-header-actions" id="profHeaderBtns">
-        <a href="settings.html#profile" class="prof-edit-btn" id="profEditBtn" style="display:none">Edit Profile</a>
-        <button class="prof-share-btn" id="profShareBtn" onclick="openShareProfile()" style="display:none"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg> Share</button>
-      </div>
-    </div>
+  <!-- a title page for a person (profile-v2.js): the header, the title page's tab bar, the tabs -->
+  <div class="tv-page de-page tp-page pf-tp" id="pfPage">
+    <div class="de-cap" aria-hidden="true"></div>
+    <div id="profHeader"><div class="page-loading" id="profHeadSkel" data-skel="profhead"></div></div>
+    <div id="pfTabsBox"></div>
 
-  <select class="prof-tab-select" id="profTabsSelect" aria-label="Profile tab" onchange="switchTab(+this.value)">
-    <option value="0">Overview</option>
-    <option value="1">Library</option>
-    <option value="2">Lists</option>
-    <option value="3">Notes</option>
-    <option value="5">Episodes</option>
-    <option value="6">Showcase</option>
-  </select>
-
-  <div class="prof-tabs">
-    <div class="prof-tab active" id="tab0" onclick="switchTab(0)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-      <span class="prof-tab-label">Overview</span>
-    </div>
-    <div class="prof-tab" id="tab1" onclick="switchTab(1)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-      <span class="prof-tab-label">Library</span>
-    </div>
-    <div class="prof-tab" id="tab2" onclick="switchTab(2)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
-      <span class="prof-tab-label">Lists</span>
-    </div>
-    <div class="prof-tab" id="tab3" onclick="switchTab(3)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>
-      <span class="prof-tab-label">Notes</span>
-    </div>
-    <div class="prof-tab" id="tab5" onclick="switchTab(5)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/><path d="M6 8h3"/><path d="M6 11h3"/><path d="M6 14h3"/><path d="M13 9l4 2-4 2z"/></svg>
-      <span class="prof-tab-label">Episodes</span>
-    </div>
-    <div class="prof-tab" id="tab6" onclick="switchTab(6)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0V4Z"/><path d="M17 5h3v2a3 3 0 0 1-3 3"/><path d="M7 5H4v2a3 3 0 0 0 3 3"/></svg>
-      <span class="prof-tab-label">Showcase</span>
-    </div>
+    <div class="prof-panel active" id="pfPanel-0" role="tabpanel" aria-labelledby="pfTab-0" tabindex="-1"><div id="pfPrompts"></div><div id="overviewContent"><div class="page-loading"><div class="spinner"></div></div></div></div>
+    <div class="prof-panel" id="pfPanel-1" role="tabpanel" aria-labelledby="pfTab-1" tabindex="-1"><div id="libraryLoading"><div class="page-loading"><div class="spinner"></div></div></div><div id="libraryContent" style="display:none"></div></div>
+    <div class="prof-panel" id="pfPanel-2" role="tabpanel" aria-labelledby="pfTab-2" tabindex="-1"><div id="listsTabContent"><div class="page-loading"><div class="spinner"></div></div></div></div>
+    <div class="prof-panel" id="pfPanel-3" role="tabpanel" aria-labelledby="pfTab-3" tabindex="-1"><div id="notesTabContent"><div class="page-loading"><div class="spinner"></div></div></div></div>
+    <div class="prof-panel" id="pfPanel-5" role="tabpanel" aria-labelledby="pfTab-5" tabindex="-1"><div id="episodesTabContent"><div class="page-loading"><div class="spinner"></div></div></div></div>
+    <div class="prof-panel" id="pfPanel-6" role="tabpanel" aria-labelledby="pfTab-6" tabindex="-1"><div id="profShowcase"><div class="page-loading"><div class="spinner"></div></div></div></div>
   </div>
-
-  <div class="prof-panel active" id="panel0"><div id="overviewContent"><div class="page-loading"><div class="spinner"></div></div></div></div>
-  <div class="prof-panel" id="panel1"><div id="libraryLoading"><div class="page-loading"><div class="spinner"></div></div></div><div id="libraryContent" style="display:none"></div></div>
-  <div class="prof-panel" id="panel2"><div id="listsTabContent"><div class="page-loading"><div class="spinner"></div></div></div></div>
-  <div class="prof-panel" id="panel3"><div id="notesTabContent"><div class="page-loading"><div class="spinner"></div></div></div></div>
-  <div class="prof-panel" id="panel5"><div id="episodesTabContent"><div class="page-loading"><div class="spinner"></div></div></div></div>
-  <div class="prof-panel" id="panel6"><div id="profShowcase"><div class="page-loading"><div class="spinner"></div></div></div></div>
 
 </div>
 
@@ -369,20 +66,22 @@
 <script src="js/config.js"></script>
 <script src="js/db.js"></script>
 <script src="js/nav.js"></script>
-<script src="js/dashboard.js"></script>
 <script src="js/sort-filter.js"></script>
 <script src="js/rating-curve.js"></script>
+<script src="js/profile-stats.js"></script>
+<script src="js/profile-v2.js"></script>
 <script>window.LIB_SCOPE = 'prof';</script>
 <script src="js/library-view.js"></script>
 <script src="js/rewatch.js"></script>
 <script src="js/create-card.js"></script>
 <script src="js/info-popup.js"></script>
 <script src="js/episode-ratings.js"></script>
-<script src="js/rating-popup.js"></script>
-<script src="js/comments.js"></script>
+<script src="js/episodes-home.js"></script>
+<script src="js/title-view.js"></script>
 <script src="js/easter-egg.js"></script>
 <script src="js/note-popup.js"></script>
 <script src="js/list-popup.js"></script>
+<script src="js/list-actions.js"></script>
 <script src="js/profile-tabs.js"></script>
 <script src="js/medals.js"></script>
 <script src="js/showcase.js"></script>
@@ -390,6 +89,13 @@
 <script>
 /* ── State ── */
 var _pUser = null, _pProfile = null, _pEntries = [], _activeTab = 0;
+// the tab bar (the title page's): drawn straight away, the counts arrive with your library
+var _PF_TABS = [[0, 'Overview'], [1, 'Library'], [2, 'Lists'], [3, 'Notes'], [5, 'Episodes'], [6, 'Showcase']];
+(function() {
+  var t = parseInt(new URLSearchParams(location.search).get('tab'), 10);
+  document.getElementById('pfTabsBox').outerHTML = MSSProfile.tabsHTML(_PF_TABS.map(function(x){ return [x[0], x[1], '']; }), _PF_TABS.some(function(x){ return x[0] === t; }) ? t : 0, 'Your profile');
+  MSSProfile.page(document.getElementById('pfPage'), { onTab: function(k, byPerson) { switchTab(+k, byPerson); } });
+})();
 var _profFavLists = [];
 var _SVG_L = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>';
 var _SVG_R = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>';
@@ -420,11 +126,17 @@ document.addEventListener('DOMContentLoaded', function() {
     _pEntriesLoaded();
     populateHeader();
     renderTab0();
+    // profile.html#ratings (Home's Score spread): straight to the Ratings box
+    // (after the page has put back its own scroll position — nav.js _mssRestoreScroll)
+    if (location.hash === '#ratings') [350, 1200].forEach(function(ms){ setTimeout(function(){ var rc = document.querySelector('#overviewContent .rc-box'), b = rc && rc.getBoundingClientRect();
+      if (b && (b.top < 0 || b.bottom > innerHeight)) rc.scrollIntoView({ block:'center', behavior:'instant' }); }, ms); });
     var tab = parseInt(new URLSearchParams(location.search).get('tab'), 10);
     if (tab === 4) { location.replace('export.html'); return; }   // Exports moved to its own page (avatar menu)
     if (tab > 0 && tab <= 6) switchTab(tab);
     else if (_activeTab === 1) renderLibrary();
     _libResume();
+    // Episode time / Total time: shows from before that don't know their episode length yet get it (in the background)
+    mssFillEpRuntimes(_pEntries, user.id, 200).then(function(n){ if (n) { MSSProfile.refreshStats({}); if (typeof _dmYouDrop === 'function') _dmYouDrop(); } });
   });
 });
 
@@ -437,67 +149,52 @@ function _renderPersonalTab(n) {
   });
 }
 
-/* ── Profile stats (5 boxes) ── */
-
-
-/* ── Header ── */
-// Until it's filled: the header's skeleton (same header, sample text masked — profile-tabs.js)
-mssSkeleton.define('profhead', function() {
-  return MSSTabs.headSkel('<button class="prof-edit-btn">Edit Profile</button><button class="prof-share-btn">' + icon('share', 13) + ' Share</button>');
-});
+/* ── Header: the shared Profiles V2 header (profile-v2.js) — banner, name, quote, social line, bio, your stats ── */
+// Until it's filled: the same header with sample text, masked into placeholders
+mssSkeleton.define('profhead', function() { return MSSProfile.headSkel(_profActions(), true); });
+function _profActions() {
+  return '<button type="button" class="tv-btn is-main" onclick="MSSProfile.editProfile()">' + icon('edit', 16) + '<span>Edit profile</span></button>'
+    + '<button type="button" class="tv-btn" onclick="openShareProfile()" aria-label="Share your profile">' + icon('share', 16) + '<span>Share</span></button>';
+}
+var _profDiary = null;
 function populateHeader() {
-  var p = _pProfile, u = _pUser;
-  document.getElementById('profHeader').style.display = '';
-  var hs = document.getElementById('profHeadSkel'); if (hs) hs.remove();
-  var un = (p && p.username) || (u.email ? u.email.split('@')[0] : '');
-  var st = computeStats(_pEntries);
-  var hours = Math.round(((st.movieMins)||0)/60);
-  var av = document.getElementById('profAvatar');
-  if (p && safeURL(p.avatar_url)) {
-    av.innerHTML = '<img src="'+safeURL(p.avatar_url)+'" alt="">';
-  } else {
-    av.textContent = (un[0]||'?').toUpperCase();
-  }
-  document.getElementById('profUsername').textContent = '@'+un;
-  var dn = document.getElementById('profDisplayName');
-  dn.textContent = (p && p.display_name) || '';
-  var bio = document.getElementById('profBio');
-  bio.textContent = (p && p.bio) || '';
-  bio.style.display = (p && p.bio) ? '' : 'none';
-  var q = document.getElementById('profQuote');
-  q.textContent = (p && p.quote) || '';
-  q.style.display = (p && p.quote) ? '' : 'none';
-  document.getElementById('profStats').innerHTML = MSSTabs.statsHTML(_pEntries);
-  document.getElementById('profEditBtn').style.display = '';
-  var sb=document.getElementById('profShareBtn'); if(sb) sb.style.display='';
+  MSSProfile.header(document.getElementById('profHeader'), {
+    profile: _pProfile || {}, entries: _pEntries, own: true, actions: _profActions(),
+    lists: _profFavLists.filter(function(l){ return l.cat === 'custom'; }).length, diary: _profDiary,
+  });
+  _profTabCounts();
   _profCounts();
+  // Diary watches (your own diary): one count, then the stats redraw with it
+  if (_profDiary == null) sb.from('diary_watches').select('id', { count: 'exact', head: true }).eq('user_id', _pUser.id)
+    .then(function(r){ if (r && r.count != null && !r.error) { _profDiary = r.count; MSSProfile.refreshStats({ diary: r.count }); } }, function(){});
+}
+// the numbers on the tabs: Library 339 · Lists 11 · Notes 31
+function _profTabCounts() {
+  MSSProfile.tabCount(1, _pEntries.length);
+  MSSProfile.tabCount(2, _profFavLists.filter(function(l){ return l.cat === 'custom'; }).length);
+  MSSProfile.tabCount(3, _pEntries.filter(function(e){ return e.notes && String(e.notes).trim(); }).length);
 }
 // Followers · Following · Friends (083) — and, for a private account, the requests waiting
 function _profCounts() {
   getFollowState(_pUser.id).then(function(st) {
-    var el = document.getElementById('profCounts'); if (!el || !st) return;
+    var el = document.getElementById('pfCounts'); if (!el || !st) return;
     var name = (_pProfile && (_pProfile.display_name || _pProfile.username)) || '';
     el.innerHTML = MSSFollow.countsHTML(st, _pUser.id, name, true)
-      + (st.requests ? '<button type="button" class="fl-req-chip" onclick="MSSFollow.open(' + attrJSON(_pUser.id) + ', \'requests\', ' + attrJSON(name) + ', true, ' + st.requests + ')">'
+      + (st.requests ? '<button type="button" class="fl-req-chip" onclick="MSSFollow.open(' + attrJSON(_pUser.id) + ', \x27requests\x27, ' + attrJSON(name) + ', true, ' + st.requests + ')">'
           + icon('users', 13) + ' ' + st.requests + ' follow request' + (st.requests === 1 ? '' : 's') + '</button>' : '');
   }).catch(function(){});
 }
 document.addEventListener('mss:follows-changed', function(){ if (_pUser) _profCounts(); });
 
 /* ── Tabs ── */
-function switchTab(n) {
+function switchTab(n, byPerson) {
   _activeTab = n;
   // Keep the tab in the URL — Back / refresh come back to it (not Overview)
   var u = new URL(location.href);
   if (n) u.searchParams.set('tab', n); else u.searchParams.delete('tab');
   history.replaceState(history.state, '', u.toString());
-  var sel = document.getElementById('profTabsSelect');
-  if (sel && +sel.value !== n) sel.value = n;
-  [0,1,2,3,5,6].forEach(function(i) {
-    var t=document.getElementById('tab'+i), p=document.getElementById('panel'+i);
-    if(t) t.classList.toggle('active', i===n);
-    if(p) p.classList.toggle('active', i===n);
-  });
+  MSSProfile.setTab(n, byPerson);
+  _PF_TABS.forEach(function(x) { var p = document.getElementById('pfPanel-' + x[0]); if (p) p.classList.toggle('active', x[0] === n); });
   if (n===1) renderLibrary();
   if (n===2 || n===3) _renderPersonalTab(n);
   if (n===5) MSSTabs.episodes(document.getElementById('episodesTabContent'), { userId: _pUser.id, owner: true });
@@ -510,66 +207,20 @@ function switchTab(n) {
 
 
 
-/* ── Tab 0: Overview ── */
-function _statsBoxHTML(entries, profile, favLists) {
-  entries = entries || [];
-  var watched = function(e){ return e.status==='completed'||e.status==='ongoing'; };
-  var byCat = function(c){ return entries.filter(function(e){return e.cat===c;}); };
-  var tv = byCat('tv'), movies = byCat('movies'), anime = byCat('anime'), cartoons = byCat('cartoons');
-  var watchlist = entries.filter(function(e){return e.status==='queue'||e.status==='up_next';});
-  var reviews = entries.filter(function(e){return e.notes && e.notes.trim();});
-
-  var favIds = {};
-  if (profile) {
-    ['top_picks','fav_tv','fav_movies','fav_anime','fav_cartoons'].forEach(function(k){
-      (Array.isArray(profile[k]) ? profile[k] : []).forEach(function(id){ favIds[id] = true; });
-    });
-  }
-  var favoritesCount = Object.keys(favIds).length;
-  var favListsArr = Array.isArray(favLists) ? favLists : [];
-  var favoriteListsCount = favListsArr.filter(function(l){ return l.cat !== 'custom'; }).length;
-  var listsCount = favListsArr.filter(function(l){ return l.cat === 'custom'; }).length;
-
-  var rows = [
-    { label:'All Items',        value:entries.length },
-    { label:'TV Shows',         value:tv.length },
-    { label:'TV Shows Watched', value:tv.filter(watched).length },
-    { label:'Movies',           value:movies.length },
-    { label:'Movies Watched',   value:movies.filter(watched).length },
-    { label:'Animes',           value:anime.length },
-    { label:'Animes Watched',   value:anime.filter(watched).length },
-    { label:'Cartoons',         value:cartoons.length },
-    { label:'Cartoons Watched', value:cartoons.filter(watched).length },
-    { label:'Watchlist',        value:watchlist.length },
-    { label:'Lists',            value:listsCount },
-    { label:'Reviews',          value:reviews.length },
-  ];
-
-  var chevronSvg = '<span class="stats-chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span>';
-  return '<div class="stats-box fade-up" id="statsBoxOwn">' + rows.map(function(r,i){
-    return '<div class="stats-row"' + (i===0 ? ' onclick="MSSTabs.toggleStats(\'statsBoxOwn\')"' : '') + '>'
-      + '<span class="stats-label">' + r.label + '</span>'
-      + '<span class="stats-value">' + r.value.toLocaleString() + (i===0 ? chevronSvg : '') + '</span>'
-      + '</div>';
-  }).join('') + '</div>';
-}
-
+/* ── Tab 0: Overview — Top Favorites, Top 5 by category and the side column (profile-v2.js) ── */
 function renderTab0() {
   var el = document.getElementById('overviewContent');
   if (!el) return;
   if (!_pEntries || !_pEntries.length) { // nothing added yet: say so (was a spinner forever)
-    el.innerHTML = mssEmpty({ art:'person', title:'Your profile is waiting', text:'Add what you\u2019ve watched and this fills up with your stats, favourites and top picks. Right now it\u2019s mostly vibes.',
+    el.innerHTML = mssEmpty({ art:'person', title:'Your profile is waiting', text:'Add what you’ve watched and this fills up with your stats, favourites and top picks. Right now it’s mostly vibes.',
       actions:[{ label:'Add a title', icon:'plus', onclick:'openAddModal()', primary:true }, { label:'Browse Discover', icon:'compass', href:'discover.html' }] });
     return;
   }
-  var _statsHTML = _statsBoxHTML(_pEntries, _pProfile, _profFavLists);
-  el.innerHTML = '<div class="overview-layout"><div class="overview-side">'+_statsHTML+MSSCurve.html(_pEntries)+'</div><div class="overview-main" id="profDashMain"></div></div>';
-  // Dashboard: Top Favorites, Would Recommend, Top 5 per type — editable here
   if (!_pProfile) _pProfile = {};
-  MSSDash.render(document.getElementById('profDashMain'), {
+  MSSProfile.overview(el, {
     entries: _pEntries, profile: _pProfile, editable: true,
     openEntry: _libOpen,
-    save: function(key, ids){ var u = {}; u[key] = ids; return updateProfile(_pUser.id, u); }
+    save: function(key, val){ var u = {}; u[key] = val; return updateProfile(_pUser.id, u); }
   });
 }
 
@@ -588,38 +239,14 @@ function openShareProfile() {
     navigator.share({ title: 'MyScreenFolio — @'+un, url: url }).catch(function(){});
     return;
   }
-  // Fallback: show popup
-  var popup = document.getElementById('profSharePopup');
-  if (!popup) {
-    popup = document.createElement('div');
-    popup.className = 'prof-share-popup';
-    popup.id = 'profSharePopup';
-    popup.innerHTML = '<div class="prof-share-card">'
-      +'<div class="prof-share-title">Share Profile</div>'
-      +'<div class="prof-share-sub">Anyone with this link can view your profile and follow you.</div>'
-      +'<div class="prof-share-link" id="profShareLink" onclick="profCopyLink()">'
-      +'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>'
-      +'<span id="profShareUrl"></span>'
-      +'</div>'
-      +'<div class="prof-share-actions">'
-      +'<button class="prof-share-copy" onclick="profCopyLink()">Copy Link</button>'
-      +'<button class="prof-share-close" onclick="closeShareProfile()">Close</button>'
-      +'</div></div>';
-    popup.addEventListener('click', function(e){ if(e.target===popup) closeShareProfile(); });
-    document.body.appendChild(popup);
-  }
-  document.getElementById('profShareUrl').textContent = url;
-  popup._url = url;
-  popup.classList.add('open');
-  mssLockScroll('profShare');
+  // Otherwise the shared ⋯ popover under the button (a page of rows on phones): Copy Link
+  var btn = document.activeElement && document.activeElement.closest && document.activeElement.closest('button') || document.querySelector('#pfActs [aria-label="Share your profile"]');
+  mssLoadScript('js/panel.js').then(function () {
+    MSSPopover.open(btn, { title: 'Share Profile', subtitle: 'Anyone with this link can view your profile and follow you.', label: 'Share Profile',
+      items: [{ label: 'Copy Link', sub: url, icon: 'link', onSelect: function () { profCopyLink(url); } }] });
+  });
 }
-function closeShareProfile() {
-  var p = document.getElementById('profSharePopup');
-  if (p) { p.classList.remove('open'); mssUnlockScroll('profShare'); }
-}
-function profCopyLink() {
-  var p = document.getElementById('profSharePopup');
-  var url = p && p._url;
+function profCopyLink(url) {
   if (!url) return;
   navigator.clipboard && navigator.clipboard.writeText(url).then(function(){ showToast('Link copied!'); });
 }
@@ -627,7 +254,7 @@ function profCopyLink() {
 // After a delete from either popup: drop it from this page and re-render
 
 
-// Your title: Info · Ratings · Note in one popup (MSSViews, info-popup.js). Opens on
+// Your title: its panel / page (MSSViews, title-view.js). Opens on
 // Ratings once it's rated/watched, otherwise on Info.
 
 

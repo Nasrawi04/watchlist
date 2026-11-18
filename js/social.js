@@ -39,33 +39,38 @@ async function _socRpc(fn, args) {
   if (error) throw error;
   return data;
 }
-// A popup shell with the site's Sort / Filter look (sf-header / sf-body / sf-footer)
-function _socDialog(id, title, onClose) {
-  let el = document.getElementById(id);
-  if (!el) {
-    el = document.createElement('div');
-    el.id = id; el.className = 'soc-overlay';
-    el.innerHTML = `<div class="soc-card" role="dialog" aria-modal="true" aria-labelledby="${id}Title">
-        <div class="sf-header"><div class="sf-title" id="${id}Title"></div>
-          <button type="button" class="sf-close" aria-label="Close">${icon('x', 18)}</button></div>
-        <div class="sf-body" id="${id}Body"></div>
-        <div class="sf-footer" id="${id}Foot"></div>
-      </div>`;
-    el.querySelector('.sf-close').onclick = () => onClose();
-    MSSDialog.bind(el, onClose);
-    document.body.appendChild(el);
-  }
-  document.getElementById(id + 'Title').textContent = title;
-  return el;
+// The social forms (New Poll, Recommend, Movie Night, Challenges, Blend's surprise pick): a side panel
+// (S, or L for the big ones; a full page on phones) with #<id>Body and the buttons in #<id>Foot, pinned at the bottom.
+// Asking for one that's open just retitles it. onClose runs once it has closed (however it closed);
+// dirty() → true while something was typed: closing it (✕, Back, Cancel → _socDialogCancel) asks first.
+const _socPanels = {};
+async function _socDialog(id, title, onClose, size = 'S', dirty) {
+  if (_socPanels[id]) { _socPanels[id].setTitle(title); return _socPanels[id]; }
+  await mssLoadScript('js/panel.js');
+  const h = MSSPanel.open({ size, kind: 'generic', title, dirty, body: `<div id="${id}Body"></div>`, footer: { dock: `<div class="soc-foot" id="${id}Foot"></div>` },
+    onClose: () => { if (_socPanels[id] !== h) return; delete _socPanels[id]; onClose?.(); } });
+  _socPanels[id] = h;
+  return h;
 }
+function _socDialogClose(id) { _socPanels[id]?.closeNow(); }
+function _socDialogCancel(id) { _socPanels[id]?.close(); }
 
 /* ════════════════════════════ POLLS ════════════════════════════ */
 const MSSPolls = (() => {
   const DURATIONS = [[1, '1 hour'], [6, '6 hours'], [24, '1 day'], [72, '3 days'], [168, '7 days']];
-  // Friends / Community / Yours show open polls and ones that ended in the last 2 days; after that they
-  // move to Completed — every ended poll you made (080); polls you only voted in just leave the feeds
-  const SCOPES = [['friends', 'Following'], ['public', 'Community'], ['mine', 'Yours'], ['done', 'Completed']];   // Following: yours, friends' and people you follow (083)
-  let el = null, user = null, scope = 'friends', polls = [], offset = 0, more = false, loading = false, focusId = null, focused = null;
+  // Following / Community / Yours show open polls; Completed shows the ones that ended in the last 7 days that
+  // you made or voted in — after that a poll leaves every public page (129: get_polls_v2 / get_poll_v2; the
+  // same rule is applied here until it runs). Following: yours, friends' and people you follow (083).
+  const SCOPES = [['friends', 'Following'], ['public', 'Community'], ['mine', 'Yours'], ['done', 'Completed']];
+  const KEEP_DAYS = 7;
+  let el = null, user = null, scope = 'friends', polls = [], offset = 0, more = false, loading = false, focusId = null, focused = null, v2 = true;
+  const fresh = p => p && (new Date(p.closes_at) > Date.now() - KEEP_DAYS * 864e5);
+  async function rpc2(fn, args) {
+    if (v2) { try { return await _socRpc(fn + '_v2', args); } catch (err) { if (err?.code !== 'PGRST202') throw err; v2 = false; } }
+    const r = await _socRpc(fn, args);
+    if (fn === 'get_poll') return fresh(r) ? r : null;
+    return (r || []).filter(p => args.p_scope === 'done' ? fresh(p) : p.is_open);
+  }
   const open = {};      // poll id → comments shown
   const comments = {};  // poll id → loaded comments
 
@@ -77,28 +82,28 @@ const MSSPolls = (() => {
       return;
     }
     if (o.poll) { focusId = o.poll; open[o.poll] = true; }
+    const act = document.getElementById('socHeadAct');
+    if (act) act.innerHTML = `<button type="button" class="btn-add-entry" onclick="MSSPolls.create()">${icon('plus', 15)} New poll</button>`;
     await load(true);
   }
-  function head(canCreate = true) {
-    return canCreate ? `<div class="soc-head"><button type="button" class="btn-add-entry" onclick="MSSPolls.create()">${icon('plus', 15)} New Poll</button></div>` : '';
-  }
   function toolbar() {
-    return `<div class="pn-toggle soc-toggle" role="tablist" aria-label="Which polls">${SCOPES.map(([k, l]) =>
-      `<button type="button" class="pn-toggle-btn${scope === k ? ' active' : ''}" role="tab" aria-selected="${scope === k}" onclick="MSSPolls.setScope('${k}')">${l}</button>`).join('')}</div>`;
+    return `<div class="fr-tabs poll-tabs" role="tablist" aria-label="Which polls">${SCOPES.map(([k, l]) =>
+      `<button type="button" class="fr-tab${scope === k ? ' active' : ''}" role="tab" aria-selected="${scope === k}" onclick="MSSPolls.setScope('${k}')">${l}</button>`).join('')}</div>`;
   }
   async function load(reset) {
     if (loading) return;
     loading = true;
     if (reset) {
       offset = 0; polls = [];
-      el.innerHTML = head() + toolbar() + `<div id="pollFeed"><div class="page-loading" style="padding:2rem"><div class="spinner"></div></div></div>`;
+      el.innerHTML = toolbar() + `<div id="pollFeed"><div class="page-loading" style="padding:2rem"><div class="spinner"></div></div></div>`;
     }
     try {
       const [page, one] = await Promise.all([
-        _socRpc('get_polls', { p_scope: scope, p_offset: offset }),
-        reset && focusId ? _socRpc('get_poll', { p_id: focusId }).catch(() => null) : null,
+        rpc2('get_polls', { p_scope: scope, p_offset: offset }),
+        reset && focusId ? rpc2('get_poll', { p_id: focusId }).catch(() => null) : null,
       ]);
       if (reset) focused = one || null;
+      if (reset && focusId && !one) showToast('That poll has ended and is no longer available.');
       polls = polls.concat(page || []);
       more = (page || []).length === 20; offset += (page || []).length;
       await Promise.all(Object.keys(open).filter(id => open[id] && !comments[id]).map(loadComments));
@@ -118,12 +123,11 @@ const MSSPolls = (() => {
       friends: ['Nothing to vote on yet', 'Start a poll — your followers get a notification and can vote and comment. Polls from people you follow show here too.'],
       public: ['No community polls yet', 'Make a poll Public and anyone on MyScreenFolio can vote.'],
       mine: ['You haven’t made a poll yet', 'Ask what to watch next, who the best director is — anything.'],
-      done: ['No finished polls yet', 'Polls you made land here once they’ve been over for 2 days — results and all, for good.'],
+      done: ['No finished polls yet', `Polls you made or voted in stay here for ${KEEP_DAYS} days after they end — results and all.`],
     }[scope];
     feed.innerHTML = list.length
       ? `<div class="poll-list">${list.map(card).join('')}</div>${more ? `<div class="eg-more"><button type="button" class="dp-more" onclick="MSSPolls.more()">Show more</button></div>` : ''}`
-      : mssEmpty({ art: 'poll', title: empty[0], text: empty[1],
-          actions: scope === 'done' ? [] : [{ label: 'New Poll', icon: 'plus', onclick: 'MSSPolls.create()', primary: true }] });
+      : `<div class="poll-none">${icon('poll', 18)}<span><b>${empty[0]}.</b> ${empty[1]}</span>${scope === 'done' ? '' : `<button type="button" class="btn-add-entry" onclick="MSSPolls.create()">${icon('plus', 14)} New poll</button>`}</div>`;
   }
   function setScope(k) {
     scope = k; focused = null;
@@ -165,28 +169,37 @@ const MSSPolls = (() => {
   }
   function card(p) {
     const a = p.author || {}, n = p.comment_count || 0, pid = attrJSON(p.id);
-    const own = p.is_mine ? `<div class="poll-own">
-        <button type="button" class="rec-icon" onclick="MSSPolls.edit(${pid})" aria-label="Edit poll" title="Edit">${icon('edit', 14)}</button>
-        ${p.is_open ? `<button type="button" class="rec-icon" onclick="MSSPolls.end(${pid})" aria-label="End poll now" title="End now">${icon('clock', 14)}</button>` : ''}
-        <button type="button" class="rec-icon rec-icon-x" onclick="MSSPolls.remove(${pid})" aria-label="Delete poll" title="Delete">${icon('trash', 14)}</button></div>`
-      : user ? `<div class="poll-own"><button type="button" class="rec-icon poll-flag" onclick="mssReport('poll', ${pid})" aria-label="Report this poll" title="Report">${icon('flag', 13)}</button></div>` : '';
+    const own = user ? `<button type="button" class="fm-icon-btn poll-more" aria-label="More for this poll" aria-haspopup="menu" onclick="MSSPolls._more(this, ${pid})">${icon('moreV', 15)}</button>` : '';
+    const titles = p.options.filter(o => o.kind === 'title');
     return `<article class="poll-card${p.is_open ? '' : ' ended'}" id="poll-${p.id}">
       <header class="poll-by">
         <a href="profile-view.html?id=${encodeURIComponent(a.id || '')}" class="poll-who">${_socAv(a, 36)}<span><b translate="no">${_socEsc(p.is_mine ? 'You' : _socName(a))}</b>
-          <small>${_notifTimeAgo(p.created_at)}${p.edited_at ? ' · edited' : ''} · <span title="${p.visibility === 'public' ? 'Anyone can vote' : 'Followers can vote'}">${icon(p.visibility === 'public' ? 'globe' : 'users', 11)} ${p.visibility === 'public' ? 'Public' : 'Followers'}</span></small></span></a>
-        <span class="poll-status${p.is_open ? ' live' : ''}">${p.is_open ? `<i aria-hidden="true"></i>${left(p)}` : `<span title="${scope === 'done' ? '' : p.is_mine ? 'Moves to Completed 2 days after it ends' : 'Leaves this feed 2 days after it ends'}">${icon('lock', 11)} ${ended(p)}</span>`}</span>
+          <small>asked ${p.visibility === 'public' ? 'everyone' : 'their followers'} · ${p.total_votes || 0} ${p.total_votes === 1 ? 'vote' : 'votes'} · ${_notifTimeAgo(p.created_at)}${p.edited_at ? ' · edited' : ''}</small></span></a>
+        <span class="poll-status${p.is_open ? ' live' : ''}">${p.is_open ? `${icon('clock', 11)} ${left(p)}` : `<span title="Stays in Completed for ${KEEP_DAYS} days after it ends">${icon('lock', 11)} ${ended(p)}</span>`}</span>
         ${own}
       </header>
       <h3 class="poll-q">${_socEsc(p.question)}</h3>
       <div class="poll-opts">${p.options.map((o, i) => optionHTML(p, o, i)).join('')}</div>
       <div class="poll-foot">
         <span class="poll-meta"><b>${p.total_votes || 0}</b> ${p.total_votes === 1 ? 'vote' : 'votes'}${p.is_open && !p.show_results ? ` · <span class="poll-hint">Vote to see the results</span>` : ''}</span>
-        <button type="button" class="rec-chip${open[p.id] ? ' active' : ''}" aria-expanded="${!!open[p.id]}" onclick="MSSPolls.toggleComments(${pid})">${icon('comment', 13)} ${n ? `${n} ${n === 1 ? 'comment' : 'comments'}` : 'Comment'}</button>
+        <span class="poll-acts"><button type="button" class="fm-btn${open[p.id] ? ' active' : ''}" aria-expanded="${!!open[p.id]}" onclick="MSSPolls.toggleComments(${pid})">${icon('comment', 13)} ${n ? `${n} ${n === 1 ? 'comment' : 'comments'}` : 'Comment'}</button>
+        ${titles.length && user ? `<a class="fm-btn" href="movie-night.html?poll=${encodeURIComponent(p.id)}">${icon('film', 13)} Make it a Movie Night</a>` : ''}</span>
       </div>
       ${open[p.id] ? commentsHTML(p) : ''}
     </article>`;
   }
   const find = id => (focused?.id === id ? focused : null) || polls.find(p => p.id === id);
+  // ⋯ — yours: Edit · End now · Delete; someone else's: Report
+  async function moreMenu(btn, id) {
+    const p = find(id); if (!p) return;
+    await mssLoadScript('js/panel.js');
+    MSSPopover.open(btn, { title: p.question, label: 'Poll actions', items: p.is_mine ? [
+      { label: 'Edit', icon: 'edit', onSelect: () => edit(id) },
+      ...(p.is_open ? [{ label: 'End it now', icon: 'clock', onSelect: () => end(id) }] : []),
+      { divider: true },
+      { label: 'Delete…', icon: 'trash', danger: true, onSelect: () => remove(id) },
+    ] : [{ label: 'Report…', icon: 'flag', danger: true, onSelect: () => mssReport('poll', id) }] });
+  }
   function replace(fresh) {
     if (focused?.id === fresh.id) focused = fresh;
     polls = polls.map(p => p.id === fresh.id ? fresh : p);
@@ -194,7 +207,7 @@ const MSSPolls = (() => {
     if (node) node.outerHTML = card(fresh);
   }
   async function refreshOne(id) {
-    try { const p = await _socRpc('get_poll', { p_id: id }); if (p) replace(p); } catch {}
+    try { const p = await rpc2('get_poll', { p_id: id }); if (p) replace(p); } catch {}
   }
 
   async function vote(id, option) {
@@ -293,7 +306,7 @@ const MSSPolls = (() => {
   const blankOpt = mode => ({ kind: mode || 'title', label: '', mode: mode || 'title' });
   function create() {
     if (!user) { location.href = 'login.html'; return; }
-    form = { question: '', visibility: 'friends', hours: 24, options: [blankOpt(), blankOpt()], locked: false };
+    form = { question: '', visibility: 'friends', hours: 24, options: [blankOpt(), blankOpt()], locked: false, dirty: false };
     show('New Poll');
   }
   function edit(id) {
@@ -302,11 +315,12 @@ const MSSPolls = (() => {
       options: p.options.map(o => ({ ...o, mode: o.kind, picked: o.kind !== 'text' })) };
     show('Edit Poll');
   }
-  function close() { MSSDialog.close(document.getElementById('pollForm')); form = null; }
-  function show(title) {
-    const ov = _socDialog('pollForm', title, close);
+  function close() { form = null; _socDialogClose('pollForm'); }
+  // Cancel / ✕ / Back after typing something asks first (the panel's "Discard changes?")
+  async function show(title) {
+    const h = await _socDialog('pollForm', title, () => { form = null; }, 'S', () => !!form?.dirty);
     draw2();
-    MSSDialog.open(ov, { focus: '#pfQ' });
+    if (!h.isPage) document.getElementById('pfQ')?.focus();
   }
   function optionRow(o, i) {
     const n = form.options.length;
@@ -330,21 +344,23 @@ const MSSPolls = (() => {
     const f = form, editing = !!f.id;
     document.getElementById('pollFormBody').innerHTML = `
       <label class="sf-section-label" for="pfQ">Question</label>
-      <textarea class="pf-q" id="pfQ" maxlength="140" rows="2" placeholder="What should we watch this weekend?" oninput="MSSPolls._f('q', 0, this.value)">${_socEsc(f.question)}</textarea>
+      <textarea class="pf-q" id="pfQ" maxlength="140" rows="1" placeholder="What should we watch this weekend?" oninput="this.style.height='auto';this.style.height=this.scrollHeight+this.offsetHeight-this.clientHeight+'px';MSSPolls._f('q', 0, this.value)">${_socEsc(f.question)}</textarea>
       <div class="pf-count"><span id="pfQn">${f.question.length}</span>/140</div>
       <div class="sf-section-label">Options <span class="sf-section-hint">(2–6)</span></div>
       ${f.locked ? `<div class="pf-note">${icon('lock', 13)} Options can’t change once people have voted.</div>` : ''}
       <div id="pfOpts">${f.options.map(optionRow).join('')}</div>
       ${!f.locked && f.options.length < 6 ? `<button type="button" class="poll-link pf-add" onclick="MSSPolls._f('add')">${icon('plus', 13)} Add an option</button>` : ''}
       <div class="sf-section-label">Who can vote</div>
-      <div class="pn-toggle soc-toggle">${[['friends', 'Followers', 'users'], ['public', 'Everyone', 'globe']].map(([k, l, ic]) =>
-        `<button type="button" class="pn-toggle-btn${f.visibility === k ? ' active' : ''}" aria-pressed="${f.visibility === k}" onclick="MSSPolls._f('vis', 0, '${k}')">${icon(ic, 13)} ${l}</button>`).join('')}</div>
+      <div class="fr-tabs pf-who">${[['friends', 'Followers', 'users'], ['public', 'Everyone', 'globe']].map(([k, l, ic]) =>
+        `<button type="button" class="fr-tab${f.visibility === k ? ' active' : ''}" aria-pressed="${f.visibility === k}" onclick="MSSPolls._f('vis', 0, '${k}')">${icon(ic, 13)} ${l}</button>`).join('')}</div>
       <div class="sf-section-label">${editing ? 'Ends' : 'Open for'}</div>
       <div class="pf-chips">${editing ? `<button type="button" class="pf-chip${f.hours == null ? ' active' : ''}" onclick="MSSPolls._f('hours', 0, null)">Keep as is</button>` : ''}${DURATIONS.map(([h, l]) =>
         `<button type="button" class="pf-chip${f.hours === h ? ' active' : ''}" onclick="MSSPolls._f('hours', 0, ${h})">${editing ? 'In ' : ''}${l}</button>`).join('')}</div>
       ${editing ? `<div class="pf-note">A poll stays open 7 days at most from when it was made.</div>` : ''}`;
-    document.getElementById('pollFormFoot').innerHTML = `<button type="button" class="sf-clear-btn" onclick="MSSPolls._close()">Cancel</button>
+    document.getElementById('pollFormFoot').innerHTML = `<button type="button" class="sf-clear-btn" onclick="_socDialogCancel('pollForm')">Cancel</button>
       <button type="button" class="sf-apply-btn" id="pfSave" onclick="MSSPolls._save()">${editing ? 'Save' : 'Post Poll'}</button>`;
+    const q = document.getElementById('pfQ');   // one line; taller only when the question needs it
+    if (q.scrollHeight > q.clientHeight) q.style.height = q.scrollHeight + q.offsetHeight - q.clientHeight + 'px';
   }
   // Search TMDB for a title or a person (debounced per option)
   const timers = {};
@@ -369,6 +385,7 @@ const MSSPolls = (() => {
   }
   function _f(what, i, v) {
     const f = form; if (!f) return;
+    if (what !== 'unpick') f.dirty = true;
     if (what === 'q') { f.question = v; document.getElementById('pfQn').textContent = v.length; return; }
     if (what === 'vis') { f.visibility = v; return draw2(); }
     if (what === 'hours') { f.hours = v; return draw2(); }
@@ -412,7 +429,7 @@ const MSSPolls = (() => {
   }
 
   return { mount, setScope, more: () => load(false), vote, end, remove, create, edit, toggleComments, addComment, editComment, saveComment,
-    cancelEdit: pid => replace(find(pid)), deleteComment, _f, _save: save, _close: close };
+    cancelEdit: pid => replace(find(pid)), deleteComment, _f, _save: save, _more: moreMenu, get: id => rpc2('get_poll', { p_id: id }) };
 })();
 
 /* ════════════════════════════ RECOMMENDATIONS ════════════════════════════ */
@@ -435,7 +452,7 @@ const MSSShare = (() => {
     }
     item = { kind: 'title', ...it }; picked = new Set(); myEntry = null;
     const isList = item.kind === 'list';
-    const ov = _socDialog('recForm', isList ? 'Share List' : 'Recommend to Friends', closeSend);
+    await _socDialog('recForm', isList ? 'Share List' : 'Recommend to Friends');
     const poster = safeURL(it.poster_url);
     const sub = isList ? [`List · ${it.count || 0} ${it.count === 1 ? 'title' : 'titles'}`]
       : [it.year, it.media_type === 'movie' ? 'Movie' : it.media_type === 'tv' ? 'TV Show' : ''].filter(Boolean);
@@ -452,7 +469,7 @@ const MSSShare = (() => {
       <div class="pf-count"><span id="recMsgN">0</span>/280</div>`;
     document.getElementById('recFormFoot').innerHTML = `<button type="button" class="sf-clear-btn" onclick="MSSShare._close()">Cancel</button>
       <button type="button" class="sf-apply-btn" id="recSend" onclick="MSSShare._send()" disabled>Send</button>`;
-    MSSDialog.open(ov);
+
     if (!friends) {
       try { friends = (await getFriendships(u.id)).filter(f => f.status === 'accepted').map(f => ({ id: f.friendId, ...f.friendProfile }))
         .sort((a, b) => (a.display_name || a.username || '').localeCompare(b.display_name || b.username || '')); }
@@ -504,7 +521,7 @@ const MSSShare = (() => {
     drawFriends(document.getElementById('recFind')?.value || '');
     drawPicked();
   }
-  function closeSend() { MSSDialog.close(document.getElementById('recForm')); }
+  function closeSend() { _socDialogClose('recForm'); }
   // What's inside the encrypted message. A poster is only ever a TMDB path.
   function payload() {
     const text = document.getElementById('recMsg').value.trim(), base = { v: 1, t: 'share', kind: item.kind, title: item.title || '', text };
@@ -512,6 +529,21 @@ const MSSShare = (() => {
     const mine = document.getElementById('recMineOn')?.checked ? myEntry : null;
     return { ...base, media_type: item.media_type, tmdb_id: item.tmdb_id, year: String(item.year || '').slice(0, 4),
       poster: String(item.poster_url || '').match(TMDB_PATH)?.[1] || null, score: mine?.score ?? null, note: mine?.note || '' };
+  }
+  /* msg_send_share (126) also tells them what you shared: "@you recommended Dune to you" — only the title / list
+     name, TMDB id, type, year and poster go with it; the message stays encrypted. Until 126 runs: the plain send. */
+  let shareRpc = true;
+  async function sendOne(args, body) {
+    const list = item.kind === 'list';
+    if (shareRpc) {
+      const shared = list ? { kind: 'list' } : { kind: 'title', title: body.title, tmdb_id: body.tmdb_id, media_type: body.media_type, year: body.year, poster: body.poster };
+      const { error } = await sb.rpc('msg_send_share', { ...args, p_item: shared, p_list: list ? item.list_id : null });
+      if (!error) return;
+      if (error.code !== 'PGRST202') throw error;
+      shareRpc = false;
+    }
+    if (list) await _socRpc('msg_send_list', { ...args, p_list: item.list_id });
+    else await _socRpc('msg_send', args);
   }
   async function send() {
     if (!item || !picked.size) return;
@@ -524,8 +556,7 @@ const MSSShare = (() => {
         if (!k.pub) throw new Error('NO_KEY');
         const e = MSSKeys.encrypt(body, k.pub);
         const args = { p_to: f.id, p_ciphertext: e.ciphertext, p_nonce: e.nonce, p_sender_pub: e.sender_pub, p_recipient_pub: e.recipient_pub };
-        if (item.kind === 'list') await _socRpc('msg_send_list', { ...args, p_list: item.list_id });
-        else await _socRpc('msg_send', args);
+        await sendOne(args, body);
       } catch (err) { console.error(err); reason = err?.hint || reason; missed.push(f.display_name || f.username); }
     }
     if (missed.length === to.length) {

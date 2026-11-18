@@ -8,6 +8,7 @@
      MSSPick.open({ pool: () => [entries on the watchlist], all: () => [your whole library],
                     user, onStarted(entry) })
      MSSPick.buttonHTML(onclick, disabled) → the trigger (same height as the list / grid switch)
+   Opens in a side panel L (a full page on phones — js/panel.js); its own look lives inside.
    Styles: "§28 Pick for me" in css/style.css.
    ════════════════════════════════════════════════════════════ */
 const MSSPick = (() => {
@@ -43,8 +44,9 @@ const MSSPick = (() => {
     return Object.entries(n).sort((a, b) => b[1] - a[1]).map(x => x[0]);
   }
   // Why this one — a few honest reasons, from your own library
-  function reasons(e) {
-    const out = [], all = o.all ? o.all() : [];
+  // list: your whole library (the home page's Pick for me passes it; inside the panel it's o.all())
+  function reasons(e, list) {
+    const out = [], all = list || (o && o.all ? o.all() : []);
     if (e.created_at) {
       const d = Math.floor((Date.now() - new Date(e.created_at)) / 864e5);
       out.push(['clock', d < 1 ? 'You only just added it — strike while you’re curious.'
@@ -67,70 +69,65 @@ const MSSPick = (() => {
         if (!best || avg > best.avg) best = { g, avg, n: xs.length };
       }
     });
-    if (best) out.push(['ratingStar', `You rate ${best.g} titles ★ ${best.avg.toFixed(1)} on average (${best.n} watched).`]);
+    if (best) out.push(['ratingStar', `You rate ${best.g} titles ★ ${mssR1(best.avg)} on average (${best.n} watched).`]);
     return out.slice(0, 3);
   }
 
+  // Its content, built once: the blurred-backdrop hero (poster, title, why this one) and the moods
+  let box = null, ph = null, foot = { skip: false, roll: false, start: false };
   function shell() {
-    let ov = document.getElementById('qpOverlay');
-    if (ov) return ov;
-    ov = document.createElement('div');
-    ov.id = 'qpOverlay';
-    ov.innerHTML = `<div class="qp-card" role="dialog" aria-modal="true" aria-labelledby="qpTitle">
-        <div class="qp-hero" id="qpHero"><div class="qp-backdrop" id="qpBackdrop"></div>
-          <div class="qp-top"><span class="qp-eyebrow">${DICE}<span>Tonight’s pick</span></span>
-            <button type="button" class="qp-x" onclick="MSSPick.close()" aria-label="Close">${icon('x', 18)}</button></div>
+    if (box) return box;
+    box = document.createElement('div');
+    box.className = 'qp';
+    box.innerHTML = `<div class="qp-hero" id="qpHero"><div class="qp-backdrop" id="qpBackdrop"></div>
+          <div class="qp-top"><span class="qp-eyebrow">${DICE}<span>Tonight’s pick</span></span></div>
           <div class="qp-main">
             <a class="qp-poster" id="qpPoster" href="#" aria-label="Open its page"></a>
             <div class="qp-info" id="qpInfo" aria-live="polite"></div>
           </div>
         </div>
         <div class="qp-body" id="qpBody"></div>
-        <div class="qp-moods" id="qpMoods"></div>
-        <div class="qp-foot">
-          <button type="button" class="qp-btn" onclick="MSSPick.skip()" id="qpSkip">${icon('x', 15)}<span>Not tonight</span></button>
-          <button type="button" class="qp-btn" onclick="MSSPick.roll()" id="qpRoll">${DICE}<span>Pick again</span></button>
-          <button type="button" class="qp-btn primary" onclick="MSSPick.start()" id="qpStart">${icon('play', 15)}<span>Start watching</span></button>
-        </div>
-      </div>`;
-    MSSDialog.bind(ov, close);
-    ov.querySelector('.qp-card').addEventListener('scroll', gFollow, { passive: true });
-    ov.addEventListener('mss:dd-closed', () => { const inp = document.getElementById('qpGenreIn'); if (inp) inp.value = genreLabel(); gRollIfChanged(); });   // Esc (MSSDialog)
-    document.body.appendChild(ov);
-    new ResizeObserver(gFollow).observe(document.getElementById('qpBody'));
+        <div class="qp-moods" id="qpMoods"></div>`;
+    box.addEventListener('click', ev => { const b = ev.target.closest('[data-qplen]'); if (b) setMood('len', mssSegPick(b)); });
+    box.addEventListener('mss:dd-closed', () => { const inp = document.getElementById('qpGenreIn'); if (inp) inp.value = genreLabel(); gRollIfChanged(); });   // Esc (MSSDialog)
+    new ResizeObserver(gFollow).observe(box.querySelector('#qpBody'));
     window.visualViewport?.addEventListener('resize', gFollow);
     window.visualViewport?.addEventListener('scroll', gFollow);
     window.addEventListener('resize', gFollow);
-    return ov;
+    return box;
+  }
+  // Not tonight · Pick again · Start watching, in the panel's footer
+  function paintFoot() {
+    ph?.setFooter({ stack: true, secondary: [
+        { label: 'Not tonight', lead: icon('x', 15), disabled: !foot.skip, onClick: () => MSSPick.skip() },
+        { label: 'Pick again', lead: DICE, disabled: !foot.roll, onClick: () => roll() }],
+      primary: { label: 'Start watching', lead: icon('play', 15), disabled: !foot.start, onClick: start } });
   }
 
-  function open(opts) {
+  async function open(opts) {
     o = opts; skip = new Set(); mood = blankMood();
     if (!o.pool().length) { showToast('Your watchlist is empty — add something first.', 'err'); return; }
-    const ov = shell();
-    MSSDialog.open(ov, { focus: '.qp-card' });      // the popup itself (no button looks pressed); Tab still reaches everything
+    await mssLoadScript('js/panel.js');
+    const h = MSSPanel.open({ size: 'L', kind: 'generic', title: 'Pick for me', subtitle: 'From your watchlist', body: shell(),
+      onClose: () => { if (ph === h) { ph = null; gChanged = false; gClose(); clearTimeout(rolling); rolling = 0; } } });
+    ph = h;
+    h.body.closest('.lyr-body').addEventListener('scroll', gFollow, { passive: true });
     drawMoods();
     roll(true);
   }
-  function close() {
-    const ov = document.getElementById('qpOverlay');
-    if (ov) MSSDialog.close(ov);
-    gChanged = false;
-    gClose();
-    clearTimeout(rolling); rolling = 0;
-  }
+  function close() { ph?.closeNow(); }
 
-  // In the mood for: Anything · Something quick · the types on this watchlist · genres
+  // In the mood for, one row each: Length (any · something quick) · Type (the types on this watchlist,
+  // any mix — only when there's more than one) · Genre (any mix); Reset when something's set
   function drawMoods() {
     const box = document.getElementById('qpMoods'); if (!box) return;
     const inPool = new Set(o.pool().map(typeOf)), types = TYPES.filter(([k]) => inPool.has(k));
     const chip = (on, label, fn) => `<button type="button" class="qp-chip${on ? ' on' : ''}" aria-pressed="${on}" onclick="${fn}">${label}</button>`;
-    const gs = genres(), any = mood.genres.size > 0, label = genreLabel();
-    box.innerHTML = `<span class="qp-moods-h">In the mood for</span><div class="qp-chips">
-      ${chip(mood.len === 'any' && !mood.types.size && !any, 'Anything', "MSSPick.mood('reset')")}
-      ${chip(mood.len === 'quick', `${icon('clock', 12)} Something quick`, "MSSPick.mood('len','quick')")}
-      ${types.length > 1 ? types.map(([k, l]) => chip(mood.types.has(k), l, `MSSPick.mood('type','${k}')`)).join('') : ''}
-      ${gs.length ? `<div class="qp-genre"><div class="td-dd sf-dd sf-dd-wide" id="qpGenreDD">
+    const gs = genres(), any = mood.genres.size > 0, label = genreLabel(), set = mood.len !== 'any' || mood.types.size || any;
+    box.innerHTML = `<div class="qp-moods-top"><h3 class="lyr-sec-h">In the mood for</h3>${set ? `<button type="button" class="qp-link qp-reset" onclick="MSSPick.mood('reset')">Reset</button>` : ''}</div>
+      <div class="qp-row"><span class="qp-row-h" id="qpLenH">Length</span>${mssSegHTML({ labelledby: 'qpLenH', value: mood.len, options: [['any', 'Any length'], ['quick', 'Something quick']], data: { qplen: '1' } })}</div>
+      ${types.length > 1 ? `<div class="qp-row"><span class="qp-row-h" id="qpTypeH">Type</span><div class="qp-chips" role="group" aria-labelledby="qpTypeH">${types.map(([k, l]) => chip(mood.types.has(k), l, `MSSPick.mood('type','${k}')`)).join('')}</div></div>` : ''}
+      ${gs.length ? `<div class="qp-row"><span class="qp-row-h" id="qpGenreH">Genre</span><div class="qp-genre"><div class="td-dd sf-dd sf-dd-wide" id="qpGenreDD">
           <input type="text" class="sf-dd-trigger qp-genre-in${any ? ' active' : ''}" id="qpGenreIn" value="${esc(label)}" placeholder="Any genre"
             role="combobox" aria-label="Genres — type to search, pick any" aria-autocomplete="list" aria-expanded="false" aria-controls="qpGenreMenu"
             autocomplete="off" spellcheck="false" autocapitalize="none" data-1p-ignore data-lpignore="true"
@@ -138,8 +135,7 @@ const MSSPick = (() => {
           <button type="button" class="qp-genre-btn" tabindex="-1" aria-label="${any ? 'Any genre' : 'Show genres'}"
             onmousedown="event.preventDefault()" onclick="event.stopPropagation();MSSPick._g('${any ? 'clear' : 'toggle'}')">${any ? icon('x', 13)
               : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>'}</button>
-          <div class="td-dd-menu" id="qpGenreMenu" role="listbox" aria-multiselectable="true" aria-label="Genres"></div></div></div>` : ''}
-    </div>`;
+          <div class="td-dd-menu" id="qpGenreMenu" role="listbox" aria-multiselectable="true" aria-label="Genres"></div></div></div></div>` : ''}`;
   }
   /* The genre box: tick any number from the list, or type to narrow it (Enter ticks the first match). Stays open until you leave it. */
   let gi = -1;
@@ -156,12 +152,12 @@ const MSSPick = (() => {
   // layout shifts (its text loads late) or a phone keyboard takes up part of the screen.
   function gPlace(dd) {
     const r = dd.querySelector('.sf-dd-trigger').getBoundingClientRect(), menu = dd.querySelector('.td-dd-menu');
-    const card = document.querySelector('.qp-card').getBoundingClientRect();
-    if (r.bottom < card.top || r.top > card.bottom) return gClose();     // scrolled out of the popup
+    const card = dd.closest('.lyr-body').getBoundingClientRect();
+    if (r.bottom < card.top || r.top > card.bottom) return gClose();     // scrolled out of the panel
     const vv = window.visualViewport, top = vv ? vv.offsetTop : 0, height = vv ? vv.height : innerHeight;
     const below = top + height - r.bottom - 12, above = r.top - top - 12, up = below < 160 && above > below;
     const h = Math.max(120, Math.min(up ? above : below, 240));
-    menu.style.cssText = `position:fixed; left:${r.left}px; width:${r.width}px; z-index:1400; display:block; max-height:${h}px; overflow-y:auto; `
+    menu.style.cssText = `position:fixed; left:${r.left}px; width:${r.width}px; z-index:2060; display:block; max-height:${h}px; overflow-y:auto; `
       + (up ? `bottom:${innerHeight - r.top}px; top:auto; border-radius:var(--radius-sm) var(--radius-sm) 0 0; border-top:0.5px solid var(--olive-light); border-bottom:none;` : `top:${r.bottom}px; bottom:auto;`);
   }
   const gFollow = () => { const dd = document.getElementById('qpGenreDD'); if (dd?.classList.contains('open')) gPlace(dd); };
@@ -218,7 +214,7 @@ const MSSPick = (() => {
 
   function setMood(k, v) {
     if (k === 'reset') mood = blankMood();
-    else if (k === 'len') mood.len = mood.len === v ? 'any' : v;
+    else if (k === 'len') mood.len = v;
     else if (k === 'type' && !mood.types.delete(v)) mood.types.add(v);
     drawMoods();
     roll();
@@ -235,7 +231,7 @@ const MSSPick = (() => {
     const posterBox = document.getElementById('qpPoster');
     const frames = reduced || list.length < 2 ? 0 : first ? 9 : 7;
     let i = 0;
-    document.getElementById('qpOverlay')?.classList.add('rolling');
+    box?.classList.add('rolling');
     const tick = () => {
       if (i < frames) {
         const e = list[Math.floor(Math.random() * list.length)];
@@ -245,12 +241,13 @@ const MSSPick = (() => {
         return;
       }
       rolling = 0;
-      document.getElementById('qpOverlay')?.classList.remove('rolling');
+      box?.classList.remove('rolling');
       cur = pick; draw(pick);
     };
     tick();
   }
-  const posterImg = e => safeURL(e.poster_url) ? `<img src="${safeURL(e.poster_url)}" alt="">` : `<span class="qp-letter">${esc((e.title || '?')[0])}</span>`;
+  // just the poster inside the "open its page" link (the title's first letter when there's none)
+  const posterImg = e => { const u = safeURL(mssSharpPoster(e.poster_url)); return u ? `<img src="${u}" alt="">` : `<span class="qp-poster-ph" aria-hidden="true">${esc((e.title || '?')[0])}</span>`; };
 
   function draw(e) {
     const list = candidates(), n = o.pool().length;
@@ -263,15 +260,14 @@ const MSSPick = (() => {
       <div class="qp-count">${list.length === n ? `1 of ${n} on your watchlist` : `1 of ${list.length} that fit · ${n} on your watchlist`}</div>
       <h2 class="qp-title" id="qpTitle" translate="no">${esc(e.title)}</h2>
       <div class="qp-meta">${bits.map(esc).join(' · ')}<span id="qpVote"></span></div>
-      ${(e.genres || []).length ? `<div class="qp-genres">${mssGenreList(e.genres).slice(0, 4).map(g => `<span>${esc(g)}</span>`).join('')}</div>` : ''}`;
+      ${(e.genres || []).length ? `<div class="qp-genres">${mssGenreList(e.genres).slice(0, 4).map(g => `<span class="w-ep-badge">${esc(g)}</span>`).join('')}</div>` : ''}`;
     const why = reasons(e);
     document.getElementById('qpBody').innerHTML = `
       <p class="qp-overview" id="qpOverview">${e.tmdb_id ? '<span class="qp-skel"></span><span class="qp-skel"></span><span class="qp-skel short"></span>' : ''}</p>
       <div class="qp-credit" id="qpCredit"></div>
       ${why.length ? `<div class="qp-why"><div class="qp-why-h">Why this one</div><ul>${why.map(([ic, t]) => `<li>${icon(ic, 14)}<span>${esc(t)}</span></li>`).join('')}</ul></div>` : ''}`;
-    document.getElementById('qpStart').disabled = false;
-    document.getElementById('qpSkip').disabled = list.length < 2;
-    document.getElementById('qpRoll').disabled = list.length < 2;
+    foot = { start: true, skip: list.length > 1, roll: list.length > 1 };
+    paintFoot();
     document.getElementById('qpBackdrop').style.backgroundImage = safeURL(e.poster_url) ? `url("${safeURL(e.poster_url)}")` : '';
     details(e);
   }
@@ -286,8 +282,8 @@ const MSSPick = (() => {
       const d = await res.json();
       if (detailsFor !== e.id || cur?.id !== e.id) return;
       document.getElementById('qpOverview').textContent = d.overview || '';
-      if (d.backdrop_path) document.getElementById('qpBackdrop').style.backgroundImage = `url("https://image.tmdb.org/t/p/w780${d.backdrop_path}")`;
-      if (d.vote_average) document.getElementById('qpVote').innerHTML = ` · <b class="qp-vote">★ ${d.vote_average.toFixed(1)}</b> <small>TMDB</small>`;
+      MSSBackdrop.url(e, 'w780').then(u => { if (u && cur?.id === e.id) document.getElementById('qpBackdrop').style.backgroundImage = `url("${u}")`; });   // the one you picked, else TMDB's
+      if (d.vote_average) document.getElementById('qpVote').innerHTML = ` · <b class="qp-vote">★ ${mssR1(d.vote_average)}</b> <small>TMDB</small>`;
       const dir = type === 'movie' ? (d.credits?.crew || []).filter(c => c.job === 'Director').map(c => c.name) : (d.created_by || []).map(c => c.name);
       const cast = (d.credits?.cast || []).slice(0, 3).map(c => c.name);
       document.getElementById('qpCredit').innerHTML = [dir.length ? `<span><b>${type === 'movie' ? 'Directed by' : 'Created by'}</b> ${esc(dir.slice(0, 2).join(', '))}</span>` : '',
@@ -297,19 +293,19 @@ const MSSPick = (() => {
     }
   }
   function drawNone() {
-    document.getElementById('qpPoster').innerHTML = `<span class="qp-letter">?</span>`;
+    document.getElementById('qpPoster').innerHTML = '<span class="qp-poster-ph" aria-hidden="true">?</span>';
     document.getElementById('qpInfo').innerHTML = `<div class="qp-count">Nothing fits</div><h2 class="qp-title" id="qpTitle">No match for that mood</h2>
       <div class="qp-meta">${skip.size ? 'You’ve skipped everything else. Picky tonight!' : 'Nothing on your watchlist fits all of those.'}</div>`;
     document.getElementById('qpBody').innerHTML = `<div class="qp-none">Try a different mood${skip.size ? ', or bring back the ones you skipped' : ''}.
       ${skip.size ? `<button type="button" class="qp-link" onclick="MSSPick.unskip()">Bring them back</button>` : ''}</div>`;
     document.getElementById('qpBackdrop').style.backgroundImage = '';
-    ['qpSkip', 'qpRoll', 'qpStart'].forEach(id => { document.getElementById(id).disabled = true; });
+    foot = { start: false, skip: false, roll: false };
+    paintFoot();
   }
 
+  // (the panel shows a spinner in the button meanwhile)
   async function start() {
     if (!cur || !o.user) return;
-    const b = document.getElementById('qpStart');
-    b.disabled = true; b.innerHTML = `${icon('play', 15)}<span>Starting…</span>`;
     try {
       const e = cur;
       await updateProgress(e.id, o.user.id, { status: 'watching' });
@@ -319,15 +315,14 @@ const MSSPick = (() => {
     } catch (err) {
       console.error(err);
       showToast('Couldn’t start it — try again.', 'err');
-      b.disabled = false; b.innerHTML = `${icon('play', 15)}<span>Start watching</span>`;
     }
   }
 
   return {
-    open, close, buttonHTML,
+    open, close, buttonHTML, reasons,
     roll: () => roll(), mood: setMood, _g: gAct, _gKey: gKey, _gPick: gPick,
     skip: () => { if (cur) skip.add(cur.id); roll(); },
-    unskip: () => { skip.clear(); document.getElementById('qpStart').disabled = false; roll(); },
+    unskip: () => { skip.clear(); roll(); },
     start,
   };
 })();

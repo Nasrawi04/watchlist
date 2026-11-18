@@ -7,33 +7,39 @@
 <script src="js/i18n.js"></script>
 <title>Activity — MyScreenFolio</title>
 <link rel="stylesheet" href="css/fonts.css">
+<link rel="stylesheet" href="css/theme.css">
 <link rel="stylesheet" href="css/style.css">
 <link rel="stylesheet" href="css/social.css">
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#1E5C26">
+  <meta name="theme-color" content="#F3EEDC">
+  <meta name="color-scheme" content="light dark">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="MyScreenFolio">
-  <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
-  <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <link rel="icon" type="image/svg+xml" sizes="any" href="icons/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
 </head>
 <body>
-<div class="page-wrap fr-page">
+<div class="page-wrap fr-page soc-page">
 
-  <div class="cat-page-header fade-up">
+  <div class="soc-bar" id="socStrip" role="navigation" aria-label="Social"></div>
+  <div class="cat-page-header soc-page-head fade-up">
     <div>
+      <div class="soc-kicker">People</div>
       <h1 class="cat-page-title">Activity</h1>
       <div class="cat-page-sub" id="socPageSub">What your friends have been watching and rating.</div>
     </div>
   </div>
-  <div class="pn-toggle soc-strip" id="socStrip" role="navigation" aria-label="People"></div>
 
-  <section aria-label="Activity">
-    <div class="fr-toolbar" id="frToolbar"></div>
-    <div id="frContent" class="fade-up fade-up-1"><div class="page-loading" data-skel="fr-page"></div></div>
-  </section>
+  <div class="fa-layout">
+    <section class="fa-main" aria-label="Activity">
+      <div class="fr-toolbar" id="frToolbar"></div>
+      <div id="frContent" class="fade-up fade-up-1"><div class="page-loading" data-skel="fr-page"></div></div>
+    </section>
+    <aside class="fa-side" id="faSide" aria-label="Your friends this week" hidden></aside>
+  </div>
 
 </div>
 
@@ -42,7 +48,7 @@
 <script src="js/db.js"></script>
 <script src="js/nav.js"></script>
 <script src="js/info-popup.js"></script>
-<script src="js/rating-popup.js"></script>
+<script src="js/title-view.js"></script>
 <script src="js/easter-egg.js"></script>
 <script src="js/note-popup.js"></script>
 <script src="js/episode-ratings.js"></script>
@@ -78,63 +84,139 @@ function _frDayLabel(dt) {
   return d0.toLocaleDateString(MSSI18n.locale, { month: 'long', day: 'numeric', year: d0.getFullYear() === today.getFullYear() ? undefined : 'numeric' });
 }
 let _frActShown = 40;
+const _frTime = d => d.toLocaleTimeString(MSSI18n.locale, { hour: 'numeric', minute: '2-digit' });
+// A score: text in its tier's colour (the rating scale, mssScoreTier) — never a coloured box
+const _frScoreHTML = (v, d = 2) => `<span class="fa-score${mssTierCls(v)}${mssIsGold(v) ? ' is-gold' : ''}">${Number(v).toFixed(d)}</span>`;
+/* Grouping (sorted by date only): one friend's episode ratings of one season within 24 hours → one card
+   (episode chips + the average); one friend's watchlist adds within 24 hours → one card with small posters */
+function _frGroup(list) {
+  const out = [], open = {};
+  list.forEach(x => {
+    const key = x._ev === 'rated_ep' && x._epr.episode_number ? `ep:${x.user_id}:${x.tmdb_id || x.entry_id}:${x._epr.season_number}`
+      : x._ev === 'watchlist' ? `wl:${x.user_id}` : null;
+    const g = key && open[key];
+    if (g && Math.abs(g._at - x._at) < 864e5 && Math.abs(g._first - x._at) < 864e5) { g.items.push(x); return; }
+    if (!key) { out.push(x); return; }
+    const ng = { ...x, items: [x], _first: x._at, _group: x._ev };
+    open[key] = ng; out.push(ng);
+  });
+  return out.map(g => g.items?.length > 1 ? g : g.items ? g.items[0] : g);
+}
 function _frRenderActivity() {
   const list = SF.list('frActivity', 'all');
   _frToolbar('Activity', list.length, 'frActivity', list.length === 1 ? 'update' : 'updates');
+  _frRenderSide();
   if (!list.length) { document.getElementById('frContent').innerHTML = _frEmptyHTML('activity', 'Nothing here yet', 'Try another friend or clear the filter.'); return; }
-  const byDate = (SF.getSort('frActivity', 'all') || 'newest') === 'newest' || SF.getSort('frActivity', 'all') === 'oldest';
+  const sort = SF.getSort('frActivity', 'all') || 'newest', byDate = sort === 'newest' || sort === 'oldest';
+  const cards = byDate ? _frGroup(list) : list, shown = cards.slice(0, _frActShown);
+  const perDay = {};
+  if (byDate) shown.forEach(x => { const d = _frDayLabel(x._at); perDay[d] = (perDay[d] || 0) + (x.items?.length || 1); });
   let html = '<div class="fa-feed">', lastDay = '';
-  list.slice(0, _frActShown).forEach(x => {
-    const a = _FR_ACT[x._ev], sc = _frScore(x);
-    const day = _frDayLabel(x._at);
-    if (byDate && day !== lastDay) { html += `<div class="fa-day">${day}</div>`; lastDay = day; }
-    if (x._ev === 'rated_ep') {
-      const r = x._epr, what = r.episode_number ? `S${r.season_number} · E${r.episode_number}` : `Season ${r.season_number}`;
-      html += `<article class="fa-item" onclick="location.href='episodes.html?show=${encodeURIComponent(x.tmdb_id)}&user=${encodeURIComponent(r.user_id)}'">
-        <div class="fa-who">${_frAvHTML(_frProfiles[x.user_id], 40)}<span class="fa-ic" style="background:${a.color}">${icon(a.ic, 9)}</span></div>
-        <div class="fa-body">
-          <div class="fa-text"><b translate="no">${escHTML(_frName(x.user_id))}</b> rated ${what} of</div>
-          <div class="fa-title" translate="no">${escHTML(x.title)}</div>
-          <div class="fa-meta">${_frTypeBadge(x)}<span>${x._at.toLocaleTimeString(MSSI18n.locale, { hour: 'numeric', minute: '2-digit' })}</span></div>
-        </div>
-        <div class="fa-score ep-score-chip ep-band-${MSSEp.band(r.score).key}">${Number(r.score).toFixed(1)}</div>
-        ${_frPosterHTML(x, 'fa-poster')}
-      </article>`;
-      return;
-    }
-    if (x._ev === 'list') {
-      const n = (x._list.items || []).length;
-      html += `<article class="fa-item" onclick="_frOpenList(${attrJSON(x._list.id)})">
-        <div class="fa-who">${_frAvHTML(_frProfiles[x.user_id], 40)}<span class="fa-ic" style="background:${a.color}">${icon(a.ic, 9)}</span></div>
-        <div class="fa-body">
-          <div class="fa-text"><b translate="no">${escHTML(_frName(x.user_id))}</b> ${a.verb}</div>
-          <div class="fa-title" translate="no">${escHTML(x.title)}</div>
-          <div class="fa-meta"><span class="w-ep-badge">${n} ${n === 1 ? 'title' : 'titles'}</span><span>${x._at.toLocaleTimeString(MSSI18n.locale, { hour: 'numeric', minute: '2-digit' })}</span></div>
-        </div>
-        ${(() => { const first = (x._list.items || []).map(_frListItem).find(Boolean); return first ? _frPosterHTML(first, 'fa-poster') : ''; })()}
-      </article>`;
-      return;
-    }
-    html += _frActItemHTML(x, a, sc);
+  shown.forEach(x => {
+    const day = byDate ? _frDayLabel(x._at) : '';
+    if (byDate && day !== lastDay) { html += `<div class="fa-day">${day}<span> · ${perDay[day]} ${perDay[day] === 1 ? 'update' : 'updates'}</span></div>`; lastDay = day; }
+    html += x._group === 'rated_ep' ? _frEpGroupHTML(x) : x._group === 'watchlist' ? _frWatchGroupHTML(x) : _frOneHTML(x);
   });
   html += '</div>';
-  if (list.length > _frActShown) html += `<button class="fr-more" onclick="_frActShown+=40;_frRender()">Show more</button>`;
+  if (cards.length > _frActShown) html += `<button class="fr-more" onclick="_frActShown+=40;_frRender()">Show more</button>`;
   document.getElementById('frContent').innerHTML = html;
   mssFillEpNames(document.getElementById('frContent'));
+}
+const _frWho = (x, a) => `<div class="fa-who">${_frAvHTML(_frProfiles[x.user_id], 40)}<span class="fa-ic" style="background:${a.color}">${icon(a.ic, 9)}</span></div>`;
+// Several episodes of one season: chips E1 6.2 … in episode order, the average on the right
+function _frEpGroupHTML(g) {
+  const a = _FR_ACT.rated_ep, eps = [...g.items].sort((p, q) => p._epr.episode_number - q._epr.episode_number);
+  const avg = eps.reduce((t, x) => t + Number(x._epr.score), 0) / eps.length;
+  const times = eps.map(x => x._at).sort((p, q) => p - q), s = g._epr.season_number;
+  const span = _frTime(times[0]) === _frTime(times[times.length - 1]) ? _frTime(times[0]) : `${_frTime(times[0])} – ${_frTime(times[times.length - 1])}`;
+  return `<article class="fa-item fa-group" onclick="location.href='episodes.html?show=${encodeURIComponent(g.tmdb_id)}&user=${encodeURIComponent(g.user_id)}'">
+    ${_frWho(g, a)}
+    <div class="fa-body">
+      <div class="fa-text"><b translate="no">${escHTML(_frName(g.user_id))}</b> rated ${eps.length} episodes of</div>
+      <div class="fa-title" translate="no">${escHTML(g.title)} · Season ${s}</div>
+      <div class="fa-chips">${eps.map(x => `<a class="fa-chip" href="episode.html?show=${encodeURIComponent(g.tmdb_id)}&s=${s}&e=${x._epr.episode_number}" onclick="event.stopPropagation()" aria-label="Episode ${x._epr.episode_number}: ${mssR1(Number(x._epr.score))}"><span>E${x._epr.episode_number}</span><b class="${mssTierCls(Number(x._epr.score)).trim()}">${mssR1(Number(x._epr.score))}</b></a>`).join('')}</div>
+      <div class="fa-meta">${_frTypeBadge(g)}<span>${span}</span></div>
+    </div>
+    <div class="fa-avg"><small>avg</small>${_frScoreHTML(avg, 1)}</div>
+    ${_frPosterHTML(g, 'fa-poster')}
+  </article>`;
+}
+// Several watchlist adds: small posters
+function _frWatchGroupHTML(g) {
+  const a = _FR_ACT.watchlist, n = g.items.length;
+  return `<article class="fa-item fa-group" onclick="viewFriend(${attrJSON(g.user_id)}, ${attrJSON(_frProfiles[g.user_id]?.username || '')})">
+    ${_frWho(g, a)}
+    <div class="fa-body">
+      <div class="fa-text"><b translate="no">${escHTML(_frName(g.user_id))}</b> added ${n} titles to their watchlist</div>
+      <div class="fa-minis">${g.items.slice(0, 8).map(x => `<button type="button" class="fa-mini" title="${escHTML(x.title)}" aria-label="${escHTML(x.title)}" onclick="event.stopPropagation();_frOpenEvent(${attrJSON(x.id.split(':')[0])}, 'watchlist')">${_frPosterHTML(x, 'fa-mini-poster')}</button>`).join('')}${n > 8 ? `<span class="fa-mini-more">+${n - 8}</span>` : ''}</div>
+      <div class="fa-meta"><span>${_frTime(g.items[g.items.length - 1]._at)} – ${_frTime(g.items[0]._at)}</span></div>
+    </div>
+  </article>`;
+}
+function _frOneHTML(x) {
+  const a = _FR_ACT[x._ev];
+  if (x._ev === 'rated_ep') {
+    const r = x._epr, what = r.episode_number ? `S${r.season_number} · E${r.episode_number}` : `Season ${r.season_number}`;
+    const href = r.episode_number ? `episode.html?show=${encodeURIComponent(x.tmdb_id)}&s=${r.season_number}&e=${r.episode_number}` : `season.html?show=${encodeURIComponent(x.tmdb_id)}&s=${r.season_number}`;
+    return `<article class="fa-item" onclick="location.href='${href}'">
+      ${_frWho(x, a)}
+      <div class="fa-body">
+        <div class="fa-text"><b translate="no">${escHTML(_frName(x.user_id))}</b> rated ${what} of</div>
+        <div class="fa-title" translate="no">${escHTML(x.title)}</div>
+        ${r.episode_number && x.tmdb_id ? mssEpNameHTML(x.tmdb_id, r.season_number, r.episode_number, 'fa-ep-name') : ''}
+        <div class="fa-meta">${_frTypeBadge(x)}<span>${_frTime(x._at)}</span></div>
+      </div>
+      ${_frScoreHTML(Number(r.score), 1)}
+      ${_frPosterHTML(x, 'fa-poster')}
+    </article>`;
+  }
+  if (x._ev === 'list') {
+    const n = (x._list.items || []).length;
+    return `<article class="fa-item" onclick="_frOpenList(${attrJSON(x._list.id)})">
+      ${_frWho(x, a)}
+      <div class="fa-body">
+        <div class="fa-text"><b translate="no">${escHTML(_frName(x.user_id))}</b> ${a.verb}</div>
+        <div class="fa-title" translate="no">${escHTML(x.title)}</div>
+        <div class="fa-meta"><span class="w-ep-badge">${n} ${n === 1 ? 'title' : 'titles'}</span><span>${_frTime(x._at)}</span></div>
+      </div>
+      ${(() => { const first = (x._list.items || []).map(_frListItem).find(Boolean); return first ? _frPosterHTML(first, 'fa-poster') : ''; })()}
+    </article>`;
+  }
+  return _frActItemHTML(x, a, _frScore(x));
+}
+/* The side column (wide screens): who was active today, and what's popular with your friends this week */
+function _frRenderSide() {
+  const el = document.getElementById('faSide');
+  if (!el) return;
+  const ev = _frEvents(), now = Date.now(), today = new Date(); today.setHours(0, 0, 0, 0);
+  const activeIds = [...new Set(ev.filter(x => x._at >= today).sort((p, q) => q._at - p._at).map(x => x.user_id))];
+  const pop = {};
+  ev.filter(x => now - x._at < 7 * 864e5 && x._ev !== 'list' && (x.tmdb_id || x.title)).forEach(x => {
+    const k = x.tmdb_id ? `${x.tmdb_type || x.cat}:${x.tmdb_id}` : x.title;
+    const p = pop[k] || (pop[k] = { x, who: new Set(), eps: 0 });
+    p.who.add(x.user_id); if (x._ev === 'rated_ep' || x._ev === 'episode') p.eps++;
+  });
+  const top = Object.values(pop).sort((p, q) => q.who.size - p.who.size || q.eps - p.eps).slice(0, 5);
+  el.hidden = !activeIds.length && !top.length;
+  el.innerHTML = (activeIds.length ? `<section class="fa-side-sec"><h2 class="fa-side-h">Active today</h2>
+      <div class="fa-side-faces">${activeIds.slice(0, 12).map(id => `<button type="button" class="fa-face" title="${escHTML(_frName(id))}" aria-label="${escHTML(_frName(id))}" onclick="viewFriend(${attrJSON(id)}, ${attrJSON(_frProfiles[id]?.username || '')})">${_frAvHTML(_frProfiles[id], 36)}</button>`).join('')}</div></section>` : '')
+    + (top.length ? `<section class="fa-side-sec"><h2 class="fa-side-h">Popular with friends this week</h2>
+      <ul class="fa-pop">${top.map(p => `<li><button type="button" class="fa-pop-row" onclick="_frOpenEvent(${attrJSON(p.x.id.split(':')[0])}, 'info')">${_frPosterHTML(p.x, 'fa-pop-poster')}
+        <span><b translate="no">${escHTML(p.x.title)}</b><small>${p.who.size} ${p.who.size === 1 ? 'friend' : 'friends'}${p.eps ? ` · ${p.eps} ${p.eps === 1 ? 'ep' : 'eps'}` : ''}</small></span></button></li>`).join('')}</ul></section>` : '');
 }
 
 // One activity update (also drawn, with sample text, as the loading skeleton)
 function _frActItemHTML(x, a, sc) {
   return `<article class="fa-item" onclick="_frOpenEvent(${attrJSON(x.id.split(':')[0])}, '${x._ev}')">
-    <div class="fa-who">${_frAvHTML(_frProfiles[x.user_id], 40)}<span class="fa-ic" style="background:${a.color}">${icon(a.ic, 9)}</span></div>
+    ${_frWho(x, a)}
     <div class="fa-body">
       <div class="fa-text"><b translate="no">${escHTML(_frName(x.user_id))}</b> ${a.verb}${x._ev === 'episode' ? ` S${_frEpOf(x).s} · E${_frEpOf(x).e} of` : ''}</div>
       <div class="fa-title" translate="no">${escHTML(x.title)}${x.year ? ` <span>${escHTML(String(x.year).slice(0, 4))}</span>` : ''}</div>
       ${x._ev === 'episode' && x.tmdb_id ? mssEpNameHTML(x.tmdb_id, _frEpOf(x).s, _frEpOf(x).e, 'fa-ep-name') : ''}
-      <div class="fa-meta">${_frTypeBadge(x)}${x._ev === 'dropped' && mssDroppedAt(x) ? `<span class="w-ep-badge">at ${escHTML(mssDroppedAt(x))}</span>` : ''}<span>${x._ev === 'finished' || x._ev === 'logged' ? x._at.toLocaleDateString(MSSI18n.locale, { month: 'short', day: 'numeric' }) : x._at.toLocaleTimeString(MSSI18n.locale, { hour: 'numeric', minute: '2-digit' })}</span></div>
+      <div class="fa-meta">${_frTypeBadge(x)}${x._ev === 'dropped' && mssDroppedAt(x) ? `<span class="w-ep-badge">at ${escHTML(mssDroppedAt(x))}</span>` : ''}<span>${x._ev === 'finished' || x._ev === 'logged' ? x._at.toLocaleDateString(MSSI18n.locale, { month: 'short', day: 'numeric' }) : _frTime(x._at)}</span></div>
       ${x._ev === 'note' ? `<div class="fa-note">${mssIsSpoiler(x) ? mssSpoilerTag(x) : `&ldquo;${escHTML(MSSRich.plain(x.notes).trim().split(/\s+/).slice(0, 30).join(' '))}${MSSRich.plain(x.notes).trim().split(/\s+/).length > 30 ? '…' : ''}&rdquo;`}</div>` : ''}
     </div>
-    ${(x._ev === 'finished' || x._ev === 'logged' || x._ev === 'caught_up') && sc != null ? `<div class="fa-score">★ ${sc.toFixed(2)}</div>` : ''}
+    ${(x._ev === 'finished' || x._ev === 'logged' || x._ev === 'caught_up') && sc != null ? _frScoreHTML(sc) : ''}
     ${_frPosterHTML(x, 'fa-poster')}
   </article>`;
 }

@@ -34,7 +34,7 @@
             then "See my medals". Official challenges wear their spotlight's colours
             and its `done` line; friends' challenges the site's own look.
 
-   Requires config.js (icon, escHTML, MSSDialog, showToast), medals.js. Styles: §57.
+   Requires config.js (icon, escHTML, showToast), panel.js (loaded when needed), medals.js. Styles: §57.
 ═══════════════════════════════════════════════════════════════ */
 const MSSSpotlights = [
   { key: 'halloween-2026', name: 'Halloween 2026', eyebrow: 'Spooky season', done: 'You made it through the night.',
@@ -84,28 +84,25 @@ const MSSSpotlight = (() => {
     return short ? left[0].toUpperCase() + left.slice(1) : `Live · ${left}`;
   }
 
-  /* ── The popup ── */
-  let cur = null;    // the challenge on show
-  function overlay() {
-    let ov = document.getElementById('spotOverlay');
-    if (ov) return ov;
-    ov = document.createElement('div');
-    ov.id = 'spotOverlay'; ov.className = 'soc-overlay spot-overlay';
-    ov.innerHTML = `<div class="soc-card spot-card" role="dialog" aria-modal="true" aria-labelledby="spotTitle"><div id="spotBody"></div></div>`;
-    MSSDialog.bind(ov, () => close());
-    document.body.appendChild(ov);
-    return ov;
+  /* ── The spotlights: side panels L (full pages on phones) in the challenge's colours. Joining a team
+     challenge opens "Pick your side" on top (Back returns), then joins. ── */
+  const panels = {};   // 'spot' | 'team' | 'done' | 'member' → panel handle
+  const vars = (spot, glow, on) => `--spot:${spot};--spot-glow:${glow};--spot-on:${on}`;
+  async function openPanel(key, o) {
+    await mssLoadScript('js/panel.js');
+    const h = MSSPanel.open({ size: o.size || 'L', kind: 'generic', title: o.title, subtitle: o.subtitle, label: o.label,
+      body: `<div class="spot-card ${o.cls || ''}" style="${o.vars || ''}">${o.html}</div>`, footer: o.footer,
+      onClose: () => { if (panels[key] !== h) return; delete panels[key]; o.onClose?.(); } });
+    panels[key] = h;
+    return h;
   }
+  const closePanel = key => panels[key]?.closeNow();
+  let cur = null;    // the challenge on show
   function show(c, e, preview) {
     cur = c;
-    const ov = overlay(), card = ov.querySelector('.spot-card');
     const lt = document.documentElement.getAttribute('data-theme') === 'light' && e.light;   // light mode: the darker set
-    card.style.setProperty('--spot', (lt ? e.light.accent : e.accent) || 'var(--olive-light)');
-    card.style.setProperty('--spot-glow', (lt ? e.light.glow : e.glow) || 'var(--olive-faint)');
-    card.style.setProperty('--spot-on', lt ? '#fff' : '#14110b');
-    document.getElementById('spotBody').innerHTML = `
-      <button type="button" class="spot-x" onclick="MSSSpotlight._close()" aria-label="Close">${icon('x', 18)}</button>
-      <div class="spot-hero"><div class="spot-medal">${MSSMedal.official(c.medal, { size: 168, label: `${c.title} medal` })}</div></div>
+    openPanel('spot', { title: 'Official challenge', subtitle: preview ? 'Preview — this is what people will see' : '', label: e.headline || c.title, vars: vars((lt ? e.light.accent : e.accent) || 'var(--olive-light)', (lt ? e.light.glow : e.glow) || 'var(--olive-faint)', lt ? '#fff' : '#14110b'),
+      html: `<div class="spot-hero"><div class="spot-medal">${MSSMedal.official(c.medal, { size: 168, label: `${c.title} medal` })}</div></div>
       <div class="spot-main">
         <div class="spot-eyebrow">${icon('crown', 13)} Official challenge${e.eyebrow ? ` · ${esc(e.eyebrow)}` : ''}</div>
         <h2 class="spot-title" id="spotTitle" translate="no">${esc(e.headline || c.title)}</h2>
@@ -113,53 +110,35 @@ const MSSSpotlight = (() => {
         <div class="spot-chips"><span>${icon('clock', 13)} ${fmt(c.starts_on)} – ${fmt(c.ends_on)}</span><span class="is-when">${when(c)}</span>${c.joined ? `<span>${icon('users', 13)} ${c.joined} joined</span>` : ''}</div>
         ${posters(c, 6)}
         <div class="spot-tags">${tags(c)}</div>
-      </div>
-      <div class="spot-foot">${preview
-        ? `<span class="spot-preview-note">${icon('eye', 13)} Preview — this is what people will see</span><button type="button" class="sf-apply-btn" onclick="MSSSpotlight._close()">Close</button>`
-        : `<button type="button" class="sf-clear-btn" onclick="MSSSpotlight._close()">Maybe later</button>
-           <button type="button" class="sf-apply-btn spot-join" onclick="MSSSpotlight._join()">${icon('check', 15)} Join</button>`}</div>`;
-    MSSDialog.open(ov, { focus: preview ? '.spot-foot .sf-apply-btn' : '.spot-join' });
+      </div>`,
+      footer: preview ? { primary: { label: 'Close', onClick: () => close() } }
+        : { secondary: [{ label: 'Maybe later', onClick: () => close() }], primary: { label: 'Join', lead: icon('check', 16), onClick: () => join() } },
+      onClose: () => { cur = null; } });
   }
-  function close() {
-    cur = null;
-    MSSDialog.close(document.getElementById('spotOverlay'));
-  }
+  function close() { cur = null; closePanel('spot'); }
   async function join() {
     const c = cur; if (!c) return;
     let team = null;
-    if (c.teams) { close(); team = await pickTeam(c); if (!team) return; }
-    const b = document.querySelector('.spot-join'); if (b) b.disabled = true;
+    if (c.teams) { team = await pickTeam(c); if (!team) return; }
     try {
       await rpc('join_official_challenge', { p_ch: c.id, p_team: team });
-      cur = null; MSSDialog.close(document.getElementById('spotOverlay'));
+      close();
       showToast(team ? `You’re on ${c.teams.find(t => t.key === team).name} — good luck!` : `You’re in — ${c.title} ${c.state === 'soon' ? 'starts soon' : 'is on'}!`);
       if (typeof MSSChallenges !== 'undefined' && document.getElementById('chList')) MSSChallenges.reload();
-    } catch (err) { if (b) b.disabled = false; showToast(err?.hint || 'Couldn’t join — try again.', 'err'); }
+    } catch (err) { showToast(err?.hint || 'Couldn’t join — try again.', 'err'); }
   }
 
   /* ── Teams (064): "Pick your side" — both team medals side by side. Resolves 'a' / 'b', or null if closed. ── */
-  let teamDone = null;
+  let teamDone = null, teamC = null, teamSel = null;
   function pickTeam(c) {
     return new Promise(res => {
-      teamDone = res;
-      let ov = document.getElementById('teamPick');
-      if (!ov) {
-        ov = document.createElement('div'); ov.id = 'teamPick'; ov.className = 'soc-overlay';
-        ov.innerHTML = `<div class="soc-card team-pick" role="dialog" aria-modal="true" aria-labelledby="teamPickTitle">
-            <div class="sf-header"><div class="sf-title" id="teamPickTitle">Pick your side</div><button type="button" class="sf-close" aria-label="Close">${icon('x', 18)}</button></div>
-            <div class="sf-body" id="teamPickBody"></div><div class="sf-footer" id="teamPickFoot"></div></div>`;
-        ov.querySelector('.sf-close').onclick = () => endTeam(null);
-        MSSDialog.bind(ov, () => endTeam(null));
-        document.body.appendChild(ov);
-      }
-      ov._c = c; ov._sel = c.my_team || null;
-      drawTeam();
-      MSSDialog.open(ov, { focus: '.team-card' });
+      teamDone = res; teamC = c; teamSel = c.my_team || null;
+      openPanel('team', { size: 'S', title: 'Pick your side', html: teamHTML(), footer: teamFoot(), onClose: () => { const d = teamDone; teamDone = null; d?.(null); } });
     });
   }
-  function drawTeam() {
-    const ov = document.getElementById('teamPick'), c = ov._c, sel = ov._sel;
-    document.getElementById('teamPickBody').innerHTML = `
+  function teamHTML() {
+    const c = teamC, sel = teamSel;
+    return `
       <p class="team-pick-lead" translate="no">${esc(c.title)}</p>
       <p class="team-pick-sub">Everyone who finishes gets the medal — in their team’s colours. Choose who you’re watching for.</p>
       <div class="team-cards" role="radiogroup" aria-label="Teams">${c.teams.map(t => `
@@ -170,44 +149,34 @@ const MSSSpotlight = (() => {
           <small>${icon('users', 12)} ${t.joined || 0} joined</small>
           <i class="team-check" aria-hidden="true">${icon('check', 14)}</i>
         </button>`).join('')}</div>`;
-    const t = c.teams.find(x => x.key === sel);
-    document.getElementById('teamPickFoot').innerHTML = `<button type="button" class="sf-clear-btn" onclick="MSSSpotlight._teamEnd(null)">Cancel</button>
-      <button type="button" class="sf-apply-btn team-go" onclick="MSSSpotlight._teamEnd('${sel || ''}')"${t ? '' : ' disabled'} style="${t ? `--team:${esc(t.color)}` : ''}">${t ? `${icon('check', 14)} Join ${esc(t.name)}` : 'Pick a side'}</button>`;
   }
+  function teamFoot() {
+    const t = teamC.teams.find(x => x.key === teamSel);
+    return { secondary: [{ label: 'Cancel', onClick: () => endTeam(null) }], primary: { label: t ? `Join ${t.name}` : 'Pick a side', lead: t ? icon('check', 16) : '', disabled: !t, onClick: () => endTeam(teamSel) } };
+  }
+  function drawTeam() { const h = panels.team; if (!h) return; h.setBody(`<div class="spot-card">${teamHTML()}</div>`); h.setFooter(teamFoot()); h.body.querySelector('.team-card.on')?.focus(); }
   function endTeam(team) {
     const done = teamDone; teamDone = null;
-    MSSDialog.close(document.getElementById('teamPick'));
-    if (done) done(team || null);
+    closePanel('team');
+    done?.(team || null);
   }
 
   /* ── "You finished!" (067) — one challenge; resolves when it's closed ── */
   const ord = n => { const v = n % 100; return n + (v >= 11 && v <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] || 'th'); };
-  let doneRes = null;
   function complete(c) {
     return new Promise(res => {
-      doneRes = res;
-      let ov = document.getElementById('spotDone');
-      if (!ov) {
-        ov = document.createElement('div'); ov.id = 'spotDone'; ov.className = 'soc-overlay spot-overlay';
-        ov.innerHTML = `<div class="soc-card spot-card spot-done" role="dialog" aria-modal="true" aria-labelledby="spotDoneTitle"><div id="spotDoneBody"></div></div>`;
-        MSSDialog.bind(ov, () => endDone());
-        document.body.appendChild(ov);
-      }
-      const card = ov.querySelector('.spot-card'), e = c.official ? entry(c.spotlight) : null;
+      const e = c.official ? entry(c.spotlight) : null;
       const lt = document.documentElement.getAttribute('data-theme') === 'light';
       const pal = e ? (lt && e.light ? e.light : e) : null;
-      card.style.setProperty('--spot', pal?.accent || (lt ? 'var(--olive)' : 'var(--olive-light)'));
-      card.style.setProperty('--spot-glow', pal?.glow || 'var(--olive-faint)');
-      card.style.setProperty('--spot-on', lt ? '#fff' : '#14110b');
       const team = c.team_name ? { name: c.team_name, color: c.team_color } : null;
       const medal = c.official ? MSSMedal.official(c.medal, { size: 168, team, label: `${c.title} medal` })
         : MSSMedal.challenge(c.place || 3, c.cat, { size: 150, label: `${c.place === 1 ? 'Gold' : c.place === 2 ? 'Silver' : 'Bronze'} medal` });
       const line = c.official ? (e?.done || 'Another one for the cabinet.')
         : c.place === 1 ? `First to the finish — out of ${c.racers}!` : c.place ? `You came ${ord(c.place)} out of ${c.racers}.` : 'You reached the goal.';
       const date = new Date(c.finished_at).toLocaleDateString(MSSI18n.locale, { day: 'numeric', month: 'short' });
-      document.getElementById('spotDoneBody').innerHTML = `
-        <button type="button" class="spot-x" onclick="MSSSpotlight._doneEnd()" aria-label="Close">${icon('x', 18)}</button>
-        <div class="spot-hero"><div class="spot-rays" aria-hidden="true"></div><div class="spot-medal">${medal}</div></div>
+      openPanel('done', { title: c.official ? 'Official challenge' : 'Challenge', label: `You finished ${c.title}`, cls: 'spot-done',
+        vars: vars(pal?.accent || (lt ? 'var(--olive)' : 'var(--olive-light)'), pal?.glow || 'var(--olive-faint)', lt ? '#fff' : '#14110b'),
+        html: `<div class="spot-hero"><div class="spot-rays" aria-hidden="true"></div><div class="spot-medal">${medal}</div></div>
         <div class="spot-main">
           <div class="spot-eyebrow">${icon(c.official ? 'crown' : 'trophy', 13)} ${c.official ? 'Official challenge · ' : ''}Complete</div>
           <h2 class="spot-title" id="spotDoneTitle"><span class="spot-done-kicker">You finished</span><span translate="no">${esc(c.title)}</span></h2>
@@ -215,38 +184,23 @@ const MSSSpotlight = (() => {
           <div class="spot-chips"><span>${icon('check', 13)} ${c.goal} watched · ${esc(date)}</span>
             ${team ? `<span class="is-when" style="background:${esc(team.color)};color:#fff">${icon('users', 13)} <b translate="no">${esc(team.name)}</b></span>` : ''}
             ${c.official ? `<span>${icon('users', 13)} ${c.finished} ${c.finished === 1 ? 'has' : 'have'} finished</span>` : ''}</div>
-        </div>
-        <div class="spot-foot"><button type="button" class="sf-clear-btn" onclick="MSSSpotlight._doneEnd()">Done</button>
-          <a class="sf-apply-btn spot-go" href="cabinet.html?tab=${c.official ? 'official' : 'challenge'}">${icon('trophy', 15)} See my medals</a></div>`;
-      MSSDialog.open(ov, { focus: '.spot-go' });
+        </div>`,
+        footer: { secondary: [{ label: 'Done', onClick: () => endDone() }], primary: { label: 'See my medals', lead: icon('trophy', 16), onClick: () => { location.href = `cabinet.html?tab=${c.official ? 'official' : 'challenge'}`; } } },
+        onClose: () => res() });
     });
   }
-  function endDone() {
-    const r = doneRes; doneRes = null;
-    MSSDialog.close(document.getElementById('spotDone'));
-    if (r) r();
-  }
+  function endDone() { closePanel('done'); }
 
   /* ── The MSF Member medal (075): once per person, extra special ── */
   function member(b) {
-    let ov = document.getElementById('spotMember');
-    if (!ov) {
-      ov = document.createElement('div'); ov.id = 'spotMember'; ov.className = 'soc-overlay spot-overlay';
-      ov.innerHTML = `<div class="soc-card spot-card spot-done spot-member" role="dialog" aria-modal="true" aria-labelledby="spotMemberTitle"><div id="spotMemberBody"></div></div>`;
-      MSSDialog.bind(ov, () => MSSDialog.close(ov));
-      document.body.appendChild(ov);
-    }
-    const lt = document.documentElement.getAttribute('data-theme') === 'light', card = ov.querySelector('.spot-card');
-    card.style.setProperty('--spot', lt ? '#8a5f0a' : '#E9B73A');
-    card.style.setProperty('--spot-glow', lt ? 'rgba(214,160,40,.28)' : 'rgba(233,183,58,.36)');
-    card.style.setProperty('--spot-on', lt ? '#fff' : '#14110b');
+    const lt = document.documentElement.getAttribute('data-theme') === 'light';
     const long = MSSMedal.memberFor(b.earned_at), fresh = Date.now() - new Date(b.earned_at) < 7 * 86400000;
     const since = new Date(b.earned_at).toLocaleDateString(MSSI18n.locale, { day: 'numeric', month: 'short', year: 'numeric' });
     // a burst of confetti behind the medal (decoration only)
-    const bits = [...Array(26)].map((_, i) => `<i style="--x:${(i * 37) % 100}%;--d:${(i * 0.13 % 1.6).toFixed(2)}s;--r:${(i * 47) % 360}deg;--c:${['#F3CE63', '#7EB86C', '#FFF4D2', '#E09A68', '#3E7A38'][i % 5]}"></i>`).join('');
-    document.getElementById('spotMemberBody').innerHTML = `
-      <button type="button" class="spot-x" onclick="MSSDialog.close(document.getElementById('spotMember'))" aria-label="Close">${icon('x', 18)}</button>
-      <div class="spot-hero"><div class="spot-rays" aria-hidden="true"></div><div class="spot-confetti" aria-hidden="true">${bits}</div>
+    const bits = [...Array(26)].map((_, i) => `<i style="--x:${(i * 37) % 100}%;--d:${(i * 0.13 % 1.6).toFixed(2)}s;--r:${(i * 47) % 360}deg;--c:${['#F3CE63', '#A6CCB1', '#FFF4D2', '#E09A68', '#3E7A38'][i % 5]}"></i>`).join('');
+    openPanel('member', { title: 'MSF Member', label: 'MSF Member medal', cls: 'spot-done spot-member',
+      vars: vars(lt ? '#8a5f0a' : '#E9B73A', lt ? 'rgba(214,160,40,.28)' : 'rgba(233,183,58,.36)', lt ? '#fff' : '#14110b'),
+      html: `<div class="spot-hero"><div class="spot-rays" aria-hidden="true"></div><div class="spot-confetti" aria-hidden="true">${bits}</div>
         <div class="spot-medal spot-shine">${MSSMedal.member({ size: 150, label: 'MSF Member medal' })}</div></div>
       <div class="spot-main">
         <div class="spot-eyebrow">${icon('sparkles', 13)} A medal just for you</div>
@@ -254,13 +208,10 @@ const MSSSpotlight = (() => {
         <p class="spot-desc">${fresh ? 'You’re officially one of us. This medal grows with you — it counts every day you’re here.'
           : `You’ve been with us for <b>${esc(long)}</b>. This one’s yours — and it keeps counting every day you’re here.`}</p>
         <div class="spot-chips"><span class="is-when">${icon('crown', 13)} ${esc(long)}</span><span>${icon('clock', 13)} Since ${esc(since)}</span></div>
-      </div>
-      <div class="spot-foot"><button type="button" class="sf-clear-btn" onclick="MSSDialog.close(document.getElementById('spotMember'))">Close</button>
-        <a class="sf-apply-btn spot-go" href="cabinet.html">${icon('trophy', 15)} See it in my cabinet</a></div>`;
-    MSSDialog.open(ov, { focus: '.spot-go' });
+      </div>`,
+      footer: { secondary: [{ label: 'Close', onClick: x => x.close() }], primary: { label: 'See it in my cabinet', lead: icon('trophy', 16), onClick: () => { location.href = 'cabinet.html'; } } } });
     sb.rpc('member_medal_seen').then(() => {}, () => {});
   }
-
   /* ── Each app open, on the home page (nav.js): one spotlight — taking turns when there are several ── */
   async function check() {
     const today = iso(new Date());
@@ -271,7 +222,7 @@ const MSSSpotlight = (() => {
       const e = entry(c.spotlight); if (!e) return false;
       return today >= (e.shows || add(c.starts_on, -7)) && today <= (e.ends || c.ends_on);
     });
-    if (document.querySelector('.soc-overlay.open, .mss-views.open')) return;   // something else is open — try next time
+    if (document.querySelector('.soc-overlay.open, .lyr.open')) return;   // something else is open — try next time
     try { sessionStorage.setItem('mss_spot_open', '1'); } catch {}
     if (!due.length) return;
     let turn = 0;
@@ -284,7 +235,6 @@ const MSSSpotlight = (() => {
     show(c, e, true);
   }
 
-  return { check, preview, tags, posters, when, entry, pickTeam, complete, member, _close: close, _join: join, _doneEnd: endDone,
-    _team: k => { const ov = document.getElementById('teamPick'); ov._sel = k; drawTeam(); ov.querySelector(`.team-card[aria-checked="true"]`)?.focus(); },
-    _teamEnd: k => endTeam(k) };
+  return { check, preview, tags, posters, when, entry, pickTeam, complete, member, _close: close,
+    _team: k => { teamSel = k; drawTeam(); } };
 })();

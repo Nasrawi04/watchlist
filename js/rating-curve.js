@@ -22,7 +22,10 @@
      MSSCurve.fromCounts(b, o)  the same bars for the MSF breakdown (title, season and episode pages):
                                 b = get_rating_breakdown's row (or null: "Not enough ratings yet"),
                                 o = { title }. Counts only: the bars read out their count, no lists.
-     MSSCurve.open(q)           the breakdown popup (get_rating_breakdown): q = { kind, tmdbId, type,
+     MSSCurve.series(items, o)  the same bars for a season, episode by episode (season.html): one bar per item, as tall as
+                                its score (from a point under the season's lowest up to 10) — items = [{ v, href, say, label, on }], o = { title, rest }. Hover / focus
+                                reads it out; a bar opens its episode (touch: the first tap reads, the second opens).
+     MSSCurve.open(q)           the breakdown side panel L / full page (get_rating_breakdown): q = { kind, tmdbId, type,
                                 season, episode, title, heading, sub }
 
    Requires config.js (liveScore, escHTML, icon, MSSDialog) and, for the popup, db.js (sb).
@@ -86,6 +89,19 @@ const MSSCurve = (() => {
     return boxHTML(' rc-msf', title, rest, `<div class="rc-plot">${plotHTML(n, { unit: 'rating' })}</div>${AXIS}`);
   }
 
+  // A season, episode by episode: a bar per episode (its score out of 10); `on` (the peak) stands out
+  function series(items, o = {}) {
+    const n = items.length, mid = Math.ceil(n / 2);
+    // scores in one season sit close together: the bars start a point under its lowest, so the differences show
+    const vs = items.map(it => it.v).filter(v => v != null), lo = vs.length ? Math.max(0, Math.floor(Math.min(...vs)) - 1) : 0;
+    const bars = items.map(it => {
+      const k = it.v == null ? 0 : Math.max(0.05, Math.min(1, (it.v - lo) / (10 - lo))), cls = `rc-col${it.on ? ' rc-on' : ''}${it.v == null ? ' rc-empty' : ''}`;
+      return `<a class="${cls}" style="--k:${k.toFixed(3)}" href="${it.href}" data-say="${escHTML(it.say)}" aria-label="${escHTML(it.label)}" ${events} onclick="return MSSCurve._tap(event, this)"><span class="rc-bar"></span></a>`;
+    }).join('');
+    // first and last under their bars; the middle one only when there is a middle bar (an odd count)
+    const axis = n > 2 && n % 2 ? `<span>E1</span><span>E${mid}</span><span>E${n}</span>` : `<span>E1</span>${n > 1 ? `<span>E${n}</span>` : ''}`;
+    return boxHTML(' rc-series', o.title || '', o.rest || '', `<div class="rc-plot" style="grid-template-columns:repeat(${n},minmax(0,1fr))">${bars}</div><div class="rc-axis" aria-hidden="true">${axis}</div>`);
+  }
   // The header reads out the bar you're on (it lights up); back to the total when you leave it
   function show(el) {
     const box = el.closest('.rc-box');
@@ -111,28 +127,12 @@ const MSSCurve = (() => {
        q = { kind: 'title' | 'season' | 'episode', tmdbId, type ('movie' | 'tv'), season, episode,
              title (for older entries not linked to TMDB), heading, sub } */
   async function open(q) {
-    let ov = document.getElementById('mssMsfOverlay');
-    if (!ov) {
-      ov = document.createElement('div');
-      ov.className = 'confirm-overlay mss-msf';
-      ov.id = 'mssMsfOverlay';
-      ov.innerHTML = `<div class="confirm-card" role="dialog" aria-modal="true" aria-labelledby="mssMsfT">
-        <button type="button" class="dp-close mss-join-x" aria-label="Close">${icon('x', 18)}</button>
-        <div class="mss-msf-eyebrow">MyScreenFolio rating</div>
-        <div class="confirm-title" id="mssMsfT" translate="no"></div>
-        <div class="mss-msf-sub" id="mssMsfSub" translate="no"></div>
-        <div class="mss-msf-body" id="mssMsfBody"></div>
-        <div class="mss-msf-note">${icon('lock', 12)} Counts only: who rated and their scores stay private. TMDB’s score isn’t part of it.</div>
-      </div>`;
-      MSSDialog.bind(ov, () => MSSDialog.close(ov));
-      ov.querySelector('.mss-join-x').addEventListener('click', () => MSSDialog.close(ov));
-      document.body.appendChild(ov);
-    }
-    ov.querySelector('#mssMsfT').textContent = q.heading || '';
-    ov.querySelector('#mssMsfSub').textContent = q.sub || '';
-    const body = ov.querySelector('#mssMsfBody');
-    body.innerHTML = `<div class="rc-box rc-msf skel" style="height:150px" aria-hidden="true"></div>`;
-    MSSDialog.open(ov, { focus: '.mss-join-x' });
+    await mssLoadScript('js/panel.js');
+    const h = MSSPanel.open({ size: 'L', kind: 'title', backdrop: q.tmdbId ? { type: q.type || 'tv', id: q.tmdbId } : null,
+      title: q.heading || '', subtitle: ['MyScreenFolio rating', q.sub].filter(Boolean).join(' · '),
+      body: `<div class="mss-msf-body"><div class="rc-box rc-msf skel" style="height:150px" aria-hidden="true"></div></div>
+        <p class="lyr-hint mss-msf-note">${icon('lock', 12)} Counts only: who rated and their scores stay private. TMDB’s score isn’t part of it.</p>` });
+    const body = h.body.querySelector('.mss-msf-body');
     try {
       const { data, error } = await sb.rpc('get_rating_breakdown', { p_kind: q.kind, p_tmdb_id: Number(q.tmdbId), p_tmdb_type: q.type || 'tv',
         p_season: q.season ?? null, p_episode: q.episode ?? null, p_title: q.title || null });
@@ -144,5 +144,5 @@ const MSSCurve = (() => {
     }
   }
 
-  return { RANGES, rated, of, html, fromCounts, open, _show: show, _leave: leave, _tap: tap };
+  return { RANGES, rated, of, html, fromCounts, series, open, _show: show, _leave: leave, _tap: tap };
 })();

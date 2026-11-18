@@ -3,87 +3,120 @@
 <head>
 <meta charset="UTF-8">
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#1E5C26">
+  <meta name="theme-color" content="#F3EEDC">
+  <meta name="color-scheme" content="light dark">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="MyScreenFolio">
-  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script src="js/splash.js"></script>
 <script src="js/i18n.js"></script>
 <title>Export — MyScreenFolio</title>
 <link rel="stylesheet" href="css/fonts.css">
+<link rel="stylesheet" href="css/theme.css">
 <link rel="stylesheet" href="css/style.css">
 <style>
-/* ── Export (export.html): the Export Studio + quick exports ── */
-.ex-wrap { max-width:1120px; margin:0 auto; }
-.ex-eyebrow { font-size:11px; font-weight:700; letter-spacing:2.6px; text-transform:uppercase; color:var(--olive-light); margin-bottom:6px; }
-.ex-title { font-family:var(--serif); font-size:clamp(28px, 5.5vw, 42px); font-weight:600; line-height:1.1; margin:0; color:var(--text); }
-.ex-sub { font-size:14px; color:var(--text-2); margin:8px 0 1.5rem; max-width:620px; line-height:1.55; }
+/* ── Export (export.html): the brand hero (your #1's backdrop, the Studio button, your library at a glance), Last time + Recent,
+   Ready-made on dark stages. Brand redesign 17 Nov 2026: tokens from css/theme.css, Oswald titles, Bebas numbers, the score ring
+   (.tv-ring, tier colours — the hero and the stages are in theme.css's dark tier scope), the rank badge look of Top Favorites. ── */
+.ex-wrap { max-width:1180px; margin:0 auto; }
+/* the hero: like the profile's Top Favorites #1 tile — the backdrop full bleed, the shade, the text along the bottom */
+.ex-hero { position:relative; isolation:isolate; display:flex; align-items:flex-end; justify-content:space-between; gap:20px 32px; flex-wrap:wrap; min-height:clamp(250px, 30vw, 330px);
+  padding:clamp(22px, 3.4vw, 40px); box-sizing:border-box; border-radius:var(--radius-lg); overflow:hidden; margin-bottom:clamp(16px, 2.4vw, 24px);
+  background:radial-gradient(120% 120% at 85% 0%, #2E6B45 0%, #1F4D33 38%, #0A2615 100%); color:#F3EEDC; box-shadow:inset 0 0 0 1px rgba(255,255,255,.08); }
+.ex-hero-bg { position:absolute; inset:0; z-index:-2; background-size:cover; background-position:50% 25%; opacity:0; transition:opacity .4s var(--ease); }
+.ex-hero-bg.in { opacity:.92; }
+.ex-hero-bg.is-poster { filter:blur(22px) saturate(1.1); scale:1.2; }
+.ex-hero-shade { position:absolute; inset:0; z-index:-1; background:linear-gradient(0deg, rgba(4,19,10,.94) 0%, rgba(4,19,10,.55) 45%, rgba(4,19,10,.15) 100%), linear-gradient(90deg, rgba(4,19,10,.72) 0%, rgba(4,19,10,.1) 70%); }
+.ex-hero-tx { flex:1 1 340px; min-width:0; display:flex; flex-direction:column; align-items:flex-start; }
+.ex-eyebrow { display:flex; align-items:center; gap:10px; margin:0 0 10px; font:600 11px var(--serif); letter-spacing:.2em; text-transform:uppercase; color:rgba(243,238,220,.8); }
+.ex-eyebrow b { font-weight:600; color:#C7E3CF; box-shadow:inset 0 -1.5px 0 #C5A15B; padding-bottom:1px; }
+.ex-eyebrow i { width:4px; height:4px; border-radius:50%; background:#C5A15B; }
+.ex-title { margin:0; font:600 clamp(32px, 4.6vw, 52px)/1.02 var(--serif); color:#F3EEDC; text-wrap:balance; }
+.ex-sub { margin:10px 0 20px; max-width:520px; font:500 clamp(13.5px, 1.2vw, 15px)/1.5 'Manrope',var(--sans); color:rgba(243,238,220,.82); }
+.ex-go { display:inline-flex; align-items:center; justify-content:center; gap:9px; min-height:50px; padding:0 24px; border-radius:var(--radius-sm); border:1px solid #C5A15B;
+  background:#C5A15B; color:#1C1609; font:700 15px 'Manrope',var(--sans); cursor:pointer; box-shadow:0 12px 26px -14px rgba(0,0,0,.8); transition:background .15s; }   /* on the dark hero: dark mode's brass, both themes */
+.ex-go:hover { background:#D0BF9A; border-color:#D0BF9A; }
+.ex-go:active { background:#B08C47; }
+.ex-hero-cap { position:absolute; top:clamp(14px, 2vw, 20px); inset-inline-end:clamp(16px, 2.4vw, 24px); font:600 11px 'Manrope',var(--sans); color:rgba(243,238,220,.62); }
+.ex-hero-cap:empty { display:none; }
+/* your library at a glance: watched · watchlist (Bebas) and the average as the score ring */
+.ex-stats { flex:none; display:flex; align-items:center; gap:clamp(14px, 2vw, 22px); padding:14px 18px; border-radius:16px; background:rgba(4,19,10,.62); border:1px solid rgba(243,238,220,.12); backdrop-filter:blur(6px); }
+.ex-stats:empty { display:none; }
+.ex-stat { display:flex; flex-direction:column; gap:3px; }
+.ex-stat b { font:400 38px/.9 var(--bebas); color:#F3EEDC; letter-spacing:.01em; }
+.ex-stat small { font:600 10.5px var(--serif); letter-spacing:.16em; text-transform:uppercase; color:rgba(243,238,220,.66); }
+.ex-stat-sep { width:1px; align-self:stretch; background:rgba(243,238,220,.14); }
+.ex-avg { display:flex; align-items:center; gap:10px; }
+.ex-avg .tv-ring { width:62px; } .ex-avg .tv-ring circle { stroke-width:9; } .ex-avg .tv-ring b { font-size:21px; }
 
-/* the Studio: a big card — words and the button on the left, every format on the right */
-.ex-hero { position:relative; overflow:hidden; display:grid; grid-template-columns:minmax(0, 1.15fr) minmax(0, 1fr); gap:28px; align-items:center;
-  padding:30px 32px; border-radius:22px; border:1px solid var(--border-olive);
-  background:radial-gradient(120% 140% at 0% 0%, var(--olive-faint), transparent 60%), radial-gradient(90% 120% at 100% 100%, rgba(126,184,108,.10), transparent 60%), var(--card); }
-.ex-hero-ic { width:54px; height:54px; border-radius:16px; display:grid; place-items:center; background:var(--olive); color:#fff; margin-bottom:16px; }
-.ex-hero h2 { margin:0 0 6px; font-family:'Oswald',var(--sans); font-size:26px; font-weight:600; color:var(--text); letter-spacing:.2px; }
-.ex-hero p { margin:0 0 20px; font-size:14px; line-height:1.6; color:var(--text-2); }
-.ex-points { display:flex; flex-wrap:wrap; gap:6px 14px; margin:0 0 22px; padding:0; list-style:none; font-size:12.5px; color:var(--text-2); }
-.ex-points li { display:inline-flex; align-items:center; gap:6px; }
-.ex-points svg { color:var(--olive-light); }
-.ex-go { display:inline-flex; align-items:center; gap:9px; padding:13px 22px; border:none; border-radius:999px; cursor:pointer;
-  background:var(--olive); color:#fff; font:700 14.5px 'Manrope',var(--sans);  transition:transform .15s, filter .15s; }
-.ex-go:hover { filter:brightness(1.08); transform:translateY(-1px); }
-.ex-go:active { transform:scale(.97); }
-.ex-go:focus-visible { outline:2px solid var(--olive-light); outline-offset:3px; }
-.ex-formats { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:10px; }
-.ex-fmt { all:unset; box-sizing:border-box; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:7px; padding:16px 8px 14px; text-align:center;
-  border-radius:16px; background:var(--bg-2); border:0.5px solid var(--border); transition:border-color .15s, transform .15s, background .15s; }
-.ex-fmt:hover { border-color:var(--border-olive); transform:translateY(-2px); background:var(--card-2); }
-.ex-fmt:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
-.ex-fmt-ic { width:40px; height:40px; border-radius:12px; display:grid; place-items:center; background:var(--olive-faint); color:var(--olive-light); }
-.ex-fmt b { font-size:13px; font-weight:700; color:var(--text); }
-.ex-fmt small { font-size:11px; color:var(--text-3); line-height:1.3; }
-
-/* quick exports: one tap, the Studio opens set up for it */
-.ex-head { display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin:2.25rem 0 .9rem; }
-.ex-head h3 { margin:0; font-family:'Oswald',var(--sans); font-size:13px; font-weight:600; letter-spacing:1.8px; text-transform:uppercase; color:var(--text-2); }
-.ex-head span { font-size:12.5px; color:var(--text-3); }
-.ex-grid { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:12px; }
-.ex-card.ex-card-wide { grid-column:1 / -1; }   /* Title card: a row of its own under the nine (3 across) */
-.ex-card { all:unset; box-sizing:border-box; cursor:pointer; position:relative; display:flex; gap:14px; align-items:flex-start; padding:18px 18px 16px;
-  border-radius:18px; background:var(--card); border:0.5px solid var(--border); transition:border-color .15s, transform .15s, box-shadow .15s; }
-.ex-card:hover { border-color:var(--border-olive); transform:translateY(-2px); }
-.ex-card:active { transform:scale(.985); }
-.ex-card:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
-.ex-card-ic { flex:none; width:46px; height:46px; border-radius:14px; display:grid; place-items:center; color:#fff; background:var(--ic, var(--olive)); }
-.ex-card-main { min-width:0; flex:1; }
-.ex-card-main b { display:block; font-size:15px; font-weight:700; color:var(--text); line-height:1.3; }
-.ex-card-main small { display:block; margin-top:4px; font-size:12.5px; color:var(--text-2); line-height:1.5; }
-.ex-card-foot { display:flex; align-items:center; gap:8px; margin-top:10px; }
-.ex-pill { display:inline-flex; align-items:center; gap:5px; padding:3px 9px; border-radius:999px; background:var(--olive-faint); color:var(--olive-light); font-size:11px; font-weight:700; letter-spacing:.3px; }
-.ex-count { font-size:11.5px; color:var(--text-3); }
-.ex-arrow { position:absolute; top:16px; inset-inline-end:14px; color:var(--text-3); opacity:0; transform:translateX(-4px); transition:opacity .15s, transform .15s; }
-.ex-card:hover .ex-arrow, .ex-card:focus-visible .ex-arrow { opacity:1; transform:none; color:var(--olive-light); }
-[dir="rtl"] .ex-arrow svg { transform:scaleX(-1); }
-.ex-note { display:flex; flex-wrap:wrap; gap:8px 18px; margin-top:1.5rem; padding:14px 16px; border-radius:14px; background:var(--bg-2); border:0.5px dashed var(--border-2); font-size:12.5px; color:var(--text-2); }
-.ex-note a { color:var(--olive-light); text-decoration:none; font-weight:600; }
-.ex-note a:hover { text-decoration:underline; }
-.ex-note span { display:block; }
-.ex-note span > svg { vertical-align:-2px; margin-inline-end:6px; }
-@media(prefers-reduced-motion:reduce) { .ex-go, .ex-fmt, .ex-card, .ex-arrow { transition:none; } }
-@media(max-width:1024px) { .ex-grid { grid-template-columns:repeat(2, minmax(0, 1fr)); } .ex-card.ex-card-wide { grid-column:auto; } }
-@media(max-width:860px) { .ex-hero { grid-template-columns:1fr; padding:24px 20px; gap:22px; } }
-@media(max-width:600px) {
-  .ex-grid { grid-template-columns:1fr; gap:10px; }
-  .ex-card { padding:14px; gap:12px; align-items:center; }
-  .ex-card-ic { width:42px; height:42px; border-radius:12px; }
-  .ex-card-main b { font-size:14.5px; }
-  .ex-card-foot { margin-top:6px; }
-  .ex-arrow { opacity:1; transform:none; top:50%; margin-top:-8px; }
-  .ex-card-main { padding-inline-end:18px; }
-  .ex-go { width:100%; justify-content:center; }
-  .ex-fmt { padding:12px 6px; } .ex-fmt-ic { width:36px; height:36px; }
+.ex-card { border-radius:var(--radius-lg); border:1px solid var(--border-default); background:var(--surface-card); }
+.ex-row { display:grid; grid-template-columns:minmax(0, 1.25fr) minmax(0, 1fr); gap:clamp(12px, 1.6vw, 18px); }
+/* Last time */
+.ex-last { display:flex; align-items:center; gap:clamp(14px, 2vw, 24px); padding:clamp(14px, 2vw, 20px); }
+.ex-th { flex:none; display:grid; place-items:center; overflow:hidden; border-radius:8px; border:1px solid var(--border-strong); background:#0A2615; color:#A6CCB1; }
+.ex-th img { display:block; width:100%; height:100%; object-fit:cover; }
+.ex-last .ex-th { width:clamp(92px, 10vw, 124px); aspect-ratio:3 / 4; box-shadow:0 14px 26px -16px rgba(0,0,0,.6); }
+.ex-k { display:flex; align-items:center; gap:8px; margin:0 0 6px; font:600 11px var(--serif); letter-spacing:.18em; text-transform:uppercase; color:var(--text-link); }
+.ex-k::before { content:''; width:6px; height:6px; border-radius:50%; background:var(--action-primary-bg); }
+.ex-last h2 { margin:0; font:600 clamp(20px, 2vw, 25px)/1.12 var(--serif); color:var(--text-heading); overflow-wrap:anywhere; }
+.ex-last p { margin:5px 0 14px; font:500 13px/1.45 'Manrope',var(--sans); color:var(--text-supporting); }
+.ex-acts { display:flex; flex-wrap:wrap; gap:8px; }
+.ex-btn { display:inline-flex; align-items:center; gap:7px; min-height:44px; padding:0 16px; border-radius:var(--radius-sm); border:1px solid var(--action-secondary-border); background:var(--action-secondary-bg); color:var(--text-body);
+  font:700 13.5px 'Manrope',var(--sans); cursor:pointer; }
+.ex-btn:hover { background:var(--action-secondary-hover); }
+.ex-btn.is-primary { background:var(--action-primary-bg); border-color:var(--action-primary-bg); color:var(--text-on-primary); }
+.ex-btn.is-primary:hover { background:var(--action-primary-hover); border-color:var(--action-primary-hover); }
+.ex-empty { display:flex; align-items:center; gap:14px; padding:18px 20px; font:500 13.5px/1.5 'Manrope',var(--sans); color:var(--text-supporting); }
+.ex-empty svg { flex:none; color:var(--text-link); }
+/* Recent */
+.ex-recent { padding:clamp(14px, 1.8vw, 20px) clamp(14px, 1.8vw, 20px) clamp(8px, 1vw, 12px); }
+.ex-recent ul { list-style:none; margin:0; padding:0; }
+.ex-recent li { display:flex; align-items:center; gap:12px; min-height:56px; border-bottom:1px solid var(--border-subtle); }
+.ex-recent li:last-child { border-bottom:0; }
+.ex-ri { flex:none; width:34px; height:34px; display:grid; place-items:center; border-radius:10px; background:var(--selected-bg); color:var(--selected-fg); }
+.ex-rt { flex:1; min-width:0; display:flex; flex-direction:column; gap:1px; padding:6px 0; border:0; background:none; color:var(--text-body); text-align:start; font:inherit; cursor:pointer; }
+.ex-rt b { font:700 13.5px/1.3 'Manrope',var(--sans); overflow-wrap:anywhere; }
+.ex-rt small { font:500 12px/1.3 'Manrope',var(--sans); color:var(--text-muted); }
+.ex-rt:hover b { text-decoration:underline; }
+.ex-again { flex:none; min-height:36px; padding:0 12px; border-radius:999px; border:1px solid var(--border-default); background:none; color:var(--action-tertiary-fg); font:700 12.5px 'Manrope',var(--sans); cursor:pointer; }
+.ex-again:hover { background:var(--action-tertiary-hover-bg); border-color:var(--border-brand); }
+.ex-none { margin:6px 0 8px; font:500 12.5px/1.45 'Manrope',var(--sans); color:var(--text-muted); }
+/* Ready-made: each on a dark stage (the Studio's desk), the format as a tag, the title in Oswald */
+.ex-head { display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin:clamp(28px, 3.6vw, 44px) 0 14px; }
+.ex-head h2 { margin:0; font:600 clamp(21px, 2.1vw, 26px)/1.1 var(--serif); color:var(--text-heading); }
+.ex-head span { font:500 12.5px 'Manrope',var(--sans); color:var(--text-muted); }
+.ex-grid { display:grid; grid-template-columns:repeat(5, minmax(0, 1fr)); gap:clamp(10px, 1.2vw, 14px); list-style:none; margin:0; padding:0; }
+.ex-rm { display:flex; flex-direction:column; width:100%; height:100%; padding:0; box-sizing:border-box; border-radius:var(--radius); border:1px solid var(--border-default); background:var(--surface-card);
+  color:var(--text-body); text-align:start; font:inherit; cursor:pointer; overflow:hidden; transition:border-color .15s, translate .15s, box-shadow .15s; }
+.ex-rm:hover { border-color:var(--border-brand); translate:0 -2px; box-shadow:0 16px 30px -18px rgba(0,0,0,.55); }
+.ex-pv { position:relative; aspect-ratio:4 / 3; display:grid; place-items:center; overflow:hidden; background:radial-gradient(120% 100% at 50% 0%, #163A24 0%, #0A2615 50%, #04130A 100%); }
+.ex-pv img { display:block; max-width:62%; max-height:84%; border-radius:4px; box-shadow:0 14px 24px -12px rgba(0,0,0,.85), 0 0 0 1px rgba(243,238,220,.12); transition:scale .25s var(--ease); }
+.ex-rm:hover .ex-pv img { scale:1.04; }
+.ex-pv.is-skel { animation:exPulse 1.4s ease-in-out infinite; }
+.ex-pv > svg { color:#A6CCB1; opacity:.6; }
+.ex-tag { position:absolute; top:8px; inset-inline-start:8px; z-index:1; padding:3px 8px 2px; border-radius:6px; background:rgba(4,19,10,.78); border:1px solid rgba(243,238,220,.14);
+  font:600 10px/1.2 var(--serif); letter-spacing:.14em; text-transform:uppercase; color:#C7E3CF; }
+@keyframes exPulse { 50% { opacity:.55; } }
+.ex-rm-tx { display:flex; flex-direction:column; gap:3px; padding:11px 12px 13px; }
+.ex-rm b { display:block; font:600 15px/1.2 var(--serif); color:var(--text-heading-2); }
+.ex-rm small { display:block; font:500 12px/1.3 'Manrope',var(--sans); color:var(--text-muted); }
+.ex-go:focus-visible { outline:2px solid #D0BF9A; outline-offset:3px; }
+.ex-btn:focus-visible, .ex-rt:focus-visible, .ex-again:focus-visible, .ex-rm:focus-visible { outline:2px solid var(--focus-ring); outline-offset:2px; }
+@media (prefers-reduced-motion:reduce) { .ex-rm, .ex-pv img, .ex-hero-bg { transition:none; } .ex-rm:hover { translate:none; } .ex-rm:hover .ex-pv img { scale:none; } .ex-pv.is-skel { animation:none; } }
+@media (max-width:1024px) { .ex-grid { grid-template-columns:repeat(3, minmax(0, 1fr)); } }
+@media (max-width:860px) { .ex-row { grid-template-columns:minmax(0, 1fr); } }
+@media (max-width:600px) {
+  .ex-hero { min-height:0; padding:22px 18px 18px; border-radius:18px; gap:16px; }
+  .ex-sub { margin-bottom:16px; }
+  .ex-go { width:100%; min-height:52px; }
+  .ex-stats { width:100%; box-sizing:border-box; justify-content:space-between; padding:12px 14px; }
+  .ex-stat b { font-size:32px; }
+  .ex-hero-cap { display:none; }
+  .ex-grid { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+  .ex-last .ex-acts .ex-btn:not(.is-primary) { display:none; }
+  .ex-head span { display:none; }
 }
 </style>
 </head>
@@ -108,71 +141,103 @@
 <script>
 /* ═══════════════════════════════════════════════════════════════
    export.html — Export (avatar menu · You → Export on phones)
-   The Export Studio (export-studio.js) and one-tap quick exports that open it
-   set up: what, how it's sorted and which format. Your library loads once and
-   every export reuses it.
+   One way in (Open Export Studio), what you made last (Last time + Recent — the last 5 setups, kept on
+   this device) and ten Ready-made exports, each with a small picture drawn by the export code itself
+   (cached on this device). A settings link (export.html#studio=…) opens the Studio with that setup.
 ═══════════════════════════════════════════════════════════════ */
 const esc = s => escHTML(s == null ? '' : String(s));
 let _exAll = null, _exReady = null;
-// Every format the Studio makes (format = its preset; the Studio picks what fits when there's nothing chosen)
-const EX_FORMATS = [
-  ['pdf', 'download', 'PDF', 'To read or print'], ['image', 'image', 'Image', 'Story or square'], ['ai', 'sparkles', 'For an AI', 'Paste into a chat'],
-  ['csv', 'list', 'Spreadsheet', 'Excel / Sheets'], ['letterboxd', 'film', 'Letterboxd', 'Import your movies'], ['backup', 'layers', 'Full backup', 'Everything, as .json'],
+const EX_FORMATS = ['pdf', 'image', 'ai', 'csv', 'letterboxd', 'backup'];
+const EX_READY = [
+  { id: 'watched', t: 'Everything I’ve watched', f: 'PDF', n: 'watched', p: { what: 'watched', sort: 'score', format: 'pdf' } },
+  { id: 'top10', t: 'My top 10', f: 'PDF', p: { what: 'watched', sort: 'score', limit: 10, format: 'pdf' } },
+  { id: 'story', t: 'Top 10 story', f: 'Image', p: { what: 'watched', sort: 'score', format: 'image', img: { size: 'story' } } },
+  { id: 'taste', t: 'Taste profile', f: 'PDF', p: { what: 'taste', format: 'pdf' } },
+  { id: 'year', t: 'Year in Review', f: 'PDF', y: true, p: { what: 'year', format: 'pdf' } },
+  { id: 'episodes', t: 'Episode ratings', f: 'Image', p: { what: 'episodes', format: 'image' } },
+  { id: 'watchlist', t: 'My watchlist', f: 'PDF', n: 'watchlist', p: { what: 'watchlist', format: 'pdf' } },
+  { id: 'watching', t: 'Currently watching', f: 'PDF', n: 'watching', p: { what: 'watching', format: 'pdf' } },
+  { id: 'ai', t: 'Ask an AI', f: 'For an AI', p: { what: 'watched', format: 'ai' } },
+  { id: 'card', t: 'Title card', f: 'Image', p: { what: 'title', format: 'image', step: 'what' } },
 ];
-const EX_QUICK = [
-  { ic: 'check', col: '#3d7a38', t: 'Everything I’ve watched', d: 'Your whole watch history, ranked by score.', f: 'PDF', n: 'watched', p: { what: 'watched', sort: 'score' } },
-  { ic: 'trophy', col: '#b8862a', t: 'My top 10', d: 'Your ten best, with posters and every rating.', f: 'PDF', p: { what: 'watched', sort: 'score', limit: 10 } },
-  { ic: 'image', col: '#7a4fa3', t: 'Top 10 story', d: 'Your ten best as an image for Instagram or TikTok.', f: 'Image', p: { what: 'watched', sort: 'score', format: 'image' } },
-  { ic: 'activity', col: '#2b5a85', t: 'My taste profile', d: 'How you score — your genres, decades and what you’re toughest on.', f: 'PDF', p: { what: 'taste' } },
-  { ic: 'clock', col: '#a8433b', t: 'Year in Review', d: 'Your year: what you finished, your best, month by month.', f: 'PDF', p: { what: 'year' } },
-  { ic: 'episodes', col: '#1f4d2b', t: 'Episode ratings', d: 'A show’s episode chart — every season at a glance.', f: 'Image', p: { what: 'episodes', format: 'image' } },
-  { ic: 'bookmark', col: '#5f6b2a', t: 'My watchlist', d: 'Everything you plan to watch.', f: 'PDF', n: 'watchlist', p: { what: 'watchlist' } },
-  { ic: 'play', col: '#c0732a', t: 'Currently watching', d: 'What you’re in the middle of, and how far.', f: 'PDF', n: 'watching', p: { what: 'watching' } },
-  { ic: 'sparkles', col: '#3e6e8e', t: 'Ask an AI', d: 'Your taste in a message to paste into any AI chat for picks.', f: 'AI', p: { what: 'watched', format: 'ai' } },
-  { ic: 'idCard', col: '#8a5a1c', t: 'Title card', d: 'One title as a card — poster, your scores and note — to share anywhere.', f: 'Image', wide: true, p: { format: 'card' } },
-];
+const FMT_IC = { 'PDF': 'download', 'Image': 'image', 'For an AI': 'sparkles', 'Spreadsheet': 'list', 'Letterboxd': 'film', 'Full backup': 'shield', 'Title card': 'idCard' };
 const exCount = k => _exAll.filter(e => k === 'watched' ? ['completed', 'ongoing'].includes(e.status) : k === 'watchlist' ? e.status === 'queue' : ['watching', 'up_next', 'paused'].includes(e.status)).length;
+const exDate = iso => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }); };
+const exWho = () => { const p = window._navUserProfile || {}; return { name: p.display_name || p.username || '', username: p.username || '', avatar_url: p.avatar_url || '' }; };
 
-function exOpen(preset) {
-  const p = window._navUserProfile || {};
-  MSSStudio.open({ preset, who: { name: p.display_name || p.username || '', username: p.username || '', avatar_url: p.avatar_url || '' }, load: () => _exReady });
+function exOpen(preset, autoGo) { MSSStudio.open({ preset, who: exWho(), load: () => _exReady, autoGo }); }
+
+function exRecentHTML() {
+  const r = MSSStudio.recent(), last = r[0], rest = r.slice(1);
+  const ic = f => icon(FMT_IC[f] || 'download', 16);
+  const lastHTML = last ? `<section class="ex-card ex-last" aria-labelledby="exLastT">
+      <div class="ex-th">${last.thumb ? `<img src="${esc(last.thumb)}" alt="">` : icon(FMT_IC[last.fmt] || 'download', 30)}</div>
+      <div><p class="ex-k">Last time</p><h2 id="exLastT" translate="no">${esc(last.name)}</h2>
+        <p>${esc([last.fmt, last.opts, exDate(last.at)].filter(Boolean).join(' · '))}</p>
+        <div class="ex-acts"><button type="button" class="ex-btn is-primary" onclick="exAgain(0)">${icon('download', 16)} Export again</button>
+          <button type="button" class="ex-btn" onclick="exEdit(0)">Edit in Studio</button></div></div></section>`
+    : `<section class="ex-card ex-empty">${icon('clock', 20)}<span>Nothing exported on this device yet. What you make shows up here, so you can make it again in one tap.</span></section>`;
+  const recentHTML = `<section class="ex-card ex-recent" aria-labelledby="exRecT"><p class="ex-k" id="exRecT">Recent</p>
+      ${rest.length ? `<ul>${rest.map((x, i) => `<li><span class="ex-ri" aria-hidden="true">${ic(x.fmt)}</span>
+        <button type="button" class="ex-rt" onclick="exEdit(${i + 1})" aria-label="Edit ${esc(x.name)} in the Studio"><b translate="no">${esc(x.name)}</b><small>${esc([x.fmt === 'Spreadsheet' ? x.ext : x.fmt, exDate(x.at)].filter(Boolean).join(' · '))}</small></button>
+        <button type="button" class="ex-again" onclick="exAgain(${i + 1})" aria-label="Export ${esc(x.name)} again">Again</button></li>`).join('')}</ul>`
+      : `<p class="ex-none">Your earlier setups (up to five) show up here.</p>`}</section>`;
+  return `<div class="ex-row">${lastHTML}${recentHTML}</div>`;
 }
+function exAgain(i) { const x = MSSStudio.recent()[i]; if (x) exOpen({ ...x.setup, step: 'options' }, true); }
+function exEdit(i) { const x = MSSStudio.recent()[i]; if (x) exOpen({ ...x.setup, step: 'options' }); }
+
 function exDraw() {
-  const page = document.getElementById('exPage');
-  page.innerHTML = `<div class="ex-wrap fade-up">
-    <div class="ex-eyebrow">Export</div>
-    <h1 class="ex-title">Take your library with you</h1>
-    <p class="ex-sub">Make a PDF to keep, an image to share, a file for another app or a full backup — you choose what goes in and see it before you download.</p>
-
-    <section class="ex-hero" aria-labelledby="exStudioT">
-      <div>
-        <span class="ex-hero-ic" aria-hidden="true">${icon('download', 26)}</span>
-        <h2 id="exStudioT">Export Studio</h2>
-        <p>Pick exactly what goes in — your watched titles, a list, your taste, your year or a show’s episodes — how it’s sorted and how it looks.</p>
-        <ul class="ex-points">
-          <li>${icon('eye', 14)} Live preview</li><li>${icon('lock', 14)} Hide spoilers or your name</li><li>${icon('moon', 14)} Light or dark</li>
-        </ul>
-        <button type="button" class="ex-go" onclick="exOpen(null)">${icon('download', 17)} Open Export Studio</button>
-      </div>
-      <div class="ex-formats" role="group" aria-label="Start with a format">
-        ${EX_FORMATS.map(([k, ic, l, sub]) => `<button type="button" class="ex-fmt" onclick="exOpen({ format: '${k}' })"><span class="ex-fmt-ic" aria-hidden="true">${icon(ic, 19)}</span><b>${l}</b><small>${sub}</small></button>`).join('')}
-      </div>
+  document.getElementById('exPage').innerHTML = `<main class="ex-wrap fade-up">
+    <section class="ex-hero" aria-labelledby="exH">
+      <span class="ex-hero-bg" id="exHeroBg" aria-hidden="true"></span><span class="ex-hero-shade" aria-hidden="true"></span><span class="ex-hero-cap" id="exHeroCap"></span>
+      <div class="ex-hero-tx"><p class="ex-eyebrow"><span translate="no">My<b>Screen</b>Folio</span><i aria-hidden="true"></i>Export</p>
+        <h1 class="ex-title" id="exH">Take your library with you</h1>
+        <p class="ex-sub">A PDF to keep, an image to share, a file for another app or a full backup.</p>
+        <button type="button" class="ex-go" onclick="exOpen(null)">${icon('sparkles', 17)} Open Export Studio</button></div>
+      <div class="ex-stats" id="exStats" aria-label="Your library"></div>
     </section>
-
-    <div class="ex-head"><h3>Quick exports</h3><span>One tap — the Studio opens ready to go</span></div>
-    <div class="ex-grid">${EX_QUICK.map((q, i) => {
-      return `<button type="button" class="ex-card${q.wide ? ' ex-card-wide' : ''}" onclick="exOpen(EX_QUICK[${i}].p)">
-        <span class="ex-card-ic" style="--ic:${q.col}" aria-hidden="true">${icon(q.ic, 21)}</span>
-        <span class="ex-card-main"><b>${esc(q.t)}</b><small>${esc(q.d)}</small>
-          <span class="ex-card-foot"><span class="ex-pill">${esc(q.f)}</span>${q.n ? `<span class="ex-count" data-n="${q.n}"></span>` : ''}</span></span>
-        <span class="ex-arrow" aria-hidden="true">${icon('arrowRight', 16)}</span></button>`;
-    }).join('')}</div>
-
-    <div class="ex-note">
-      <span>${icon('layers', 14)} A list? Open it and use its <b>Export</b> button — <a href="lists.html">Your lists</a></span>
-      <span>${icon('episodes', 14)} A show’s chart is on <a href="episodes.html">Episodes</a> too</span>
-    </div>
-  </div>`;
+    <div id="exRecent">${exRecentHTML()}</div>
+    <div class="ex-head"><h2 id="exReadyT">Ready-made</h2><span>One tap — the Studio opens set up</span></div>
+    <ul class="ex-grid" aria-labelledby="exReadyT">${EX_READY.map((q, i) => `<li><button type="button" class="ex-rm" onclick="exOpen(EX_READY[${i}].p)">
+        <span class="ex-pv ex-rm-pv is-skel" aria-hidden="true"><span class="ex-tag">${esc(q.f)}</span><span class="ex-pv-in" id="exPv_${q.id}"></span></span>
+        <span class="ex-rm-tx"><b>${esc(q.t)}</b><small id="exSub_${q.id}">${esc(q.f)}</small></span></button></li>`).join('')}</ul>
+  </main>`;
+}
+// the hero, once your library's here: your #1's backdrop behind it, watched · watchlist and your average as the score ring
+function exHero() {
+  const w = _exAll.filter(e => ['completed', 'ongoing'].includes(e.status)), sc = w.map(e => liveScore(e)).filter(v => v != null).map(Number);
+  const avg = sc.length ? sc.reduce((a, b) => a + b, 0) / sc.length : null, n = v => Number(v).toLocaleString('en-GB');
+  const st = document.getElementById('exStats');
+  if (st && _exAll.length) st.innerHTML = `<div class="ex-stat"><b>${n(w.length)}</b><small>Watched</small></div><span class="ex-stat-sep" aria-hidden="true"></span>
+    <div class="ex-stat"><b>${n(exCount('watchlist'))}</b><small>Watchlist</small></div>
+    ${avg != null ? `<span class="ex-stat-sep" aria-hidden="true"></span><div class="ex-avg">${MSSStudio.ring(avg, 's')}<div class="ex-stat"><small>Average</small><small>score</small></div></div>` : ''}`;
+  const top = w.filter(e => liveScore(e) != null && e.status !== 'dropped').sort((a, b) => liveScore(b) - liveScore(a))[0];
+  if (top) { MSSStudio.paintBackdrop(document.getElementById('exHeroBg'), top); const c = document.getElementById('exHeroCap'); if (c) c.textContent = `#1 · ${top.title}`; }
+}
+// the cards' subtitles, once your library's here: "PDF · 218", "PDF · 2026"
+function exCounts() {
+  EX_READY.forEach(q => {
+    const el = document.getElementById('exSub_' + q.id); if (!el) return;
+    const n = q.n ? exCount(q.n) : null, y = q.y ? MSSYear.years(_exAll, null)[0] : null;
+    el.textContent = [q.f, n != null ? n : '', y || ''].filter(x => x !== '').join(' · ');
+  });
+}
+// small pictures, drawn by the export code (one at a time, when the page is idle), kept on this device
+async function exThumbs() {
+  const all = _exAll || [], who = exWho(), pr = MSSStudio.prefs();
+  const key = [all.length, all.reduce((m, e) => String(e.updated_at || '') > m ? String(e.updated_at || '') : m, ''), pr.theme || '', who.username, pr.privacy?.anon ? 1 : 0].join('|');
+  const have = MSSStudio.thumbCache.get(key);
+  const put = (id, url) => { const el = document.getElementById('exPv_' + id); if (!el) return; el.parentElement.classList.remove('is-skel'); el.outerHTML = url ? `<img src="${url}" alt="">` : icon(FMT_IC[EX_READY.find(q => q.id === id)?.f] || 'download', 30); };
+  const todo = EX_READY.filter(q => { if (q.id in have) { put(q.id, have[q.id]); return false; } return true; });
+  const idle = () => new Promise(r => (window.requestIdleCallback || setTimeout)(r, { timeout: 1200 }));
+  for (const q of todo) {
+    await idle();
+    let url = null;
+    try { url = await MSSStudio.thumb(q.p, { all, who }); } catch (err) { console.warn('Ready-made picture:', q.id, err); }
+    put(q.id, url);
+    if (url || all.length) MSSStudio.thumbCache.put(key, q.id, url);
+  }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -182,9 +247,18 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
     _exReady = getEntries(user.id).then(r => (_exAll = r || []), () => (_exAll = []));
-    exDraw();                               // straight away; the counts fill in once your library's here
+    exDraw();                               // straight away; the counts and pictures fill in once your library's here
+    window.addEventListener('msf-export-recent', () => { const r = document.getElementById('exRecent'); if (r) r.innerHTML = exRecentHTML(); });
+    // a settings link (export.html#studio=…) opens the Studio set up like that
+    const fromLink = MSSStudio.fromHash();
+    if (fromLink) { history.replaceState(null, '', location.pathname + location.search); exOpen({ ...fromLink, step: 'options' }); }
+    // the header's You → Export shortcuts (nav.js): export.html?format=pdf | image | csv | backup opens the Studio on it
+    const fmt = new URLSearchParams(location.search).get('format');
+    if (!fromLink && EX_FORMATS.includes(fmt)) exOpen({ format: fmt, ...(fmt === 'backup' ? { what: 'all', step: 'options' } : { step: 'what' }) });
     await _exReady;
-    document.querySelectorAll('.ex-count[data-n]').forEach(el => { const n = exCount(el.dataset.n); el.textContent = `${n} ${n === 1 ? 'title' : 'titles'}`; });
+    exHero();
+    exCounts();
+    exThumbs();
   });
 });
 </script>

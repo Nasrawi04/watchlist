@@ -1,32 +1,39 @@
 /* ══════════════════════════════════════════
    social-nav.js — what every Social page starts with
-     MSSSocial.boot(key, opts)  draws the sub-nav strip and starts the page
+     MSSSocial.boot(key, opts)  draws the Social tab bar and starts the page
        opts.friends  load your friends (social-core.js) for this page
        opts.render   the page draws itself with _frRender()
        opts.start    (user, query) → once sign-in is known
-     MSSSocial.paint()          redraws the strip (unread counts changed)
+     MSSSocial.paint()          redraws the bar (request / chat counts changed)
      MSSSocial.count(text)      the line under the page title
-   The strip shows the pages in this page's group, wide screens only: phones
-   and tablets have the top toggles (MSS_TABS, nav.js) for the same places.
+   The bar (wide screens, ≥ 1200px): every Social page in one track, in three groups —
+   People (Friends · Activity · Compare · Blend) │ Together (Movie Night · Challenges · Polls ·
+   Episode Chat) │ Messages (unread badge). Its pages come from SHELL_TABS (nav.js), the same list the
+   phone / tablet Social sheet (shellSheet, nav.js) is built from.
 ══════════════════════════════════════════ */
 const MSSSocial = (() => {
-  const GROUPS = [
-    [['friends', 'Friends', 'friends.html'], ['activity', 'Activity', 'activity.html'], ['compare', 'Compare', 'compare.html'], ['blend', 'Blend', 'blend.html']],
-    [['night', 'Movie Night', 'movie-night.html'], ['challenges', 'Challenges', 'challenges.html'], ['polls', 'Polls', 'polls.html'], ['epchat', 'Episode Chat', 'episode-chat.html']],
-  ];
   let cur = null;
-  function badge(k) {
-    if (k === 'friends' && typeof _frIncoming !== 'undefined' && _frIncoming.length) return `<span class="fr-tab-dot" aria-label="${_frIncoming.length} requests">${_frIncoming.length}</span>`;
-    if (k === 'epchat' && typeof MSSEpChat !== 'undefined' && MSSEpChat.count) return `<span class="soc-strip-n" aria-label="${MSSEpChat.count} new">${MSSEpChat.count}</span>`;
+  const here = () => (location.pathname.split('/').pop() || '').toLowerCase();
+  function groups() {
+    const t = SHELL_TABS.find(x => x.k === 'social');
+    return _socialSections(t).map(s => s.items);
+  }
+  function badge(it) {
+    if (it.req && typeof _frIncoming !== 'undefined' && _frIncoming.length) return `<span class="soc-bar-n is-alert" aria-label="${_frIncoming.length} requests">${_frIncoming.length}</span>`;
+    if (it.href === 'episode-chat.html' && typeof MSSEpChat !== 'undefined' && MSSEpChat.count) return `<span class="soc-bar-n" aria-label="${MSSEpChat.count} new">${MSSEpChat.count}</span>`;
+    if (it.msg) return '<span class="notif-badge soc-bar-badge" data-msg-badge></span>';
     return '';
   }
   function paint(key = cur) {
     cur = key;
-    const el = document.getElementById('socStrip'), group = GROUPS.find(g => g.some(([k]) => k === cur));
+    const el = document.getElementById('socStrip');
     if (!el) return;
-    el.hidden = !group;
-    if (group) el.innerHTML = group.map(([k, label, href]) =>
-      `<a class="pn-toggle-btn${k === cur ? ' active' : ''}" href="${href}"${k === cur ? ' aria-current="page"' : ''}>${label}${badge(k)}</a>`).join('');
+    const page = here();
+    el.innerHTML = groups().map(g => `<div class="soc-bar-group">${g.map(it => {
+      const on = it.href === page;
+      return `<a class="soc-bar-btn${on ? ' active' : ''}${it.msg ? ' nav-msg-btn' : ''}" href="${it.href}"${on ? ' aria-current="page"' : ''}>${icon(it.icon, 14)}<span>${it.label}</span>${badge(it)}</a>`;
+    }).join('')}</div>`).join('<span class="soc-bar-sep" aria-hidden="true"></span>');
+    if (typeof _navMsgBadge === 'function') _navMsgBadge(_navMsgCount);
   }
   function count(text) {
     const el = document.getElementById('socPageSub');

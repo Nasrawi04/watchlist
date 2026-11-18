@@ -5,6 +5,31 @@
 
 // Apply saved theme immediately to avoid flash of wrong mode
 document.documentElement.setAttribute('data-theme', mssThemeOf(mssThemeChoice()));
+mssThemeBar();
+// the browser's bar colour follows the page (mirrors --bg-app in css/theme.css)
+function mssThemeBar() {
+  const m = document.querySelector('meta[name="theme-color"]');
+  if (m) m.content = document.documentElement.getAttribute('data-theme') === 'dark' ? '#04130A' : '#F3EEDC';
+}
+/* App icons (owner, 18 Nov 2026). The tab's icon is the rounded Forest tile (see-through corners, reads on light
+   and dark tab bars): SVG where the browser takes it, a 32px PNG otherwise. Add to Home Screen (apple-touch-icon)
+   and installing the app (manifest-dark.json) follow the system's Light / Dark. A home-screen icon is saved when
+   it's added, so it keeps that look after. */
+function mssAppIcons() {
+  const d = matchMedia('(prefers-color-scheme: dark)').matches ? '-dark' : '';
+  document.querySelectorAll('link[rel="icon"], link[rel="apple-touch-icon"]').forEach(l => l.remove());
+  for (const [rel, href, sizes, type] of [['icon', 'icons/favicon.svg', 'any', 'image/svg+xml'], ['icon', 'icons/favicon-32.png', '32x32', 'image/png'],
+    ['apple-touch-icon', `icons/icon${d}-180.png`, '180x180']]) {
+    const l = document.createElement('link');
+    Object.assign(l, { rel, href }); l.setAttribute('sizes', sizes);
+    if (type) l.type = type;
+    document.head.appendChild(l);
+  }
+  const man = document.querySelector('link[rel="manifest"]');
+  if (man) man.setAttribute('href', d ? 'manifest-dark.json' : 'manifest.json');
+}
+mssAppIcons();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', mssAppIcons);
 
 // ── CONFIGURE ──────────────────────────────
 const SUPABASE_URL      = 'https://yqbfjtkcsgyvnablmuzp.supabase.co';
@@ -83,10 +108,16 @@ function mssSetView(view) {
   url.searchParams.delete('mode');
   if (view === 'mine') url.searchParams.delete('view'); else url.searchParams.set('view', view);
   history.replaceState(history.state, '', url.pathname + url.search);
-  window.mssTabsRefresh?.();
 }
 const mssViewToggleHTML = (id, label, cur, fn) => `<div class="pn-toggle fade-up" id="${id}" role="tablist" aria-label="${label}">${[['mine', 'Mine'], ['friends', 'Friends'], ['community', 'Community']].map(([k, l]) =>
   `<button type="button" class="pn-toggle-btn${cur === k ? ' active' : ''}" role="tab" aria-selected="${cur === k}" data-view="${k}" onclick="${fn}('${k}')">${l}</button>`).join('')}</div>`;
+// …and under 1200px (Notes, Lists): the Library's status tabs under the toolbar; only Mine shows its count
+function mssViewTabsHTML(label, cur, fn, what, mineCount) {
+  return `<div class="lib-tabs" role="tablist" aria-label="${label}">${[
+    ['mine', 'Mine', 'user', `Your ${what}`], ['friends', 'Friends', 'users', 'From your friends'], ['community', 'Community', 'globe', `Everyone’s ${what}`]].map(([k, l, ic, sub]) =>
+    `<button type="button" role="tab" class="lib-tab${k === cur ? ' is-on' : ''}" aria-selected="${k === cur}" onclick="${fn}('${k}')">
+      <span class="lib-tab-ic" aria-hidden="true">${icon(ic, 16)}</span><span class="lib-tab-txt"><span class="lib-tab-l">${l}${k === 'mine' && mineCount != null ? ` <b>${mineCount}</b>` : ''}</span><small>${sub}</small></span></button>`).join('')}</div>`;
+}
 function mssPaintViewToggle(id, view) {
   document.querySelectorAll(`#${id} .pn-toggle-btn`).forEach(b => { const on = b.dataset.view === view; b.classList.toggle('active', on); b.setAttribute('aria-selected', on); });
 }
@@ -229,6 +260,9 @@ const ICONS = {
   calendar: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="17" rx="2"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/></svg>`,
   clock:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`,
   lock:     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`,
+  key:      `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/></svg>`,
+  shield:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></svg>`,
+  phone:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="2"/><path d="M11 18h2"/></svg>`,
   unlock:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-3.24"/></svg>`,
   image:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></svg>`,
   trash:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>`,
@@ -244,6 +278,7 @@ const ICONS = {
   bell:     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>`,
   layers:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>`,
   flag:     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>`,
+  ban:      `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/></svg>`,
   info:     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`,
   activity: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>`,
   skipForward: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg>`,
@@ -254,6 +289,7 @@ const ICONS = {
   compare: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3l4 4-4 4"/><path d="M20 7H4"/><path d="M8 21l-4-4 4-4"/><path d="M4 17h16"/></svg>`,
   ratingStar: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`,
   notebook: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>`,
+  help:     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,
   compass:  `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>`,
   crown:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m2 4 3 12h14l3-12-6 7-4-7-4 7-6-7z"/><path d="M5 20h14"/></svg>`,
   edit:     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>`,
@@ -279,7 +315,10 @@ const ICONS = {
   share:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4"/><path d="m15.4 6.5-6.8 4"/></svg>`,
   inbox:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>`,
   send:     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>`,
+  pin:      `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17v5"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"/></svg>`,
   animeFace: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="9" cy="10" r="1.3" fill="currentColor" stroke="none"/><circle cx="15" cy="10" r="1.3" fill="currentColor" stroke="none"/><path d="M9 15c1 1 5 1 6 0"/></svg>`,
+  grip:     `<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>`,
+  chart:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="12" width="3" height="6" rx="1"/><rect x="12" y="8" width="3" height="10" rx="1"/><rect x="17" y="5" width="3" height="13" rx="1"/></svg>`,
 };
 
 function icon(name, size = 18) {
@@ -465,41 +504,17 @@ function calcObjective(ratings, cat) {
   return Math.round((coreVals.reduce((a, b) => a + Number(b), 0) / coreVals.length) * 100) / 100;
 }
 
-/* ── Live score — always recalculate from ratings when available ── */
-// A title's saved ratings as group cards: each group's average, and its ratings as small bars.
-// Core first, then Bonus under its own header. Only rated ratings, empty groups left out. '' when nothing's rated.
-function mssRatingCardsHTML(ratings, cat, isMovie) {
-  const groups = mssRatedGroups(ratings, cat, isMovie);
-  if (!groups.length) return '';
-  const n = v => Number(v).toFixed(2).replace(/0$/, '');
-  const card = g => `<section class="rg-card" aria-label="${escHTML(g.name)}, ${n(g.avg)}">
-      <div class="rg-head"><h4 class="rg-name">${escHTML(g.name)}</h4><b class="rg-avg">${n(g.avg)}</b></div>
-      <ul class="rg-items">${g.items.map(x => `<li><span class="rg-label">${escHTML(x.label)}</span><span class="rg-bar" aria-hidden="true"><i style="width:${x.v * 10}%"></i></span><b>${x.v.toFixed(1)}</b></li>`).join('')}</ul>
-    </section>`;
-  const core = groups.filter(g => g.kind === 'core'), bonus = groups.filter(g => g.kind === 'bonus');
-  return `<div class="rg-wrap">${core.length ? `<div class="rg-grid">${core.map(card).join('')}</div>` : ''}
-    ${bonus.length ? `<div class="fd-section-hd rg-bonus-hd">Bonus</div><div class="rg-grid">${bonus.map(card).join('')}</div>` : ''}</div>`;
-}
-
-// The Score Breakdown rows: Core 70%, Enjoyment 20%, Bonus 10% (the title page and Import)
-function mssScoreBreakdownHTML(ratings, cat, isMovie) {
-  const has = v => v !== undefined && v !== null && v !== '';
+// The three parts of the score (Core 70% · Enjoyment 20% · Bonus 10%), each an average or null — the Edit page's tab bar
+function mssScoreParts(ratings, cat, isMovie) {
+  const r = ratings || {}, has = v => v !== undefined && v !== null && v !== '';
   const { core, bonus } = getRatings(cat, isMovie);
-  const coreKeys = core.filter(r => r.key !== 'enjoyment').map(r => r.key);
-  if (cat !== 'anime' && cat !== 'cartoons' && has(ratings.animation)) coreKeys.push('animation');
+  const coreKeys = core.filter(x => x.key !== 'enjoyment').map(x => x.key);
+  if (cat !== 'anime' && cat !== 'cartoons' && has(r.animation)) coreKeys.push('animation');
   const avg = l => l.length ? l.reduce((a, b) => a + Number(b), 0) / l.length : null;
-  const coreAvg = avg(coreKeys.map(k => ratings[k]).filter(has)), bonusAvg = avg(bonus.map(r => ratings[r.key]).filter(has));
-  return [
-    { label: 'Core (70%)', val: coreAvg },
-    { label: 'Enjoyment (20%)', val: has(ratings.enjoyment) ? Number(ratings.enjoyment) : null },
-    { label: 'Bonus (10%)', val: bonusAvg },
-  ].map(r => `<div class="score-breakdown-row">
-    <label>${r.label}</label>
-    <div class="score-mini-bar"><div class="score-mini-fill" style="width:${r.val != null ? r.val * 10 : 0}%"></div></div>
-    <span class="score-mini-val">${r.val != null ? Number(r.val).toFixed(2) : '—'}</span>
-  </div>`).join('');
+  return { core: avg(coreKeys.map(k => r[k]).filter(has)), enjoyment: has(r.enjoyment) ? Number(r.enjoyment) : null, bonus: avg(bonus.map(x => r[x.key]).filter(has)) };
 }
 
+/* ── Live score — always recalculate from ratings when available ── */
 function liveScore(e) {
   if (!e) return null;
   const calc = e.ratings ? calcFinal(e.ratings, e.cat) : null;
@@ -698,18 +713,45 @@ const MSSImageCheck = (() => {
   return { allowed, review, preload: () => model().catch(() => {}) };
 })();
 
-/* ── Toast ── */
-function showToast(msg, type = 'ok') {
+/* ── Toast ──
+   One at a time, bottom centre (above the bottom bar on phones); a new one replaces the old.
+   showToast(message)                       4s
+   showToast(message, 'err', { retry })     red ! icon, plus Retry when retry is given
+   _mssToastShow(message, { lead, label, onClick, ms })  lead: HTML on the left (a new notification's avatar)
+   Hovering or focusing it pauses the clock. Announced politely (role=status). */
+const _mssToast = { t: null, left: 0, at: 0 };
+function _mssToastEl() {
   let t = document.getElementById('toast');
-  if (!t) {
-    t = document.createElement('div');
-    t.id = 'toast';
-    document.body.appendChild(t);
+  if (!t) { t = document.createElement('div'); t.id = 'toast'; document.body.appendChild(t); }
+  if (!t._mssBound) {
+    t._mssBound = true;
+    t.setAttribute('role', 'status'); t.setAttribute('aria-live', 'polite');
+    const pause = () => { if (!_mssToast.t) return; clearTimeout(_mssToast.t); _mssToast.t = null; _mssToast.left -= Date.now() - _mssToast.at; t.classList.add('is-paused'); };
+    const resume = () => { if (_mssToast.t || !t.classList.contains('visible') || t.matches(':hover') || t.contains(document.activeElement)) return; t.classList.remove('is-paused'); _mssToastRun(t, Math.max(800, _mssToast.left)); };
+    t.addEventListener('pointerenter', pause); t.addEventListener('focusin', pause);
+    t.addEventListener('pointerleave', resume); t.addEventListener('focusout', () => setTimeout(resume, 0));
   }
-  t.textContent = msg;                       // (also clears any Undo button)
-  t.className = 'toast visible' + (type === 'err' ? ' toast-err' : '');
-  clearTimeout(t._timer);
-  t._timer = setTimeout(() => t.classList.remove('visible'), 3000);
+  return t;
+}
+function _mssToastRun(t, ms) {
+  clearTimeout(_mssToast.t);
+  _mssToast.left = ms; _mssToast.at = Date.now();
+  _mssToast.t = setTimeout(() => { _mssToast.t = null; t.classList.remove('visible'); }, ms);
+}
+function _mssToastShow(msg, { type = 'ok', label = '', onClick = null, ms = 4000, lead = '' } = {}) {
+  const t = _mssToastEl();
+  t.innerHTML = `${type === 'err' ? '<span class="toast-ic" aria-hidden="true">!</span>' : lead}<span class="toast-msg"></span>${label ? '<button type="button" class="toast-undo"></button><span class="toast-bar" aria-hidden="true"></span>' : ''}`;
+  t.querySelector('.toast-msg').textContent = msg;
+  t.className = 'toast visible' + (type === 'err' ? ' toast-err' : '') + (label ? ' toast-has-undo' : '');
+  t.style.setProperty('--toast-ms', ms + 'ms');
+  _mssToastRun(t, ms);
+  const btn = t.querySelector('.toast-undo');
+  if (btn) { btn.textContent = label; btn.onclick = () => { clearTimeout(_mssToast.t); _mssToast.t = null; onClick(btn, t); }; }
+  return t;
+}
+function showToast(msg, type = 'ok', { retry } = {}) {
+  if (type === 'err' && retry) return _mssToastShow(msg, { type, label: 'Retry', ms: 6000, onClick: () => { _mssToastEl().classList.remove('visible'); retry(); } });
+  return _mssToastShow(msg, { type });
 }
 
 /* ── Toast with Undo ──
@@ -742,22 +784,8 @@ async function mssSaveImage(canvas, filename, previewEl) {
   setTimeout(() => { link.remove(); URL.revokeObjectURL(url); }, 200);
 }
 
-// A toast with one button (Undo, Change, Set date…) and a bar showing the time left. Announced (role=status).
-function showActionToast(msg, label, onClick, ms = 6000) {
-  let t = document.getElementById('toast');
-  if (!t) { t = document.createElement('div'); t.id = 'toast'; document.body.appendChild(t); }
-  t.innerHTML = `<span class="toast-msg"></span><button type="button" class="toast-undo"></button><span class="toast-bar" aria-hidden="true"></span>`;
-  t.querySelector('.toast-msg').textContent = msg;
-  t.className = 'toast visible toast-has-undo';
-  t.setAttribute('role', 'status');
-  t.style.setProperty('--toast-ms', ms + 'ms');
-  clearTimeout(t._timer);
-  t._timer = setTimeout(() => t.classList.remove('visible'), ms);
-  const btn = t.querySelector('.toast-undo');
-  btn.textContent = label;
-  btn.onclick = () => { clearTimeout(t._timer); onClick(btn, t); };
-  return t;
-}
+// A toast with one button (Undo, Change, Set date…) and a bar showing the time left.
+function showActionToast(msg, label, onClick, ms = 6000) { return _mssToastShow(msg, { label, onClick, ms }); }
 function showUndoToast(msg, undo, ms = 6000) {
   showActionToast(msg, 'Undo', async btn => {
     btn.disabled = true; btn.textContent = 'Undoing…';
@@ -777,33 +805,96 @@ async function mssConfirmDelete(e) {
                   ['delete', 'Also delete it from your Diary', n === 1 ? 'Removes its watch too.' : `Removes its ${n} watches too.`]] : null });
   return v === true ? 'keep' : v;
 }
-// Its Diary watches go (diary = 'delete'); kept ones stay, unlinked (110). Returns what was removed.
-async function mssDeleteWatches(entryId) {
-  const { data } = await sb.from('diary_watches').select('*').eq('entry_id', entryId);
-  const { error } = await sb.from('diary_watches').delete().eq('entry_id', entryId);
-  if (error) throw error;
-  return data || [];
-}
+/* ── Delete an entry, with Undo ──
+   MSSPendingDelete.run(entry, { diary, onHide, onRestore, carry })
+   Nothing is deleted while Undo is on screen: the entry is hidden at once (onHide; getEntries
+   leaves it out too) and the delete runs when the 6s are up — so Undo puts back everything exactly
+   (ratings, episode ratings, notes, comments, list places, Diary watches…). diary 'delete' also
+   removes its Diary watches (by id); 'keep' leaves them, unlinked, as before (110).
+   The waiting deletes are kept in this browser: leaving or closing the page sends them straight
+   away (keepalive), and anything still waiting is finished on the next page load.
+   carry: true → you're about to go to another page (the full-page editor), which shows the Undo
+   (a fresh 6s) instead. Undo with no onRestore reloads the page (keeps your scroll position). */
+const MSSPendingDelete = (() => {
+  const KEY = 'msf_pending_deletes', MS = 6000, timers = {};
+  let token = null;
+  if (sb) sb.auth.onAuthStateChange((ev, session) => { token = session?.access_token || null; });
+  const read = () => { try { const v = JSON.parse(localStorage.getItem(KEY) || '[]'); return Array.isArray(v) ? v : []; } catch { return []; } };
+  const write = a => { try { a.length ? localStorage.setItem(KEY, JSON.stringify(a)) : localStorage.removeItem(KEY); } catch {} };
+  const put = r => write([...read().filter(x => x.id !== r.id), r]);
+  const drop = id => write(read().filter(x => x.id !== id));
+  const ids = () => new Set(read().map(r => r.id));
 
-// Delete one of your entries with Undo: a full copy is kept first, so Undo
-// puts it back exactly (ratings, notes, dates, and its Diary watches if they went too).
-// Returns the deleted copy.
-async function mssDeleteWithUndo(e, uid, { onUndone, diary = 'keep' } = {}) {
-  const { data: copy } = await sb.from('entries').select('*').eq('id', e.id).single();
-  const watches = diary === 'delete' ? await mssDeleteWatches(e.id) : [];
-  await deleteEntry(e.id, uid);
-  showUndoToast(`Deleted “${e.title || 'entry'}”`, async () => {
-    // the watches first, unlinked: putting the title back links them again (112), so none is logged twice
-    for (let i = 0; i < watches.length; i += 500) {
-      const { error } = await sb.from('diary_watches').insert(watches.slice(i, i + 500).map(({ has_time, ...w }) => ({ ...w, entry_id: null })));
+  async function commit(r) {
+    for (let i = 0; i < (r.watchIds || []).length; i += 200) {
+      const { error } = await sb.from('diary_watches').delete().in('id', r.watchIds.slice(i, i + 200));
       if (error) throw error;
     }
-    const { error } = await sb.from('entries').insert(copy || e);
-    if (error) throw error;
-    if (onUndone) onUndone(copy || e); else location.reload();   // reload keeps your scroll position
-  });
-  return copy;
-}
+    await deleteEntry(r.id, r.uid);
+    drop(r.id);
+  }
+  function wait(r, o) {
+    const left = Math.max(1500, r.until - Date.now());
+    clearTimeout(timers[r.id]);
+    timers[r.id] = setTimeout(() => finish(r, o), left);
+    showUndoToast(`Deleted “${r.title || 'entry'}”`, async () => {
+      clearTimeout(timers[r.id]); delete timers[r.id];
+      drop(r.id);
+      if (o.onRestore) o.onRestore(); else location.reload();
+    }, left);
+  }
+  // A failed delete stays waiting (the next page load tries again) — or Retry now
+  async function finish(r, o) {
+    delete timers[r.id];
+    try { await commit(r); }
+    catch (err) {
+      console.error('Delete entry:', err);
+      showToast(`Couldn’t delete “${r.title || 'entry'}” yet.`, 'err', { retry: () => finish(r, o) });
+    }
+  }
+  async function run(e, o = {}) {
+    const uid = window._navUser?.id || (await getCurrentUser()).id;
+    let watchIds = [];
+    if (o.diary === 'delete') {
+      const { data, error } = await sb.from('diary_watches').select('id').eq('entry_id', e.id);
+      if (error) throw error;
+      watchIds = (data || []).map(w => w.id);
+    }
+    const r = { id: e.id, uid, title: e.title || '', watchIds, until: Date.now() + MS, carry: !!o.carry };
+    put(r);
+    o.onHide?.(e);
+    if (!r.carry) wait(r, o);
+  }
+  // Leaving / closing the page: send what's waiting now (keepalive outlives the page)
+  function flush() {
+    if (!token) return;
+    const h = { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${token}` };
+    read().filter(r => !r.carry).forEach(r => {
+      clearTimeout(timers[r.id]); delete timers[r.id];
+      for (let i = 0; i < (r.watchIds || []).length; i += 100)
+        fetch(`${SUPABASE_URL}/rest/v1/diary_watches?id=in.(${r.watchIds.slice(i, i + 100).join(',')})`, { method: 'DELETE', headers: h, keepalive: true }).catch(() => {});
+      fetch(`${SUPABASE_URL}/rest/v1/entries?id=eq.${encodeURIComponent(r.id)}&user_id=eq.${encodeURIComponent(r.uid)}`, { method: 'DELETE', headers: h, keepalive: true }).catch(() => {});
+    });
+  }
+  // Page load (or coming back to it): a carried delete gets its Undo for the time left; the rest finish now
+  async function resume() {
+    const list = read();
+    if (!list.length || !sb) return;
+    const { data } = await sb.auth.getSession();
+    const me = data?.session?.user?.id;
+    if (!me) return;
+    for (const r of list) {
+      if (r.uid !== me || timers[r.id]) continue;
+      // carried from the page before (just now): a fresh 6s here, since loading the page used some up
+      if (r.carry && Date.now() < r.until + 10000) { const x = { ...r, carry: false, until: Date.now() + MS }; put(x); wait(x, {}); }
+      else commit(r).catch(err => console.warn('Finishing a delete:', err));
+    }
+  }
+  addEventListener('pagehide', flush);
+  addEventListener('pageshow', ev => { if (ev.persisted) resume(); });
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', resume, { once: true }); else resume();
+  return { run, ids };
+})();
 
 /* ── Poster helpers ── */
 /* ── Escaping helpers — use for ANY user- or API-supplied text going into innerHTML ── */
@@ -890,6 +981,56 @@ function mssJumpTo(y) {
   });
 })();
 
+
+/* ── mssMorph(el, html): update el's content to html in place, touching only what changed ──
+   A view that redraws itself as its data arrives (the title panel / page: details, cast, comments… each
+   land separately) would otherwise rebuild every element each time — the backdrop and every poster / photo
+   start hidden again and fade back in: the "blink". Here unchanged nodes stay as they are (an <img> with the
+   same src is kept, loaded), changed text / attributes are set, new pieces are added, gone ones removed.
+   Kept as the page's scripts left them: the classes has-bd · no-bd · is-loaded · fx-vis · is-scrolled, and an
+   inline style when the new markup has none (the backdrop's picture and framing). */
+const mssMorph = (() => {
+  const KEEP = new Set(['has-bd', 'no-bd', 'is-loaded', 'fx-vis', 'is-scrolled']);
+  const sig = n => n.nodeType === 1 ? n.nodeName + '#' + (n.id || '') + '.' + (n.classList[0] || '') : '#' + n.nodeType;
+  function node(a, b) {
+    if (a.nodeType !== b.nodeType || a.nodeName !== b.nodeName) { a.replaceWith(b); return; }
+    if (a.nodeType !== 1) { if (a.nodeValue !== b.nodeValue) a.nodeValue = b.nodeValue; return; }
+    if (a.tagName === 'IMG' && a.getAttribute('src') !== b.getAttribute('src')) { a.replaceWith(b); return; }
+    for (const { name, value } of [...b.attributes]) {
+      if (name === 'class') {
+        const v = [value, ...[...a.classList].filter(c => KEEP.has(c) && !b.classList.contains(c))].join(' ').trim();
+        if (a.getAttribute('class') !== v) a.setAttribute('class', v);
+      } else if (a.getAttribute(name) !== value) a.setAttribute(name, value);
+    }
+    for (const { name } of [...a.attributes]) {
+      if (b.hasAttribute(name) || name === 'style') continue;
+      if (name === 'class') { const v = [...a.classList].filter(c => KEEP.has(c)).join(' '); if (v) a.setAttribute('class', v); else a.removeAttribute('class'); }
+      else a.removeAttribute(name);
+    }
+    if (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA' || a.tagName === 'SELECT') return;   // what's typed stays
+    kids(a, b);
+  }
+  function kids(a, b) {
+    const bn = [...b.childNodes];
+    let i = 0;
+    bn.forEach((x, k) => {
+      let cur = a.childNodes[i];
+      if (!cur) { a.appendChild(x); i++; return; }
+      if (sig(cur) !== sig(x)) {
+        if (bn[k + 1] && sig(cur) === sig(bn[k + 1])) { a.insertBefore(x, cur); i++; return; }        // a new piece here
+        while (cur && a.childNodes[i + 1] && sig(a.childNodes[i + 1]) === sig(x) && sig(cur) !== sig(x)) { cur.remove(); cur = a.childNodes[i]; }   // a piece gone
+      }
+      node(cur, x); i++;
+    });
+    while (a.childNodes.length > i) a.lastChild.remove();
+  }
+  return (el, html) => {
+    if (!el) return;
+    const tpl = document.createElement('template');
+    tpl.innerHTML = html;
+    kids(el, tpl.content);
+  };
+})();
 /* The upload rule, shown wherever you can upload a picture (profile photo, your own poster) */
 function mssUploadRuleHTML() {
   return `<p class="mss-upload-rule">${icon('info', 13)}<span>Only upload pictures you own or have the right to use — not someone else’s photo or artwork without permission. Pictures that break this can be reported and removed.</span></p>`;
@@ -975,7 +1116,7 @@ function clampWords(text, max) {
 /* ── Rich notes (MSSRich) — Letterboxd-style styling for personal notes /
    reviews. Saved as plain text with small markers, so nothing else changes:
      **bold**   *italic*   __underline__   ~~strike~~   > a quoted line
-   MSSRich.html(text)   → safe HTML for a full note (quotes become blocks)
+   MSSRich.html(text, { paras }) → safe HTML for a full note (quotes become blocks; paras: <p> per paragraph)
    MSSRich.plain(text)  → the text without markers (previews, cards, images)
    MSSRich.toolbarHTML(textareaId, endHTML) + MSSRich.attach(textarea, { maxWords, onLimit })
      endHTML (optional) sits at the end of the same row — the note's spoiler toggle
@@ -1009,11 +1150,22 @@ const MSSRich = (() => {
   }
   const runHTML = r => KINDS.filter(k => r.f.includes(k)).reduce((h, k) => `<${TAG[k]}>${h}</${TAG[k]}>`, escHTML(r.t));
   const inline = line => runs(line).map(runHTML).join('');
-  function html(text) {
+  // o.paras: blank lines make paragraphs (<p>) instead of <br> — reading a whole note (the title panel's Review)
+  function html(text, o = {}) {
     const lines = String(text || '').trim().split(/\r?\n/);
     const out = [];
-    let quote = null;
+    let quote = null, para = null;
     const flush = () => { if (quote) { out.push(`<blockquote class="mss-rq">${quote.join('<br>')}</blockquote>`); quote = null; } };
+    if (o.paras) {
+      const end = () => { if (para) { out.push(`<p>${para.join('<br>')}</p>`); para = null; } };
+      lines.forEach(raw => {
+        if (QUOTE.test(raw)) { end(); (quote ||= []).push(inline(raw.replace(QUOTE, ''))); }
+        else if (!raw.trim()) { end(); flush(); }
+        else { flush(); (para ||= []).push(inline(raw)); }
+      });
+      end(); flush();
+      return out.join('');
+    }
     lines.forEach(raw => {
       if (QUOTE.test(raw)) { (quote ||= []).push(inline(raw.replace(QUOTE, ''))); return; }
       flush();
@@ -1241,7 +1393,7 @@ const MSSRich = (() => {
 const MSSEmoji = (() => {
   const FINE = matchMedia('(hover: hover) and (pointer: fine)');
   // where emoji make sense — never search boxes, usernames, numbers or dates
-  const FIELDS = 'textarea:not([readonly]):not([hidden]):not([data-no-emoji]), .mss-rte, #mssCommentsInput, .det-reply-input, #lsName, #xsTitle, #setDisplayName, #mnT, #chT, .ch-in:not([inputmode]), input[id^="pfO"]';
+  const FIELDS = 'textarea:not([readonly]):not([hidden]):not([data-no-emoji]), .mss-rte, .tv-composer .tv-input, #lsName, #xsTitle, #setDisplayName, #mnT, #chT, .ch-in:not([inputmode]), input[id^="pfO"]';
   const GROUPS = [['smile', '😀', 'Smileys'], ['people', '👋', 'People'], ['nature', '🐻', 'Animals & Nature'], ['food', '🍔', 'Food & Drink'], ['activity', '⚽', 'Activities'],
     ['travel', '✈️', 'Travel & Places'], ['objects', '💡', 'Objects'], ['symbols', '❤️', 'Symbols'], ['flags', '🏁', 'Flags']];
   const STARTERS = ['😂', '❤️', '👍', '😭', '🔥'];     // until you've used five of your own
@@ -1401,7 +1553,7 @@ const MSSEmoji = (() => {
     if (refocus && field?.isConnected) field.focus({ preventScroll: true });
   }
 
-  /* ── every emoji: a popup like the site's others (MSSDialog — page locked behind it) ── */
+  /* ── every emoji: a popover by the box (a full page on phones) — MSSDialog: Esc, focus kept inside ── */
   function build() {
     ov = document.createElement('div');
     ov.className = 'mss-emo-ov';
@@ -1458,6 +1610,13 @@ const MSSEmoji = (() => {
     if (!ov) build();
     ov.querySelector('input').value = '';
     MSSDialog.open(ov, { focus: '.mss-emo-search input' });
+    // desktop: under (or above) the smiley / the box, kept on screen; phones: the full page (CSS)
+    const card = ov.firstElementChild, a = (bar?._at || field)?.getBoundingClientRect?.();
+    if (a && innerWidth >= 560) {
+      const w = card.offsetWidth, h = card.offsetHeight, up = a.bottom + 6 + h > innerHeight - 8 && a.top - 6 - h > 8;
+      card.style.left = Math.max(8, Math.min(a.right - w, innerWidth - w - 8)) + 'px';
+      card.style.top = Math.max(8, up ? a.top - 6 - h : Math.min(a.bottom + 6, innerHeight - h - 8)) + 'px';
+    } else card.style.left = card.style.top = '';
     load().then(() => { if (MSSDialog.isOpen(ov)) fill(); })
       .catch(() => { ov.querySelector('.mss-emo-grid').innerHTML = '<div class="mss-emo-wait">Emoji didn’t load — check your connection.</div>'; });
   }
@@ -1581,31 +1740,6 @@ function getTypeBadge(entry, context) {
   return '<span class="type-label">' + label + '</span>';
 }
 
-/* Overlay variant — no poster tag, returns empty (label appears before genres only) */
-/*
- * getTypeBadgeOverlay(entry, context) — Movie/TV Show type tag pinned
- * to a poster's bottom-left corner. Reuses the exact same .type-label/
- * .type-label-tv classes (solid olive for Movie, solid blue for TV
- * Show) used everywhere else on the site for this same distinction —
- * .type-label-overlay-bottom only adds the corner positioning on top
- * of that existing look, rather than introducing a separate badge
- * style.
- */
-function getTypeBadgeOverlay(entry, context) {
-  var cat = (entry && entry.cat) || '';
-  var isMovie;
-  if (cat === 'movies') {
-    isMovie = true;
-  } else if (cat === 'tv') {
-    isMovie = false;
-  } else {
-    var mediaType = (entry && entry.ratings && entry.ratings._media_type) || 'show';
-    isMovie = mediaType === 'movie';
-  }
-  var label = isMovie ? 'Movie' : 'TV Show';
-  var cls = isMovie ? 'type-label type-label-overlay-bottom' : 'type-label type-label-tv type-label-overlay-bottom';
-  return '<span class="' + cls + '">' + label + '</span>';
-}
 
 /* ── Keep your place ──
    Redrawing a page's sections (a title edited, hidden, moved…) or going to a
@@ -1650,12 +1784,13 @@ function mssScrollReturn(root) {
 // a place saved for another page (you went somewhere else instead) is dropped
 try {
   const s = JSON.parse(sessionStorage.getItem('mssScrollBack') || 'null'), page = location.pathname.split('/').pop() || 'index.html';
-  if (s && page !== 'detail.html' && s.page.split('?')[0] !== page) sessionStorage.removeItem('mssScrollBack');
+  if (s && page !== 'detail.html' && page !== 'item.html' && s.page.split('?')[0] !== page) sessionStorage.removeItem('mssScrollBack');   // (the Edit page and a title's page keep it for Back)
 } catch {}
 
-/* Profile photos: saved as a 400px JPEG at 0.82 (~30–50 kB). Shown at ~80px at most,
-   so 400 stays sharp on 3× screens. Settings uses it for uploads, nav.js to shrink old ones. */
-const MSS_AVATAR = { px: 400, q: 0.82, max: 80 * 1024 };   // max = a saved photo bigger than this gets redone
+/* Profile photos: a 2:3 portrait (the profile shows it like a title's poster), saved as a 400×600 JPEG at 0.82
+   (~40–70 kB); round avatars elsewhere crop its middle. Photos from before are square — still fine everywhere.
+   Settings uses it for uploads, nav.js to shrink old ones (keeping their shape). */
+const MSS_AVATAR = { px: 400, h: 600, q: 0.82, max: 110 * 1024 };   // px = width; max = a saved photo bigger than this gets redone
 // Older versions saved avatar.png / avatar.jpeg, so a new photo left the old file behind.
 // Removes every file in your avatars folder except the one your profile uses (keepUrl;
 // null = remove them all, for deleting the account).
@@ -1668,8 +1803,10 @@ async function mssAvatarTidy(uid, keepUrl) {
 }
 
 /* ── Navigation helpers ── */
-function goToDetail(id, fromFile) {
+// tab: the Edit page's tab to open on ('ratings' | 'progress' | 'review'; Info otherwise)
+function goToDetail(id, fromFile, tab) {
   sessionStorage.setItem('detailId', id);
+  if (tab) sessionStorage.setItem('detailScrollTo', tab); else sessionStorage.removeItem('detailScrollTo');
   try { sessionStorage.setItem('mssScrollBack', JSON.stringify({ page: _mssHere(), t: Date.now(), ...mssScrollSnap(document.body) })); } catch {}
   // Coming from this very page → keep its ?query too, so Back returns to the
   // same title / list / profile (title.html without ?type&id showed nothing)
@@ -1704,20 +1841,17 @@ function mssTitleLinkHTML(e, innerHTML) {
   return `<button type="button" class="mss-title-link" onclick="mssOpenTitle(${attrJSON(src)}, this)">${innerHTML}</button>`;
 }
 function mssOpenTitle(src, btn) {
-  // close whichever popup it came from — the search picker opens on its own
-  if (typeof MSSRate !== 'undefined') MSSRate.close();
-  if (typeof MSSNote !== 'undefined') MSSNote.close();
   MSSInfo.discover(src, btn);
 }
 /* ── Like / dislike on someone's note, list or reply ──
    mssReactions → { like, dislike, mine:'like'|'dislike'|null }
    mssReact     → toggles your reaction, returns the new state (popups)
    mssReactFeed → same, but shows the change at once and rolls it back if
-                  saving fails (feeds: Notes, Lists, title page notes/replies)
-   mssReactButtonsHTML draws the 👍 / 👎 pair. */
+                  saving fails (feeds: Notes, Lists, title page notes/replies) */
 const _MSS_REACT = {
   note: ['note_reactions', 'entry_id'], list: ['list_reactions', 'list_id'],
   noteReply: ['note_reply_reactions', 'reply_id'], listReply: ['list_reply_reactions', 'reply_id'],
+  epReply: ['ep_note_reply_reactions', 'reply_id'],
 };
 async function mssReactions(kind, id) {
   const [t, c] = _MSS_REACT[kind], me = window._navUser?.id;
@@ -1758,7 +1892,7 @@ async function mssReactFeed(kind, id, isLike, get, set) {
 }
 /* ── Double-tap / double-click to like — everywhere there's a Like button ──
    Mark the area with data-dbl-like and its Like button with data-like
-   (mssReactButtonsHTML does this already). A double tap / double click
+   (a title's Review tab does this already). A double tap / double click
    anywhere in the area presses that Like — only if it isn't liked yet, so
    it never un-likes and does nothing else. The button is looked for inside
    the area, then in the popup the area sits in. If the area opens something
@@ -1795,12 +1929,6 @@ async function mssReactFeed(kind, id, isLike, get, set) {
   });
 })();
 
-function mssReactButtonsHTML(state, onLike, onDislike) {
-  const st = state || { like: 0, dislike: 0, mine: null };
-  return `<button type="button" class="popup-action-btn np-react${st.mine === 'like' ? ' is-on' : ''}" onclick="${onLike}" data-like aria-label="Like" aria-pressed="${st.mine === 'like'}">${icon(st.mine === 'like' ? 'thumbsUpFilled' : 'thumbsUp', 14)}<span>${st.like}</span></button>
-    <button type="button" class="popup-action-btn np-react np-react-down${st.mine === 'dislike' ? ' is-on' : ''}" onclick="${onDislike}" aria-label="Dislike" aria-pressed="${st.mine === 'dislike'}">${icon(st.mine === 'dislike' ? 'thumbsDownFilled' : 'thumbsDown', 14)}<span>${st.dislike}</span></button>`;
-}
-
 // A username in a popup → their profile (your own goes to your profile)
 function mssProfileLinkHTML(p, innerHTML) {
   if (!p || (!p.id && !p.username)) return innerHTML;
@@ -1826,14 +1954,6 @@ function mssDroppedTagHTML(e, withAt = true) {
   return `<span class="dropped-tag">${icon('drop', 11)} ${escHTML(withAt ? mssDroppedLabel(e) : 'Dropped')}</span>`;
 }
 
-// "Up Next" / "Taking a Break" cover on a poster: the poster softly
-// blurred + dimmed, with a big label pill that scales with the poster
-// (style.css .mss-hold). Use inside a position:relative poster box.
-function mssHoldHTML(e) {
-  const upNext = e.status === 'up_next';
-  if (!upNext && e.status !== 'paused') return '';
-  return `<div class="mss-hold ${upNext ? 'is-up-next' : 'is-break'}"><span class="mss-hold-label">${MSSI18n.lang === 'en' ? (upNext ? 'Up<br>Next' : 'Taking<br>a Break') : escHTML(mssT(upNext ? 'Up Next' : 'Taking a Break'))}</span></div>`;
-}
 
 /* ── A show's AIRED episodes, season by season (from TMDB's /tv/{id}) ──
    TMDB lists announced seasons before they air (e.g. a season 4 premiering next year, with
@@ -1886,7 +2006,7 @@ async function mssFixUnaired(entries, userId, onChange) {
       const s = Number(e.season) || 0, n = Number(e.episode) || 0, ls = a.breakdown.length, ln = a.breakdown[ls - 1];
       if (s > ls || (s === ls && n > ln) || (s === ls && n === ln && e.status === 'watching')) {   // walked into (or up to) episodes not out yet
         upd.season = ls; upd.episode = ln; upd.watched = a.eps;
-        if (e.status === 'watching') { upd.status = 'ongoing'; showToast(`${e.title}: you’re all caught up — it waits in To Be Continued until new episodes air.`); }
+        if (e.status === 'watching') { upd.status = 'ongoing'; showToast(`${e.title}: you’re all caught up — it waits in Watched until new episodes air.`); }
       }
       await updateProgress(e.id, userId, upd);
       Object.assign(e, upd); changed = true;
@@ -1896,7 +2016,7 @@ async function mssFixUnaired(entries, userId, onChange) {
 }
 
 /* To Be Continued shows with new episodes fully out (MSSSchedule.newOut, tv-schedule.js) — the
-   category pages and your Library mark them; nothing moves until you tap Up Next.
+   Library pages show them in Watching's Up next (Start); the status stays 'ongoing' until you start.
    → { entryId: { s, n, air } } */
 async function mssNewEpisodes(entries) {
   const shows = entries.filter(e => e.status === 'ongoing' && e.tmdb_id && e.tmdb_type === 'tv' && e.ratings?._media_type !== 'movie');
@@ -1912,12 +2032,6 @@ async function mssNewEpisodes(entries) {
 }
 // "New Season" when the new episode starts a season after yours, else "New Episodes"
 const _mssNewWhat = (e, ep) => ep.s > (Number(e.season) || 0) ? 'Season' : 'Episodes';
-// …on the poster: the same cover as Up Next / Taking a Break, in its own colour
-function mssNewSeasonHoldHTML(e, ep) {
-  if (!ep) return '';
-  const w = _mssNewWhat(e, ep);
-  return `<div class="mss-hold is-new"><span class="mss-hold-label">${MSSI18n.lang === 'en' ? 'New<br>' + w : escHTML(mssT('New ' + w))}</span></div>`;
-}
 // …and a badge like the genre ones (its own colour): "New Season · S3"
 function mssNewSeasonBadgeHTML(e, ep) {
   return ep ? `<span class="w-ep-badge mss-new-badge">${icon('sparkles', 11)} New ${_mssNewWhat(e, ep)} · S${ep.s}${_mssNewWhat(e, ep) === 'Episodes' ? ' E' + ep.n : ''}</span>` : '';
@@ -1932,22 +2046,6 @@ function mssToolbarHTML(label, count, barHTML = '', noun = 'item') {
     </div>${barHTML}`;
 }
 
-/* ══════════════════════════════════════════
-   POSTER CARD — MSSCard.poster (.q-card)
-   One poster card for every poster row / grid: Home, Discover + its lists,
-   search results, the title page's "You might also like", person credits,
-   shared lists, the Episodes search and the dashboard picks.
-     MSSCard.poster({
-       title, year,
-       poster: url  |  posterHTML: '<img…>'   (e.g. posterHTML(entry, 'big'))
-       onclick: 'js…' | href: 'page.html' | attrs: 'onclick="…" data-…'
-       type: 'movie' | 'tv' | 'Label'   (bottom-left tag; typeHTML for a custom one)
-       rank,                            (1, 2, 3… badge)
-       score: '8.5' | scoreHTML,        (★ row under the title)
-       below, overPoster, cls, infoCls  (extra HTML / classes)
-     })
-   Cards are keyboard-usable: links, or role="button" + Enter / Space.
-══════════════════════════════════════════ */
 // "Who can view" (lists 068, notes 069): the private link — copies it, or a fresh one
 // (fresh = the old link stops working). kind: 'list' → list-view.html, 'note' → notes.html
 async function mssCopyShareLink(kind, id, fresh) {
@@ -2039,42 +2137,459 @@ function mssVisBadge(visibility) {
   return '';
 }
 
+/* ══════════════════════════════════════════
+   THE STANDARD ITEM CARD — MSSCard.poster (.msf-card, style.css §60)
+   One card for every movie, show, anime and cartoon in a grid or rail:
+   Home, Discover + its lists, search, Title, Person, the Library and the
+   category pages, lists, ratings bands, profiles, Movie Night, Blend…
+     MSSCard.poster({
+       title, year,
+       poster: url  |  posterHTML: '<img…>'     (e.g. posterHTML(entry, 'big', MSF_CARD_SIZES))
+       onclick: 'js…' | href: 'page.html' | attrs: 'onclick="…" data-…'
+       type: 'movie' | 'tv' | { label, tv }     (bottom-left tag — mssTypeOf)
+       rank | rankHTML,                         (top-left: MSF's rank tab, or a rating badge)
+       rewatch, status: 'up_next' | 'paused',   (top-right)
+       score (yours, 2 decimals) | tmdb ('8.1'), off (a dropped score)
+       meta: { long, short } | 'text',  sub,    (line 2 left / an extra line under the title)
+       progress: { badge, count, pct, muted },  (Watching / Taking a Break instead of line 2)
+       controls, below, over, cls, label, age, tk, bd: 'tv:1396' (a row's TMDB backdrop), art (its fallback: the poster),
+       decor: true                              (just the look, inside a dialog or link that says it all)
+     })
+   MSSCard.row(o) draws the same options as a list row (list views).
+   mssEntryCard(e, o) builds those options from one of your titles, MSSCard.tmdb(it, o) from a
+   TMDB item (your status + score when it's in your library — MSSMine). Keyboard: links, or
+   role="button" + Enter / Space. Badges are aria-hidden; the card's aria-label says it all once.
+══════════════════════════════════════════ */
+const MSF_CARD_SIZES = '(max-width:600px) 130px, (max-width:1100px) 190px, (min-width:2200px) 270px, 230px';
+// A rating with one decimal, never rounded up (owner): 8.78 → "8.7", 9.99 → "9.9", 10 → "10.0". Differences
+// (+0.46 / −0.46) are cut towards zero the same way. The 1e-9 keeps 8.7 from showing as 8.6 (8.7 × 10 = 86.99999…).
+function mssR1(v) {
+  const n = Number(v);
+  if (!isFinite(n)) return String(v);
+  const t = Math.trunc(n * 10 + (n < 0 ? -1e-9 : 1e-9)) / 10;
+  return (Object.is(t, -0) ? 0 : t).toFixed(1);
+}
+/* ── THE RATING SCALE — 9 tiers, the one place every score's colour comes from ──
+   CSS: --st-<key> (the colour) / --st-<key>-on (text on it) in css/theme.css, light + dark.
+   The class .st-<key> (or the filled .ep-band-<key>) sets --st / --st-on / --st-fill on an element: rings,
+   numbers and bars use var(--st); chips, badges and heatmap cells use var(--st-fill) + var(--st-on).
+   Anything always on a dark backdrop (photos, the title hero) gets the dark values (.st-dark in theme.css).
+   JS: mssScoreTier(v) → { key, name, min, cls, bg, fg, ink, gold, fill } — hex for the current theme, or
+   o.dark: true for the dark values (canvas, photo backdrops). o.dropped: never gold.
+   Judged on the number as shown (2 decimals). Masterpiece (9.90+) is gold. */
+const MSS_TIERS = [
+  { min: 9.9, key: 'masterpiece', name: 'Masterpiece', light: '#C9A227', dark: '#C9A227', onL: '#241800', onD: '#241800', inkL: '#9A7208', inkD: '#E3C45C', gold: true },
+  { min: 9.5, key: 'outstanding', name: 'Outstanding', light: '#1D4FA0', dark: '#3D7FE0', onL: '#FFFFFF', onD: '#FFFFFF' },
+  { min: 9.0, key: 'excellent',   name: 'Excellent',   light: '#1F6A35', dark: '#2F9A50', onL: '#FFFFFF', onD: '#FFFFFF' },
+  { min: 8.0, key: 'great',       name: 'Great',       light: '#4A9443', dark: '#6BBF5E', onL: '#FFFFFF', onD: '#10200D' },
+  { min: 7.0, key: 'decent',      name: 'Decent',      light: '#97A63A', dark: '#B5C454', onL: '#1C2008', onD: '#1C2008' },
+  { min: 6.0, key: 'mixed',       name: 'Mixed',       light: '#D98E2B', dark: '#F0A64A', onL: '#241503', onD: '#241503' },
+  { min: 5.0, key: 'weak',        name: 'Weak',        light: '#C2541A', dark: '#E7743A', onL: '#FFFFFF', onD: '#241005' },
+  { min: 4.0, key: 'bad',         name: 'Bad',         light: '#9E1F1A', dark: '#D2423A', onL: '#FFFFFF', onD: '#FFFFFF' },
+  { min: 0,   key: 'garbage',     name: 'Garbage',     light: '#4E2A84', dark: '#8B5CD6', onL: '#FFFFFF', onD: '#FFFFFF' },
+];
+// Masterpiece's gold, for canvas gradients (addColorStop) and CSS fills
+const MSS_GOLD_STOPS = [[0, '#F3DC8A'], [0.5, '#C9A227'], [1, '#8A6300']];
+const MSS_GOLD_FILL = 'linear-gradient(135deg, #F3DC8A 0%, #C9A227 50%, #8A6300 100%)';
+function mssScoreTier(v, o = {}) {
+  if (v == null || v === '' || isNaN(v)) return null;
+  const n = Number(Number(v).toFixed(2));
+  let t = MSS_TIERS.find(x => n >= x.min) || MSS_TIERS[MSS_TIERS.length - 1];
+  if (t.gold && o.dropped) t = MSS_TIERS[1];
+  const dark = o.dark != null ? !!o.dark : document.documentElement.getAttribute('data-theme') !== 'light';
+  const bg = dark ? t.dark : t.light;
+  return { key: t.key, name: t.name, min: t.min, cls: 'st-' + t.key, gold: !!t.gold, bg, fg: dark ? t.onD : t.onL,
+    ink: t.gold ? (dark ? t.inkD : t.inkL) : bg, fill: t.gold ? MSS_GOLD_FILL : bg };
+}
+// ' st-<key>' for a class list ('' with no score)
+function mssTierCls(v, o) { const t = mssScoreTier(v, o); return t ? ' ' + t.cls : ''; }
+// Swap an element's tier class in place (live inputs, sliders): no score → no tier class
+function mssSetTier(el, v, o) {
+  if (!el) return;
+  [...el.classList].forEach(c => { if (c.startsWith('st-')) el.classList.remove(c); });
+  const t = mssScoreTier(v, o); if (t) el.classList.add(t.cls);
+}
+// The top tier (Masterpiece, 9.90+) is gold — judged on the number as shown (2 decimals)
+function mssIsGold(v) { return v != null && v !== '' && !isNaN(v) && Number(Number(v).toFixed(2)) >= 9.9; }
+// MSF's rating number: "★ 9.65" (yours, 2 decimals) · TMDB: already formatted (1 decimal). Coloured by its tier
+function mssScoreHTML(v, o = {}) {
+  if (v == null || v === '' || isNaN(v)) return '';
+  if (o.tmdb) return `<span class="msf-score is-tmdb${mssTierCls(v)}${mssIsGold(v) ? ' is-gold' : ''}${o.cls ? ' ' + o.cls : ''}" aria-label="TMDB score ${escHTML(String(v))}">★ ${escHTML(String(v))}</span>`;
+  const s = Number(v).toFixed(2);
+  return `<span class="msf-score${o.off ? ' is-off' : mssTierCls(v) + (mssIsGold(v) ? ' is-gold' : '')}${o.cls ? ' ' + o.cls : ''}"${o.off ? ' title="Doesn’t count"' : ''}>★ ${s}</span>`;
+}
+// Movie / TV Show / Anime / Cartoon, coloured by format (film brown, TV blue — .type-label)
+function mssTypeOf(cat, isMovie) {
+  return { label: cat === 'anime' ? 'Anime' : cat === 'cartoons' ? 'Cartoon' : isMovie ? 'Movie' : 'TV Show', tv: !isMovie };
+}
+// The badges under a title on the big backdrop cards (profile & Home Top Favorites, the Watched podium) — one look everywhere:
+// the type tag (Movie brown / TV blue, .type-label), then year, seasons (shows) and o.genres genres as glass chips (.mss-tag)
+function mssPhotoTagsHTML(e, o = {}) {
+  const movie = mssIsMovieEntry(e), t = mssTypeOf(e.cat, movie), y = e.year ? String(e.year).slice(0, 4) : '';
+  const seasons = !movie && typeof mssMetaOf === 'function' ? String(mssMetaOf(e).long || '').split(' · ')[0] : '';
+  const gs = o.genres ? (Array.isArray(e.genres) ? e.genres.slice(0, o.genres) : []) : [];
+  const chip = s => `<span class="mss-tag">${escHTML(s)}</span>`;
+  return `<span class="mss-tags${o.cls ? ' ' + o.cls : ''}" aria-hidden="true"><span class="type-label${t.tv ? ' type-label-tv' : ''}">${t.label}</span>${y ? chip(y) : ''}${/season/i.test(seasons) ? chip(seasons) : ''}${gs.map(chip).join('')}</span>`;
+}
+// A title's favourite character / episode / season (then the least favourites, muted) as small gold chips (.lp-fav) — the Library
+// cards, the Watched podium and the profile's Top Favorites. cls: the row's class (default 'lp-favs'). '' when there are none.
+function mssFavChipsHTML(e, cls) {
+  const r = e?.ratings; if (!r || (!r._favorites && !r._lowlights)) return '';
+  const f = r._favorites || {}, low = r._lowlights || f._lowlights || {}, mv = e.cat === 'movies';
+  const item = (what, v, lo) => {
+    if (!v) return '';
+    const m = what === 'episode' && /^S(\d+)E(\d+)\b/.exec(v), shown = m ? 'S' + m[1] + ' E' + m[2] : v;
+    return `<span class="lp-fav${lo ? ' is-low' : ''}" title="${escHTML((lo ? 'Least favourite ' : 'Favourite ') + what + ': ' + v)}">${icon({ character: 'user', episode: 'episodes', season: 'layers' }[what], 11)}<b translate="no">${escHTML(shown)}</b></span>`;
+  };
+  const html = item('character', f.character) + (mv ? '' : item('episode', f.episode) + item('season', f.season))
+    + item('character', low.character, true) + (mv ? '' : item('episode', low.episode, true) + item('season', low.season, true));
+  return html ? `<div class="${cls || 'lp-favs'}">${html}</div>` : '';
+}
+// The rewatch pill (.rewatch-badge) — shown from 2 watches
+function mssRewatchBadgeHTML(n) {
+  return n > 1 ? `<span class="rewatch-badge" title="Watched ${n} times"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg> ${n}</span>` : '';
+}
+// Up Next / Taking a Break — the only two status badges: a green pill (icon only on small cards)
+const MSS_STATUS = { up_next: ['Up Next', 'skipForward'], paused: ['Taking a Break', 'pause'] };
+function mssStatusPillHTML(status) {
+  const st = MSS_STATUS[status];
+  return st ? `<span class="msf-card__status" title="${st[0]}">${icon(st[1], 11)}<span class="msf-card__status-t">${st[0]}</span></span>` : '';
+}
+const mssRewatchCount = e => Number(e?.ratings?._rewatch_count) || 1;
+// Runtime for films; "4 Seasons · 86 Eps" (short "S4 · E86") for shows
+function mssMetaOf(e) {
+  if (mssIsMovieEntry(e)) {
+    const h = Number(e.runtime_h) || 0, m = Number(e.runtime_m) || 0;
+    const t = h || m ? (h ? `${h}h ${m}m` : `${m}m`) : '';
+    return { long: t, short: t };
+  }
+  const bd = Array.isArray(e.ratings?._season_breakdown) ? e.ratings._season_breakdown.filter(n => parseInt(n) > 0).map(Number) : [];
+  const s = bd.length || Number(e.total_seasons) || 0, n = bd.length ? bd.reduce((a, b) => a + b, 0) : Number(e.total_eps) || 0;
+  const L = [s ? `${s} ${s === 1 ? 'Season' : 'Seasons'}` : '', n ? `${n} ${n === 1 ? 'Ep' : 'Eps'}` : ''].filter(Boolean).join(' · ');
+  const S = [s ? `S${s}` : '', n ? `E${n}` : ''].filter(Boolean).join(' · ');   // short: "S9 · E91"
+  return { long: L, short: S };
+}
+// The same details as plain text for list rows ("2h 44m", "4 Seasons · 86 Eps", short "S4 · E86" on phones)
+function mssRowMetaHTML(e) {
+  const m = mssMetaOf(e);
+  return m.long ? `<span class="msf-row-meta"><span class="is-long">${escHTML(m.long)}</span><span class="is-short">${escHTML(m.short)}</span></span>` : '';
+}
+// One of your titles → card options (status, score, meta or progress, type, rewatch)
+// the small "Comments" strip under a list row → that title's Comments tab
+function mssCommentsStripHTML(onclick) {
+  return `<button type="button" class="cc-strip" onclick="${onclick}">${icon('comment', 11)}<span>Comments</span></button>`;
+}
+function mssEntryCard(e, o = {}) {
+  const movie = mssIsMovieEntry(e), st = e.status;
+  const c = { title: e.title, year: e.year, posterHTML: posterHTML(e, 'big', MSF_CARD_SIZES), art: e.poster_url, bd: MSSBackdrop.key(e), bdStyle: MSSBackdrop.style(e, false, 'list'), type: mssTypeOf(e.cat, movie),
+    rewatch: mssRewatchCount(e), dropped: st === 'dropped' };
+  if (st === 'up_next' || st === 'paused') c.status = st;
+  if ((st === 'watching' || st === 'paused') && !movie && (e.total_eps || e.season != null || e.watched)) {
+    const pct = e.total_eps ? Math.round(((e.watched ?? 0) / e.total_eps) * 100) : null;
+    c.progress = { badge: e.season != null ? `S${e.season} · E${e.episode ?? 0}` : (e.watched ? `Ep ${e.watched}` : ''),
+      count: e.total_eps ? `${e.watched ?? 0} / ${e.total_eps} eps` : '', pct, muted: st === 'paused' };
+  } else c.meta = mssMetaOf(e);
+  if (st === 'completed' || st === 'ongoing' || st === 'dropped') { const s = liveScore(e); if (s != null) { c.score = s; c.off = st === 'dropped'; } }
+  if (st === 'dropped' && !movie && e.total_eps) c.meta = { long: `Dropped · ${e.watched ?? 0} / ${e.total_eps} eps`, short: `${e.watched ?? 0}/${e.total_eps}` };
+  return Object.assign(c, o);
+}
+
+/* Your library, for cards on mixed pages (Discover, Home rails, Title, Person, Search):
+   Up Next / Taking a Break / rewatch badges only — no watching progress (S·E badge, eps, % bar: that's
+   the Library's and Home's Continue watching, owner 17 Nov 2026); the rating is always TMDB's here —
+   your MSF score shows only in your library and lists.
+   A page that already has your entries hands them over (MSSMine.set); otherwise they're loaded
+   once, and the cards already drawn are redrawn with your status. */
+const MSSMine = (() => {
+  let map = null, loading = null;
+  const reg = [];                                  // what each drawn card was made from (data-tki)
+  const k = (t, id) => `${t === 'movie' ? 'movie' : 'tv'}:${id}`;
+  function set(entries) {
+    map = new Map();
+    (entries || []).forEach(e => { if (e.tmdb_id) map.set(k(e.tmdb_type || (mssIsMovieEntry(e) ? 'movie' : 'tv'), e.tmdb_id), e); });
+    document.querySelectorAll('.msf-card[data-tki], .msf-row[data-tki]').forEach(el => {
+      const r = reg[el.dataset.tki];
+      if (!r || !map.has(el.dataset.tk)) return;
+      const t = document.createElement('template');
+      t.innerHTML = MSSCard.tmdb(r.it, r.o).trim();
+      const next = t.content.firstElementChild;
+      // keep what the page added after drawing it (e.g. Discover lists' "dl-in-view" fade-in) — without it the row stays invisible
+      el.classList.forEach(c => { if (!/^(msf-|is-|has-)/.test(c)) next.classList.add(c); });
+      el.replaceWith(next);
+    });
+  }
+  function load() {
+    if (map || loading || typeof getEntries !== 'function') return;
+    loading = (async () => {
+      for (let i = 0; i < 40 && !window._navUser; i++) await new Promise(r => setTimeout(r, 250));   // signed in? (nav.js)
+      if (window._navUser && !map) set(await getEntries(window._navUser.id));
+    })().catch(() => {});
+  }
+  return { set, load, get: (t, id) => (map ? map.get(k(t, id)) : null) || null, key: k, reg };
+})();
+
 const MSSCard = (() => {
+  const KEYS = `onkeydown="if(event.target===this&&(event.key==='Enter'||event.key===' ')){event.preventDefault();this.click()}"`;
   const RANK = r => r === 1 ? 'cg-rank-1' : r === 2 ? 'cg-rank-2' : r === 3 ? 'cg-rank-3' : 'cg-rank-other';
-  const KEYS = `onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click()}"`;
+  const STATUS = MSS_STATUS;
   function img(url, title) {
     const u = safeURL(url), letter = escHTML((title || '?')[0].toUpperCase());
-    return u ? `<img src="${u}" alt="" loading="lazy" data-letter="${letter}" onerror="mssImgError(this)" style="width:100%;height:100%;object-fit:cover;">`
-      : `<div class="home-tmdb-poster-fallback">${letter}</div>`;
+    if (!u) return `<span class="msf-card__letter" aria-hidden="true">${letter}</span>`;
+    const m = /^(https:\/\/image\.tmdb\.org\/t\/p\/)(?:w\d+|original)(\/.+)$/.exec(u);
+    const set = m ? ` srcset="${m[1]}w185${m[2]} 185w, ${m[1]}w342${m[2]} 342w, ${m[1]}w500${m[2]} 500w" sizes="${MSF_CARD_SIZES}"` : '';
+    return `<img src="${m ? `${m[1]}w342${m[2]}` : u}"${set} alt="" loading="lazy" decoding="async" data-letter="${letter}" onerror="mssImgError(this)">`;
   }
+  const typeObj = t => !t ? null : typeof t === 'object' ? t : t === 'movie' ? { label: 'Movie', tv: false } : t === 'tv' ? { label: 'TV Show', tv: true } : { label: t, tv: !/movie/i.test(t) };
   function typeTag(t) {
-    if (!t) return '';
-    const movie = t === 'movie', label = movie ? 'Movie' : t === 'tv' ? 'TV Show' : t;
-    return `<span class="${movie ? 'type-label' : t === 'tv' ? 'type-label type-label-tv' : 'type-label'} type-label-overlay-bottom">${escHTML(label)}</span>`;
+    t = typeObj(t);
+    return t ? `<span class="type-label${t.tv ? ' type-label-tv' : ''} msf-card__type" aria-hidden="true">${escHTML(t.label)}</span>` : '';
+  }
+  const metaTxt = m => !m ? null : typeof m === 'string' ? { long: m, short: m } : m;
+  function label(o, t) {
+    const p = [o.title, o.year ? String(o.year).slice(0, 4) : '', t && t.label];
+    if (o.status) p.push(STATUS[o.status][0]);
+    if (o.progress) p.push([o.progress.badge, o.progress.count, o.progress.pct != null ? `${o.progress.pct}% watched` : ''].filter(Boolean).join(', '));
+    if (o.score != null) p.push(`your score ${Number(o.score).toFixed(2)}${o.off ? ', doesn’t count' : ''}`);
+    else if (o.tmdb != null) p.push(`TMDB score ${o.tmdb}`);
+    if (o.labelExtra) p.push(o.labelExtra);
+    if (o.rewatch > 1) p.push(`watched ${o.rewatch} times`);
+    if (o.rank) p.push(`rank ${o.rank}`);
+    return p.filter(Boolean).join(', ');
   }
   function poster(o) {
-    const cls = 'q-card' + (o.cls ? ' ' + o.cls : '');
-    const inner = `
-      <div class="q-poster" style="position:relative">${o.posterHTML != null ? o.posterHTML : img(o.poster, o.title)}<div class="q-poster-overlay"></div>${o.rank ? `<div class="cg-rank-badge ${RANK(o.rank)}">${o.rank}</div>` : ''}${o.typeHTML != null ? o.typeHTML : typeTag(o.type)}${o.overPoster || ''}</div>
-      <div class="q-info${o.infoCls ? ' ' + o.infoCls : ''}">
-        <div class="title-year-row"><div class="q-title" style="margin-bottom:0;" translate="no">${escHTML(o.title || '')}</div>${o.year ? `<span class="title-year-inline">${escHTML(String(o.year).slice(0, 4))}</span>` : ''}</div>
-        ${o.below || ''}${o.score ? `<div class="home-tmdb-meta-row"><span class="home-tmdb-score">★ ${escHTML(o.score)}</span></div>` : o.scoreHTML ? `<div class="home-tmdb-meta-row">${o.scoreHTML}</div>` : ''}
+    const t = typeObj(o.type), m = metaTxt(o.meta), pr = o.progress;
+    const st = o.status && STATUS[o.status];
+    const tr = o.rewatch > 1 ? mssRewatchBadgeHTML(o.rewatch) : '', br = mssStatusPillHTML(o.status);   // Up Next / Taking a Break: bottom-right of the poster
+    const score = o.score != null ? mssScoreHTML(o.score, { off: o.off }) : o.tmdb != null ? mssScoreHTML(o.tmdb, { tmdb: true }) : '';
+    const line2 = pr ? `<div class="msf-card__prog"><div class="msf-card__prog-row">${pr.badge ? `<span class="w-ep-badge">${escHTML(pr.badge)}</span>` : ''}<span class="msf-card__count">${escHTML(pr.count || '')}</span></div>
+          ${pr.pct != null ? `<div class="msf-card__bar${pr.muted ? ' is-muted' : ''}"><i style="width:${Math.min(100, Math.max(0, pr.pct))}%"></i></div><div class="msf-card__pl">${pr.pct}% watched</div>` : ''}</div>`
+      : `<div class="msf-card__line2">${m && (m.long || m.short) ? `<span class="msf-card__meta"><span class="is-long">${escHTML(m.long || m.short)}</span><span class="is-short">${escHTML(m.short || m.long)}</span></span>` : '<span class="msf-card__meta"></span>'}${score}</div>`;
+    const body = `<div class="msf-card__poster">${o.posterHTML != null ? o.posterHTML : img(o.poster, o.title)}
+        ${o.rankHTML || (o.rank ? `<span class="cg-rank-badge ${RANK(o.rank)}" aria-hidden="true">${o.rank}</span>` : '')}
+        ${tr ? `<div class="msf-card__tr" aria-hidden="true">${tr}</div>` : ''}${br ? `<div class="msf-card__br" aria-hidden="true">${br}</div>` : ''}${typeTag(t)}${o.over || ''}</div>
+      <div class="msf-card__info">
+        <div class="msf-card__line1"><span class="msf-card__title" translate="no">${escHTML(o.title || '')}</span>${o.year ? `<span class="msf-card__year">${escHTML(String(o.year).slice(0, 4))}</span>` : ''}</div>
+        ${o.sub ? `<div class="msf-card__sub">${o.sub}</div>` : ''}${line2}${o.below || ''}
       </div>`;
+    const controls = o.controls ? `<div class="msf-card__controls" onclick="event.stopPropagation()" onkeydown="event.stopPropagation()">${o.controls}</div>` : '';
+    const cls = 'msf-card' + (o.dropped ? ' is-dropped' : '') + (o.cls ? ' ' + o.cls : '');
+    const aria = ` aria-label="${escHTML(o.label || label(o, t))}"`;
+    const tk = o.tk ? ` data-tk="${escHTML(o.tk)}" data-tki="${o.tki}"` : '';
     // o.age: [type, id] → locked for 13–17 accounts when mature; [type, id, true] → left out (MSSAge)
     const age = o.age ? MSSAge.attr(o.age[0], o.age[1], o.age[2]) : '';
-    if (o.href) return `<a class="${cls}" href="${escHTML(o.href)}" style="text-decoration:none;color:inherit"${age}>${inner}</a>`;
+    if (o.decor) return `<div class="${cls} is-decor" aria-hidden="true">${body}</div>`;   // inside something that already says it all (a dialog, a link)
+    if (o.href) return `<a class="${cls}" href="${escHTML(o.href)}"${aria}${tk}${age}>${body}</a>`;
     const click = o.attrs || (o.onclick ? `onclick="${o.onclick}"` : '');
-    return `<div class="${cls}" ${click} role="button" tabindex="0" ${KEYS}${age}>${inner}</div>`;
+    // with buttons (category pages): the poster + info is the button, the buttons sit beside it — never one inside the other
+    if (controls) return `<div class="${cls} has-controls"${tk}${age}><div class="msf-card__main" ${click} role="button" tabindex="0" ${KEYS}${aria}>${body}</div>${controls}</div>`;
+    return `<div class="${cls}" ${click} role="button" tabindex="0" ${KEYS}${aria}${tk}${age}>${body}</div>`;
   }
-  return { poster, img, typeTag };
+  /* The same title as a list row (list views): poster on the left; title · year, rewatch + status;
+     type tag + details; progress (or notes / extras via `below`). The category pages' buttons sit
+     at the edge of the cream side, next to the rating; the right side carries the title's TMDB backdrop.
+     Same options as poster(). */
+  function row(o) {
+    const t = typeObj(o.type), m = metaTxt(o.meta), pr = o.progress;
+    const score = o.score != null ? mssScoreHTML(o.score, { off: o.off }) : o.tmdb != null ? mssScoreHTML(o.tmdb, { tmdb: true }) : '';
+    const artU = safeURL(o.art || o.poster), art = artU ? artU.replace(/\/(w\d+|original)\//, '/w342/') : '';
+    const main = `<div class="msf-row__poster">${o.posterHTML != null ? o.posterHTML : img(o.poster, o.title)}
+        ${o.rankHTML || (o.rank ? `<span class="cg-rank-badge ${RANK(o.rank)}" aria-hidden="true">${o.rank}</span>` : '')}${o.over || ''}</div>
+      <div class="msf-row__body">
+        <div class="msf-row__line1"><span class="msf-row__title" translate="no">${escHTML(o.title || '')}</span>${o.year ? `<span class="msf-row__year">${escHTML(String(o.year).slice(0, 4))}</span>` : ''}
+          ${o.rewatch > 1 || o.status ? `<span class="msf-row__badges" aria-hidden="true">${o.rewatch > 1 ? mssRewatchBadgeHTML(o.rewatch) : ''}${mssStatusPillHTML(o.status)}</span>` : ''}</div>
+        <div class="msf-row__tags" aria-hidden="true">${t ? `<span class="type-label${t.tv ? ' type-label-tv' : ''}">${escHTML(t.label)}</span>` : ''}${pr && pr.badge ? `<span class="w-ep-badge">${escHTML(pr.badge)}</span>` : ''}${
+          !pr && m && (m.long || m.short) ? `<span class="msf-row-meta"><span class="is-long">${escHTML(m.long || m.short)}</span><span class="is-short">${escHTML(m.short || m.long)}</span></span>` : ''}${o.sub ? `<span class="msf-row__sub">${o.sub}</span>` : ''}</div>
+        ${pr && pr.pct != null ? `<div class="msf-row__prog"><div class="msf-card__bar${pr.muted ? ' is-muted' : ''}"><i style="width:${Math.min(100, Math.max(0, pr.pct))}%"></i></div>
+          <div class="msf-row__pl">${escHTML(pr.count ? pr.count + ' · ' : '')}${pr.pct}% watched</div></div>` : ''}${o.below || ''}
+      </div>`;
+    // the right side: the title's TMDB backdrop (loaded when the row comes into view — MSSBackdrop); the poster if it has none
+    const artEl = `${o.bd || art ? `<span class="msf-row__art${o.bd ? ' is-bd' : ''}"${o.bd ? ` data-bd="${escHTML(o.bd)}"` : ''}${art ? ` data-poster="${escHTML(art)}"` : ''}${!o.bd && art ? ` style="background-image:url('${art}')"` : o.bd && o.bdStyle ? ` style="${escHTML(o.bdStyle)}"` : ''} aria-hidden="true"></span>` : ''}`;
+    const sc = `<div class="msf-row__score">${score}</div>`;   // on the cream side, next to the backdrop — never over it
+    const cls = 'msf-row' + (o.bd || art ? ' has-art' : '') + (o.dropped ? ' is-dropped' : '') + (o.cls ? ' ' + o.cls : '');
+    const aria = ` aria-label="${escHTML(o.label || label(o, t))}"`, tk = o.tk ? ` data-tk="${escHTML(o.tk)}" data-tki="${o.tki}"` : '';
+    const age = o.age ? MSSAge.attr(o.age[0], o.age[1], o.age[2]) : '';
+    const click = o.attrs || (o.onclick ? `onclick="${o.onclick}"` : '');
+    if (o.href) return `<a class="${cls}" href="${escHTML(o.href)}"${aria}${tk}${age}><div class="msf-row__main">${main}</div>${sc}${artEl}</a>`;
+    // with buttons: the poster + text is the button; the buttons sit beside it at the edge of the cream area — never one inside the other
+    if (o.controls) return `<div class="${cls} has-controls"${tk}${age}><div class="msf-row__main" ${click} role="button" tabindex="0" ${KEYS}${aria}>${main}</div>${sc}
+      <div class="msf-row__controls" onclick="event.stopPropagation()" onkeydown="event.stopPropagation()">${o.controls}</div>${artEl}</div>`;
+    return `<div class="${cls}" ${click} role="button" tabindex="0" ${KEYS}${aria}${tk}${age}><div class="msf-row__main">${main}</div>${sc}${artEl}</div>`;
+  }
+  // A TMDB item ({ id, media_type, title, year, poster_url, score }) — with your status when it's yours
+  function tmdb(it, o = {}) {
+    const type = it.media_type === 'movie' ? 'movie' : 'tv';
+    const e = it.id != null && it.media_type ? MSSMine.get(type, it.id) : null;
+    let c;
+    if (e) {
+      c = mssEntryCard(e, { title: it.title || e.title, year: it.year || e.year });
+      if (safeURL(it.poster_url)) { delete c.posterHTML; c.poster = it.poster_url; }
+      // outside your library the rating is always TMDB's, and no watching progress — the card looks like
+      // any other Discover card (details + TMDB score); only the small status / rewatch badges show it's yours
+      delete c.score; delete c.off;
+      if (c.progress) { delete c.progress; c.meta = it.meta || mssMetaOf(e); }
+      if (it.meta) c.meta = it.meta;
+      if (it.score != null) c.tmdb = it.score;
+    } else c = { title: it.title, year: it.year, poster: it.poster_url, type: mssTypeOf(it.cat, type === 'movie'), tmdb: it.score != null ? it.score : undefined, meta: it.meta,
+      bd: it.id != null && it.media_type ? `${type}:${Number(it.id)}` : '' };
+    if (it.id != null && it.media_type) {
+      const key = MSSMine.key(type, it.id);
+      c.tk = key; c.tki = MSSMine.reg.push({ it, o }) - 1;
+      MSSMine.load();
+    }
+    return (o.asRow ? row : poster)(Object.assign(c, o));   // asRow: a list row instead of a card
+  }
+  // Loading placeholders in the card's own shape
+  const skel = n => Array.from({ length: n }, () => '<div class="msf-card is-skel" aria-hidden="true"><div class="msf-card__poster"></div><div class="msf-card__info"><div class="msf-card__skl"></div><div class="msf-card__skl"></div></div></div>').join('');
+  return { poster, row, tmdb, img, typeTag, skel };
 })();
+
+/* A title's backdrop — THE one place every page gets it from (headers, panels, list rows, the Library
+   menu, Diary, episode pages…). Each person can pick their own for a title on its Edit page; it's kept
+   with their entry (ratings._backdrop, a TMDB image path), so everyone who sees that entry sees it.
+     · an entry (has .ratings): its owner's choice, else TMDB's
+     · a TMDB title ({ tmdb_id, tmdb_type | media_type } or a panel's { type, id }): your own choice for
+       it (if it's in your library), else TMDB's
+   Keys (list rows' data-bd, path()): 'p:/x.jpg' a chosen picture · 'd:tv:1396' TMDB's own ·
+   'tv:1396' yours, else TMDB's. TMDB's are fetched once and kept for the visit (sessionStorage);
+   list rows load theirs when they come near the screen (no backdrop → the poster, softly blurred). */
+const MSSBackdrop = (() => {
+  const KEY = 'msf_bd_v1', MINE = 'msf_bd_mine_v1', mem = {}, ask = {};
+  try { Object.assign(mem, JSON.parse(sessionStorage.getItem(KEY) || '{}')); } catch {}
+  const save = () => { try { sessionStorage.setItem(KEY, JSON.stringify(mem)); } catch {} };
+  const okPath = p => typeof p === 'string' && /^\/[\w.-]{1,120}$/.test(p);
+  const isEntry = x => !!x && typeof x === 'object' && 'ratings' in x;
+  const chosen = e => okPath(e?.ratings?._backdrop) ? e.ratings._backdrop : null;
+  // 'tv:1396' for a title, or '' when it isn't linked to TMDB
+  function tkey(x) {
+    if (!x) return '';
+    if (!x.tmdb_id && x.type) return (x.type === 'movie' || x.type === 'tv') && Number(x.id) ? `${x.type}:${Number(x.id)}` : '';   // a panel's { type, id }
+    const type = x.tmdb_type || x.media_type || (x.cat === 'movies' || (isEntry(x) && typeof mssIsMovieEntry === 'function' && mssIsMovieEntry(x)) ? 'movie' : 'tv');
+    const id = Number(x.tmdb_id);
+    return id && (type === 'movie' || type === 'tv') ? `${type}:${id}` : '';
+  }
+  function tmdb(k) {
+    if (k in mem) return Promise.resolve(mem[k]);
+    if (!ask[k]) { const [t, id] = k.split(':');
+      ask[k] = (typeof tmdbFetch === 'function' && typeof TMDB_BASE !== 'undefined' ? tmdbFetch(`${TMDB_BASE}/${t}/${id}?language=en-US`).then(r => r.ok ? r.json() : null) : Promise.resolve(null))
+        .then(d => { mem[k] = d?.backdrop_path || null; save(); return mem[k]; }).catch(() => null); }
+    return ask[k];
+  }
+  // your own choices ('tv:1396' → path), read once per visit: only the entries that have one
+  let mine = null;
+  function loadMine() {
+    if (mine) return mine;
+    return (mine = (async () => {
+      const uid = window._navUser?.id || (typeof sb !== 'undefined' && sb ? (await sb.auth.getSession()).data.session?.user?.id : null);
+      if (!uid) return {};
+      try { const c = JSON.parse(sessionStorage.getItem(MINE) || 'null'); if (c?.uid === uid) return c.map; } catch {}
+      const { data } = await sb.from('entries').select('tmdb_id,tmdb_type,cat,ratings->_backdrop').eq('user_id', uid).not('ratings->_backdrop', 'is', null);
+      const map = {};
+      (data || []).forEach(r => { const k = tkey({ tmdb_id: r.tmdb_id, tmdb_type: r.tmdb_type || (r.cat === 'movies' ? 'movie' : 'tv') }); if (k && okPath(r._backdrop)) map[k] = r._backdrop; });
+      try { sessionStorage.setItem(MINE, JSON.stringify({ uid, map })); } catch {}
+      return map;
+    })().catch(() => ({})));
+  }
+  // after you save a title with (or without) a chosen backdrop
+  function remember(e) {
+    const k = tkey(e); if (!k) return;
+    loadMine().then(map => {
+      if (chosen(e)) map[k] = chosen(e); else delete map[k];
+      try { const c = JSON.parse(sessionStorage.getItem(MINE) || 'null'); if (c) sessionStorage.setItem(MINE, JSON.stringify({ ...c, map })); } catch {}
+    });
+  }
+  // the key for a list row / card: an entry carries its owner's choice
+  function key(x) {
+    if (isEntry(x) && chosen(x)) return 'p:' + chosen(x);
+    const k = tkey(x);
+    return k ? (isEntry(x) ? 'd:' + k : k) : '';
+  }
+  async function path(k) {
+    if (!k) return null;
+    if (k.startsWith('p:')) return okPath(k.slice(2)) ? k.slice(2) : null;
+    if (k.startsWith('d:')) return tmdb(k.slice(2));
+    const own = (await loadMine())[k];
+    return own || tmdb(k);
+  }
+  function paint(el) {
+    el.dataset.bdOn = '1';
+    path(el.dataset.bd).then(p => {
+      if (p) { const u = `https://image.tmdb.org/t/p/w780${p}`, im = new Image(); im.onload = () => { el.style.backgroundImage = `url('${u}')`; el.classList.add('in'); }; im.src = u; }
+      else if (el.dataset.poster) { el.style.backgroundImage = `url('${el.dataset.poster}')`; el.classList.add('in', 'is-poster'); }
+    });
+  }
+  const io = typeof IntersectionObserver === 'function' ? new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { io.unobserve(e.target); paint(e.target); } }), { rootMargin: '400px 0px' }) : null;
+  new MutationObserver(() => document.querySelectorAll('.msf-row__art[data-bd]:not([data-bd-seen])').forEach(el => { el.dataset.bdSeen = '1'; io ? io.observe(el) : paint(el); }))
+    .observe(document.documentElement, { childList: true, subtree: true });
+  // → the picture's URL at a TMDB size, or null when there's none
+  async function url(x, size = 'w1280') {
+    const p = await path(key(x));
+    return p ? `https://image.tmdb.org/t/p/${size}${p}` : null;
+  }
+  /* How the owner framed it (Edit page → Adjust): ratings._backdrop_pos = { x: 0–100 (% from the left), y: 0–100 (% from the top), z: 1–2.5 (zoom) }.
+     → { x, y, z } or null (the default: centred, 25% from the top, no zoom). style(e, img) → inline CSS for a background box, or for an
+     <img> (img = true). Every place that draws an entry's backdrop uses it, so it looks the same everywhere. */
+  // t: 'desk' (a header on a computer / tablet) · 'phone' (a header on a phone) · 'big' (the Library's big Watching card, full width)
+  //    · 'card' (Library cards: Watching, the list view) · 'top' (the Watched top 3 — follows 'card' until framed on its own)
+  //    · 'list' (list rows: Home, Ratings…) · 'fav' (its Top Favorites tile on the profile)
+  //    · 'banner' (the profile banner, when it's the #1 favourite and no banner was chosen)
+  //    · 'ccwall' / 'cca4' (Create Card's backdrop band: Wallpaper / A4). Unframed places follow a close one (FOLLOW).
+  function pos(e, t = 'desk') {
+    const raw = e?.ratings?._backdrop_pos;
+    if (!raw || typeof raw !== 'object') return null;
+    // framed for each place, or (older) one for all. Places with no framing of their own follow a close one:
+    // the big card → the card · a Top Favorites tile (profiles) → the card · the profile banner (your #1 favourite's) → the desktop header
+    // · Create Card's Wallpaper → the desktop header · its A4 → the Wallpaper (then the desktop header)
+    const FOLLOW = { big: 'card', top: 'card', fav: 'card', banner: 'desk', ccwall: 'desk', cca4: 'ccwall' };
+    const keyed = ['desk', 'phone', 'big', 'card', 'top', 'list', 'fav', 'banner', 'ccwall', 'cca4'].some(k => raw[k]);
+    let p = keyed ? raw[t] : raw;
+    for (let f = t; keyed && !p && FOLLOW[f]; ) { f = FOLLOW[f]; p = raw[f]; }
+    if (!p || typeof p !== 'object') return null;
+    const x = Number(p.x), y = Number(p.y), z = Number(p.z);
+    if (!isFinite(y)) return null;
+    return { x: isFinite(x) ? Math.max(0, Math.min(100, x)) : 50, y: Math.max(0, Math.min(100, y)), z: isFinite(z) ? Math.max(1, Math.min(2.5, z)) : 1 };
+  }
+  function style(e, img, t) {
+    const p = pos(e, t); if (!p) return '';
+    return `${img ? 'object-position' : 'background-position'}:${p.x}% ${p.y}%;${p.z > 1 ? `transform:scale(${p.z});transform-origin:${p.x}% ${p.y}%;` : ''}`;
+  }
+  return { path, url, key, tmdb: k => tmdb(k), chosen, remember, pos, style };
+})();
+
+/* A rail of cards: swipe on touch, arrows on desktop (one view per press, faded at either end) */
+function mssRail(id, cards, cls = '') {
+  return `<div class="grid-nav-wrap msf-rail-wrap">
+    <button type="button" class="grid-nav-btn arr-left" onclick="event.stopPropagation();mssRailGo('${id}',-1)" aria-label="Scroll left" aria-disabled="true">${icon('chevleft', 14)}</button>
+    <button type="button" class="grid-nav-btn arr-right" onclick="event.stopPropagation();mssRailGo('${id}',1)" aria-label="Scroll right">${icon('chevright', 14)}</button>
+    <div class="msf-rail${cls ? ' ' + cls : ''}" id="${id}">${cards}</div></div>`;
+}
+function mssRailEdges(rail) {
+  const w = rail && rail.closest('.msf-rail-wrap');
+  if (!w) return;
+  const end = rail.scrollWidth - rail.clientWidth - 2, x = Math.abs(rail.scrollLeft);
+  w.classList.toggle('is-static', end <= 0);                 // nothing to scroll: no arrows
+  w.querySelector('.arr-left')?.setAttribute('aria-disabled', x <= 2);
+  w.querySelector('.arr-right')?.setAttribute('aria-disabled', x >= end);
+}
+function mssRailGo(id, dir) {
+  const rail = document.getElementById(id), c = rail && rail.firstElementChild;
+  if (!c) return;
+  const gap = parseFloat(getComputedStyle(rail).columnGap) || 0, per = c.getBoundingClientRect().width + gap;
+  const n = Math.max(1, Math.floor((rail.clientWidth + gap) / per));
+  rail.scrollBy({ left: dir * n * per * (document.documentElement.dir === 'rtl' ? -1 : 1), behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+}
+document.addEventListener('scroll', ev => { if (ev.target.classList?.contains('msf-rail')) mssRailEdges(ev.target); }, { capture: true, passive: true });
+document.addEventListener('pointerover', ev => { const w = ev.target.closest?.('.msf-rail-wrap'); if (w) mssRailEdges(w.querySelector('.msf-rail')); }, { passive: true });
+// a rail just drawn (or resized) sets its arrows straight away
+const _mssRailRO = typeof ResizeObserver === 'function' ? new ResizeObserver(es => es.forEach(e => mssRailEdges(e.target))) : null;
+if (_mssRailRO) new MutationObserver(() => document.querySelectorAll('.msf-rail:not([data-ro])').forEach(r => { r.dataset.ro = '1'; _mssRailRO.observe(r); }))
+  .observe(document.documentElement, { childList: true, subtree: true });
 
 /* ══════════════════════════════════════════
    LOADING SKELETONS — mssSkeleton(kind)
    While a page loads, every .page-loading box is filled with a shimmering
    copy of what the page will look like. The placeholders are built from the
-   page's REAL classes (.page-stats, .section-block, .w-card, .q-card,
-   .queue-grid, .nc-card…), so they take the same sizes as the finished page
+   page's REAL classes (.page-stats, .section-block, .msf-row, .msf-card,
+   .msf-grid / .msf-rail, .nc-card…), so they take the same sizes as the finished page
    at every screen width — phones included — and follow its media queries.
 
    Which layout a box gets: data-skel="kind" on the .page-loading, else its
@@ -2082,7 +2597,7 @@ const MSSCard = (() => {
    Empty stat rows that load separately (<div class="page-stats" data-skel-stats="6">)
    get that many stat-box placeholders until the page fills them; they are
    cleared once no loading box is left on the page.
-   Kinds: library, sections, completed, grid, row, notes, lists, title,
+   Kinds: library, sections, grid, row, notes, lists, title,
    person, profile, overview, detail, rows, episodes, homerow.
    Boxes added later (tab switches, re-renders) are filled automatically.
 ══════════════════════════════════════════ */
@@ -2090,11 +2605,10 @@ const mssSkeleton = (() => {
   const rep = (n, f) => Array.from({ length: n }, (_, i) => f(i)).join('');
   const line = (w, cls = '') => `<span class="skel skel-line ${cls}" style="width:${w}"></span>`;
   const stats = n => `<div class="page-stats">${rep(n, () => `<div class="page-stat"><span class="skel skel-num"></span>${line('62%', 'skel-xs')}</div>`)}</div>`;
-  const wcard = i => `<div class="w-card"><div class="w-poster skel"></div><div class="w-body">${line(['48%', '38%', '56%'][i % 3], 'skel-title')}${line('26%', 'skel-badge')}${line('72%', 'skel-sm')}</div></div>`;
+  const wcard = i => `<div class="msf-row is-skel"><div class="msf-row__main"><div class="msf-row__poster skel"></div><div class="msf-row__body">${line(['48%', '38%', '56%'][i % 3], 'skel-title')}${line('26%', 'skel-badge')}${line('72%', 'skel-sm')}</div></div></div>`;
   const section = rows => `<div class="section-block"><div class="section-block-header">${line('min(34%, 180px)', 'skel-head')}</div><div class="skel-section-body">${rep(rows, wcard)}</div></div>`;
-  // title · year · score — the three lines a real poster card has, so the row keeps its height when it fills in
-  const qcard = i => `<div class="q-card"><div class="q-poster skel"></div><div class="q-info">${line(['78%', '64%', '86%'][i % 3], 'skel-title')}${line('34%', 'skel-sm')}${line('26%', 'skel-badge')}</div></div>`;
-  const grid = n => `<div class="queue-grid">${rep(n, qcard)}</div>`;
+  // the standard card's own shape (MSSCard.skel), so a row keeps its height when it fills in
+  const grid = n => `<div class="msf-grid">${MSSCard.skel(n)}</div>`;
   const ncard = () => `<div class="nc-card"><div class="nc-poster skel"></div><div class="nc-main skel-col">${line('52%', 'skel-title')}${line('34%', 'skel-badge')}${line('96%')}${line('88%')}${line('58%')}</div></div>`;
   const row = () => `<div class="skel-row"><span class="skel skel-avatar"></span><div class="skel-col">${line('min(58%, 320px)')}${line('min(34%, 180px)', 'skel-sm')}</div></div>`;
   const head = () => `<div class="skel-head-row">${line('min(40%, 240px)', 'skel-h1')}${line('min(26%, 160px)', 'skel-sm')}</div>`;
@@ -2102,9 +2616,8 @@ const mssSkeleton = (() => {
   const KINDS = {
     library:   () => stats(5) + section(2) + section(2) + section(2),
     sections:  () => section(2) + section(2) + section(2),
-    completed: () => section(4),
     grid:      () => grid(8),
-    row:       () => rep(6, qcard),
+    row:       () => MSSCard.skel(6),
     notes:     () => `<div class="skel-stack">${rep(3, ncard)}</div>`,
     lists:     () => `<div class="skel-tiles">${rep(4, () => `<span class="skel skel-tile"></span>`)}</div>`,
     title:     () => `<span class="skel skel-hero"></span>` + media(false) + line('min(30%, 160px)', 'skel-head skel-gap') + grid(6),
@@ -2117,12 +2630,12 @@ const mssSkeleton = (() => {
     homerow:   () => line('min(22%, 120px)', 'skel-sm') + line('min(40%, 240px)', 'skel-title') + grid(6),   // a home page row
   };
   const SKEL_BY_PARENT = [
-    ['#libraryLoading', 'library'], ['.queue-grid', 'row'],
+    ['#libraryLoading', 'library'], ['.msf-rail, .msf-grid', 'row'],
     ['#overviewContent, #pvOverviewContent', 'overview'], ['#listsTabContent', 'lists'], ['#notesTabContent', 'notes'],
-    ['#episodesTabContent', 'grid'], ['#npList, #frContent', 'rows'], ['#collabList', 'rows'],
+    ['#episodesTabContent, #pvEpisodesContent', 'eph'], ['#npList, #frContent', 'rows'], ['#collabList', 'rows'],
   ];
   const SKEL_BY_PAGE = {
-    'completed.html': 'completed', 'notes.html': 'notes', 'lists.html': 'lists', 'episodes.html': 'episodes',
+    'notes.html': 'notes', 'lists.html': 'lists', 'episodes.html': 'episodes',
     'title.html': 'title', 'person.html': 'person', 'detail.html': 'detail', 'list-view.html': 'grid',
     'user.html': 'profile', 'profile-view.html': 'profile', 'friends.html': 'rows', 'activity.html': 'rows', 'compare.html': 'rows', 'blend.html': 'rows', 'movie-night.html': 'rows', 'challenges.html': 'rows', 'polls.html': 'rows', 'episode-chat.html': 'rows', 'messages.html': 'rows', 'notifications.html': 'rows', 'cabinet.html': 'grid',
   };
@@ -2157,7 +2670,7 @@ const mssSkeleton = (() => {
      reads like the finished one. Boxes already showing that kind are redrawn. */
   const EXACT = new Set();
   const MEDIA = '[class*="poster"]:not([class*="poster-overlay"]):not([class*="posters"]), [class*="still"], [class*="backdrop"], [class*="avatar"], [class*="-cover"], [class*="photo"], .hf-av, .skel-media-box';
-  const GHOST = '.type-label, .w-ep-badge, .fv-w-ep-badge, .section-pill, .cg-rank-badge, .dropped-tag, .rewatch-badge, .skel-ghost-box';
+  const GHOST = '.type-label, .msf-card__status, .w-ep-badge, .section-pill, .cg-rank-badge, .dropped-tag, .rewatch-badge, .skel-ghost-box';
   function mask(root) {
     const kept = el => el.closest('[data-skel-keep]');
     root.querySelectorAll(MEDIA).forEach(el => {
@@ -2204,10 +2717,12 @@ const mssSkeleton = (() => {
     setTimeout(() => el.classList.remove('mss-arrive'), 1100);
   };
   const shown = el => !!el.getClientRects().length || [...el.children].some(c => c.getClientRects().length);
-  /* ── A slow load says so: after 1.5s a small chip with a line for the page, changing every
-     2.5s; after 8s it says the connection seems slow (or that you're offline) ── */
+  /* ── A slow load says so: after 1.5s a floating pill in the toast spot (over the page, never in it), with a line for the
+     page, changing every 2.5s; after 8s it says the connection seems slow (or that you're offline). A change fades the old
+     words out and the new in while the pill eases to its new width (owner, 14 Nov 2026: back to the pill from before the
+     popups redesign). Announced politely, once per change. ── */
   const FIRST = { 'index.html': 'Getting your home ready…', '': 'Getting your home ready…', 'library.html': 'Pulling your library…', 'tv-shows.html': 'Pulling your library…',
-    'movies.html': 'Pulling your library…', 'anime.html': 'Pulling your library…', 'cartoons.html': 'Pulling your library…', 'completed.html': 'Pulling your library…',
+    'movies.html': 'Pulling your library…', 'anime.html': 'Pulling your library…', 'cartoons.html': 'Pulling your library…',
     'discover.html': 'Finding something to watch…', 'discover-list.html': 'Finding something to watch…', 'friends.html': 'Catching up with your friends…', 'activity.html': 'Catching up with your friends…', 'compare.html': 'Lining up your tastes…', 'blend.html': 'Mixing your tastes…', 'movie-night.html': 'Dimming the lights…', 'challenges.html': 'Checking the scoreboard…', 'polls.html': 'Counting the votes…', 'episode-chat.html': 'Catching up on the chat…', 'messages.html': 'Checking your messages…',
     'title.html': 'Fetching the details…', 'person.html': 'Fetching the details…', 'episodes.html': 'Lining up the episodes…', 'lists.html': 'Gathering the lists…',
     'list-view.html': 'Gathering the list…', 'notes.html': 'Gathering the notes…', 'profile.html': 'Loading the profile…', 'profile-view.html': 'Loading the profile…',
@@ -2223,27 +2738,38 @@ const mssSkeleton = (() => {
     if (!chip) {
       chip = document.createElement('div');
       chip.className = 'mss-slow';
-      chip.setAttribute('role', 'status');
-      chip.innerHTML = '<span class="mss-slow-logo" aria-hidden="true"></span><span></span>';   // the MSF logo, filling up as it loads
-      document.body.appendChild(chip);
+      chip.setAttribute('role', 'status'); chip.setAttribute('aria-live', 'polite');
+      chip.innerHTML = '<span class="mss-slow-logo" aria-hidden="true"></span><span class="mss-slow-tx"></span>';   // the MSF logo, turning as it loads
     }
+    if (!chip.isConnected) document.body.appendChild(chip);
     const tx = chip.lastElementChild, page = location.pathname.split('/').pop();
     let i = -1;
+    chip.style.width = '';
     tx.textContent = FIRST[page] || 'Loading…';
     requestAnimationFrame(() => chip.classList.add('show'));
+    const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
     slowIv = setInterval(() => {
       if (!busy()) return slowHide();
-      tx.style.opacity = 0;
+      const next = !navigator.onLine ? 'You’re offline — waiting for a connection…'
+        : Date.now() - slowAt > 8000 ? 'Still loading — your connection seems slow.' : MORE[++i % MORE.length];
+      if (next === tx.textContent) return;
+      tx.classList.add('is-out');
       setTimeout(() => {
-        tx.textContent = !navigator.onLine ? 'You’re offline — waiting for a connection…'
-          : Date.now() - slowAt > 8000 ? 'Still loading — your connection seems slow.' : MORE[++i % MORE.length];
-        tx.style.opacity = 1;
-      }, 250);
+        const w0 = chip.offsetWidth;
+        tx.textContent = next;
+        if (!calm) {                                  // ease from the old width to the new one
+          chip.style.width = 'auto'; const w1 = chip.offsetWidth;
+          chip.style.width = w0 + 'px'; void chip.offsetWidth; chip.style.width = w1 + 'px';
+        }
+        tx.classList.remove('is-out');
+      }, calm ? 120 : 200);
     }, 2500);
   }
   function slowHide() {
     clearTimeout(slowT); clearInterval(slowIv); slowT = slowIv = 0;
-    chip?.classList.remove('show');
+    if (!chip) return;
+    chip.classList.remove('show');
+    setTimeout(() => { if (chip && !chip.classList.contains('show')) chip.remove(); }, 300);
   }
   let raf = 0;
   const slowCheck = () => {
@@ -2357,7 +2883,13 @@ const MSSOrder = (() => {
     if (mode === 'release_new' || mode === 'release_old') return v ? 'Released ' + (v.length > 4 ? new Date(v + 'T12:00:00').toLocaleDateString(MSSI18n.locale, { month: 'short', year: 'numeric' }) : v) : 'Release date unknown';
     return '';
   }
-  return { ORDER_GROUPS, orderLabel, orderValue, sortBy, reorder, orderHint };
+  // The short chip on a list card ("By your score", "Your order") — own: the viewer's list
+  function byLabel(mode, own) {
+    const S = { highest: own ? 'By your score' : 'By score', lowest: 'Lowest score first', watched_new: 'Latest watched', watched_old: 'First watched',
+      release_new: 'Newest first', release_old: 'Oldest first', az: 'A–Z', za: 'Z–A', enjoyment: 'By enjoyment', story: 'By story', acting: 'By acting', ending: 'By ending' };
+    return S[mode] || (own ? 'Your order' : 'Their order');
+  }
+  return { ORDER_GROUPS, orderLabel, byLabel, orderValue, sortBy, reorder, orderHint };
 })();
 
 /* ── Page scroll lock — every popup, panel and dropdown that stops the page
@@ -2450,6 +2982,18 @@ const MSSRegion = (() => {
    js/social.js is loaded the first time it's needed. */
 // Loads a script once, even when two places ask at the same time (or it's already on the page)
 const _mssScripts = {};
+// Popups that open by themselves (Spotlight, On This Day, the Member medal) wait for the launch screen (splash.js),
+// and for the welcome / Set up your folio while it's due or open (onboarding.js sets window._mssOnboarding)
+function mssAfterLaunch() {
+  return new Promise(res => {
+    const go = () => {
+      if (window.mssLaunchOpen?.()) return document.addEventListener('mss:launch-done', go, { once: true });
+      if (window._mssOnboarding) return document.addEventListener('mss:onboarding-done', go, { once: true });
+      res();
+    };
+    go();
+  });
+}
 function mssLoadScript(src) {
   if (_mssScripts[src]) return _mssScripts[src];
   return (_mssScripts[src] = new Promise(res => {
@@ -2458,6 +3002,24 @@ function mssLoadScript(src) {
     const sc = old || document.createElement('script');
     sc.addEventListener('load', res); sc.addEventListener('error', res);
     if (!old) { sc.src = src; sc.async = true; sc.dataset.loaded = '0'; sc.addEventListener('load', () => { sc.dataset.loaded = '1'; }); document.head.appendChild(sc); }
+  }));
+}
+// A phone frame's status bar (Welcome slides, Help & Guides — §73 Device frames): the time, signal, Wi-Fi and battery,
+// so a screenshot inside .dvf-ph reads like a real phone instead of running under the camera
+function mssPhoneBar() {
+  return `<span class="dvf-sb" aria-hidden="true"><b>9:41</b><i><svg viewBox="0 0 18 12"><rect x="0" y="8" width="3" height="4" rx=".8"/><rect x="5" y="5.5" width="3" height="6.5" rx=".8"/><rect x="10" y="3" width="3" height="9" rx=".8"/><rect x="15" y="0" width="3" height="12" rx=".8"/></svg>`
+    + `<svg viewBox="0 0 16 12"><path d="M8 2.2c2.4 0 4.6.9 6.2 2.5l1.3-1.3A10.6 10.6 0 0 0 8 .4 10.6 10.6 0 0 0 .5 3.4l1.3 1.3A8.8 8.8 0 0 1 8 2.2Zm0 3.6c1.4 0 2.7.5 3.7 1.5l1.3-1.3A7 7 0 0 0 8 4a7 7 0 0 0-5 2l1.3 1.3c1-1 2.3-1.5 3.7-1.5Zm0 3.6c.5 0 1 .2 1.3.5L8 11.6 6.7 9.9c.3-.3.8-.5 1.3-.5Z"/></svg>`
+    + `<svg viewBox="0 0 27 12"><rect x=".5" y=".5" width="22" height="11" rx="3" fill="none" stroke="currentColor" opacity=".45"/><rect x="2.5" y="2.5" width="16" height="7" rx="1.6"/><rect x="24" y="4" width="2" height="4" rx="1" opacity=".45"/></svg></i></span>`;
+}
+// Loads a stylesheet once (or resolves at once if the page already links it) — e.g. Set up your folio needs profile.css
+function mssLoadStyle(href) {
+  if (_mssScripts[href]) return _mssScripts[href];
+  return (_mssScripts[href] = new Promise(res => {
+    if (document.querySelector(`link[rel="stylesheet"][href="${href}"]`)) return res();
+    const l = document.createElement('link');
+    l.rel = 'stylesheet'; l.href = href;
+    l.addEventListener('load', res); l.addEventListener('error', res);
+    document.head.appendChild(l);
   }));
 }
 /* Report something — js/report.js loads the first time (MSSReport, 086_reports.sql).
@@ -2492,12 +3054,20 @@ function mssRecommend(item) {
      MSSDialog.close(overlay)               // in the popup's close()
      MSSDialog.isOpen(overlay) / MSSDialog.top()
 ══════════════════════════════════════════ */
+// Menus close before any popup, panel or confirm opens: the You / Library mega menu, select
+// dropdowns, pickers and ⋯ popovers (so nothing is left open underneath, e.g. Switch account)
+function mssCloseMenus() {
+  if (typeof _dmHide === 'function') _dmHide();
+  if (typeof _closeAllDropdownsExcept === 'function') _closeAllDropdownsExcept();
+  if (typeof MSSPicker !== 'undefined') MSSPicker.closeOpen();
+  if (typeof MSSPopover !== 'undefined') MSSPopover.close();
+}
 const MSSDialog = (() => {
   const stack = [];                 // [{ ov, returnTo }] — last = top
   let handoff = null;               // focus target kept for a popup that replaces the one just closed
   const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
-  const cardOf = ov => ov.querySelector('[role="dialog"]') || ov.firstElementChild || ov;
+  const cardOf = ov => ov.querySelector('[role="dialog"], [role="alertdialog"]') || ov.firstElementChild || ov;
   const find = ov => stack.findIndex(d => d.ov === ov);
   const visible = el => !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length);
   const focusEl = el => { try { el.focus({ preventScroll: true }); } catch {} };
@@ -2516,6 +3086,7 @@ const MSSDialog = (() => {
     if (!card.hasAttribute('tabindex')) card.setAttribute('tabindex', '-1');
     const i = find(ov);
     if (i === -1) {
+      mssCloseMenus();                                     // menus never stay open under a popup
       const active = document.activeElement;
       stack.push({ ov, returnTo: handoff || (active && active !== document.body && !ov.contains(active) ? active : null) });
     } else stack.push(stack.splice(i, 1)[0]);            // already open → bring to the top
@@ -2561,6 +3132,9 @@ const MSSDialog = (() => {
       // Capture phase + stop: only the top popup closes, not page popups underneath
       ev.preventDefault(); ev.stopImmediatePropagation();
       if (MSSPicker.closeOpen()) return;              // an open picker in it closes first
+      if (typeof MSSPopover !== 'undefined' && MSSPopover.closeOpen()) return;   // …a ⋯ menu over it
+      const cb = document.activeElement;
+      if (cb?.getAttribute('role') === 'combobox' && cb.getAttribute('aria-expanded') === 'true') { cb.dispatchEvent(new Event('mss:close-list')); return; }   // …a search's result list
       const dd = cardOf(ov).querySelector('.sf-dd.open');   // …and so does an open dropdown (Filter, Pick for me's genre…)
       if (dd) { dd.classList.remove('open'); const m = dd.querySelector('.td-dd-menu'); if (m) m.style.cssText = ''; dd.querySelector('[aria-expanded]')?.setAttribute('aria-expanded', 'false'); dd.dispatchEvent(new Event('mss:dd-closed', { bubbles: true })); return; }
       (ov._mssClose || (() => close(ov)))();
@@ -2768,28 +3342,37 @@ const MSSPicker = (() => {
 
 /* ══════════════════════════════════════════
    CONFIRM DIALOG
+   One card for every "are you sure?" (styles: §14 in style.css). Desktop / tablet: a 400px modal;
+   narrow screens: a card at the bottom with a drag handle (drag it down = Cancel) and the main
+   action on top. Focus starts on Cancel, so Enter never runs a red action by accident.
 ══════════════════════════════════════════ */
-// danger (default true) → solid red confirm button; danger:false → solid olive
-// (for non-destructive actions like signing out or starting a rewatch).
-// cancelText:null → a single-button notice (resolves true when dismissed).
+// danger (default true) → red main button + red icon tile; danger:false → MSF green
+// (for actions that can be undone, like signing out or starting a rewatch).
+// cancelText:null → a single-button notice (neutral tile; resolves true when dismissed).
 // choices: [[value, label, hint]] → a pick-one list in the popup (the first picked); then it resolves to
 // the picked value instead of true (false when cancelled)
-function showConfirm({ title = 'Are you sure?', message = '', confirmText = 'Confirm', cancelText = 'Cancel', iconName = 'x', iconHTML = '', tone = '', danger = true, choices = null } = {}) {
+function showConfirm({ title = 'Are you sure?', message = '', confirmText = 'Confirm', cancelText = 'Cancel', iconName = 'x', iconHTML = '', tone = '', danger = true, choices = null, altText = null } = {}) {
   return new Promise((resolve) => {
     const overlay  = document.getElementById('confirmOverlay');
     if (!overlay) { resolve(window.confirm(message || title)); return; }
     const notice = cancelText == null;
+    const card = overlay.querySelector('.confirm-card');
 
     const btnOk     = document.getElementById('confirmOk');
     const btnCancel = document.getElementById('confirmCancel');
     document.getElementById('confirmTitle').textContent = title;
     document.getElementById('confirmMsg').textContent   = message;
-    document.getElementById('confirmIcon').innerHTML    = iconHTML || icon(iconName, 36);
+    document.getElementById('confirmIcon').innerHTML    = iconHTML || icon(iconName, 20);
     overlay.dataset.tone = tone;           // a one-off look (e.g. 'egg' — easter-egg.js)
+    card.classList.toggle('is-danger', !notice && danger);
+    card.classList.toggle('is-safe', !notice && !danger);
     btnOk.textContent = confirmText;
     btnOk.classList.toggle('is-safe', !danger);
     btnCancel.textContent = notice ? '' : cancelText;
     btnCancel.hidden = notice;
+    // a third answer (altText) → resolves 'alt'; it sits on its own row under the other two
+    const btnAlt = document.getElementById('confirmAlt');
+    if (btnAlt) { btnAlt.hidden = !altText; btnAlt.textContent = altText || ''; btnAlt.parentElement.classList.toggle('has-alt', !!altText); }
     const box = document.getElementById('confirmChoices');
     let picked = choices?.[0]?.[0];
     if (box) {
@@ -2811,21 +3394,73 @@ function showConfirm({ title = 'Are you sure?', message = '', confirmText = 'Con
       };
     }
 
+    let closing = false;
     function done(val) {
-      MSSDialog.close(overlay);
-      overlay._mssClose = null;
+      if (closing) return;
+      closing = true;
       btnOk.removeEventListener('click', onOk);
       btnCancel.removeEventListener('click', onCancel);
-      resolve(val);
+      btnAlt?.removeEventListener('click', onAlt);
+      overlay._mssClose = null;
+      mssConfirmClose(overlay, () => resolve(val));
     }
     const onOk     = () => done(choices?.length ? picked : true);
     const onCancel = () => done(notice);
+    const onAlt    = () => done('alt');
+    btnAlt?.addEventListener('click', onAlt);
     btnOk.addEventListener('click', onOk);
     btnCancel.addEventListener('click', onCancel);
     if (!overlay._mssBound) { overlay._mssBound = true; overlay.addEventListener('click', ev => { if (ev.target === overlay) overlay._mssClose?.(); }); }
-    overlay._mssClose = onCancel;          // backdrop + Esc
-    MSSDialog.open(overlay, { focus: notice ? btnOk : btnCancel });
+    overlay._mssClose = onCancel;          // backdrop, Esc, drag down
+    mssConfirmOpen(overlay, { focus: notice ? btnOk : btnCancel });
   });
+}
+// Shared by showConfirm and the other confirms built on the same card (Drop):
+// a confirm over an open popup gets the lighter scrim; on narrow screens the main action goes on
+// top (in the page order too, so Tab follows what you see) and the card can be dragged down to cancel.
+const MSS_CF_SHEET = '(max-width:559px)';
+function mssConfirmOpen(overlay, o) {
+  const card = overlay.querySelector('.confirm-card'), acts = card.querySelector('.confirm-actions');
+  overlay.classList.remove('is-leaving');
+  overlay.classList.toggle('is-over', !!MSSDialog.top() && MSSDialog.top() !== overlay);
+  const ok = acts.querySelector('.confirm-ok');
+  if (matchMedia(MSS_CF_SHEET).matches) acts.prepend(ok); else acts.append(ok);
+  if (!card._mssDrag) { card._mssDrag = true; mssSheetDrag(card, () => overlay._mssClose?.()); }
+  MSSDialog.open(overlay, o);
+}
+// Fades it out (120ms; the bottom card also slides 24px), then closes it and calls then()
+function mssConfirmClose(overlay, then) {
+  overlay.classList.add('is-leaving');
+  setTimeout(() => {
+    overlay.classList.remove('is-leaving');
+    const card = overlay.querySelector('.confirm-card'); card.style.transform = '';
+    MSSDialog.close(overlay);
+    then?.();
+  }, matchMedia(MSS_CF_SHEET).matches ? 180 : 120);
+}
+// Drag a bottom card down to dismiss it (narrow screens only). Buttons and fields keep their taps.
+function mssSheetDrag(card, onDismiss) {
+  let y0 = 0, t0 = 0, dy = 0, id = null;
+  card.addEventListener('pointerdown', ev => {
+    if (!matchMedia(MSS_CF_SHEET).matches || ev.button > 0 || ev.target.closest('button, a, input, select, textarea, label')) return;
+    id = ev.pointerId; y0 = ev.clientY; t0 = Date.now(); dy = 0;
+    card.setPointerCapture?.(id);
+  });
+  card.addEventListener('pointermove', ev => {
+    if (ev.pointerId !== id) return;
+    dy = Math.max(0, ev.clientY - y0);
+    if (dy > 4) { card.classList.add('is-dragging'); card.style.transform = `translateY(${dy}px)`; }
+  });
+  const end = ev => {
+    if (ev.pointerId !== id) return;
+    id = null;
+    card.classList.remove('is-dragging');
+    if (dy > 80 || dy / Math.max(1, Date.now() - t0) > 0.6) { onDismiss(); return; }
+    card.style.transition = 'transform .18s var(--layer-in)'; card.style.transform = '';
+    setTimeout(() => { card.style.transition = ''; }, 200);
+  };
+  card.addEventListener('pointerup', end);
+  card.addEventListener('pointercancel', end);
 }
 
 /* ══════════════════════════════════════════
@@ -3133,6 +3768,8 @@ const MSS_SEARCH_MS = 300;
    (sign-up, reset and Settings). MSSPass.mount(boxId, inputId, names?) fills the box with a strength
    bar + word, a counter that only shows near the limit, and a checklist that ticks off as you type.
    names() → words the password shouldn't contain (username, email name) — caps it at "Weak".
+   MSSPass.mount(boxId, inputId, names, { compact: true }) → the same rules as one line: a bar and a
+   sentence naming the next thing to add ("Good. Add a number or symbol.") — the sign-up form.
    Only the length is enforced (MSSPass.error(p)); the rest is advice. Styles: "Password guide".
 ══════════════════════════════════════════ */
 const MSSPass = (() => {
@@ -3147,12 +3784,30 @@ const MSSPass = (() => {
     if (named && s > 2) s = 2;
     return { s, has, named, word: ['Password strength', 'Too short', named ? 'Weak' : 'Fair', 'Good', 'Strong'][s] };
   }
-  function mount(boxId, inputId, names) {
+  // compact: one line — a bar and one sentence with the next thing to add (sign-up); same rules
+  const NEXT = { case: 'Add upper and lowercase letters.', num: 'Add a number or symbol.', long: '12 or more characters makes it stronger.' };
+  function line(p, r) {
+    if (!p) return `${MIN}–${MAX} characters.`;
+    if (!r.has.len) return p.length < MIN ? `Too short. Use at least ${MIN} characters.` : `Too long. ${MAX} characters at most.`;
+    if (r.named) return 'Weak. Leave your username or email out of it.';
+    const next = ['case', 'num', 'long'].find(k => !r.has[k]);
+    return `${r.word}.${next ? ' ' + NEXT[next] : ''}`;
+  }
+  function mount(boxId, inputId, names, o = {}) {
     const box = document.getElementById(boxId), input = document.getElementById(inputId);
     if (!box || !input) return () => {};
     input.maxLength = MAX;
     input.setAttribute('aria-describedby', boxId + 'Rules');
     box.classList.add('mss-pw');
+    if (o.compact) {
+      box.classList.add('is-compact');
+      box.innerHTML = `<span class="mss-pw-bar" aria-hidden="true"><i></i></span><span class="mss-pw-line" id="${boxId}Rules" aria-live="polite"></span>`;
+      const say = box.querySelector('.mss-pw-line');
+      const update = () => { const p = input.value, r = score(p, names ? names() : []); box.dataset.s = r.s; say.textContent = line(p, r); };
+      input.addEventListener('input', update);
+      update();
+      return update;
+    }
     box.innerHTML = `<div class="mss-pw-meter" data-s="0" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
       <div class="mss-pw-row"><span class="mss-pw-word" aria-live="polite">Password strength</span><span class="mss-pw-count" hidden></span></div>
       <ul class="mss-pw-rules" id="${boxId}Rules">
@@ -3181,28 +3836,15 @@ const MSSPass = (() => {
   return { MIN, MAX, error, score, mount };
 })();
 
-function mssJoin(what = 'do that') {
-  let ov = document.getElementById('mssJoin');
-  if (!ov) {
-    ov = document.createElement('div');
-    ov.className = 'confirm-overlay mss-join';
-    ov.id = 'mssJoin';
-    ov.innerHTML = `<div class="confirm-card" role="dialog" aria-modal="true" aria-labelledby="mssJoinT" aria-describedby="mssJoinM">
-      <button type="button" class="dp-close mss-join-x" aria-label="Close">${icon('x', 18)}</button>
-      <div class="mss-join-ic" aria-hidden="true">${icon('user', 26)}</div>
-      <div class="confirm-title" id="mssJoinT"></div>
-      <div class="confirm-msg" id="mssJoinM">It’s free — track what you watch, rate it, write notes, make lists and join the conversation.</div>
-      <div class="confirm-actions mss-join-actions">
-        <a class="confirm-ok is-safe" href="login.html#signup">Create account</a>
-        <a class="confirm-cancel" href="login.html">Sign in</a>
-      </div>
-    </div>`;
-    MSSDialog.bind(ov, () => MSSDialog.close(ov));
-    ov.querySelector('.mss-join-x').addEventListener('click', () => MSSDialog.close(ov));
-    document.body.appendChild(ov);
-  }
-  ov.querySelector('#mssJoinT').textContent = 'Sign up to ' + what;
-  MSSDialog.open(ov, { focus: '.confirm-ok' });
+// Signed out and trying to do something that needs an account: the shared confirm (Create account · Sign in · Not now).
+// Signing in remembers this page, so you come back to it (like every Sign in link).
+async function mssJoin(what = 'do that') {
+  const a = await showConfirm({ title: 'Sign up to ' + what, message: 'It’s free — track what you watch, rate it, write notes, make lists and join the conversation.',
+    confirmText: 'Create account', altText: 'Sign in', cancelText: 'Not now', iconName: 'user', danger: false });
+  if (!a) return;
+  const page = location.pathname.split('/').pop() || 'index.html';
+  try { if (page !== 'login.html') sessionStorage.setItem('mss_next', page + location.search); } catch {}
+  location.href = a === 'alt' ? 'login.html' : 'login.html#signup';
 }
 /* ══════════════════════════════════════════
    JUST WATCHED — mssWatchedPopup(entry, { onRate, onLater })
@@ -3272,8 +3914,9 @@ function setTheme(choice) {
   const theme = mssThemeOf(choice);
   document.documentElement.classList.add('theme-transitioning');
   document.documentElement.setAttribute('data-theme', theme);
+  mssThemeBar();
   try { localStorage.setItem('wl-theme', choice); } catch {}
-  updateThemeIcon(theme);
+  mssSyncThemeSwitches();
   if (typeof syncThemeButtons === 'function') syncThemeButtons();   // Settings
   setTimeout(() => document.documentElement.classList.remove('theme-transitioning'), 320);
 }
@@ -3282,17 +3925,27 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
   if (mssThemeChoice() === 'system') setTheme('system');
 });
 
-function toggleTheme() {
-  const current = document.documentElement.getAttribute('data-theme') || 'dark';
-  setTheme(current === 'dark' ? 'light' : 'dark');
+/* The Light / Dark switch — one component for the account menu, the phone Account page and the
+   footer (nav.js). Shows the theme in use (System → whichever the device is on); choosing one sets
+   it. Settings keeps its own three-way picker; both save the same choice ('wl-theme').
+     mssThemeSwitch(labelledBy) → HTML (a radio group; ← → move between the two) */
+function mssThemeSwitch(labelledBy) {
+  const cur = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+  return `<div class="mss-theme-sw" role="radiogroup" data-theme-sw${labelledBy ? ` aria-labelledby="${labelledBy}"` : ' aria-label="Theme"'}>${[['light', 'sun', 'Light'], ['dark', 'moon', 'Dark']].map(([v, ic, l]) =>
+    `<button type="button" role="radio" class="mss-theme-opt${cur === v ? ' on' : ''}" aria-checked="${cur === v}" tabindex="${cur === v ? 0 : -1}" data-v="${v}">${icon(ic, 14)}<span>${l}</span></button>`).join('')}</div>`;
 }
-
-function updateThemeIcon(theme) {
-  const darkBtn  = document.getElementById('ttpDark');
-  const lightBtn = document.getElementById('ttpLight');
-  if (darkBtn)  darkBtn.classList.toggle('active',  theme === 'dark');
-  if (lightBtn) lightBtn.classList.toggle('active', theme === 'light');
+function mssSyncThemeSwitches() {
+  const cur = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+  document.querySelectorAll('[data-theme-sw] .mss-theme-opt').forEach(b => { const on = b.dataset.v === cur; b.classList.toggle('on', on); b.setAttribute('aria-checked', on); b.tabIndex = on ? 0 : -1; });
 }
+document.addEventListener('click', ev => { const b = ev.target.closest?.('[data-theme-sw] .mss-theme-opt'); if (b) setTheme(b.dataset.v); });
+document.addEventListener('keydown', ev => {
+  const b = ev.target.closest?.('[data-theme-sw] .mss-theme-opt');
+  if (!b || !['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(ev.key)) return;
+  ev.preventDefault();
+  const other = [...b.parentElement.children].find(x => x !== b);
+  setTheme(other.dataset.v); other.focus();
+});
 
 /* ══════════════════════════════════════════
    CONTENT LANGUAGE — MSSLang
@@ -3414,41 +4067,16 @@ const MSSLang = (() => {
    SCORE BADGE SYSTEM
 ══════════════════════════════════════════ */
 function scoreColor(score) {
-  if (score == null) return null;
-  const s = Number(score);
-  const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
-  if (s >= 10) return { bg: '#D4AF37', text: '#1A1A1A' };
-  if (s >= 9)  return { bg: isDark ? '#4ade80' : '#166534', text: isDark ? '#1A1A1A' : '#ffffff' };
-  if (s >= 8)  return { bg: isDark ? '#86EFAC' : '#16a34a', text: isDark ? '#1A3A1F' : '#ffffff' };
-  if (s >= 7)  return { bg: isDark ? '#bbf7d0' : '#16a34a', text: isDark ? '#1A3A1F' : '#ffffff' };
-  if (s >= 6)  return { bg: '#ca8a04', text: '#ffffff' };
-  if (s >= 3)  return { bg: '#dc2626', text: '#ffffff' };
-  return             { bg: '#7c3aed', text: '#ffffff' };
+  // the rating scale's tier (mssScoreTier) — CSS variables, so it follows the theme
+  const t = mssScoreTier(score);
+  return t ? { bg: 'var(--st-fill)', text: 'var(--st-on)', tier: t } : null;   // with the .st-<key> class scoreBadge adds
 }
 
 function scoreBadge(score, size) {
   const clr = scoreColor(score);
   if (!clr) return '';
   const sz = size || 'md';
-  return `<span class="score-badge score-badge-${sz}" style="background:${clr.bg};color:${clr.text}">${Number(score).toFixed(2)}</span>`;
-}
-
-/* ══════════════════════════════════════════
-   VIEW PREFERENCE SYSTEM
-══════════════════════════════════════════ */
-const _VIEW_KEY = 'wl-views';
-
-function getView(section) {
-  try { return (JSON.parse(localStorage.getItem(_VIEW_KEY)) || {})[section] || 'list'; }
-  catch { return 'list'; }
-}
-
-function setViewPref(section, view) {
-  try {
-    const prefs = JSON.parse(localStorage.getItem(_VIEW_KEY)) || {};
-    prefs[section] = view;
-    localStorage.setItem(_VIEW_KEY, JSON.stringify(prefs));
-  } catch(e) {}
+  return `<span class="score-badge score-badge-${sz} ${clr.tier.cls}" style="background:${clr.bg};color:${clr.text}">${Number(score).toFixed(2)}</span>`;
 }
 
 /* ══════════════════════════════════════════
@@ -3574,9 +4202,7 @@ function mssErrorPage(kind, opts = {}) {
   const retry = () => { if (typeof d.retry === 'function') { sec._mssStop(); d.retry(); } else location.reload(); };
   const run = {
     search: () => {
-      const g = document.getElementById('globalSearch');
-      if (g && g.offsetParent) g.focus();
-      else if (document.getElementById('mobileSearchBar') && typeof toggleMobileSearch === 'function') toggleMobileSearch();
+      if (typeof mssOpenSearch === 'function') mssOpenSearch();
       else location.href = 'discover.html';
     },
     back: () => { if (history.length > 1 && document.referrer.startsWith(location.origin)) history.back(); else location.href = 'index.html'; },

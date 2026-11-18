@@ -14,8 +14,9 @@
      • episodes that aired in the last 7 days of a show you track (and
        after you added it), one notification per show per release day
        → add_new_episode_notifications
-     (A show you'd caught up on never moves by itself any more: To Be Continued
-      marks it "New episodes" with an Up Next button — newOut(), category.js)
+     (A show you'd caught up on stays To Be Continued in the database; once newOut()
+      finds an episode out past your progress, the Library pages show it in Watching's
+      Up next with Start — library-view.js. Nothing is written until you press Start.)
      • a movie on your Watchlist / Up Next coming out in your country —
        in cinemas, then to stream / buy, in the last 14 days (TMDB
        release dates; MSSRegion)
@@ -46,7 +47,10 @@ const MSSSchedule = (() => {
 
   async function details(id) {
     const hit = cache[id];
-    if (hit && Date.now() - hit.t < TTL) return hit.d;
+    // Kept 12 h — except when the episode it said was next has aired since: that's exactly when a show
+    // you're waiting on gets something new, so it's asked again then (once; the fresh copy has a later "next")
+    const nextAired = hit?.d?.next?.air && hit.d.next.air < ymd(new Date());
+    if (hit && Date.now() - hit.t < TTL && !nextAired) return hit.d;
     try {
       // straight from TMDB (not the device's day-old copy) — the schedule is about what's out now
       const res = await tmdbFetch(`${TMDB_BASE}/tv/${id}?language=en-US`, { cache: 'reload' });

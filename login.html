@@ -4,10 +4,10 @@
 <meta charset="UTF-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; img-src 'self' data: blob: https://image.tmdb.org https://res.cloudinary.com https://yqbfjtkcsgyvnablmuzp.supabase.co; connect-src 'self' https://yqbfjtkcsgyvnablmuzp.supabase.co wss://yqbfjtkcsgyvnablmuzp.supabase.co">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<script src="js/splash.js"></script>
 <script src="js/i18n.js"></script>
 <title>Sign In — MyScreenFolio</title>
 <link rel="stylesheet" href="css/fonts.css">
+<link rel="stylesheet" href="css/theme.css">
 <link rel="stylesheet" href="css/style.css">
 <style>
 /* ═════════════════════════════════════════════════════════════
@@ -19,57 +19,37 @@
    ═════════════════════════════════════════════════════════════ */
 body { background:var(--bg); min-height:100dvh; }
 .au { min-height:100dvh; display:grid; grid-template-columns:1fr; }
-@media (min-width:960px) { .au { grid-template-columns:minmax(0, 1.08fr) minmax(440px, 1fr); } }
+@media (min-width:960px) { .au { grid-template-columns:minmax(0, .9fr) minmax(460px, 1.1fr); } }
 
 /* ── The stage ── */
-.au-stage { position:relative; overflow:hidden; isolation:isolate; background:#0B0B0F; color:#EDEDED;
+.au-stage { position:relative; overflow:hidden; isolation:isolate; background:#090D0A; color:#EDEDED;
   display:flex; flex-direction:column; justify-content:flex-end; padding:28px 22px 50px;
-  min-height:clamp(240px, calc(100svh - 500px), 440px); }   /* phones: taller wall, and Sign in still fits on one screen */
+  min-height:clamp(170px, calc(100svh - 600px), 300px); }   /* phones: a band of posters, and Sign in still fits on one screen */
 @media (min-width:960px) { .au-stage { padding:48px 56px; min-height:100dvh; position:sticky; top:0; height:100dvh; } }
-.au-wall { position:absolute; inset:-12% -10%; z-index:-2; display:grid; grid-template-columns:repeat(5, 1fr); gap:12px;
-  transform:rotate(-8deg) scale(1.05); opacity:.78; }
-@media (min-width:960px) { .au-wall { grid-template-columns:repeat(4, 1fr); gap:16px; opacity:.8; } }
-.au-col { display:flex; flex-direction:column; gap:12px; will-change:transform; }   /* moved by the script (drift + drag) */
-@media (min-width:960px) { .au-col { gap:16px; } }
-.au-tile { position:relative; display:block; aspect-ratio:2/3; border-radius:10px; overflow:hidden; border:0.5px solid rgba(255,255,255,.12);
-  background:linear-gradient(160deg, var(--g, #2F4A2A), #0B0B0F); transition:border-color .2s, opacity .2s; }
-/* Posters you can open (the admins' picks or this week's trending): a column stops while you're on it,
-   and you can grab it (mouse) or scroll it (wheel / trackpad) up and down, like Home's Explore row */
-a.au-tile { cursor:pointer; -webkit-tap-highlight-color:transparent; -webkit-user-drag:none; user-select:none; -webkit-user-select:none; }
-.au-wall.can-drag .au-col { cursor:grab; }
-.au-wall.dragging, .au-wall.dragging .au-col, .au-wall.dragging a.au-tile { cursor:grabbing; }
-.au-wall.dragging a.au-tile { pointer-events:none; }
-a.au-tile:hover { border-color:rgba(255,255,255,.7); }
-a.au-tile::after { content:attr(data-name); position:absolute; left:0; right:0; bottom:0; padding:22px 9px 8px;
-  font:600 11.5px/1.3 'Manrope', var(--sans); color:#fff; background:linear-gradient(transparent, rgba(0,0,0,.85));
-  opacity:0; transition:opacity .2s; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
-a.au-tile:hover::after { opacity:1; }
-@media (pointer:coarse) { a.au-tile::after { display:none; } }
-.au-tile img { width:100%; height:100%; object-fit:cover; display:block; opacity:0; transition:opacity .6s ease; }
-.au-tile img.in { opacity:1; }
+/* the wall of posters itself: §Poster wall in css/style.css (js/poster-wall.js) */
 .au-stage::before { content:''; position:absolute; inset:0; z-index:-1; pointer-events:none;
-  background:linear-gradient(180deg, rgba(11,11,15,.45) 0%, rgba(11,11,15,.08) 30%, rgba(11,11,15,.88) 76%, #0B0B0F 100%),
-             radial-gradient(70% 55% at 15% 100%, rgba(74,103,65,.45), transparent 70%); }
+  background:linear-gradient(180deg, rgba(4,19,10,.45) 0%, rgba(4,19,10,.08) 30%, rgba(4,19,10,.88) 76%, #090D0A 100%),
+             radial-gradient(70% 55% at 15% 100%, color-mix(in srgb, var(--p-forest-800) 45%, transparent), transparent 70%); }
 @media (min-width:960px) {
-  .au-stage::before { background:linear-gradient(90deg, rgba(11,11,15,.08), rgba(11,11,15,.3) 60%, rgba(11,11,15,.7)),
-      linear-gradient(180deg, rgba(11,11,15,.55), transparent 26%, transparent 50%, #0B0B0F 94%),
-      radial-gradient(60% 50% at 10% 95%, rgba(74,103,65,.5), transparent 70%); }
+  .au-stage::before { background:linear-gradient(90deg, rgba(4,19,10,.08), rgba(4,19,10,.3) 60%, rgba(4,19,10,.7)),
+      linear-gradient(180deg, rgba(4,19,10,.55), transparent 26%, transparent 50%, #090D0A 94%),
+      radial-gradient(60% 50% at 10% 95%, color-mix(in srgb, var(--p-forest-800) 50%, transparent), transparent 70%); }
 }
 .au-brand { position:absolute; top:22px; left:22px; display:flex; align-items:center; gap:12px; text-decoration:none; color:#EDEDED; }
 @media (min-width:960px) { .au-brand { top:44px; left:56px; } }
 .au-brand img { height:46px; width:auto; display:block; }
 @media (min-width:960px) { .au-brand img { height:60px; } }
 .au-brand span { font-family:var(--serif); font-weight:500; font-size:15px; letter-spacing:3px; }
-.au-brand b { font-weight:500; color:#7EB86C; }
-.au-eyebrow { font-size:11px; font-weight:700; letter-spacing:2.4px; text-transform:uppercase; color:#7EB86C; margin-bottom:10px; }
+.au-brand b { font-weight:500; color:var(--p-forest-300); }
+.au-eyebrow { font-size:11px; font-weight:700; letter-spacing:2.4px; text-transform:uppercase; color:var(--p-forest-300); margin-bottom:10px; }
 .au-head { font-family:var(--serif); font-weight:600; font-size:clamp(28px, 7.5vw, 40px); line-height:1.04; letter-spacing:-.3px; margin:0; max-width:15ch; }
 @media (min-width:960px) { .au-head { font-size:clamp(44px, 4.4vw, 64px); } }
-.au-head em { font-style:normal; color:#7EB86C; }
+.au-head em { font-style:normal; color:var(--p-forest-300); }
 .au-feats { display:none; list-style:none; margin:28px 0 0; padding:0; gap:14px; }
 @media (min-width:960px) { .au-feats { display:grid; } }
 .au-feats li { display:flex; align-items:center; gap:14px; font-size:15px; color:rgba(237,237,237,.82); }
-.au-feats i { width:38px; height:38px; border-radius:12px; flex-shrink:0; display:grid; place-items:center; color:#7EB86C;
-  background:rgba(126,184,108,.12); border:0.5px solid rgba(126,184,108,.32); font-style:normal; }
+.au-feats i { width:38px; height:38px; border-radius:12px; flex-shrink:0; display:grid; place-items:center; color:var(--p-forest-300);
+  background:color-mix(in srgb, var(--p-forest-300) 12%, transparent); border:0.5px solid color-mix(in srgb, var(--p-forest-300) 32%, transparent); font-style:normal; }
 .au-feats i svg { width:18px; height:18px; }
 .au-credit { display:none; margin-top:30px; font-size:11.5px; color:rgba(237,237,237,.45); }
 @media (min-width:960px) { .au-credit { display:block; } }
@@ -78,20 +58,14 @@ a.au-tile:hover::after { opacity:1; }
 .au-side { position:relative; display:flex; flex-direction:column; align-items:center; justify-content:safe center; gap:16px;
   padding:22px 16px calc(32px + env(safe-area-inset-bottom)); }
 @media (min-width:960px) { .au-side { padding:48px 40px; } }
-.au-theme { position:absolute; top:14px; right:14px; width:44px; height:44px; border-radius:50%; display:grid; place-items:center; cursor:pointer;
-  background:var(--card-solid); color:var(--text-2); border:0.5px solid var(--border-2); }
-.au-theme:hover { color:var(--text); border-color:var(--border-olive); }
-.au-theme svg { width:18px; height:18px; }
-.au-theme .sun { display:none; }
-[data-theme="dark"] .au-theme .sun { display:block; } [data-theme="dark"] .au-theme .moon { display:none; }
-@media (max-width:959px) {
-  /* over the dark poster band (in both themes): stays light, and gets brighter on hover */
-  .au-theme { position:fixed; top:calc(12px + env(safe-area-inset-top)); z-index:5; background:rgba(11,11,15,.55); color:#EDEDED; border-color:rgba(255,255,255,.2); }
-  .au-theme:hover, .au-theme:focus-visible { color:#fff; background:rgba(11,11,15,.75); border-color:rgba(255,255,255,.55); }
-}
-.au-card { width:100%; max-width:420px; background:var(--card-solid); border:0.5px solid var(--border-2); border-radius:22px; padding:24px 22px 22px; }
-@media (min-width:960px) { .au-card { padding:30px 30px 26px; } }
-@media (max-width:959px) { .au-card { margin-top:-28px; position:relative; z-index:2; } }
+.au-card { width:100%; max-width:400px; }   /* the form sits right on the page — no box around it */
+/* phones: "Browse as a guest" on the poster band, visible without scrolling */
+.au-stage-guest { position:absolute; top:max(18px, env(safe-area-inset-top)); right:16px; display:inline-flex; align-items:center; gap:6px; min-height:44px; padding:0 4px;
+  font:700 13px var(--sans); color:#fff; text-decoration:none; }
+.au-stage-guest:hover { text-decoration:underline; text-underline-offset:3px; }
+.au-stage-guest:focus-visible { outline:2px solid var(--p-forest-300); outline-offset:2px; border-radius:6px; }
+.au-stage-guest svg { width:15px; height:15px; }
+@media (min-width:960px) { .au-stage-guest { display:none; } }
 
 /* saved accounts (in the Sign in panel): one tap, no password */
 .auth-saved { display:flex; flex-direction:column; gap:10px; margin-bottom:18px; }
@@ -109,7 +83,7 @@ a.au-tile:hover::after { opacity:1; }
 .auth-saved-go { flex-shrink:0; color:var(--text-3); display:grid; place-items:center; transition:color .2s, transform .2s; }
 .auth-saved-btn:hover .auth-saved-go { color:var(--olive-light); transform:translateX(2px); }
 .auth-saved-ava { width:40px; height:40px; border-radius:11px; overflow:hidden; flex-shrink:0; display:grid; place-items:center;
-  background:var(--olive); color:#fff; font-family:var(--serif); font-size:17px; }
+  background:var(--olive); color:var(--text-on-brand); font-family:var(--serif); font-size:17px; }
 .auth-saved-ava img { width:100%; height:100%; object-fit:cover; }
 .auth-or { display:flex; align-items:center; gap:12px; margin-top:8px; font-size:12px; font-weight:600; color:var(--text-3); }
 .auth-or::before, .auth-or::after { content:''; flex:1; height:1px; background:var(--border-2); }
@@ -124,11 +98,9 @@ a.au-tile:hover::after { opacity:1; }
 .au-tabs.create::before { transform:translateX(100%); }
 .au-tab:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
 
-.au-title { font-family:var(--serif); font-weight:600; font-size:26px; line-height:1.1; color:var(--text); margin:0 0 4px; }
+.au-title { font-family:var(--serif); font-weight:600; font-size:26px; line-height:1.1; color:var(--text-heading); margin:0 0 4px; }
 .au-sub { font-size:14px; color:var(--text-2); margin:0 0 20px; line-height:1.5; }
 .au-panel[hidden] { display:none; }
-.au-panel { animation:auIn .35s var(--ease) backwards; }
-@keyframes auIn { from { opacity:0; transform:translateY(6px); } }
 
 /* fields */
 .au-form { display:flex; flex-direction:column; gap:14px; }
@@ -139,7 +111,7 @@ a.au-tile:hover::after { opacity:1; }
 .au-box > svg { position:absolute; left:14px; width:17px; height:17px; color:var(--text-3); pointer-events:none; transition:color .2s; }
 .au-box:focus-within > svg { color:var(--olive-light); }
 .au-input { width:100%; min-height:50px; padding:0 14px 0 42px; border-radius:12px; font:500 15px var(--sans); color:var(--text);
-  background:var(--bg-2); border:1px solid var(--border-2); outline:none; transition:border-color .2s, background .2s; }
+  background:var(--bg-2); border:1px solid var(--border-input); outline:none; transition:border-color .2s, background .2s; }
 .au-input::placeholder { color:var(--text-3); }
 .au-input:focus { border-color:var(--olive-light); background:var(--card-solid); }
 .au-input.has-eye { padding-right:50px; }
@@ -158,31 +130,41 @@ a.au-tile:hover::after { opacity:1; }
 .au-priv-opt svg { width:18px; height:18px; flex-shrink:0; color:var(--text-3); }
 .au-priv-opt span { display:flex; flex-direction:column; min-width:0; }
 .au-priv-opt b { font-size:14px; color:var(--text); }
-.au-priv-opt small { font-size:11.5px; color:var(--text-3); line-height:1.3; }
+.au-priv-opt small { font-size:11.5px; color:var(--text-2); line-height:1.3; }
 .au-priv-opt.on { border-color:var(--olive-light); background:var(--olive-faint); }
 .au-priv-opt.on svg { color:var(--olive-light); }
 .au-priv-opt:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
 .au-hint b { color:var(--olive-light); font-weight:700; }
 
-/* Email / Username switch beside the label */
-.au-chips { display:inline-flex; padding:3px; border-radius:10px; background:var(--bg-2); border:0.5px solid var(--border); }
-.au-chips label { position:relative; cursor:pointer; }
-.au-chips input { position:absolute; opacity:0; inset:0; margin:0; cursor:pointer; }
-.au-chips span { display:block; padding:6px 11px; border-radius:7px; font-size:12px; font-weight:700; color:var(--text-3); transition:all .2s; }
-.au-chips input:checked + span { background:var(--card-solid); color:var(--text); box-shadow:inset 0 0 0 1px var(--border-2); }
-.au-chips input:focus-visible + span { outline:2px solid var(--olive-light); }
+/* Create account: two steps */
+.au-steps { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin:-6px 0 16px; }
+.au-steps span { display:flex; flex-direction:column; gap:6px; font-size:11.5px; font-weight:700; color:var(--text-3); }
+.au-steps span::before { content:''; height:3px; border-radius:2px; background:var(--border-2); }
+.au-steps span.on { color:var(--olive-light); }
+.au-steps span.on::before { background:var(--olive-light); }
+.au-steps span:last-child { text-align:end; }
+.au-step[hidden] { display:none; }
+.au-avail { font-size:12px; font-weight:700; color:var(--text-3); }
+.au-avail.ok { color:var(--olive-light); }
+.au-avail.bad { color:var(--danger); }
+.au-next { margin:2px 0 0; font-size:12px; color:var(--text-3); text-align:center; line-height:1.45; }
+.au-back { align-self:flex-start; }
+.au-label-row .au-link { padding:0; font-size:12.5px; }
+.au-switch { margin:4px 0 0; text-align:center; font-size:13px; color:var(--text-2); }
+.au-switch .au-link { display:inline; align-self:auto; padding:0; }
+@media (min-width:960px) { .au-switch { display:none; } }
 
 /* errors */
 .flip-card__error { display:none; align-items:flex-start; gap:9px; padding:11px 13px; border-radius:12px; font-size:13px; line-height:1.45; font-weight:600;
   color:#E5675F; background:rgba(229,103,95,.1); border:1px solid rgba(229,103,95,.35); }
-[data-theme="light"] .flip-card__error { color:#A8322B; background:rgba(179,55,47,.07); border-color:rgba(179,55,47,.3); }
+[data-theme="light"] .flip-card__error { color:var(--error-fg); background:color-mix(in srgb, var(--error-fg) 7%, transparent); border-color:color-mix(in srgb, var(--error-fg) 30%, transparent); }
 .flip-card__error.show { display:flex; }
 .flip-card__error.show::before { content:'!'; flex-shrink:0; width:18px; height:18px; border-radius:50%; display:grid; place-items:center; font-size:11px; font-weight:800; color:#fff; background:currentColor; }
 .flip-card__error.show::before { color:inherit; }
 
 /* buttons + links */
-.au-btn { min-height:52px; border-radius:12px; border:1px solid var(--olive); cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:10px;
-  font:700 15px var(--sans); color:#fff; background:var(--olive); transition:filter .2s, transform .12s; margin-top:4px; }
+.au-btn { min-height:52px; border-radius:var(--radius-sm); border:1px solid var(--olive); cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:10px;
+  font:700 15px var(--sans); color:var(--text-on-brand); background:var(--olive); transition:filter .2s, transform .12s; margin-top:4px; }
 .au-btn:hover { filter:brightness(1.08); }
 .au-btn:active { transform:scale(.985); }
 .au-btn:disabled { opacity:.7; cursor:progress; filter:none; }
@@ -196,10 +178,13 @@ a.au-tile:hover::after { opacity:1; }
 .au-row-split { justify-content:space-between; align-items:center; gap:10px; }
 .au-remember { display:inline-flex; align-items:center; gap:8px; min-height:40px; font-size:13px; font-weight:600; color:var(--text-2); cursor:pointer; }
 .au-remember input { width:17px; height:17px; margin:0; accent-color:var(--olive-light); cursor:pointer; }
-.au-guest { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; max-width:420px; min-height:48px; padding:0 16px; border-radius:14px;
-  border:1px dashed var(--border-2); color:var(--text-2); font-size:13.5px; font-weight:600; text-decoration:none; transition:border-color .2s, color .2s; }
-.au-guest:hover { border-color:var(--olive-light); color:var(--text); }
+.au-guest { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; min-height:50px; padding:0 16px; border-radius:var(--radius-sm); box-sizing:border-box;
+  border:1px solid var(--border-2); background:var(--card); color:var(--text); font-size:14px; font-weight:700; text-decoration:none; transition:border-color .2s; }
+.au-guest:hover { border-color:var(--olive-light); }
+.au-guest:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
 .au-guest svg { width:16px; height:16px; }
+.au-guest-block { display:flex; flex-direction:column; gap:12px; margin-top:4px; }
+@media (max-width:959px) { .au-card .au-guest-block { display:none; } }   /* phones: it's on the poster band */
 
 /* done states (check your email) */
 .au-done { display:flex; flex-direction:column; align-items:center; text-align:center; gap:10px; padding:8px 0 4px; }
@@ -208,17 +193,18 @@ a.au-tile:hover::after { opacity:1; }
 .au-done p { font-size:14px; color:var(--text-2); line-height:1.6; margin:0; }
 .au-done strong { color:var(--text); word-break:break-all; }
 
-@media (prefers-reduced-motion:reduce) { .au-panel, .au-tabs::before { animation:none !important; transition:none !important; } }
+@media (prefers-reduced-motion:reduce) { .au-tabs::before { transition:none !important; } }
 </style>
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0B0B0F">
+  <meta name="color-scheme" content="light dark">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="MyScreenFolio">
-  <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
-  <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <link rel="icon" type="image/svg+xml" sizes="any" href="icons/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
 </head>
 <body>
 
@@ -226,9 +212,10 @@ a.au-tile:hover::after { opacity:1; }
 
   <!-- The stage: this week's posters drifting behind what MyScreenFolio is -->
   <section class="au-stage" aria-label="MyScreenFolio">
-    <div class="au-wall" id="auWall" aria-hidden="true"></div>
+    <div class="pw-wall" id="auWall" aria-hidden="true"></div>
+    <a class="au-stage-guest" href="index.html">Browse as a guest <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
     <a class="au-brand" href="index.html" aria-label="MyScreenFolio home" translate="no">
-      <img src="icons/logo-nav.png" alt="" width="95" height="60">
+      <img src="icons/logo-dark.svg" alt="" width="142" height="60">
     </a>
     <div>
       <div class="au-eyebrow">Your screen portfolio</div>
@@ -244,11 +231,6 @@ a.au-tile:hover::after { opacity:1; }
 
   <!-- The form -->
   <section class="au-side">
-    <button type="button" class="au-theme" onclick="toggleTheme()" aria-label="Switch light / dark">
-      <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg>
-      <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
-    </button>
-
     <div class="au-card">
       <!-- Sign in · Create account -->
       <div class="au-tabs" id="auTabs" role="tablist" aria-label="Sign in or create an account">
@@ -265,20 +247,14 @@ a.au-tile:hover::after { opacity:1; }
         <form class="au-form" onsubmit="doSignIn(event)" novalidate>
           <div class="flip-card__error" id="siError" role="alert"></div>
           <div class="au-field">
-            <div class="au-label-row">
-              <label class="au-label" for="siEmail" id="siLabel">Email</label>
-              <div class="au-chips" role="radiogroup" aria-label="Sign in with">
-                <label><input type="radio" id="siModeEmail" name="siMode" value="email" checked onchange="setSIMode('email')"><span>Email</span></label>
-                <label><input type="radio" id="siModeUsername" name="siMode" value="username" onchange="setSIMode('username')"><span>Username</span></label>
-              </div>
-            </div>
+            <label class="au-label" for="siEmail">Email or username</label>
             <div class="au-box">
-              <svg id="siIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg>
-              <input class="au-input" id="siEmail" type="email" maxlength="254" placeholder="you@example.com" autocomplete="email" inputmode="email" data-mask="email">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/></svg>
+              <input class="au-input" id="siEmail" type="text" maxlength="254" placeholder="you@example.com or username" autocomplete="username" autocapitalize="none" spellcheck="false">
             </div>
           </div>
           <div class="au-field">
-            <label class="au-label" for="siPass">Password</label>
+            <div class="au-label-row"><label class="au-label" for="siPass">Password</label><button type="button" class="au-link" onclick="goToReset()">Forgot password?</button></div>
             <div class="au-box">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
               <input class="au-input has-eye" id="siPass" type="password" maxlength="72" placeholder="Your password" autocomplete="current-password">
@@ -288,65 +264,75 @@ a.au-tile:hover::after { opacity:1; }
               </button>
             </div>
           </div>
-          <div class="au-row-end au-row-split">
-            <label class="au-remember"><input type="checkbox" id="siRemember" checked> Remember me</label>
-            <button type="button" class="au-link" onclick="goToReset()">Forgot password?</button>
-          </div>
-          <button class="au-btn" id="btnSignIn" type="submit"><span>Let’s go</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+          <label class="au-remember"><input type="checkbox" id="siRemember" checked> Keep me signed in</label>
+          <button class="au-btn" id="btnSignIn" type="submit"><span>Sign in</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
         </form>
+        <div class="au-guest-block"><div class="auth-or">or</div>
+          <a class="au-guest" href="index.html">Browse as a guest <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div>
+        <p class="au-switch">New here? <button type="button" class="au-link" onclick="setMode(true)">Create an account</button></p>
       </div>
 
       <!-- Create account -->
       <div class="au-panel" id="suPanel" role="tabpanel" aria-labelledby="tabCreate" hidden>
-        <h2 class="au-title">Start your folio</h2>
-        <p class="au-sub">Free, and it takes a minute.</p>
+        <div class="au-steps" aria-hidden="true"><span class="on" id="suStepBar1">1 · Your account</span><span id="suStepBar2">2 · About you</span></div>
+        <h2 class="au-title" id="suTitle">Start your folio</h2>
+        <p class="au-sub" id="suStepOf" aria-live="polite">Step 1 of 2 · Free, and it takes a minute.</p>
         <form class="au-form" onsubmit="doSignUp(event)" novalidate>
           <div class="flip-card__error" id="suError" role="alert"></div>
-          <div class="au-field">
-            <label class="au-label" for="suUser">Username</label>
-            <div class="au-box">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/></svg>
-              <input class="au-input" id="suUser" type="text" maxlength="20" placeholder="e.g. movienight_sam" autocomplete="off" autocapitalize="none" spellcheck="false" aria-describedby="suUserHint"
-                     data-mask="username" oninput="auUserHint()">
+          <fieldset class="au-step au-form" id="suStep1" style="border:0;margin:0;padding:0;min-width:0">
+            <legend class="sr-only">Your account</legend>
+            <div class="au-field">
+              <div class="au-label-row"><label class="au-label" for="suUser">Username</label><span class="au-avail" id="suAvail" aria-live="polite"></span></div>
+              <div class="au-box">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/></svg>
+                <input class="au-input" id="suUser" type="text" maxlength="20" placeholder="e.g. movienight_sam" autocomplete="off" autocapitalize="none" spellcheck="false" aria-describedby="suUserHint"
+                       data-mask="username" oninput="auUserHint()">
+              </div>
+              <div class="au-hint" id="suUserHint">3–20 letters, numbers or _</div>
             </div>
-            <div class="au-hint" id="suUserHint">3–20 letters, numbers or _</div>
-          </div>
-          <div class="au-field">
-            <label class="au-label" for="suEmail">Email</label>
-            <div class="au-box">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg>
-              <input class="au-input" id="suEmail" type="email" maxlength="254" placeholder="you@example.com" autocomplete="email" inputmode="email" data-mask="email" oninput="if ($('suPass').value) auPassSU()">
+            <div class="au-field">
+              <label class="au-label" for="suEmail">Email</label>
+              <div class="au-box">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg>
+                <input class="au-input" id="suEmail" type="email" maxlength="254" placeholder="you@example.com" autocomplete="email" inputmode="email" data-mask="email" oninput="if ($('suPass').value) auPassSU()">
+              </div>
             </div>
-          </div>
-          <div class="au-field">
-            <label class="au-label" for="suPass">Password</label>
-            <div class="au-box">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-              <input class="au-input has-eye" id="suPass" type="password" maxlength="64" placeholder="8–64 characters" autocomplete="new-password">
-              <button type="button" class="au-eye" aria-label="Show password" aria-pressed="false" onclick="auEye(this)">
-                <svg class="on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>
-                <svg class="off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.9 17.9A10.4 10.4 0 0 1 12 19c-6.4 0-10-7-10-7a18.5 18.5 0 0 1 5.1-5.9M9.9 4.2A9.1 9.1 0 0 1 12 4c6.4 0 10 7 10 7a18.6 18.6 0 0 1-2.2 3.2M1 1l22 22"/></svg>
-              </button>
-            </div>
-<div id="suGuide"></div>
-          </div>
-          <div class="au-field">
-            <div class="au-label" id="suBirthLabel">Date of birth</div>
-            <div class="mss-birth-row au-birth" role="group" aria-labelledby="suBirthLabel" aria-describedby="suBirthHint" id="suBirth"></div>
-            <div class="au-hint" id="suBirthHint">Private — it never shows on your profile.</div>
-          </div>
-          <div class="au-field">
-            <div class="au-label" id="suPrivLabel">Account</div>
-            <div class="au-priv" role="radiogroup" aria-labelledby="suPrivLabel">
-              <button type="button" class="au-priv-opt on" role="radio" aria-checked="true" data-priv="0" onclick="auPriv(false)">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-                <span><b>Public</b></span></button>
-              <button type="button" class="au-priv-opt" role="radio" aria-checked="false" data-priv="1" onclick="auPriv(true)">
+            <div class="au-field">
+              <label class="au-label" for="suPass">Password</label>
+              <div class="au-box">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                <span><b>Private</b></span></button>
+                <input class="au-input has-eye" id="suPass" type="password" maxlength="64" placeholder="8–64 characters" autocomplete="new-password">
+                <button type="button" class="au-eye" aria-label="Show password" aria-pressed="false" onclick="auEye(this)">
+                  <svg class="on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>
+                  <svg class="off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.9 17.9A10.4 10.4 0 0 1 12 19c-6.4 0-10-7-10-7a18.5 18.5 0 0 1 5.1-5.9M9.9 4.2A9.1 9.1 0 0 1 12 4c6.4 0 10 7 10 7a18.6 18.6 0 0 1-2.2 3.2M1 1l22 22"/></svg>
+                </button>
+              </div>
+              <div id="suGuide"></div>
             </div>
-          </div>
-          <button class="au-btn" id="btnSignUp" type="submit"><span>Create my folio</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+            <button class="au-btn" id="btnSUNext" type="submit"><span>Continue</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+            <p class="au-next">Next: your birthday (kept private) and a public or private profile.</p>
+          </fieldset>
+          <fieldset class="au-step au-form" id="suStep2" hidden style="border:0;margin:0;padding:0;min-width:0">
+            <legend class="sr-only">About you</legend>
+            <button type="button" class="au-link au-link-muted au-back" onclick="auStep(1)">← Back</button>
+            <div class="au-field">
+              <div class="au-label" id="suBirthLabel">Date of birth</div>
+              <div class="mss-birth-row au-birth" role="group" aria-labelledby="suBirthLabel" aria-describedby="suBirthHint" id="suBirth"></div>
+              <div class="au-hint" id="suBirthHint">Private — it never shows on your profile.</div>
+            </div>
+            <div class="au-field">
+              <div class="au-label" id="suPrivLabel">Your profile</div>
+              <div class="au-priv" role="radiogroup" aria-labelledby="suPrivLabel">
+                <button type="button" class="au-priv-opt on" role="radio" aria-checked="true" data-priv="0" onclick="auPriv(false)">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                  <span><b>Public</b><small>Anyone can see it</small></span></button>
+                <button type="button" class="au-priv-opt" role="radio" aria-checked="false" data-priv="1" onclick="auPriv(true)">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                  <span><b>Private</b><small>You approve followers</small></span></button>
+              </div>
+            </div>
+            <button class="au-btn" id="btnSignUp" type="submit"><span>Create my folio</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+          </fieldset>
         </form>
       </div>
 
@@ -406,10 +392,6 @@ a.au-tile:hover::after { opacity:1; }
       </div>
     </div>
 
-    <a class="au-guest" href="index.html">
-      Just looking? Browse without an account
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-    </a>
   </section>
 </main>
 
@@ -417,160 +399,12 @@ a.au-tile:hover::after { opacity:1; }
 
 <script src="js/vendor/supabase-2.118.0.js"></script>
 <script src="js/config.js"></script>
+<script src="js/poster-wall.js"></script>
+<script src="js/db.js"></script>
 <script src="js/msg-keys.js"></script>
 <script>
-/* ── The poster wall: titles the admins chose (Admin → Sign-in posters, sql/078) — Anime on the
-   left, Movies and TV Shows down the middle, Cartoons on the right (on a phone the middle gets a
-   third column mixing both). The picks are kept on this device and only fetched again after an admin
-   saves (a tiny "when was it saved?" check each visit). Nothing chosen yet, or it can't load →
-   this week's trending; and until posters arrive, the tiles are the site's colours.
-   Every poster opens its title (guests can look around; title.html offers to sign up to rate it). ── */
-(() => {
-  const wall = document.getElementById('auWall');
-  const wide = matchMedia('(min-width:960px)').matches, per = 7;
-  const tones = ['#2F4A2A', '#6B4A22', '#3B2347', '#22384F', '#1E4A47', '#4A2A22', '#33442A'];
-  // Sharp on every screen: the browser picks the size it needs (phones ~w342, retina laptops w500–w780)
-  const IMG = 'https://image.tmdb.org/t/p/', KEY = 'msf_wall';
-  const pic = p => `src="${IMG}w342${p}" srcset="${IMG}w342${p} 342w, ${IMG}w500${p} 500w, ${IMG}w780${p} 780w" sizes="(min-width:960px) 20vw, 30vw"`;
-  const okPath = p => typeof p === 'string' && /^\/[A-Za-z0-9_-]{5,64}\.(jpg|jpeg|png)$/.test(p);
-  const clean = list => (Array.isArray(list) ? list : [])
-    .filter(t => t && okPath(t.poster) && /^\d{1,9}$/.test(String(t.id)) && (t.type === 'movie' || t.type === 'tv'));
-  let shown = '';
-
-  /* Drift + grab: each column drifts on its own (alternate ones the other way). Hovering a column stops it;
-     drag it with the mouse or scroll over it with the wheel / trackpad to move it yourself either way,
-     and ~1.2s after you let go it carries on from there. A drag isn't a click on the poster under it.
-     Two copies of each column make it loop seamlessly. Reduced motion: no drift, still movable. */
-  const motion = (() => {
-    const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const fine = matchMedia('(hover: hover) and (pointer: fine)').matches;
-    const TILT = Math.cos(8 * Math.PI / 180);            // the wall is tilted 8° — moves follow the pointer
-    let cols = [], drag = null, last = performance.now();
-    const half = col => col.children.length > per ? col.children[per].offsetTop - col.children[0].offsetTop : 0;
-    const put = (st, y) => { const h = st.h || (st.h = half(st.el)); if (h) { y %= h; if (y < 0) y += h; } st.y = y; st.el.style.transform = `translate3d(0, ${-y}px, 0)`; };
-    const later = st => { clearTimeout(st.t); st.busy = true; st.t = setTimeout(() => { st.busy = false; }, 1200); };
-
-    function bind() {
-      cols = [...wall.children].map((el, i) => ({ el, i, y: 0, h: 0, hover: false, busy: false, t: 0,
-        speed: (i % 2 ? -1 : 1) / (60 + i * 14) }));          // share of a loop per second (the old 60s + 14s a column)
-      wall.classList.toggle('can-drag', fine && !!wall.querySelector('a.au-tile'));
-      cols.forEach(st => {
-        put(st, 0);
-        if (fine) {                                             // (a phone's tap would leave it "hovered")
-          st.el.addEventListener('mouseenter', () => { st.hover = true; });
-          st.el.addEventListener('mouseleave', () => { st.hover = false; });
-        }
-        st.el.addEventListener('wheel', e => {
-          if (!wall.classList.contains('can-drag')) return;
-          e.preventDefault();
-          put(st, st.y + (e.deltaMode === 1 ? e.deltaY * 32 : e.deltaY)); later(st);
-        }, { passive: false });
-        st.el.addEventListener('pointerdown', e => {
-          if (e.pointerType !== 'mouse' || e.button !== 0 || !wall.classList.contains('can-drag')) return;
-          e.preventDefault();                                   // no text selection / link dragging
-          drag = { st, y: e.clientY, start: st.y, moved: false };
-          clearTimeout(st.t); st.busy = true;
-        });
-      });
-    }
-    addEventListener('pointermove', e => {
-      if (!drag) return;
-      const dy = (e.clientY - drag.y) / TILT;
-      if (!drag.moved && Math.abs(dy) > 5) { drag.moved = true; wall.classList.add('dragging'); }
-      if (drag.moved) put(drag.st, drag.start - dy);
-    });
-    addEventListener('pointerup', () => {
-      if (!drag) return;
-      const { st, moved } = drag;
-      drag = null; wall.classList.remove('dragging'); later(st);
-      if (moved) {                                            // the drag isn't a click on the poster underneath
-        const stop = ev => { ev.preventDefault(); ev.stopPropagation(); };
-        wall.addEventListener('click', stop, { capture: true, once: true });
-        setTimeout(() => wall.removeEventListener('click', stop, { capture: true }), 50);
-      }
-    });
-    addEventListener('resize', () => cols.forEach(st => { st.h = 0; put(st, st.y); }));
-    if (!reduced) requestAnimationFrame(function step(t) {
-      const dt = Math.min(64, t - last) / 1000; last = t;
-      if (!document.hidden) cols.forEach(st => { if (!st.hover && !st.busy && !(drag && drag.st === st)) put(st, st.y + st.speed * (st.h || half(st.el)) * dt); });
-      requestAnimationFrame(step);
-    });
-    return { bind };
-  })();
-
-  // columns → `per` titles each (repeating a short row), then drawn twice over for the endless drift
-  function draw(columns) {
-    const sig = JSON.stringify(columns);
-    if (sig === shown) return;
-    shown = sig;
-    wall.innerHTML = columns.map((col, c) => {
-      const tiles = Array.from({ length: per * 2 }, (_, i) => {
-        const t = col.length ? col[i % per % col.length] : null, g = tones[(c * 3 + i) % tones.length];
-        return t
-          ? `<a class="au-tile" style="--g:${g}" href="title.html?type=${t.type}&id=${t.id}&from=wall" tabindex="-1" data-name="${escHTML(t.title || '')}"><img ${pic(t.poster)} alt="" decoding="async" onload="this.classList.add('in')"></a>`
-          : `<div class="au-tile" style="--g:${g}"></div>`;
-      }).join('');
-      return `<div class="au-col">${tiles}</div>`;
-    }).join('');
-    motion.bind();
-  }
-  // the admins' rows → this screen's columns (phone: a movies + TV mix in the middle, offset so it never lines up)
-  function fromSlots(slots) {
-    const a = clean(slots?.anime), m = clean(slots?.movies), t = clean(slots?.tv), c = clean(slots?.cartoons);
-    if (!(a.length + m.length + t.length + c.length)) return null;
-    if (wide) return [a, m, t, c];
-    const mix = [];
-    for (let i = 0; i < per; i++) { const src = i % 2 ? t : m; if (src.length) mix.push(src[(i + 3) % src.length]); }
-    return [a, m, mix, t, c];
-  }
-  // any empty row borrows from this week's trending
-  async function trending() {
-    let list = [];
-    try { list = JSON.parse(sessionStorage.getItem('msf_login_trending') || '[]'); } catch {}
-    if (!list.length) {
-      try {
-        const r = await fetch(`${SUPABASE_URL}/functions/v1/tmdb/trending/all/week?language=en-US`);
-        if (r.ok) list = ((await r.json()).results || [])
-          .map(x => ({ id: x.id, type: x.media_type, title: x.title || x.name, poster: x.poster_path }));
-        list = clean(list);
-        if (list.length) try { sessionStorage.setItem('msf_login_trending', JSON.stringify(list)); } catch {}
-      } catch {}
-    }
-    return list;
-  }
-  async function paint(slots) {
-    let cols = fromSlots(slots);
-    const n = wide ? 4 : 5;
-    if (!cols || cols.some(col => !col.length)) {
-      const tr = await trending();
-      cols = cols || Array.from({ length: n }, () => []);
-      cols = cols.map((col, i) => col.length ? col : tr.slice(i * per, i * per + per).concat(tr).slice(0, per));
-    }
-    draw(cols);
-  }
-
-  let saved = null;
-  try { saved = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch {}
-  // straight away: the copy on this device (or the colours)
-  if (saved?.slots) paint(saved.slots); else draw(Array.from({ length: wide ? 4 : 5 }, () => []));
-  // then: has an admin saved since? (only then fetch the posters again)
-  (async () => {
-    try {
-      const { data: v, error } = await sb.from('sign_in_wall').select('updated_at').eq('id', 1).maybeSingle();
-      if (error) throw error;
-      if (!v) { if (!saved) paint(null); return; }
-      if (saved && saved.at === v.updated_at) return;
-      const { data, error: e2 } = await sb.from('sign_in_wall').select('slots, updated_at').eq('id', 1).maybeSingle();
-      if (e2) throw e2;
-      saved = { at: data.updated_at, slots: data.slots || {} };
-      try { localStorage.setItem(KEY, JSON.stringify(saved)); } catch {}
-      paint(saved.slots);
-    } catch (err) {
-      console.warn('Sign-in posters:', err);
-      if (!saved) paint(null);               // couldn't ask → trending
-    }
-  })();
-})();
+/* ── The poster wall (js/poster-wall.js): every poster opens its title; guests can look around ── */
+MSSPosterWall.mount(document.getElementById('auWall'), { link: true });
 
 /* Redirect if already logged in — but not if this is a password reset */
 (async () => {
@@ -646,52 +480,48 @@ function auEye(btn) {
   btn.setAttribute('aria-pressed', String(show));
   btn.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
 }
-// "Your profile: @name" as you type a username
+// "Your profile: @name" and a live "Available" check as you type a username
+let _auUserOk = null, _auUserT = 0, _auUserSeq = 0;
+const AU_USER_RE = /^[a-zA-Z0-9_]{3,20}$/;
 function auUserHint() {
-  const v = $('suUser').value;
+  const v = $('suUser').value.trim(), seq = ++_auUserSeq;
   $('suUserHint').innerHTML = v.length >= 3 ? `Your profile: <b translate="no">@${escHTML(v)}</b>` : '3–20 letters, numbers or _';
   if ($('suPass').value) auPassSU();
+  _auUserOk = null; clearTimeout(_auUserT);
+  const say = (t, cls) => { const el = $('suAvail'); el.textContent = t; el.className = 'au-avail' + (cls ? ' ' + cls : ''); };
+  if (!v) return say('');
+  if (!AU_USER_RE.test(v)) return say(v.length < 3 ? '' : 'Letters, numbers and _ only', v.length < 3 ? '' : 'bad');
+  say('Checking…');
+  _auUserT = setTimeout(async () => {
+    const [free, allowed] = await Promise.all([checkUsernameAvailable(v).catch(() => true), isUsernameAllowed(v)]);
+    if (seq !== _auUserSeq) return;                       // you've typed since
+    _auUserOk = free && allowed;
+    say(!allowed ? 'Not allowed' : free ? '✓ Available' : 'Taken', _auUserOk ? 'ok' : 'bad');
+  }, MSS_SEARCH_MS);
 }
-// The new-password guide (MSSPass, js/config.js): 8–64 characters, live checklist — sign-up and reset
-const auPassSU = MSSPass.mount('suGuide', 'suPass', () => [$('suUser').value, $('suEmail').value.split('@')[0]]);
+// The new-password guide (MSSPass, js/config.js): sign-up as one line, reset with the full checklist
+const auPassSU = MSSPass.mount('suGuide', 'suPass', () => [$('suUser').value, $('suEmail').value.split('@')[0]], { compact: true });
 MSSPass.mount('rpGuide', 'rpPass');
-
-/* ── Sign in with Email or Username ── */
-function setSIMode(mode) {
-  const input = $('siEmail'), email = mode === 'email';
-  input.type = email ? 'email' : 'text';
-  input.placeholder = email ? 'you@example.com' : 'your_username';
-  input.autocomplete = email ? 'email' : 'username';
-  input.inputMode = email ? 'email' : 'text';
-  input.autocapitalize = 'none';
-  input.dataset.mask = email ? 'email' : 'username';      // usernames: lowercase letters, numbers and _ only
-  input.maxLength = email ? 254 : 40;                      // (older accounts can have up to 40)
-  $('siLabel').textContent = email ? 'Email' : 'Username';
-  $('siIcon').innerHTML = email ? '<rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/>' : '<circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/>';
-  input.value = '';
-  showErr('siError', '');
-  input.focus();
-}
 
 /* ── Sign In ── */
 async function doSignIn(e) {
   e.preventDefault();
   const identifier = $('siEmail').value.trim();
   const pass = $('siPass').value;
-  const mode = document.querySelector('input[name="siMode"]:checked').value;
+  const byEmail = identifier.includes('@');               // one field: an email, or else a username
 
   if (!identifier || !pass) { showErr('siError', 'Please fill in both fields.'); return; }
-  if (mode === 'email' && !EMAIL_RE.test(identifier)) { showErr('siError', 'That email doesn’t look right.'); return; }
+  if (byEmail && !EMAIL_RE.test(identifier)) { showErr('siError', 'That email doesn’t look right.'); return; }
   showErr('siError', '');
   _auBtn('btnSignIn', 'Signing in…', true);
-  const again = () => _auBtn('btnSignIn', 'Let’s go', false);
+  const again = () => _auBtn('btnSignIn', 'Sign in', false);
 
-  let email = mode === 'email' ? identifier.toLowerCase() : identifier;
+  let email = byEmail ? identifier.toLowerCase() : identifier;
   // Username → the email, only if the password is right (014 SQL) — wrong password and
   // unknown username get the same NULL answer.
-  if (mode === 'username') {
+  if (!byEmail) {
     try {
-      const { data: lookedUpEmail, error } = await sb.rpc('get_email_for_login', { p_username: identifier, p_password: pass });
+      const { data: lookedUpEmail, error } = await sb.rpc('get_email_for_login', { p_username: identifier.replace(/^@/, '').toLowerCase(), p_password: pass });
       if (error) { showErr('siError', isRateLimitError(error) ? 'Too many attempts — please wait a minute and try again.' : 'Could not sign in — please try again.'); again(); return; }
       if (!lookedUpEmail) { showErr('siError', 'That username and password don’t match.'); again(); return; }
       email = lookedUpEmail;
@@ -700,7 +530,7 @@ async function doSignIn(e) {
     }
   }
 
-  MSSRemember.set($('siRemember').checked);          // unticked → signed out when the browser closes
+  MSSRemember.set($('siRemember').checked);          // Keep me signed in unticked → signed out when the browser closes
   const { error } = await sb.auth.signInWithPassword({ email, password: pass });
   if (error) {
     showErr('siError', /invalid login credentials/i.test(error.message || '') ? 'That email and password don’t match.' : (error.message || 'Couldn’t sign in.'));
@@ -725,19 +555,39 @@ function auPriv(on) {
   _auPrivate = !!on;
   document.querySelectorAll('.au-priv-opt').forEach(b => { const a = (b.dataset.priv === '1') === _auPrivate; b.classList.toggle('on', a); b.setAttribute('aria-checked', a); });
 }
+// Step 1 of 2 (your account) → Step 2 of 2 (about you); Back keeps what you typed
+function auStep(n) {
+  $('suStep1').hidden = n !== 1; $('suStep2').hidden = n !== 2;
+  $('suStepBar2').classList.toggle('on', n === 2);
+  $('suStepOf').textContent = n === 1 ? 'Step 1 of 2 · Free, and it takes a minute.' : 'Step 2 of 2 · Almost there.';
+  showErr('suError', '');
+  (n === 1 ? $('suUser') : $('suStep2').querySelector('input, select, button.mss-pick-trigger, .au-priv-opt'))?.focus();
+}
+function _auStep1Error(username, email, pass) {
+  if (username.length < 3) return 'Your username needs at least 3 characters.';
+  if (username.length > 20) return 'Your username can be 20 characters at most.';
+  if (!/^[a-zA-Z0-9_]+$/.test(username)) return 'Usernames can only use letters, numbers and _.';
+  if (_auUserOk === false) return $('suAvail').textContent === 'Not allowed' ? 'That username isn’t allowed — please pick another.' : 'That username is taken — please pick another.';
+  if (!email) return 'Please add your email.';
+  if (!EMAIL_RE.test(email)) return 'That email doesn’t look right.';
+  return MSSPass.error(pass) || (pass.length > 128 ? 'Your password can be 128 characters at most.' : '');
+}
 async function doSignUp(e) {
   e.preventDefault();
   const username = $('suUser').value.trim();
   const email    = $('suEmail').value.trim().toLowerCase();
   const pass     = $('suPass').value;
+  if (!$('suStep1').hidden) {                       // Continue
+    const err = _auStep1Error(username, email, pass);
+    if (err) { showErr('suError', err); return; }
+    if (_auAgeBlocked()) { showErr('suError', AU_UNDER_13); return; }
+    auStep(2);
+    return;
+  }
+  const back1 = msg => { auStep(1); showErr('suError', msg); };
+  const err1 = _auStep1Error(username, email, pass);
+  if (err1) { back1(err1); return; }
 
-  if (username.length < 3)      { showErr('suError', 'Your username needs at least 3 characters.'); return; }
-  if (username.length > 20)     { showErr('suError', 'Your username can be 20 characters at most.'); return; }
-  if (!/^[a-zA-Z0-9_]+$/.test(username)) { showErr('suError', 'Usernames can only use letters, numbers and _.'); return; }
-  if (!email)                   { showErr('suError', 'Please add your email.'); return; }
-  if (!EMAIL_RE.test(email))    { showErr('suError', 'That email doesn’t look right.'); return; }
-  if (MSSPass.error(pass))       { showErr('suError', MSSPass.error(pass)); return; }
-  if (pass.length > 128)        { showErr('suError', 'Your password can be 128 characters at most.'); return; }
   // Birthday (088): 13 and up. An under-13 answer blocks sign-up on this device for a day.
   if (_auAgeBlocked())          { showErr('suError', AU_UNDER_13); return; }
   const birth = mssBirthValue('suBirth');
@@ -748,7 +598,7 @@ async function doSignUp(e) {
 
   _auBtn('btnSignUp', 'Creating your folio…', true);
   const again = () => _auBtn('btnSignUp', 'Create my folio', false);
-  if (!(await isUsernameAllowed(username))) { showErr('suError', 'That username isn’t allowed — please pick another.'); again(); return; }
+  if (!(await isUsernameAllowed(username))) { again(); back1('That username isn’t allowed — please pick another.'); return; }
 
   let data, error;
   try {
@@ -763,6 +613,7 @@ async function doSignUp(e) {
     await _auSetupMessages(pass);
     window.location.href = mssAfterLogin();
   } else if (data?.user) {
+    $('auTabs').hidden = true;
     $('suPanel').innerHTML = `<div class="au-done">
         <div class="au-done-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg></div>
         <h2 class="au-title">Check your email</h2>

@@ -1,0 +1,374 @@
+/* ════════════════════════════════════════════════════════════════
+   MyScreenFolio — colour theme  (css/theme.css · approved 17 Nov 2026)
+
+   THE source of truth for every colour on the site. Loaded before style.css on every page.
+   Generated from the approved palette; contrast-checked (WCAG AA for all text, AAA for reading
+   text, 3:1 for controls) and checked for colour blindness — re-run the checks after any change.
+
+   Rules (full text: docs/palette/theme-tokens.md):
+    1. One source of truth.
+    2. Three layers.
+    3. Brass acts, Forest locates.
+    4. One primary per view.
+    5. Layers go up.
+    6. Nothing floats on the page colour.
+    7. Edges that matter reach 3:1.
+    8. Text stays on its scale.
+    9. Status is not brand.
+   10. Never colour alone.
+   11. Themes swap values, not names.
+
+   Layer 1 · Palette  — raw colours (--p-*). Never used by components.
+   Layer 2 · Semantic — what a colour is for; dark is the default, light overrides.
+   Layer 3 · Component tokens — live with their component and only point at layer 2.
+   ════════════════════════════════════════════════════════════════ */
+
+/* ── Layer 1 · Palette (approved 16 Nov 2026: Forest #1F4D33 · Ivory #F3EEDC · Antique Gold #C5A15B) ── */
+:root {
+  --p-forest-50: #EDFBF1;
+  --p-forest-100: #DFF3E4;
+  --p-forest-200: #C7E3CF;
+  --p-forest-300: #A6CCB1;
+  --p-forest-400: #81B290;
+  --p-forest-500: #5D9971;
+  --p-forest-600: #3C8256;
+  --p-forest-700: #2E6B45;
+  --p-forest-800: #1F4D33;
+  --p-forest-900: #153C24;
+  --p-forest-950: #0A2615;
+
+  --p-brass-50: #FCF7E8;
+  --p-brass-100: #F4ECD9;
+  --p-brass-200: #E5DABE;
+  --p-brass-300: #D0BF9A;
+  --p-brass-400: #C5A15B;
+  --p-brass-500: #A0854C;
+  --p-brass-600: #8C6C26;
+  --p-brass-700: #73581C;
+  --p-brass-800: #5B4312;
+  --p-brass-900: #422F09;
+  --p-brass-950: #2A1C03;
+
+  --p-ivory-50: #F9F7EE;
+  --p-ivory-100: #F3EEDC;
+  --p-ivory-200: #DEDBCF;
+  --p-ivory-300: #C4C1B3;
+  --p-ivory-400: #A9A595;
+  --p-ivory-500: #8E8978;
+  --p-ivory-600: #76725F;
+  --p-ivory-700: #615D4C;
+  --p-ivory-800: #4B483A;
+  --p-ivory-900: #363327;
+  --p-ivory-950: #221F16;
+
+  --p-pine-50: #F0FAF3;
+  --p-pine-100: #E5F0E8;
+  --p-pine-200: #D2DFD5;
+  --p-pine-300: #B7C5BA;
+  --p-pine-400: #99AA9D;
+  --p-pine-500: #7C8F81;
+  --p-pine-600: #647769;
+  --p-pine-700: #506255;
+  --p-pine-800: #3D4C41;
+  --p-pine-900: #2A362D;
+  --p-pine-950: #18221B;
+
+  --p-forest-brand: #1F4D33;
+
+  --p-ivory-brand: #F3EEDC;
+
+  --p-brass-brand: #C5A15B;
+
+  --p-bronze-brand: #7A5A22;
+
+  --p-deep-forest: #04130A;
+
+  --p-charcoal-pine: #1E2A22;
+
+  --p-score-top-dark: #D8B872;
+
+  --p-green-300: #97EEBC;
+  --p-green-700: #156F41;
+
+  --p-amber-300: #F2A359;
+  --p-amber-700: #824103;
+
+  --p-red-300: #E6857E;
+  --p-red-700: #69040D;
+  --p-red-600: #A2342A;
+
+  --p-blue-300: #8ECBFF;
+  --p-blue-700: #024478;
+  --p-blue-600: #2A5986;
+
+  --p-sky-300: #93BBE2;
+
+  --p-terracotta-300: #E0956C;
+  --p-terracotta-700: #9C470D;
+}
+
+/* ── Layer 2 · Semantic — Dark mode (default): Deep Forest ── */
+:root,
+:root[data-theme="dark"] {
+  /* Backgrounds */
+  --bg-app:                    var(--p-deep-forest);          /* The website background behind everything (html/body). */
+  --bg-content:                #06190D;                       /* The main content column on wide layouts; a quiet step off the app background so content reads as a sheet. */
+  --bg-alt:                    #081C0F;                       /* Secondary pages and bands: settings, sign-in, footer band, alternating page sections. */
+  --bg-nav:                    #051B0D;                       /* Top bar, phone bottom bar, section chip rows (solid; add blur over it only if wanted). */
+
+  /* Surfaces */
+  --surface-section:           #122619;                       /* Large grouped blocks on a page (a Home widget, a settings group, a stats block). */
+  --surface-card:              #1A2E20;                       /* Item cards, list rows, tiles — the standard card (.msf-card). */
+  --surface-panel:             #0A2515;                       /* Side panels and sheets (title panel, notifications, nav menu, filters). Its own tone: a step off the page, framed by --border-panel. */
+  --surface-dropdown:          #25392B;                       /* Dropdowns, menus, popovers, tooltips — float above whatever they open from. */
+  --surface-modal:             #1D3124;                       /* Modals, confirms and full pop-ups (over --overlay-scrim). */
+  --surface-chat:              #0A1A0F;                       /* The message thread background (chat, episode chat). */
+  --chat-bubble-mine:          var(--p-forest-800);           /* Your message bubble: Forest Green in both modes (with --text-on-brand). */
+  --chat-bubble-theirs:        #26362B;                       /* Other people's message bubbles. */
+  --surface-elevated:          #293C2F;                       /* Anything raised above a card: sticky bars, the selected segment, toasts. */
+  --fill-subtle:               #26362B;                       /* Inset fills inside a surface: chips, progress tracks, input backgrounds on panels, skeletons. */
+  --overlay-scrim:             rgba(3,12,6,.66);              /* Dims the page behind a modal or side panel. */
+  --overlay-photo:             rgba(4,14,8,.72);              /* Shade over posters / backdrops so text on photos stays readable (always dark). */
+
+  /* Brand & interactive */
+  --brand:                     var(--p-forest-800);           /* Forest Green surface: hero bands, brand marks, the active nav pill. */
+  --brand-hover:               var(--p-forest-700);           /* Forest Green surfaces on hover (selected chips, active tabs, brand buttons). */
+  --action-primary-bg:         var(--p-brass-400);            /* Primary buttons (one per view): Save, Create, Add. */
+  --action-primary-hover:      var(--p-brass-300);            /* Primary button on hover. */
+  --action-primary-pressed:    #B08C47;                       /* Primary button while pressed. */
+  --action-secondary-bg:       #27382C;                       /* Secondary buttons: a solid quiet fill so they read as buttons, not text. */
+  --action-secondary-border:   #778171;                       /* Secondary button outline. */
+  --action-secondary-hover:    #304235;                       /* Secondary button on hover. */
+  --action-tertiary-fg:        var(--p-forest-300);           /* Tertiary / text buttons and inline actions (“See all”, “Edit”). */
+  --action-tertiary-hover-bg:  #293B2D;                       /* Background a tertiary button gets on hover. */
+  --selected-bg:               #294632;                       /* Selected chips, current tab, chosen list row (“where you are”). */
+  --selected-fg:               var(--p-forest-200);           /* Text and icons on a selected item. */
+  --nav-active-bg:             var(--p-forest-800);           /* Active item in the top bar / bottom bar / menus. */
+  --nav-active-fg:             var(--p-ivory-100);            /* Text and icon of the active nav item. */
+  --nav-indicator:             var(--p-brass-400);            /* The small bar / dot under the active nav item. */
+  --state-hover:               rgba(243,238,220,.06);         /* Generic hover wash laid over any surface (rows, icon buttons). */
+  --state-pressed:             rgba(243,238,220,.10);         /* Generic pressed wash. */
+  --disabled-bg:               #263129;                       /* Disabled buttons and controls. */
+  --disabled-fg:               #787D71;                       /* Text on disabled controls (deliberately low contrast). */
+  --toggle-track-off:          #778171;                       /* Switch track when off; also unchecked checkbox / radio rim. */
+  --toggle-track-on:           var(--p-brass-400);            /* Switch track when on; checked checkbox / radio fill. */
+  --toggle-thumb:              var(--p-ivory-100);            /* Switch thumb (knob). */
+  --segment-track:             #26362B;                       /* Segmented control / tab-group background (Light · Dark, Grid · List). */
+  --segment-selected-bg:       var(--p-forest-800);           /* The chosen segment. */
+  --segment-selected-fg:       var(--p-ivory-100);            /* Text of the chosen segment. */
+
+  /* Text */
+  --text-heading:              var(--p-ivory-100);            /* Page titles and primary headings. */
+  --text-heading-2:            #E9E4D2;                       /* Section headings and card titles. */
+  --text-body:                 #E9E4D2;                       /* Normal reading text. */
+  --text-supporting:           #C7C4B7;                       /* Supporting text: descriptions, secondary lines. */
+  --text-muted:                #AEAB9F;                       /* Muted text: meta, dates, counts, placeholders. */
+  --text-link:                 var(--p-forest-300);           /* Links and brand-coloured text. */
+  --text-on-primary:           #1C1609;                       /* Text on primary (brass / bronze) buttons and gold badges. */
+  --text-on-brand:             var(--p-ivory-100);            /* Text on Forest Green (hero, active nav, my chat bubble, selected segment). */
+  --text-on-photo:             var(--p-ivory-100);            /* Text over posters and backdrops (on --overlay-photo). */
+
+  /* Logo (the MSF monogram, drawn inline by nav.js mssLogoSVG — owner, 18 Nov 2026) */
+  --logo-m:                    var(--p-ivory-100);            /* The film-strip M and the play arrow. */
+  --logo-s:                    var(--p-pine-400);             /* The S. */
+  --logo-f:                    var(--p-brass-400);            /* The F (Antique Gold). */
+
+  /* Borders */
+  --border-default:            #364738;                       /* Card, section and panel edges (decorative). */
+  --border-subtle:             #2B3D2F;                       /* Dividers between rows and inside cards. */
+  --border-strong:             #4E5C4D;                       /* Emphasised edges: hovered cards, the side-panel edge, dropdown and modal frames. */
+  --border-input:              #778171;                       /* Inputs, selects, checkboxes, secondary buttons: must reach 3:1. */
+  --border-brand:              #486952;                       /* Soft brand-tinted edge: hovered cards and chips, gentle emphasis (decorative, softer than --border-selected). */
+  --border-selected:           var(--p-forest-400);           /* Outline of a selected card / chip / option. */
+  --focus-ring:                var(--p-brass-300);            /* Keyboard focus indicator (2px outline, 2px offset). */
+
+  /* Functional */
+  --success-fg:                var(--p-green-300);            /* Saved, done, connected: text and icons. */
+  --success-bg:                #284331;                       /* Saved, done, connected: tinted background for banners / pills. */
+  --success-border:            #528466;                       /* Saved, done, connected: outline of banners / pills. */
+  --warning-fg:                var(--p-amber-300);            /* Spoilers, limits, unsaved changes: text and icons. */
+  --warning-bg:                #323B26;                       /* Spoilers, limits, unsaved changes: tinted background for banners / pills. */
+  --warning-border:            #7B633A;                       /* Spoilers, limits, unsaved changes: outline of banners / pills. */
+  --error-fg:                  var(--p-red-300);              /* Failed, destructive actions, validation: text and icons. */
+  --error-bg:                  #30382A;                       /* Failed, destructive actions, validation: tinted background for banners / pills. */
+  --error-border:              #76554A;                       /* Failed, destructive actions, validation: outline of banners / pills. */
+  --info-fg:                   var(--p-blue-300);             /* Neutral notices, “airing”, tips: text and icons. */
+  --info-bg:                   #273F39;                       /* Neutral notices, “airing”, tips: tinted background for banners / pills. */
+  --info-border:               #4E7584;                       /* Neutral notices, “airing”, tips: outline of banners / pills. */
+  --error-solid:               #B5463A;                       /* Filled destructive button (Delete) — with --text-on-error. */
+  --text-on-error:             var(--p-ivory-100);            /* Text on --error-solid. */
+
+  /* Content */
+  --tag-tv:                    var(--p-sky-300);              /* TV Show type tag. */
+  --tag-movie:                 var(--p-terracotta-300);       /* Movie type tag. */
+  --tag-tv-solid:              var(--p-blue-600);             /* Solid TV badge fill (with --text-on-brand). */
+  --tag-movie-solid:           #8A3F0C;                       /* Solid Movie badge fill (with --text-on-brand). */
+  --rating-mine:               var(--p-forest-300);           /* Your score on cards and pages. */
+  --rating-top:                var(--p-score-top-dark);       /* A 9.80+ score (the site's top-score gold). */
+  --rating-theirs:             var(--p-terracotta-300);       /* Someone else's score in Compare. */
+}
+
+/* ── Layer 2 · Semantic — Light mode: Ivory ── */
+:root[data-theme="light"] {
+  /* Backgrounds */
+  --bg-app:                    var(--p-ivory-100);
+  --bg-content:                #F6F1E1;
+  --bg-alt:                    #EDE7D1;
+  --bg-nav:                    #F7F3E2;
+
+  /* Surfaces */
+  --surface-section:           #EDE7D1;
+  --surface-card:              #FEFCF3;
+  --surface-panel:             #E9E3CC;
+  --surface-dropdown:          #FFFEFD;
+  --surface-modal:             #FEFBF1;
+  --surface-chat:              #EDE7D1;
+  --chat-bubble-mine:          var(--p-forest-800);
+  --chat-bubble-theirs:        #FFFDF4;
+  --surface-elevated:          #FFFDF8;
+  --fill-subtle:               #E6E0CA;
+  --overlay-scrim:             rgba(30,42,34,.40);
+  --overlay-photo:             rgba(4,14,8,.66);
+
+  /* Brand & interactive */
+  --brand:                     var(--p-forest-800);
+  --brand-hover:               var(--p-forest-900);
+  --action-primary-bg:         var(--p-bronze-brand);
+  --action-primary-hover:      #664A1B;
+  --action-primary-pressed:    #563F17;
+  --action-secondary-bg:       #FAF6E7;
+  --action-secondary-border:   #7C827A;
+  --action-secondary-hover:    #F1EBD7;
+  --action-tertiary-fg:        #24583A;
+  --action-tertiary-hover-bg:  #F0EEE2;
+  --selected-bg:               #E7E9DB;
+  --selected-fg:               var(--p-forest-800);
+  --nav-active-bg:             var(--p-forest-800);
+  --nav-active-fg:             var(--p-ivory-100);
+  --nav-indicator:             var(--p-bronze-brand);
+  --state-hover:               rgba(30,42,34,.05);
+  --state-pressed:             rgba(30,42,34,.09);
+  --disabled-bg:               #E6E3D6;
+  --disabled-fg:               #92958A;
+  --toggle-track-off:          #7C827A;
+  --toggle-track-on:           var(--p-bronze-brand);
+  --toggle-thumb:              #FFFDF6;
+  --segment-track:             #E6E0CA;
+  --segment-selected-bg:       var(--p-forest-800);
+  --segment-selected-fg:       var(--p-ivory-100);
+
+  /* Text */
+  --text-heading:              var(--p-forest-800);
+  --text-heading-2:            var(--p-charcoal-pine);
+  --text-body:                 var(--p-charcoal-pine);
+  --text-supporting:           #3A453E;
+  --text-muted:                #525E56;
+  --text-link:                 #24583A;
+  --text-on-primary:           var(--p-ivory-100);
+  --text-on-brand:             var(--p-ivory-100);
+  --text-on-photo:             var(--p-ivory-100);
+
+  /* Logo */
+  --logo-m:                    var(--p-forest-800);
+  --logo-s:                    var(--p-pine-600);
+  --logo-f:                    var(--p-brass-500);
+
+  /* Borders */
+  --border-default:            #E0DFD3;
+  --border-subtle:             #EBE9DE;
+  --border-strong:             #C7C8BD;
+  --border-input:              #7C827A;
+  --border-brand:              #A5B6A6;
+  --border-selected:           var(--p-forest-800);
+  --focus-ring:                var(--p-forest-800);
+
+  /* Functional */
+  --success-fg:                var(--p-green-700);
+  --success-bg:                #E6ECDD;
+  --success-border:            #A0C2A9;
+  --warning-fg:                var(--p-amber-700);
+  --warning-bg:                #F1E8D7;
+  --warning-border:            #CCB090;
+  --error-fg:                  var(--p-red-700);
+  --error-bg:                  #EEE1D8;
+  --error-border:              #C29894;
+  --info-fg:                   var(--p-blue-700);
+  --info-bg:                   #E4E8E2;
+  --info-border:               #99B1BF;
+  --error-solid:               var(--p-red-600);
+  --text-on-error:             var(--p-ivory-100);
+
+  /* Content */
+  --tag-tv:                    var(--p-blue-600);
+  --tag-movie:                 var(--p-terracotta-700);
+  --tag-tv-solid:              var(--p-blue-600);
+  --tag-movie-solid:           #8A3F0C;
+  --rating-mine:               var(--p-forest-800);
+  --rating-top:                #6E5020;
+  --rating-theirs:             var(--p-terracotta-700);
+}
+
+/* ── The rating scale: 9 tiers (owner, 17 Nov 2026) — every score's colour comes from here ──
+   --st-<key>       the tier's colour: rings, score numbers, bars
+   --st-<key>-on    text on that colour
+   Put .st-<key> (or the filled .ep-band-<key>) on an element and it gets --st / --st-on / --st-fill (a filled chip / badge / cell — Masterpiece: the gold gradient).
+   JS twin: MSS_TIERS / mssScoreTier() in js/config.js (canvas reads the hex there).
+   Dark values are the default; .st-dark (and the photo / hero scopes below) keep them in light mode too. */
+:root, :root[data-theme="dark"],
+.st-dark, .tv-hero, .tv-mini, .lh, .nf-card, .df-head, .pf-fav, .mh-fav, .sp-upnext, .lib-pod-in, .lp-ring, .de-bar, .mf-rate, .dy-best.is-top, .egs-hero,
+.es-desk, .es-fav, .ex-hero, .ex-rm-pv {
+  --st-garbage:#8B5CD6;      --st-garbage-on:#FFFFFF;
+  --st-bad:#D2423A;          --st-bad-on:#FFFFFF;
+  --st-weak:#E7743A;         --st-weak-on:#241005;
+  --st-mixed:#F0A64A;        --st-mixed-on:#241503;
+  --st-decent:#B5C454;       --st-decent-on:#1C2008;
+  --st-great:#6BBF5E;        --st-great-on:#10200D;
+  --st-excellent:#2F9A50;    --st-excellent-on:#FFFFFF;
+  --st-outstanding:#3D7FE0;  --st-outstanding-on:#FFFFFF;
+  --st-masterpiece:#E3C45C;  --st-masterpiece-on:#241800;    /* the gold as a line / number; fills use the gradient */
+}
+:root[data-theme="light"] {
+  --st-garbage:#4E2A84;      --st-garbage-on:#FFFFFF;
+  --st-bad:#9E1F1A;          --st-bad-on:#FFFFFF;
+  --st-weak:#C2541A;         --st-weak-on:#FFFFFF;
+  --st-mixed:#D98E2B;        --st-mixed-on:#241503;
+  --st-decent:#97A63A;       --st-decent-on:#1C2008;
+  --st-great:#4A9443;        --st-great-on:#FFFFFF;
+  --st-excellent:#1F6A35;    --st-excellent-on:#FFFFFF;
+  --st-outstanding:#1D4FA0;  --st-outstanding-on:#FFFFFF;
+  --st-masterpiece:#9A7208;  --st-masterpiece-on:#241800;
+}
+:root { --st-gold-fill: linear-gradient(135deg, #F3DC8A 0%, #C9A227 50%, #8A6300 100%); }
+.st-garbage,     .ep-band-garbage     { --st:var(--st-garbage);     --st-on:var(--st-garbage-on);     --st-fill:var(--st-garbage); }
+.st-bad,         .ep-band-bad         { --st:var(--st-bad);         --st-on:var(--st-bad-on);         --st-fill:var(--st-bad); }
+.st-weak,        .ep-band-weak        { --st:var(--st-weak);        --st-on:var(--st-weak-on);        --st-fill:var(--st-weak); }
+.st-mixed,       .ep-band-mixed       { --st:var(--st-mixed);       --st-on:var(--st-mixed-on);       --st-fill:var(--st-mixed); }
+.st-decent,      .ep-band-decent      { --st:var(--st-decent);      --st-on:var(--st-decent-on);      --st-fill:var(--st-decent); }
+.st-great,       .ep-band-great       { --st:var(--st-great);       --st-on:var(--st-great-on);       --st-fill:var(--st-great); }
+.st-excellent,   .ep-band-excellent   { --st:var(--st-excellent);   --st-on:var(--st-excellent-on);   --st-fill:var(--st-excellent); }
+.st-outstanding, .ep-band-outstanding { --st:var(--st-outstanding); --st-on:var(--st-outstanding-on); --st-fill:var(--st-outstanding); }
+.st-masterpiece, .ep-band-masterpiece { --st:var(--st-masterpiece); --st-on:var(--st-masterpiece-on); --st-fill:var(--st-gold-fill); }
+/* the filled look (chips, badges, heatmap cells) is in style.css §46, where the old bands were, so it keeps their cascade */
+
+/* ── Browser consistency (Safari, Chrome, Edge, Firefox) ──
+   Browsers fill in their own colours wherever a page doesn't say: form controls, date pickers, dropdown
+   lists, autofill, text selection, focus rings — and Edge / Chrome can auto-darken a page. These rules
+   give every browser the same answer, from the tokens above. Components may still override them. */
+:root { color-scheme:dark; accent-color:var(--toggle-track-on); }               /* native controls, pickers, scrollbars follow the theme */
+:root[data-theme="light"] { color-scheme:light; }
+::selection { background:color-mix(in srgb, var(--action-primary-bg) 38%, transparent); color:inherit; }
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible { outline:2px solid var(--focus-ring); outline-offset:2px; }
+input:-webkit-autofill, input:-webkit-autofill:hover, input:-webkit-autofill:focus,
+textarea:-webkit-autofill, select:-webkit-autofill {
+  -webkit-text-fill-color:var(--text-body); caret-color:var(--text-body);
+  -webkit-box-shadow:0 0 0 1000px var(--surface-card) inset; box-shadow:0 0 0 1000px var(--surface-card) inset;
+  transition:background-color 9999s ease-out 0s;                                   /* keeps Chrome/Edge from repainting it yellow/blue */
+}
+::placeholder { color:var(--text-muted); opacity:1; }                              /* Firefox fades placeholders by default */
+@media (forced-colors: active) { :root { accent-color:auto; } }                    /* Windows high-contrast: let the system colours win */
+
+
+/* ── Future themes ──
+   A theme overrides values, never names. Example shape (not active):
+   :root[data-theme-variant="example"][data-theme="dark"] { --p-forest-brand: #…; --bg-app: #…; --action-primary-bg: #…; }
+   Fixed artwork palettes (medals, showcase finishes, category tiles, exports) get their own named block here when migrated. */

@@ -6,16 +6,17 @@
        setting (Settings → Episode Ratings: ask per show / always / never)
        and the per-show choice, asks the rewatch question once per rewatch,
        then opens the quick-rate popup.
-   • MSSEp.rate(entry, season, episode, { onSaved, note })   note: open with the note box showing
-       Opens the quick-rate popup directly (info popup "Rate Episodes",
-       Episodes page), with ‹ › to move between episodes.
+   • MSSEp.rate(entry, season, episode, { onSaved, note })   note: start in the note box
+       Opens Rate episodes directly (info popup "Rate Episodes", Episodes page): a side panel L,
+       or a full page on phones (js/panel.js), with Prev / Next to move between episodes.
    • MSSEp.seasonEpisodes(tmdbId, season) — TMDB episode details (cached).
    • episode 0 = the whole season: MSSEp.rate(entry, season, 0) rates a
      season. Pressing "+" again while the popup is open queues the next
      episode ("Episode 2 of 3"); finishing a season shows a summary card.
-   • MSSEp.showPopup({ title, poster, tmdbId, status, rows, total, userId, whoName })
-       A show's rating summary with "View & Rate Episodes".
-   • MSSEp.band(score) → { key, name } — the shared colour bands.
+   • MSSEp.showPopup({ title, poster, tmdbId, entry, status, rows, total, userId, whoName })
+       A show's rating summary with "View & Rate Episodes" — a side panel L / full page.
+       "Rate episodes of …?" is the shared confirm with a third answer (altText).
+   • MSSEp.band(score) → { key, name } — the shared colour bands (= mssScoreTier's 9 tiers).
 
    Scores 1.0–10.0 (0.1 steps) · up to 3 tags · optional note (a season's: its review), up to 500 words,
    with bold / italic / quotes, a spoiler mark and who can read it (Anyone · Friends · Only me — 108).
@@ -28,19 +29,11 @@
 // Who can read the note in the rating popup (the shared picker calls a page-level function by name)
 function _mssEpNoteVis(v) { MSSEp._noteVis(v); }
 const MSSEp = (() => {
-  // ink: dark text on that colour
-  const BANDS = [
-    { min: 10,  key: 'perfect',     name: 'Perfect 10', ink: true },
-    { min: 9.5, key: 'masterpiece', name: 'Masterpiece' },
-    { min: 8.5, key: 'great',       name: 'Great' },
-    { min: 7.5, key: 'good',        name: 'Good',   ink: true },
-    { min: 6.5, key: 'decent',      name: 'Decent', ink: true },
-    { min: 5.0, key: 'meh',         name: 'Meh',    ink: true },
-    { min: 0,   key: 'bad',         name: 'Bad' },
-  ];
+  // the colour bands are the site's rating scale (MSS_TIERS, config.js): Masterpiece 9.90+ … Garbage < 4
+  const BANDS = MSS_TIERS.map(t => ({ min: t.min, key: t.key, name: t.name, gold: !!t.gold }));
   const TAGS = ['Plot Twist', 'Emotional', 'Funny', 'Action-Packed', 'Cliffhanger', 'Scary', 'Iconic', 'Character Focus', 'Slow', 'Filler'];
   const NOTE_WORDS = NOTE_WORD_LIMIT;   // 500, like title notes (config.js)
-  const band = v => BANDS.find(b => Number(v) >= b.min) || BANDS[BANDS.length - 1];
+  const band = v => BANDS.find(b => Number(Number(v).toFixed(2)) >= b.min) || BANDS[BANDS.length - 1];
   const esc = s => escHTML(s == null ? '' : String(s));
   const isShow = e => e && !(e.cat === 'movies' || e.ratings?._media_type === 'movie');
   const uid = () => window._navUser?.id || null;
@@ -111,48 +104,39 @@ const MSSEp = (() => {
     return { hi: items.filter(x => v(x) === hi), lo: items.filter(x => v(x) === lo), high: hi, low: lo };
   }
 
-  /* ── Popup shell ── */
+  /* ── Rate episodes: one panel that stays open while you move between episodes ── */
   let st = null;   // { e, s, n, prev, score, tags:Set, note, eps }
-  function inject() {
-    if (document.getElementById('mssEpOverlay')) return;
-    const ov = document.createElement('div');
-    ov.id = 'mssEpOverlay';
-    ov.innerHTML = `<div id="mssEpCard" role="dialog" aria-modal="true" aria-labelledby="mssEpTitle"></div>`;
-    MSSDialog.bind(ov, close);
-    document.body.appendChild(ov);
-  }
-  function show(html) {
-    inject();
-    document.getElementById('mssEpCard').innerHTML = html;
-    MSSDialog.open(document.getElementById('mssEpOverlay'));
+  let ph = null;   // the panel's handle
+  let paintQ = Promise.resolve();
+  // Fill the panel (opening it the first time); one paint at a time, in order
+  function paint(o) {
+    paintQ = paintQ.then(async () => {
+      if (!ph) {
+        await mssLoadScript('js/panel.js');
+        if (!st && !o.done) return;                           // closed while loading
+        const h = MSSPanel.open({ size: 'L', kind: 'title', tallHero: true, title: o.title, subtitle: o.sub, label: o.label, heroImg: o.media, body: o.body, footer: o.footer,
+          dirty: () => !!st?.changed, onClose: () => { if (ph === h) { ph = null; st = null; } } });
+        ph = h;
+      } else {
+        ph.setTitle(o.title, o.sub); ph.setHero(o.media); ph.setBody(o.body); ph.setFooter(o.footer);
+        ph.body.closest('.lyr-body').scrollTop = 0;
+      }
+      o.after?.();
+    });
+    return paintQ;
   }
   function close() {
-    MSSDialog.close(document.getElementById('mssEpOverlay'));
-    st = null;
+    const h = ph; ph = null; st = null;
+    h?.closeNow();
   }
 
   /* ── 1) "Rate episodes of …?" (first "+" on a show, when the setting is "ask") ── */
-  let askResolve = null;
-  function askShow(e) {
-    return new Promise(res => {
-      askResolve = res;
-      const poster = safeURL(e.poster_url);
-      show(`<div class="ep-ask">
-          <div class="ep-ask-poster">${poster ? `<img src="${poster}" alt="">` : esc((e.title || '?')[0])}</div>
-          <div class="ep-ask-body">
-            <div class="ep-eyebrow">Episode ratings</div>
-            <div class="ep-ask-title" id="mssEpTitle">Rate episodes of ${esc(e.title)}?</div>
-            <div class="ep-ask-sub">Each time you mark an episode watched, you can give it a quick score.</div>
-          </div>
-        </div>
-        <div class="ep-actions ep-actions-3" id="mssEpPopupActions">
-          <button type="button" class="popup-action-btn" onclick="MSSEp._ask('yes')">Yes</button>
-          <button type="button" class="popup-action-btn np-ghost" onclick="MSSEp._ask('later')">Not now</button>
-          <button type="button" class="popup-action-btn np-ghost" onclick="MSSEp._ask('never')">Never for this show</button>
-        </div>`);
-    });
+  // the shared confirm with a third answer: Yes (green) · Not now · Never for this show
+  async function askShow(e) {
+    const a = await showConfirm({ title: `Rate episodes of ${e.title}?`, message: 'Each time you mark an episode watched, you can give it a quick score.',
+      confirmText: 'Yes', cancelText: 'Not now', altText: 'Never for this show', iconName: 'star', danger: false });
+    return a === true ? 'yes' : a === 'alt' ? 'never' : 'later';
   }
-  function answerAsk(a) { const r = askResolve; askResolve = null; close(); r?.(a); }
 
   /* ── 2) Quick-rate popup ── */
   // The number is a text box: type a score (1–10) or use − / + and the slider
@@ -163,12 +147,17 @@ const MSSEp = (() => {
              aria-label="Episode score, 1 to 10" oninput="MSSEp._typed(this.value)" onchange="MSSEp._typedDone(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">
       <span id="mssEpBand">${b.name}</span></div>`;
   }
+  // The slider drawn as 10 segments, filled up to the score (the last one partly)
+  const segFill = i => Math.min(1, Math.max(0, st.score - i));
+  const segsHTML = () => Array.from({ length: 10 }, (_, i) => `<i style="--f:${segFill(i)}"></i>`).join('');
   // Update colour + band name + slider without rewriting what's being typed
   function paintScore() {
+    document.querySelectorAll('#mssEpSegs i').forEach((el, i) => el.style.setProperty('--f', segFill(i)));
     const b = band(st.score), box = document.getElementById('mssEpScore');
     if (box) box.className = `ep-score ep-band-${b.key}`;
     const nm = document.getElementById('mssEpBand'); if (nm) nm.textContent = b.name;
-    const sl = document.getElementById('mssEpSlider'); if (sl && Number(sl.value) !== st.score) sl.value = st.score;
+    const sl = document.getElementById('mssEpSlider');
+    if (sl) { if (Number(sl.value) !== st.score) sl.value = st.score; sl.setAttribute('aria-valuetext', `${mssR1(st.score)}, ${b.name}`); }
   }
   function typed(v) {
     const n = parseFloat(String(v).replace(',', '.'));
@@ -184,53 +173,82 @@ const MSSEp = (() => {
     el.value = st.score.toFixed(1);
     paintScore();
   }
-  function render(meta) {
-    const e = st.e, m = meta || {};
-    const still = m.still ? `https://image.tmdb.org/t/p/w780${m.still}` : null;
-    const words = (st.note || '').trim().split(/\s+/).filter(Boolean).length;
+  // Where you are: "The Sopranos · episode 51 of 86" (from your season breakdown, when there is one)
+  function whereText(e, s, n) {
+    const sizes = seasonSizes(e), sum = a => a.reduce((x, y) => x + y, 0);
+    if (n === 0) return `${e.title} · Season ${s}${sizes.length ? ` of ${sizes.length}` : ''}`;
+    return sizes.length >= s ? `${e.title} · episode ${sum(sizes.slice(0, s - 1)) + n} of ${sum(sizes)}` : `${e.title} · S${s} · E${n}`;
+  }
+  async function stillOf(e, m) {
+    if (m.still) return `https://image.tmdb.org/t/p/w1280${m.still}`;
+    return e.tmdb_id ? MSSBackdrop.url(e).catch(() => null) : null;     // no still: the show's backdrop (the one picked for it, else TMDB's)
+  }
+  // the numbers under the picture: TMDB, when it aired, how long (a season: its episodes, your average)
+  function statsHTML(m, season) {
+    const t = (v, lbl, sm) => `<div class="lyr-stat${sm ? ' is-sm' : ''}${typeof v === 'number' ? ' ep-band-' + band(v).key : ''}"><b>${typeof v === 'number' ? mssR1(v) : esc(v)}</b><span>${esc(lbl)}</span></div>`;
+    const list = season
+      ? [st.eps?.length ? t(String(st.eps.length), 'Episodes') : null, st.epAvg != null ? t(st.epAvg, 'Your episode average') : null]
+      : [m.vote ? t(Number(mssR1(m.vote)), 'TMDB') : null,
+         m.air ? t(new Date(m.air + 'T12:00:00').toLocaleDateString(MSSI18n.locale, { month: 'short', day: 'numeric', year: 'numeric' }), 'Aired', true) : null,
+         m.rt ? t(m.rt + 'm', 'Runtime', true) : null];
+    const shown = list.filter(Boolean);
+    return shown.length ? `<div class="lyr-stats${shown.length > 3 ? ' is-wrap' : ''}" style="--n:${shown.length}">${shown.join('')}</div>` : '';
+  }
+  async function render(meta) {
+    const e = st.e, m = meta || {}, at = st;
     const season = st.n === 0;
-    const poster = safeURL(e.poster_url);
+    const [media] = await Promise.all([stillOf(e, m), mssLoadScript('js/panel.js')]);
+    if (st !== at) return;
+    const page = !mssLayerFits(600), next = page && !season;     // phones: Save & next
     const q = st.queue?.length ? `<div class="ep-queue">Episode ${st.qi + 1} of ${st.queue.length}<span style="width:${Math.round(100 * (st.qi + 1) / st.queue.length)}%"></span></div>` : '';
-    show(`${q}<div class="ep-hero${season ? ' ep-hero-season' : ''}">${still ? `<img src="${still}" alt="">` : season && poster ? `<img src="${poster}" alt="" class="ep-hero-poster">` : `<div class="ep-hero-empty" translate="no">${esc(e.title)}</div>`}
-        <span class="ep-se">${season ? 'Season ' + st.s : `S${st.s} · E${st.n}${m.abs ? ` <small>#${m.abs}</small>` : ''}`}</span>
-        <button type="button" class="ep-close" onclick="MSSEp.close()" aria-label="Close">✕</button>
-      </div>
-      <div class="ep-body">
-        <div class="ep-eyebrow"><span translate="no">${esc(e.title)}</span>${st.prev ? `<span> · ${mssT('Your previous: {0}', Number(st.prev.score).toFixed(1))}</span>` : ''}</div>
-        <div class="ep-title" id="mssEpTitle">${esc(season ? `Rate Season ${st.s}` : (m.name || `Episode ${st.n}`))}</div>
-        <div class="ep-meta">${season ? esc([st.eps?.length ? st.eps.length + ' episodes' : '', st.epAvg != null ? 'Your episode average ' + st.epAvg.toFixed(1) : ''].filter(Boolean).join(' · ')) : [m.air ? new Date(m.air + 'T12:00:00').toLocaleDateString(MSSI18n.locale, { month: 'short', day: 'numeric', year: 'numeric' }) : '', m.rt ? m.rt + 'm' : '', m.vote ? 'TMDB ' + Number(m.vote).toFixed(1) : ''].filter(Boolean).map(esc).join(' · ')}</div>
-        <div class="ep-rate">
-          ${scoreHTML()}
-          <div class="ep-slider-row">
-            <button type="button" class="ep-step" onclick="MSSEp._step(-0.1)" aria-label="Lower by 0.1">−</button>
-            <input type="range" class="ep-slider" id="mssEpSlider" min="1" max="10" step="0.1" value="${st.score}" aria-label="Episode score" oninput="MSSEp._slide(this.value)">
-            <button type="button" class="ep-step" onclick="MSSEp._step(0.1)" aria-label="Raise by 0.1">+</button>
-          </div>
+    const tags = st.showTags
+      ? `<div class="ep-tags">${TAGS.map(t => `<button type="button" class="genre-opt${st.tags.has(t) ? ' selected' : ''}" aria-pressed="${st.tags.has(t)}" onclick="MSSEp._tag(${attrJSON(t)})">${esc(t)}</button>`).join('')}</div>
+         <p class="lyr-hint">Up to 3 · <button type="button" class="ep-link" onclick="MSSEp._toggle('tags')" aria-expanded="true">Done</button></p>`
+      : `<div class="ep-tags">${[...st.tags].map(t => `<span class="genre-opt selected">${esc(t)}</span>`).join('')}
+         <button type="button" class="ep-extra-btn" onclick="MSSEp._toggle('tags')" aria-expanded="false">${st.tags.size ? 'Edit tags' : '+ Add tag'}</button></div>`;
+    const navRow = st.queue?.length ? '' : `<div class="ep-nav">
+        <button type="button" class="ep-nav-btn" onmousedown="event.preventDefault()" onclick="MSSEp._go(-1)">‹ Prev</button>
+        <button type="button" class="ep-nav-btn" onmousedown="event.preventDefault()" onclick="MSSEp._go(1)">Next ›</button></div>`;
+    const body = `${q}
+      <div class="ep-eyebrow">${season ? 'Season ' + st.s : `S${st.s} · E${st.n}${m.abs ? ` <small>#${m.abs}</small>` : ''}`}${st.prev ? `<span> · ${mssT('Your previous: {0}', mssR1(Number(st.prev.score)))}</span>` : ''}</div>
+      ${statsHTML(m, season)}
+      ${!season && m.overview ? `<div class="ep-overview"><p class="ep-overview-txt${m.overview.length > 200 ? ' is-clamped' : ''}" id="mssEpOverview" translate="no">${esc(m.overview)}</p>${m.overview.length > 200 ? `<button type="button" class="ep-link" aria-expanded="false" aria-controls="mssEpOverview" onclick="this.previousElementSibling.classList.toggle('is-clamped'); const o = this.getAttribute('aria-expanded') === 'true'; this.setAttribute('aria-expanded', !o); this.textContent = o ? 'More' : 'Less'">More</button>` : ''}</div>` : ''}
+      <div class="ep-rate">
+        ${scoreHTML()}
+        <div class="ep-slider-row">
+          <button type="button" class="ep-step" onclick="MSSEp._step(-0.1)" aria-label="Lower by 0.1">${icon('minus', 16)}</button>
+          <div class="ep-bar"><span class="ep-bar-segs" id="mssEpSegs" aria-hidden="true">${segsHTML()}</span>
+            <input type="range" class="ep-slider" id="mssEpSlider" min="1" max="10" step="0.1" value="${st.score}" aria-label="Episode score" aria-valuetext="${mssR1(st.score)}, ${band(st.score).name}" oninput="MSSEp._slide(this.value)"></div>
+          <button type="button" class="ep-step" onclick="MSSEp._step(0.1)" aria-label="Raise by 0.1">${icon('plus', 16)}</button>
         </div>
-        <div class="ep-extras">
-          <button type="button" class="ep-extra-btn" onclick="MSSEp._toggle('tags')" aria-expanded="${!!st.showTags}">+ Tags${st.tags.size ? ` (${st.tags.size})` : ''}</button>
-          <button type="button" class="ep-extra-btn" onclick="MSSEp._toggle('note')" aria-expanded="${!!st.showNote}">+ ${season ? 'Review' : 'Note'}${(st.note || '').trim() ? ' ✓' : ''}</button>
-        </div>
-        ${st.showTags ? `<div class="ep-tags">${TAGS.map(t => `<button type="button" class="genre-opt${st.tags.has(t) ? ' selected' : ''}" onclick="MSSEp._tag(${attrJSON(t)})">${esc(t)}</button>`).join('')}<div class="ep-hint">Up to 3</div></div>` : ''}
-        ${st.showNote ? `<div class="ep-note">
-          <div id="mssEpNoteTools"></div>
-          <textarea class="field-input" id="mssEpNote" rows="5" placeholder="${season ? 'Your review of this season…' : 'A thought on this episode…'}" aria-label="${season ? 'Season review' : 'Episode note'}" oninput="MSSEp._note(this)">${esc(st.note || '')}</textarea>
-          <div class="ep-hint" id="mssEpNoteCount">${words} / ${NOTE_WORDS} words</div>
-          ${mssEpNoteVisHTML('mssEpNoteVis', st.noteVis, '_mssEpNoteVis')}
-        </div>` : ''}
       </div>
-      <div class="ep-nav">
-        ${st.queue?.length ? `<button type="button" class="ep-nav-btn" onclick="MSSEp.close()">Skip all</button>`
-          : `<button type="button" class="ep-nav-btn" onmousedown="event.preventDefault()" onclick="MSSEp._go(-1)" aria-label="Previous">‹ Prev</button>`}
-        ${season || !st.prompted ? '<span></span>' : `<button type="button" class="ep-stop" onclick="MSSEp._stop()">Stop asking for this show</button>`}
-        ${st.queue?.length ? '<span></span>' : `<button type="button" class="ep-nav-btn" onmousedown="event.preventDefault()" onclick="MSSEp._go(1)" aria-label="Next">Next ›</button>`}
+      <div class="lyr-sec"><h4 class="lyr-sec-h">Tags</h4>${tags}</div>
+      <div class="lyr-sec ep-note"><h4 class="lyr-sec-h"><label for="mssEpNote">${season ? 'Review' : 'Note'}</label></h4>
+        <div id="mssEpNoteTools"></div>
+        <textarea class="field-input" id="mssEpNote" rows="4" placeholder="${season ? 'Your review of this season…' : 'Add a note about this episode…'}" oninput="MSSEp._note(this)">${esc(st.note || '')}</textarea>
+        <div class="ep-hint" id="mssEpNoteCount">${(st.note || '').trim().split(/\s+/).filter(Boolean).length} / ${NOTE_WORDS} words</div>
+        ${mssEpNoteVisHTML('mssEpNoteVis', st.noteVis, '_mssEpNoteVis')}
       </div>
-      <div class="ep-actions" id="mssEpPopupActions">
-        ${st.prev ? `<button type="button" class="popup-action-btn popup-action-danger ep-del" onclick="MSSEp._remove()" aria-label="Remove this rating" title="Remove this rating">${icon('trash', 15)}</button>` : ''}
-        <button type="button" class="popup-action-btn np-ghost" onclick="MSSEp._skip()">Skip</button>
-        <button type="button" class="popup-action-btn ep-save" onmousedown="event.preventDefault()" onclick="MSSEp._save(this)">Save</button>
-      </div>`);
-    if (st.showNote) noteTools(e);
+      ${navRow}
+      ${season || !st.prompted ? '' : `<p class="ep-stop-row"><button type="button" class="ep-stop" onclick="MSSEp._stop()">Stop asking for this show</button></p>`}`;
+    const more = { label: 'More actions', icon: 'moreV', onClick: (h, b) => moreMenu(b) };
+    const footer = st.queue?.length
+      ? { secondary: [more, { label: 'Skip', onClick: () => skip() }, { label: 'Skip all', onClick: () => close() }], primary: { label: 'Save', onClick: () => save() } }
+      : { secondary: [more, { label: 'Skip', onClick: () => skip() },
+            { label: '‹ Prev', end: true, only: 'side', onClick: () => go(-1) }, { label: 'Next ›', end: true, only: 'side', onClick: () => go(1) }],
+          primary: { label: next ? 'Save & next' : 'Save', onClick: () => (next ? saveNext() : save()) } };
+    await paint({ title: season ? `Rate Season ${st.s}` : (m.name || `Episode ${st.n}`),
+      sub: whereText(e, st.s, st.n), label: `Rate episodes, ${e.title}`, media, body, footer,
+      after: () => { noteTools(e); if (st?.focusNote) { st.focusNote = false; document.getElementById('mssEpNote')?.focus(); } } });
+  }
+  // ⋯ in the footer: remove this rating (Undo in the toast) · remove all of them (asks first)
+  function moreMenu(btn) {
+    if (!st) return;
+    const { e, onSaved } = st;
+    MSSPopover.open(btn, { title: e.title, label: 'More actions', items: [
+      ...(st.prev ? [{ label: 'Remove rating', icon: 'trash', danger: true, onSelect: removeHere }] : []),
+      { label: 'Remove all ratings', icon: 'trash', danger: true, onSelect: () => { close(); removeAll(e, { onSaved }); } },
+    ] });
   }
   // The note's editor, like a title note's: B · I · U · S · Quote, the spoiler mark at the end of the row,
   // styles as you type, typing stops at the word limit
@@ -251,7 +269,7 @@ const MSSEp = (() => {
     const prev = await existing(e, s, n).catch(() => null);
     st = { e, s, n, prev, score: prev ? Number(prev.score) : 8.0, tags: new Set(prev?.tags || []), note: prev?.note || '', rewatch: !!opts.rewatch, onSaved: opts.onSaved, prompted: !!opts.prompted,
            noteVis: prev?.note_visibility || 'anyone', noteSpoiler: !!prev?.note_spoiler,
-           queue: opts.queue || null, qi: opts.qi || 0, showTags: !!(prev?.tags?.length), showNote: !!opts.note || !!prev?.note };
+           queue: opts.queue || null, qi: opts.qi || 0, showTags: false, focusNote: !!opts.note };
     render(null);
     const eps = await seasonEpisodes(e.tmdb_id, s);
     if (!st || st.e !== e || st.s !== s || st.n !== n) return;
@@ -325,7 +343,7 @@ const MSSEp = (() => {
     return { e, s, n, prev, row, onSaved: at.onSaved };
   }
   function offerUndo({ e, s, n, prev, row, onSaved }) {
-    showUndoToast(`Rated ${lbl(s, n)} — ${row.score.toFixed(1)}`, async () => {
+    showUndoToast(`Rated ${lbl(s, n)} — ${mssR1(row.score)}`, async () => {
       if (prev) {
         const { id, created_at, updated_at, ...back } = prev;
         const { error: er } = await sb.from('episode_ratings').upsert(back, { onConflict: 'user_id,entry_id,season_number,episode_number' });
@@ -341,26 +359,55 @@ const MSSEp = (() => {
     console.error('Episode rating:', err);
     showToast(isRateLimitError?.(err) ? RATE_LIMIT_MESSAGE : 'Couldn’t save that rating — try again.', 'err');
   }
-  async function save(btn) {
+  // Save: the next queued episode, the season summary after its last episode, or done
+  async function save() {
     if (!st || st.moving) return;
     const inp = document.getElementById('mssEpScoreInput'); if (inp) { inp.blur(); typedDone(inp); }
     st.moving = true;
-    btn.disabled = true; btn.textContent = 'Saving…';
     const at = st;
     try {
       const saved = await persist(), { e, s, n, row, onSaved } = saved;
       if (st !== at) { onSaved?.(row); offerUndo(saved); return; }
       const queue = st.queue, qi = st.qi, eps = st.eps, prompted = st.prompted;
-      close();
+      st.changed = false;
       onSaved?.(row);
-      if (queue && qi + 1 < queue.length) open(e, queue[qi + 1][0], queue[qi + 1][1], { queue, qi: qi + 1, rewatch: row.is_rewatch, onSaved, prompted });
-      else if (n > 0) maybeSeasonDone(e, s, n, eps);
       offerUndo(saved);
+      if (queue && qi + 1 < queue.length) return open(e, queue[qi + 1][0], queue[qi + 1][1], { queue, qi: qi + 1, rewatch: row.is_rewatch, onSaved, prompted });
+      if (n > 0 && await maybeSeasonDone(e, s, n, eps)) return;
+      close();
     } catch (err) {
       saveFailed(err);
       if (st === at) st.moving = false;
-      btn.disabled = false; btn.textContent = 'Save';
     }
+  }
+  // Phones: Save & next — saves, then the next episode (a season's last one shows its summary, as Save does)
+  async function saveNext() {
+    if (!st || st.moving) return;
+    const size = seasonSizes(st.e)[st.s - 1] || st.eps?.length || 0;
+    if (st.queue?.length || (size && st.n >= size)) return save();
+    const inp = document.getElementById('mssEpScoreInput'); if (inp) { inp.blur(); typedDone(inp); }
+    st.changed = true;                                        // Save always saves, even TMDB's starting score
+    return go(1);
+  }
+  /* Rate in place (the title page's episode rows): only the score changes — the tags, note, its visibility and
+     spoiler mark stay as they were; the same table, Undo and "rating one turns the show on" as Save. → the row, or null */
+  async function quick(e, s, n, score, o = {}) {
+    if (!e || !isShow(e) || !uid()) return null;
+    try {
+      const prev = await existing(e, s, n).catch(() => null);
+      const row = {
+        user_id: uid(), entry_id: e.id, tmdb_id: e.tmdb_id || null, season_number: s, episode_number: n,
+        score: Math.min(10, Math.max(1, Math.round(Number(score) * 10) / 10)), tags: prev?.tags || [], note: prev?.note || '',
+        is_rewatch: prev ? !!prev.is_rewatch : (typeof isRewatching === 'function' && isRewatching(e)),
+        note_visibility: prev?.note_visibility || 'anyone', note_spoiler: !!prev?.note_spoiler,
+      };
+      const { error } = await sb.from('episode_ratings').upsert(row, { onConflict: 'user_id,entry_id,season_number,episode_number' });
+      if (error) throw error;
+      if (e.ratings?._ep_rate !== 'on') saveEntryPref(e, { _ep_rate: 'on' }).catch(() => {});
+      o.onSaved?.(row);
+      offerUndo({ e, s, n, prev, row, onSaved: o.onSaved });
+      return row;
+    } catch (err) { saveFailed(err); return null; }
   }
   /* Remove one rating (an episode, or a whole season when n = 0) — Undo puts it back */
   const lbl = (s, n) => n ? `S${s} · E${n}` : `Season ${s}`;
@@ -403,34 +450,30 @@ const MSSEp = (() => {
   function skip() {
     if (!st) return;
     const { e, queue, qi, onSaved, rewatch, prompted } = st;
-    close();
     if (queue && qi + 1 < queue.length) open(e, queue[qi + 1][0], queue[qi + 1][1], { queue, qi: qi + 1, rewatch, onSaved, prompted });
+    else close();
   }
 
   /* ── 3) Season finished: summary card (after rating its last episode) ── */
   async function maybeSeasonDone(e, s, n, eps) {
     const size = seasonSizes(e)[s - 1] || eps?.length || 0;
-    if (!size || n < size) return;
+    if (!size || n < size) return false;
     const { data } = await sb.from('episode_ratings').select('episode_number,score').eq('entry_id', e.id).eq('season_number', s).gt('episode_number', 0);
     const rs = (data || []).sort((a, b) => a.episode_number - b.episode_number);
-    if (rs.length < 2) return;
+    if (rs.length < 2) return false;
     const a = rs.reduce((x, r) => x + Number(r.score), 0) / rs.length;
     const top = extremes(rs, r => r.score), eps2 = l => l.map(r => 'E' + r.episode_number).join(', ');
     const b = band(a);
-    show(`<div class="ep-body ep-done">
-        <div class="ep-eyebrow" translate="no">${esc(e.title)}</div>
-        <div class="ep-title" id="mssEpTitle">Season ${s} complete</div>
-        <div class="ep-score ep-band-${b.key}" style="margin:14px auto"><b>${a.toFixed(1)}</b><span>Your average · ${b.name}</span></div>
-        <div class="ep-done-row" aria-label="Season ${s} episode scores">${rs.map(r => `<i class="ep-band-${band(r.score).key}" title="E${r.episode_number}: ${Number(r.score).toFixed(1)}">${Number(r.score).toFixed(1)}</i>`).join('')}</div>
-        <div class="ep-meta" style="text-align:center;margin-top:10px">Best: ${eps2(top.hi)} (${top.high.toFixed(1)}) · Lowest: ${eps2(top.lo)} (${top.low.toFixed(1)})</div>
-      </div>
-      <div class="ep-actions">
-        <button type="button" class="popup-action-btn np-ghost" onclick="MSSEp.close()">Done</button>
-        <button type="button" class="popup-action-btn ep-save" onclick="MSSEp._rateSeason(${s})">Rate the Season</button>
-      </div>`);
-    lastEntry = e;
+    st.changed = false;
+    await paint({ title: `Season ${s} complete`, sub: e.title, label: `Season ${s} complete, ${e.title}`, media: null, done: true,
+      body: `<div class="ep-done">
+        <div class="ep-score ep-band-${b.key}"><b>${mssR1(a)}</b><span>Your average · ${b.name}</span></div>
+        <div class="ep-done-row" aria-label="Season ${s} episode scores">${rs.map(r => `<i class="ep-band-${band(r.score).key}" title="E${r.episode_number}: ${mssR1(Number(r.score))}">${mssR1(Number(r.score))}</i>`).join('')}</div>
+        <div class="ep-meta">Best: ${eps2(top.hi)} (${mssR1(top.high)}) · Lowest: ${eps2(top.lo)} (${mssR1(top.low)})</div>
+      </div>`,
+      footer: { secondary: [{ label: 'Done', onClick: () => close() }], primary: { label: 'Rate the Season', onClick: () => open(e, s, 0) } } });
+    return true;
   }
-  let lastEntry = null;
 
   async function stop() {
     if (!st) return;
@@ -441,66 +484,55 @@ const MSSEp = (() => {
   }
 
   /* ── 4) Show popup: a show's episode-rating summary, then "View & Rate"
-     (Episodes page cards and profile Episodes tabs) ──
+     (a friend's episode ratings on the title page) ──
      o = { title, poster, tmdbId, status, rows:[{season_number, episode_number, score, updated_at}],
            total, userId (someone else's), whoName } */
   const STATUS_LABEL = { watching: 'Watching', ongoing: 'To Be Continued', completed: 'Watched', up_next: 'Up Next', paused: 'Taking a Break', queue: 'Watchlist', dropped: 'Dropped' };
-  function showPopup(o) {
+  let sumPanel = null;
+  // big tiles (average, rated, best, lowest), a few highlights, then every season: its average and one square per episode
+  function summaryHTML(o, rows) {
+    if (!rows.length) return `<div class="lyr-stats" style="--n:2"><div class="lyr-stat"><b>—</b><span>Average</span></div><div class="lyr-stat"><b>0${o.total ? `<small>/${o.total}</small>` : ''}</b><span>Rated</span></div></div>
+      <p class="lyr-hint">No episodes rated yet${o.userId ? '' : ' — open the show to start rating'}.</p>`;
+    const num = r => Number(r.score), se = r => `S${r.season_number}·E${r.episode_number}`;
+    const avg = rows.reduce((x, r) => x + num(r), 0) / rows.length, b = band(avg);
+    const ex = extremes(rows, num), best = ex.hi[0], low = ex.lo[0];
+    const last = rows.reduce((x, y) => (new Date(y.updated_at) > new Date(x.updated_at) ? y : x));
+    const tile = (v, lbl) => `<div class="lyr-stat ep-band-${band(v).key}"><b>${mssR1(v)}</b><span>${esc(lbl)}</span></div>`;
+    const seasons = [...new Set(rows.map(r => r.season_number))].map(sn => {
+      const rs = rows.filter(r => r.season_number === sn), a = rs.reduce((x, r) => x + num(r), 0) / rs.length;
+      return { sn, rs, a };
+    });
+    const top = seasons.length > 1 ? seasons.reduce((x, y) => (y.a > x.a ? y : x)) : null;
+    const tens = rows.filter(r => num(r) >= 10).length;
+    const chips = [top ? `${icon('layers', 13)}<span>Best season <b>S${top.sn} · ${mssR1(top.a)}</b></span>` : '',
+      tens ? `${icon('star', 13)}<span><b>${tens}</b> perfect ${tens === 1 ? '10' : '10s'}</span>` : '',
+      `${icon('calendar', 13)}<span>Last rated: ${se(last)} · ${new Date(last.updated_at).toLocaleDateString(MSSI18n.locale, { month: 'short', day: 'numeric', year: 'numeric' })}</span>`].filter(Boolean);
+    return `<div class="lyr-stats is-wrap" style="--n:4">
+        ${tile(avg, b.name)}
+        <div class="lyr-stat"><b>${rows.length}${o.total ? `<small>/${o.total}</small>` : ''}</b><span>Rated</span></div>
+        ${tile(num(best), `Best · ${se(best)}${ex.hi.length > 1 ? ` +${ex.hi.length - 1}` : ''}`)}
+        ${tile(num(low), `Lowest · ${se(low)}${ex.lo.length > 1 ? ` +${ex.lo.length - 1}` : ''}`)}
+      </div>
+      ${o.total ? `<div class="ep-show-progress" aria-label="${rows.length} of ${o.total} episodes rated"><span style="width:${Math.min(100, Math.round(100 * rows.length / o.total))}%"></span></div>` : ''}
+      <div class="lyr-chips">${chips.map((c, i) => `<span class="lyr-chip${i === 0 && top ? ' is-up' : ''}">${c}</span>`).join('')}</div>
+      <div class="lyr-sec"><h3 class="lyr-sec-h">Seasons</h3>
+        <ul class="ep-sum-seasons">${seasons.map(x => `<li class="ep-sum-season">
+          <span class="ep-sum-sn">S${x.sn}</span>
+          <span class="ep-sum-avg ep-band-${band(x.a).key}">${mssR1(x.a)}</span>
+          <span class="eg-mini ep-show-mini" role="img" aria-label="Season ${x.sn}: ${x.rs.length} rated, average ${mssR1(x.a)}">${x.rs.map(r => `<i class="ep-band-${band(num(r)).key}" title="${se(r)}: ${mssR1(num(r))}"></i>`).join('')}</span>
+          <span class="ep-sum-n">${x.rs.length} rated</span></li>`).join('')}</ul></div>`;
+  }
+  async function showPopup(o) {
     const rows = (o.rows || []).filter(r => r.episode_number > 0).sort((a, b) => a.season_number - b.season_number || a.episode_number - b.episode_number);
-    const avg = rows.length ? rows.reduce((x, r) => x + Number(r.score), 0) / rows.length : null;
-    const bests = rows.length ? extremes(rows, r => r.score).hi : [], best = bests[0] || null;
-    const last = rows.length ? rows.reduce((x, y) => (new Date(y.updated_at) > new Date(x.updated_at) ? y : x)) : null;
-    const b = avg != null ? band(avg) : null;
     const href = `episodes.html?show=${o.tmdbId}${o.userId ? '&user=' + encodeURIComponent(o.userId) : ''}`;
     const poster = safeURL(o.poster);
-    show(`<div class="ep-show-head">
-        <div class="ep-show-poster">${poster ? `<img src="${poster}" alt="">` : esc((o.title || '?')[0])}</div>
-        <div class="ep-show-info">
-          <div class="ep-eyebrow">${o.whoName ? esc(o.whoName) + '’s episode ratings' : 'Episode ratings'}</div>
-          <div class="ep-title" id="mssEpTitle" translate="no">${esc(o.title)}</div>
-          ${o.status ? `<span class="ep-status">${esc(STATUS_LABEL[o.status] || o.status)}</span>` : ''}
-        </div>
-        <button type="button" class="ep-close ep-close-flat" onclick="MSSEp.close()" aria-label="Close">✕</button>
-      </div>
-      <div class="ep-body">
-        <div class="ep-show-stats">
-          <div class="ep-show-stat ${b ? 'ep-band-' + b.key : ''}"><b>${avg != null ? avg.toFixed(1) : '—'}</b><span>${b ? b.name : 'Average'}</span></div>
-          <div class="ep-show-stat"><b>${rows.length}${o.total ? `<small>/${o.total}</small>` : ''}</b><span>Rated</span></div>
-          <div class="ep-show-stat"><b>${best ? Number(best.score).toFixed(1) : '—'}</b><span>${best ? `Best · S${best.season_number}·E${best.episode_number}${bests.length > 1 ? ` +${bests.length - 1}` : ''}` : 'Best'}</span></div>
-        </div>
-        ${o.total ? `<div class="ep-show-progress" aria-label="${rows.length} of ${o.total} episodes rated"><span style="width:${Math.min(100, Math.round(100 * rows.length / o.total))}%"></span></div>` : ''}
-        ${rows.length ? `<div class="eg-mini ep-show-mini" aria-hidden="true">${rows.slice(0, 120).map(r => `<i class="ep-band-${band(r.score).key}" title="S${r.season_number}·E${r.episode_number}: ${Number(r.score).toFixed(1)}"></i>`).join('')}</div>` : `<p class="ep-ask-sub">No episodes rated yet${o.userId ? '' : ' — open the show to start rating'}.</p>`}
-        ${last ? `<div class="ep-meta" style="margin-top:10px">Last rated: S${last.season_number} · E${last.episode_number} · ${new Date(last.updated_at).toLocaleDateString(MSSI18n.locale, { month: 'short', day: 'numeric', year: 'numeric' })}</div>` : ''}
-      </div>
-      <div class="ep-actions">
-        <button type="button" class="popup-action-btn np-ghost" onclick="MSSEp.close()">Close</button>
-        <a class="popup-action-btn ep-save" href="${href}">${o.userId ? 'View Ratings' : 'View & Rate Episodes'}</a>
-      </div>`);
-  }
-
-  /* Show card (Episodes page + profile Episodes tabs) → opens showPopup */
-  const cards = {};
-  const totalOf = e => (Array.isArray(e.ratings?._season_breakdown) ? e.ratings._season_breakdown.map(Number).filter(n => n > 0).reduce((a, b) => a + b, 0) : 0) || null;
-  function showCardHTML(e, rows, o = {}) {
-    cards[e.id] = { e, rows, o };
-    const rs = (rows || []).filter(r => r.episode_number > 0).sort((a, b) => a.season_number - b.season_number || a.episode_number - b.episode_number);
-    const avg = rs.length ? rs.reduce((x, r) => x + Number(r.score), 0) / rs.length : null;
-    const total = totalOf(e), b = avg != null ? band(avg) : null;
-    const poster = safeURL(mssSharpPoster(e.poster_url));
-    return `<button type="button" class="eg-show" onclick="MSSEp._card(${attrJSON(e.id)})" aria-label="${esc(e.title)} — episode ratings">
-      <span class="eg-show-poster">${poster ? `<img src="${poster}" alt="" loading="lazy">` : ''}</span>
-      <span class="eg-show-info">
-        <span class="eg-show-title" translate="no">${esc(e.title)}</span>
-        <span class="eg-show-tags">${e.status ? `<span class="ep-status">${esc(STATUS_LABEL[e.status] || e.status)}</span>` : ''}${b ? `<span class="eg-show-avg ep-band-${b.key}">${avg.toFixed(1)}</span>` : ''}</span>
-        <span class="eg-show-sub">${rs.length ? `${rs.length}${total ? ' / ' + total : ''} episodes rated` : 'No episodes rated yet'}</span>
-        ${total ? `<span class="ep-show-progress eg-show-progress"><span style="width:${Math.min(100, Math.round(100 * rs.length / total))}%"></span></span>` : ''}
-        ${rs.length ? `<span class="eg-mini" title="Your episode scores — one square per rated episode">${rs.slice(0, 60).map(r => `<i class="ep-band-${band(r.score).key}" title="S${r.season_number}·E${r.episode_number}: ${Number(r.score).toFixed(1)}"></i>`).join('')}</span>` : ''}
-      </span>
-    </button>`;
-  }
-  function openCard(id) {
-    const c = cards[id]; if (!c) return;
-    showPopup({ title: c.e.title, poster: mssSharpPoster(c.e.poster_url), tmdbId: c.e.tmdb_id, status: c.e.status, rows: c.rows, total: totalOf(c.e), userId: c.o.userId, whoName: c.o.whoName });
+    await mssLoadScript('js/panel.js');
+    const h = MSSPanel.open({ size: 'L', kind: 'title', tallHero: true, backdrop: o.entry || { type: 'tv', id: o.tmdbId }, poster, title: o.title,
+      subtitle: [o.whoName ? o.whoName + '’s episode ratings' : 'Episode ratings', o.status ? STATUS_LABEL[o.status] || o.status : ''].filter(Boolean).join(' · '),
+      body: summaryHTML(o, rows),
+      footer: { secondary: [{ label: 'Close', only: 'side', onClick: x => x.close() }], primary: { label: o.userId ? 'View Ratings' : 'View & Rate Episodes', onClick: () => { location.href = href; } } },
+      onClose: () => { if (sumPanel === h) sumPanel = null; } });
+    sumPanel = h;
   }
 
   /* ── After "+" ── */
@@ -548,13 +580,12 @@ const MSSEp = (() => {
 
   return {
     extremes, afterWatch, rate: (e, s, n, o = {}) => open(e, s, n, { ...o, rewatch: typeof isRewatching === 'function' && isRewatching(e) }),
-    close, band, BANDS, TAGS, mode, setMode, isShow, seasonEpisodes, showPopup, showCardHTML, _card: openCard,
+    close, band, BANDS, TAGS, mode, setMode, isShow, seasonEpisodes, showPopup,
     statusLabel: st => STATUS_LABEL[st] || st,
     _noteVis: v => { if (st) { st.noteVis = v; st.changed = true; } },
-    _ask: answerAsk, _slide: setScore, _typed: typed, _typedDone: typedDone, _step: d => st && setScore(st.score + d), _tag: toggleTag, _note: onNote,
-    _toggle: k => { if (!st) return; st[k === 'tags' ? 'showTags' : 'showNote'] = !st[k === 'tags' ? 'showTags' : 'showNote']; render(st.eps?.find(x => x.n === st.n)); },
-    remove, removeAll,
-    _go: go, _save: save, _stop: stop, _skip: skip, _remove: removeHere,
-    _rateSeason: sn => { const e = lastEntry; close(); if (e) open(e, sn, 0); },
+    _slide: setScore, _typed: typed, _typedDone: typedDone, _step: d => st && setScore(st.score + d), _tag: toggleTag, _note: onNote,
+    _toggle: () => { if (!st) return; st.showTags = !st.showTags; render(st.eps?.find(x => x.n === st.n)); },
+    remove, removeAll, quick,
+    _go: go, _stop: stop,
   };
 })();

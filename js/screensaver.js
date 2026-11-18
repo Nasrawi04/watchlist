@@ -12,8 +12,8 @@
 window.MSSScreensaver = (() => {
   // the site's colours — brighter ones over the dark theme, deeper ones over the light (so it always stands out)
   const COLORS = {
-    dark:  ['#7EB86C', '#8AAFD1', '#B48BC9', '#E2B53E', '#5FB3A8', '#D9774A', '#E2DAD0'],
-    light: ['#1E5C26', '#3D6D96', '#7A4A8C', '#B8862A', '#2E7D72', '#B0562E', '#2B2A28'],
+    dark:  ['#A6CCB1', '#8AAFD1', '#B48BC9', '#E2B53E', '#5FB3A8', '#D9774A', '#F3EEDC'],
+    light: ['#1F4D33', '#3D6D96', '#7A4A8C', '#B8862A', '#2E7D72', '#B0562E', '#2B2A28'],
   };
   const touch = matchMedia('(pointer: coarse)').matches;
   let el = null, logo = null, ci = -1, x = 0, y = 0, vx = 0, vy = 0, w = 0, h = 0, raf = 0, last = 0, swallow = false, px = null, py = null;

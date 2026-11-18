@@ -64,7 +64,7 @@ const MSSFollow = (() => {
       const ok = rel === 'requested' ? true : await showConfirm({
         title: `Unfollow ${who}?`,
         message: rel === 'friends' ? 'You’ll stop being friends — Movie Nights, shared lists and Friends-only things stop showing for each other.' : 'Their updates stop showing for you.',
-        confirmText: 'Unfollow', iconName: 'users' });
+        confirmText: 'Unfollow', iconName: 'users', danger: false });
       if (!ok) return null;
       await unfollowUser(userId);
       if (rel === 'requested') showToast('Request cancelled');
@@ -80,28 +80,18 @@ const MSSFollow = (() => {
 
   /* ── The list popup ── */
   let L = null;   // { userId, kind, name, own, items, offset, more, busy }
-  function popupShell() {
-    let ov = document.getElementById('flPop');
-    if (ov) return ov;
-    ov = document.createElement('div');
-    ov.id = 'flPop'; ov.className = 'soc-overlay';
-    ov.innerHTML = `<div class="soc-card fl-card" role="dialog" aria-modal="true" aria-labelledby="flPopTitle">
-        <div class="sf-header"><div class="sf-title" id="flPopTitle"></div>
-          <button type="button" class="sf-close" aria-label="Close" onclick="MSSFollow.close()">${icon('x', 18)}</button></div>
-        <div class="fl-tabs" id="flTabs" role="tablist"></div>
-        <div class="sf-body fl-body" id="flBody"></div></div>`;
-    MSSDialog.bind(ov, close);
-    document.body.appendChild(ov);
-    return ov;
-  }
-  function open(userId, kind, name, own, reqCount) {
+  // a side panel S (full page on phones): the tabs, then the people
+  let flPanel = null;
+  async function open(userId, kind, name, own, reqCount) {
     L = { userId, kind, name, own: !!own, items: [], offset: 0, more: false, busy: false, req: reqCount || 0 };
-    const ov = popupShell();
-    document.getElementById('flPopTitle').textContent = own ? 'Your people' : (name || 'People');
-    MSSDialog.open(ov, { focus: '.fl-tab.active' });
+    await mssLoadScript('js/panel.js');
+    const h = MSSPanel.open({ size: 'S', kind: 'generic', title: own ? 'Your people' : (name || 'People'),
+      body: '<div class="fl-tabs" id="flTabs" role="tablist"></div><div class="fl-body" id="flBody"></div>',
+      onClose: () => { if (flPanel === h) { flPanel = null; L = null; } } });
+    flPanel = h;
     load(kind);
   }
-  function close() { MSSDialog.close(document.getElementById('flPop')); L = null; }
+  function close() { flPanel?.close(); }
   function tabs() {
     const list = KINDS.concat(L.own && L.req ? [['requests', 'Requests']] : []);
     document.getElementById('flTabs').innerHTML = list.map(([k, l]) =>
@@ -117,7 +107,7 @@ const MSSFollow = (() => {
     let got = [];
     try { got = await getFollowList(L.userId, L.kind, L.offset); } catch { body.innerHTML = `<div class="fl-empty">Couldn’t load this — try again.</div>`; L.busy = false; return; }
     if (!L || L.kind !== kind) return;
-    L.busy = false; L.items = L.items.concat(got); L.offset += got.length; L.more = got.length === 60;
+    L.busy = false; L.items = L.items.concat(got); L.offset += got.length; L.more = got.length === 60; L.hidden = got.hidden || null;
     draw();
   }
   function draw() {
@@ -126,6 +116,7 @@ const MSSFollow = (() => {
       following: L.own ? 'You’re not following anyone yet. Find people on the Social page.' : 'Not following anyone yet.',
       friends: L.own ? 'No friends yet — when you and someone follow each other, you’re friends.' : 'No friends yet.',
       requests: 'No requests waiting.' }[L.kind];
+    if (L.hidden) { body.innerHTML = `<div class="fl-empty">${icon('lock', 14)} ${L.hidden === 'friends' ? 'Only their friends can see this list.' : 'They keep this list private.'}</div>`; return; }
     body.innerHTML = L.items.length
       ? `<div class="fl-list">${L.items.map(p => rowHTML(p, { kind: L.kind, own: L.own })).join('')}</div>`
         + (L.more ? `<button type="button" class="rec-btn fl-more" onclick="MSSFollow._more()">Show more</button>` : '')

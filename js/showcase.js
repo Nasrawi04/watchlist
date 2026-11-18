@@ -1,191 +1,242 @@
 /* ═══════════════════════════════════════════════════════════════
-   showcase.js — the Showcase tab on profiles (062 + 063_showcase_shelves.sql)
-   A cabinet of 3 shelves × 3 medals someone picked to show off — achievements,
-   official and challenge medals. It follows the site's light / dark look by
-   default; the owner can pick a shelf style (SCHEMES) and a background picture
-   from any title (slightly blurred). Edit: tap a spot, tap a medal; Save.
+   showcase.js — the Showcase tab ("The Trophy Room", 128_showcase_trophy_room.sql)
+   One renderer for your profile (profile.html) and anyone else's (profile-view.html): a small lit stage
+   in front of a picture, with up to 9 medals in the order picked — #1 is always the star.
 
-   MSSShowcase.mount(el, userId, { own })   profile.html (own) · profile-view.html
+   MSSShowcase.mount(el, userId, { own, name })    the tab: header row + stage (or the empty state)
+   MSSShowcase.stageHTML(picks, look, o)           the stage alone (also the Studio's preview and its layout thumbnails)
+       picks = [medal…] in order; look = { layout, finish, blur, lighting } ; o = { name, total, bg (url | null),
+       phone, studio (spot numbers, picked spot), sel (picked spot), thumb (no words), enter (entrance motion) }
+   MSSShowcase.medal / name / sub / ribbon         shared with the Medal card and the Studio
+   MSSShowcase.state()                             the mounted showcase ({ picks, look, all, … }) for the Studio
 
-   Requires config.js (icon, escHTML, MSSDialog, showToast), nav.js
-   (tmdbFetch, TMDB_*, _tmdbSearch), medals.js. Styles: §58.
+   Layouts: Spotlight (default) — #1 on the tall plinth with its beam and "Centre stage", #2–#5 on stepped plinths
+   (inner pair taller) with nameplates in the plinth front, #6–#9 on a front ledge (only from 6 medals); phones:
+   the hero, a row of four, the ledge. Shelves — up to three lit boards of three, labels set into the board,
+   half-full shelves centred, empty ones hidden. Medal rail — medals hang from rails on V-ribbons in the medal's
+   colours, rows of 5 + 4 (phones 3 a rail). Look: finish (auto follows light / dark, + six), blur, lighting;
+   the finish colours plinths, ledge, boards, nameplates and the wash over the picture; vignette always on.
+
+   Requires config.js (icon, escHTML, mssSkeleton, showToast), medals.js. Loads js/medal-card.js (tap a medal) and
+   js/showcase-studio.js (Edit showcase). Styles: css/showcase.css.
 ═══════════════════════════════════════════════════════════════ */
 const MSSShowcase = (() => {
   const esc = s => escHTML(s == null ? '' : String(s));
-  const rpc = async (fn, args) => { const { data, error } = await sb.rpc(fn, args); if (error) throw error; return data; };
-  const SLOTS = 9, IMG = 'https://image.tmdb.org/t/p/';
-  // Shelf styles — colours live in CSS (.sc-s-<key>, §58); 'default' follows light / dark
-  const SCHEMES = [['default', 'Site'], ['walnut', 'Walnut'], ['oak', 'Oak'], ['marble', 'Marble'], ['midnight', 'Midnight'], ['emerald', 'Emerald'], ['crimson', 'Crimson']];
-  let S = null;        // { el, uid, own, slots: [badge|null ×9], bg, scheme, all }
-  let E = null;        // editor: { slots, bg, scheme, sel, view: 'medals' | 'bg', hits, imgs }
+  const IMG = 'https://image.tmdb.org/t/p/';
+  const MAX = 9;
+  const FINISHES = [['auto', 'Auto'], ['crimson', 'Crimson'], ['midnight', 'Midnight'], ['emerald', 'Emerald'], ['walnut', 'Walnut'], ['oak', 'Oak'], ['marble', 'Marble']];
+  const LAYOUTS = [['spotlight', 'Spotlight', 'Hero, podium and ledge'], ['shelves', 'Shelves', 'Three lit shelves of three'], ['rail', 'Medal rail', 'Hanging on ribbons']];
+  const BLURS = [['none', 'None'], ['soft', 'Soft'], ['strong', 'Strong']];
+  const LIGHTS = [['spotlight', 'Spotlight'], ['even', 'Even'], ['moody', 'Moody']];
+  const DEF_LOOK = { layout: 'spotlight', finish: 'auto', blur: 'soft', lighting: 'spotlight', bg: null, bg_title: null, use_profile_backdrop: false };
+  const phoneMQ = matchMedia('(max-width: 640px)');
+  let S = null;   // { el, uid, own, name, picks, look, profileBg, total, all, loaded }
+  const entered = new Set();   // whose stage has had its entrance this visit
 
-  const medal = (b, size) => b.kind === 'member' ? MSSMedal.member({ size: Math.round(size * .85) })
+  /* ── one medal: artwork, name, what it is ── */
+  const medal = (b, size) => b.kind === 'member' ? MSSMedal.member({ size: Math.round(size * .9) })
     : b.kind === 'secret' ? MSSMedal.secret(b.medal, { size })
     : b.kind === 'achievement' ? MSSMedal.achievement(b.ach_key, b.ach_level, { size, at: b.at })
     : b.kind === 'official' ? MSSMedal.official(b.medal, { size, team: b.team_color ? { color: b.team_color } : null })
     : MSSMedal.challenge(b.place, b.cat, { size: Math.round(size * .8) });
-  const name = b => b.kind === 'achievement' ? (MSSMedal.ACH[b.ach_key]?.name || b.title) : b.title;
-  const sub = b => b.kind === 'member' ? MSSMedal.memberFor(b.earned_at)          // how long they've been here (075)
-    : b.kind === 'secret' ? 'Secret medal'
-    : b.kind === 'achievement' ? `${MSSMedal.LEVEL[b.ach_level - 1]} · ${Number(b.at || 0).toLocaleString(MSSI18n.locale)}`
-    : b.kind === 'official' ? (b.team_name || 'Official') : b.place === 1 ? 'Gold · 1st' : b.place === 2 ? 'Silver · 2nd' : 'Bronze';
-  const cabinet = () => S.own ? 'cabinet.html' : `cabinet.html?user=${encodeURIComponent(S.uid)}`;
+  const name = b => b.kind === 'achievement' ? (MSSMedal.ACH[b.ach_key]?.name || b.title) : b.kind === 'member' ? 'MSF Member' : b.title;
+  const num = n => Number(n || 0).toLocaleString(typeof MSSI18n !== 'undefined' ? MSSI18n.locale : undefined);
+  const sub = b => b.kind === 'member' ? MSSMedal.memberFor(b.earned_at)
+    : b.kind === 'secret' ? 'Secret'
+    : b.kind === 'achievement' ? `${MSSMedal.LEVEL[b.ach_level - 1]} · ${num(b.at)}`
+    : b.kind === 'official' ? (b.team_name || 'Official')
+    : b.place === 1 ? 'Gold · finished 1st' : b.place === 2 ? 'Silver · finished 2nd' : `Bronze${b.place ? ` · finished #${b.place}` : ''}`;
+  const KIND = { achievement: 'Achievement', official: 'Official', challenge: 'Challenge', secret: 'Secret', member: 'Member' };
+  // the ribbon a medal hangs from on the rail: its own colours (level, team / official, member green + gold)
+  const LV = { 1: ['#8A4E22', '#C9803F'], 2: ['#78818C', '#CDD3DA'], 3: ['#A8761A', '#E8BC4C'], 4: ['#2F6A2A', '#82C66F'] };
+  function ribbon(b) {
+    if (b.kind === 'achievement') return LV[b.ach_level] || LV[1];
+    if (b.kind === 'challenge') return LV[b.place === 1 ? 3 : b.place === 2 ? 2 : 1];
+    if (b.kind === 'member') return ['#2B5A27', '#E9C25A'];
+    if (b.kind === 'secret') return ['#3B2D6E', '#38B6AE'];
+    return /^#[0-9a-f]{6}$/i.test(b.team_color || '') ? [b.team_color, '#F4EFE6'] : ['#3A2A6B', '#E08A2E'];
+  }
+  const label = (b, i) => `${name(b)}, ${KIND[b.kind] === 'Achievement' ? sub(b) : KIND[b.kind] || 'Medal'}, spot ${i + 1}`;
+  const finishName = k => (FINISHES.find(x => x[0] === k) || FINISHES[0])[1];
+  const layoutName = k => (LAYOUTS.find(x => x[0] === k) || LAYOUTS[0])[1];
+  const cleanLook = l => {
+    const L = { ...DEF_LOOK, ...(l || {}) };
+    if (!LAYOUTS.some(x => x[0] === L.layout)) L.layout = 'spotlight';
+    if (!FINISHES.some(x => x[0] === L.finish)) L.finish = 'auto';
+    if (!BLURS.some(x => x[0] === L.blur)) L.blur = 'soft';
+    if (!LIGHTS.some(x => x[0] === L.lighting)) L.lighting = 'spotlight';
+    L.use_profile_backdrop = !!L.use_profile_backdrop;
+    return L;
+  };
 
+  /* ── the stage ── */
+  // medal sizes (px at desktop; the stage scales them with clamp() in CSS through --ms)
+  const SIZE = { hero: 196, in: 120, out: 100, ledge: 88, ph: 64, shelf: 96, rail: 92, thumb: 40 };
+  function post(b, i, kind, o, d, ord) {
+    const plate = `<b translate="no">${esc(name(b))}</b><small>${esc(sub(b))}</small>`;
+    // thumbnails sit inside a button (Studio → Layout): no buttons of their own
+    const tag = o.thumb ? 'span' : 'button';
+    const btn = `<${tag}${o.thumb ? '' : ' type="button"'} class="sc3-m" data-i="${i}"${o.thumb ? '' : ` aria-label="${esc(label(b, i))}"`}>
+        ${kind === 'hero' && !o.thumb ? `<span class="sc3-tag" aria-hidden="true">${icon('sparkles', 11)} Centre stage</span>` : ''}
+        ${o.studio ? `<span class="sc3-n" aria-hidden="true">${i + 1}</span>` : ''}
+        <span class="sc3-art" aria-hidden="true">${medal(b, o.thumb ? SIZE.thumb : SIZE[kind] || 96)}</span></${tag}>`;
+    const sel = o.studio && o.sel === i ? ' is-sel' : '';
+    const words = o.thumb ? '' : kind === 'hero' || kind === 'in' || kind === 'out'
+      ? `<span class="sc3-plinth" aria-hidden="true"><span class="sc3-plate">${plate}</span></span>`
+      : kind === 'shelf' ? `<span class="sc3-label">${plate}</span>`
+      : `<span class="sc3-name">${plate}</span>`;
+    const plinth = o.thumb && (kind === 'hero' || kind === 'in' || kind === 'out') ? '<span class="sc3-plinth" aria-hidden="true"></span>' : '';
+    const rib = kind === 'rail' ? (() => { const [a, c] = ribbon(b); return `<span class="sc3-rib" aria-hidden="true"><i style="background:${a}"></i><i style="background:${c}"></i></span>`; })() : '';
+    return `<li class="sc3-post is-${kind}${sel}" data-spot="${i}" style="--d:${d}${ord ? `;order:${ord}` : ''}" role="listitem">${rib}${btn}${words}${plinth}${kind === 'ledge' || kind === 'ph' ? '<span class="sc3-pad" aria-hidden="true"></span>' : ''}</li>`;
+  }
+  function arrange(picks, L, o) {
+    const n = picks.length, P = (i, k, d, ord) => picks[i] ? post(picks[i], i, k, o, d, ord) : '';
+    if (L === 'shelves') {
+      const rows = [0, 3, 6].filter(s => s < n);
+      return rows.map((s, r) => `<li class="sc3-shelf" role="none"><ul class="sc3-row" role="list">${[s, s + 1, s + 2].map((i, k) => P(i, 'shelf', r * 3 + k + 1)).join('')}</ul><span class="sc3-board" aria-hidden="true"></span></li>`).join('');
+    }
+    if (L === 'rail') {
+      const per = o.phone ? 3 : 5, rows = [];
+      for (let s = 0; s < n; s += per) rows.push(s);
+      if (!o.phone && n > 5) rows.splice(0, rows.length, 0, 5);   // 5 + 4
+      return rows.map((s, r) => { const e = !o.phone && r === 0 ? Math.min(n, 5) : Math.min(n, s + per);
+        return `<li class="sc3-rail" role="none"><span class="sc3-bar" aria-hidden="true"><i></i><i></i></span><ul class="sc3-row" role="list">${Array.from({ length: e - s }, (_, k) => P(s + k, 'rail', s + k + 1)).join('')}</ul></li>`; }).join('');
+    }
+    // Spotlight: #4 #2 #1 #3 #5 on the podium (phones: the hero, then #2–#5 in a row), #6–#9 on the ledge.
+    // In the page they're in spot order (screen readers, the keyboard); CSS order places them.
+    const ledge = n > 5 ? `<li class="sc3-ledge" role="none"><ul class="sc3-row" role="list">${[5, 6, 7, 8].map((i, k) => P(i, 'ledge', 6 + k)).join('')}</ul><span class="sc3-ledge-bar" aria-hidden="true"></span></li>` : '';
+    if (o.phone && !o.thumb) return `<li class="sc3-pod is-hero-only" role="none"><ul class="sc3-row" role="list">${P(0, 'hero', 1)}</ul></li>
+      ${n > 1 ? `<li class="sc3-pod is-four" role="none"><ul class="sc3-row" role="list">${[1, 2, 3, 4].map(i => P(i, 'ph', i + 1)).join('')}</ul></li>` : ''}${ledge}`;
+    return `<li class="sc3-pod" role="none"><ul class="sc3-row" role="list">${P(0, 'hero', 1, 3)}${P(1, 'in', 2, 2)}${P(2, 'in', 3, 4)}${P(3, 'out', 4, 1)}${P(4, 'out', 5, 5)}</ul></li>${ledge}`;
+  }
+  function stageHTML(picks, look, o = {}) {
+    const L = cleanLook(look), n = picks.length;
+    const beams = L.lighting === 'even' ? '' : `<span class="sc3-beams" aria-hidden="true"><i class="is-hero"></i>${L.lighting === 'spotlight' && L.layout === 'spotlight' && n > 1 ? '<i class="is-l"></i><i class="is-r"></i>' : ''}</span>`;
+    const cls = ['sc3', `is-${L.layout}`, `f-${L.finish}`, `b-${L.blur}`, `l-${L.lighting}`, o.phone ? 'is-phone' : '', o.studio ? 'is-studio' : '',
+      o.thumb ? 'is-thumb' : '', o.enter ? 'is-enter' : '', o.bg ? 'has-bg' : '', `n-${n}`].filter(Boolean).join(' ');
+    const top = o.thumb ? '' : `<div class="sc3-top"><span class="sc3-eye" translate="no">${esc(o.name || '')}${o.total != null ? ` · ${num(o.total)} medal${o.total === 1 ? '' : 's'}` : ''}</span>
+      ${o.studio ? '' : `<span class="sc3-chip" aria-hidden="true">${icon('eye', 13)} Tap a medal for its story</span>`}</div>`;
+    return `<div class="${cls}">
+      ${o.bg ? `<span class="sc3-bg" style="background-image:url('${esc(o.bg)}')" aria-hidden="true"></span>` : ''}<span class="sc3-wash" aria-hidden="true"></span>${beams}<span class="sc3-vig" aria-hidden="true"></span>
+      ${top}<ul class="sc3-list" role="list" aria-label="${o.thumb ? '' : `${n} medal${n === 1 ? '' : 's'} on show`}">${arrange(picks, L.layout, o)}</ul></div>`;
+  }
+
+  /* ── the tab ── */
+  const rpc = async (fn, args) => { const { data, error } = await sb.rpc(fn, args); if (error) throw error; return data; };
+  // read a get_showcase result — the new shape (128), or an old one (062–063: 9 fixed spots, a scheme)
+  function read(d) {
+    d = d || {};
+    const picks = Array.isArray(d.picks) ? d.picks.filter(Boolean) : Array.isArray(d.slots) ? d.slots.filter(Boolean) : [];
+    const look = cleanLook(d.picks ? d : { finish: d.scheme === 'default' ? 'auto' : d.scheme, bg: d.bg || null });
+    return { picks: picks.slice(0, MAX), look, profileBg: d.profile_bg || null, total: d.total != null ? d.total : null, all: Array.isArray(d.all) ? d.all : null };
+  }
   async function mount(el, uid, o = {}) {
     if (!el || !uid) return;
-    if (S && S.el === el && S.uid === uid && S.loaded) return;      // tab opened again — already drawn
-    S = { el, uid, own: !!o.own, name: o.name || '', slots: Array(SLOTS).fill(null), bg: null, scheme: 'default', all: [], loaded: false };
+    if (S && S.el === el && S.uid === uid && S.loaded) { draw(); return; }      // tab opened again — drawn again (no entrance)
+    S = { el, uid, own: !!o.own, name: o.name || '', picks: [], look: cleanLook(), profileBg: null, total: null, all: [], loaded: false };
+    el.innerHTML = `<div class="page-loading" data-skel="showcase"></div>`;
     try {
-      const d = await rpc('get_showcase', { p_user: uid, p_all: S.own });
-      S.slots = Array.from({ length: SLOTS }, (_, i) => d?.slots?.[i] || null);
-      S.bg = d?.bg || null; S.all = Array.isArray(d?.all) ? d.all : [];
-      S.scheme = SCHEMES.some(x => x[0] === d?.scheme) ? d.scheme : 'default';
-    } catch { /* no showcase yet — an empty shelf */ }
+      const r = read(await rpc('get_showcase', { p_user: uid, p_all: S.own }));
+      Object.assign(S, r, { all: r.all || [] });
+      if (S.total == null && S.own) S.total = S.all.length;
+    } catch (err) { console.warn('Showcase:', err); }
     S.loaded = true;
+    await bgOf();
+    draw(true);
+    if (!S.name && typeof _pvProfile !== 'undefined' && _pvProfile) S.name = _pvProfile.display_name || _pvProfile.username || '';
+  }
+  // the picture: their own pick, or — linked — the profile's current backdrop (it follows when that changes)
+  async function bgOf(look = S.look) {
+    if (look.use_profile_backdrop) {
+      let u = null;
+      try { const c = typeof MSSProfile !== 'undefined' && MSSProfile.currentBackdrop ? await MSSProfile.currentBackdrop() : null; u = c?.url || null; } catch {}
+      if (!u && S.profileBg) u = `${IMG}w1280${S.profileBg}`;
+      return (S.bgUrl = u ? u.replace('/w1280/', '/w780/') : null);
+    }
+    return (S.bgUrl = look.bg ? `${IMG}w780${look.bg}` : null);
+  }
+  const ownerName = () => S.own ? (window._navUserProfile?.display_name || window._navUserProfile?.username || 'You') : (S.name || 'Their');
+  function draw(first) {
+    if (!S) return;
+    const n = S.picks.length, who = S.own ? 'Your showcase' : `<span translate="no">${esc(S.name || 'Their')}</span>’s showcase`;
+    const meta = n ? `${n} on show · ${layoutName(S.look.layout)} · ${finishName(S.look.finish)}` : 'Nothing on show yet';
+    // the Cabinet is yours alone — someone else's profile shows only their showcase
+    const acts = S.own ? `<div class="sc3-acts"><a class="tv-btn" href="cabinet.html">${icon('trophy', 16)}<span>Cabinet</span></a><button type="button" class="tv-btn is-main" data-sc="edit">${icon('edit', 16)}<span>Edit showcase</span></button></div>` : '';
+    const head = `<div class="sc3-head"><div class="sc3-head-t"><h2>${who}</h2><p>${esc(meta)}</p></div>${acts}</div>`;
+    let body;
+    if (n) {
+      const enter = first && !entered.has(S.uid) && !matchMedia('(prefers-reduced-motion: reduce)').matches;
+      entered.add(S.uid);
+      body = stageHTML(S.picks, S.look, { name: ownerName(), total: S.total, bg: S.bgUrl, phone: phoneMQ.matches, enter });
+    } else if (S.own) body = emptyOwnHTML();
+    else body = `<div class="sc3-none"><span class="sc3-none-ic" aria-hidden="true">${icon('trophy', 22)}</span>
+        <div class="sc3-none-t"><b>Nothing on show yet</b><span><span translate="no">${esc(S.name || 'They')}</span> hasn’t picked any medals.</span></div></div>`;
+    S.el.innerHTML = `<section class="sc3-tab" aria-label="Showcase">${head}${body}</section>`;
+    wire();
+  }
+  // your own, nothing picked: the stage is still there — five dashed spots waiting
+  function emptyOwnHTML() {
+    const L = cleanLook({ ...S.look, layout: 'spotlight' });
+    return `<div class="sc3 is-spotlight is-empty f-${L.finish} b-${L.blur} l-${L.lighting}${S.bgUrl ? ' has-bg' : ''}">
+      ${S.bgUrl ? `<span class="sc3-bg" style="background-image:url('${esc(S.bgUrl)}')" aria-hidden="true"></span>` : ''}<span class="sc3-wash" aria-hidden="true"></span>
+      <span class="sc3-beams" aria-hidden="true"><i class="is-hero"></i><i class="is-l"></i><i class="is-r"></i></span><span class="sc3-vig" aria-hidden="true"></span>
+      <div class="sc3-empty-t"><h3>Your stage is empty</h3><p>Pick up to 9 medals — your best goes centre stage.</p>
+        <div class="sc3-empty-acts"><button type="button" class="sc3-ghost-btn" data-sc="autofill">${icon('sparkles', 15)} Auto-fill my best</button>
+          <button type="button" class="sc3-solid-btn" data-sc="edit">Pick medals</button></div></div>
+      <ul class="sc3-list" aria-hidden="true"><li class="sc3-pod"><ul class="sc3-row">${['out', 'in', 'hero', 'in', 'out'].map(k =>
+        `<li class="sc3-post is-${k} is-ghost"><span class="sc3-slot">${icon('plus', k === 'hero' ? 22 : 16)}</span><span class="sc3-plinth"></span></li>`).join('')}</ul></li></ul></div>`;
+  }
+  function wire() {
+    const sec = S.el.querySelector('.sc3-tab'); if (!sec || sec.dataset.wired) return;
+    sec.dataset.wired = '1';
+    sec.addEventListener('click', ev => {
+      const a = ev.target.closest('[data-sc]');
+      if (a) return a.dataset.sc === 'edit' ? edit() : edit({ autofill: true });
+      const m = ev.target.closest('.sc3-m'); if (!m) return;
+      const b = S.picks[+m.dataset.i]; if (b) openCard(b);
+    });
+  }
+  async function openCard(b) {
+    await mssLoadScript('js/medal-card.js');
+    MSSMedalCard.open(b, { own: S.own, ownerId: S.uid, ownerName: S.own ? '' : S.name, look: S.look, bg: S.bgUrl,
+      showcase: S.own ? { at: id => S.picks.findIndex(x => x.id === id), toggle } : null });
+  }
+  // the Medal card's "On your showcase" switch: the next free spot / taken off — saved straight away
+  async function toggle(b) {
+    const at = S.picks.findIndex(x => x.id === b.id), next = S.picks.slice();
+    if (at >= 0) next.splice(at, 1);
+    else if (next.length >= MAX) { showToast('All 9 spots are taken — take one off first.'); return null; }
+    else next.push(b);
+    await save(next, S.look);
+    return S.picks.findIndex(x => x.id === b.id);
+  }
+  async function save(picks, look) {
+    try { await rpc('set_showcase', { p_picks: picks.map(b => b.id), p_look: cleanLook(look) }); }
+    catch (err) {
+      const missing = err?.code === 'PGRST202' || /set_showcase/i.test(err?.message || '');
+      showToast(missing ? 'Couldn’t save — run the showcase database update (sql/128) first.' : err?.hint || 'Couldn’t save — try again.', 'err');
+      throw err;
+    }
+    // read it back, so what's shown is what was really saved
+    const r = read(await rpc('get_showcase', { p_user: S.uid, p_all: true }));
+    Object.assign(S, r, { all: r.all || S.all });
+    await bgOf();
     draw();
   }
+  async function edit(o = {}) {
+    if (!S?.own) return;
+    await Promise.all([mssLoadScript('js/showcase-studio.js'), mssLoadScript('js/medal-card.js')]);
+    MSSShowcaseStudio.open({ picks: S.picks.slice(), look: { ...S.look }, all: S.all, name: ownerName(), total: S.total, autofill: !!o.autofill,
+      profileBg: () => bgOf({ use_profile_backdrop: true }), save: async (picks, look) => { await save(picks, look); showToast('Showcase saved'); } });
+  }
+  // computer ↔ phone: the arrangement changes
+  phoneMQ.addEventListener('change', () => { if (S?.loaded && S.el.isConnected) draw(); });
 
-  // The cabinet: three shelves of three. Each medal stands on its shelf, its name
-  // printed underneath; the back panel can be a picture, slightly blurred.
-  function slotHTML(b, i) {
-    if (b) return `<a class="sc-slot" href="${cabinet()}" aria-label="${esc(name(b))} — ${esc(sub(b))}"><span class="sc-medal">${medal(b, 88)}</span></a>`;
-    return S.own ? `<button type="button" class="sc-slot sc-empty" onclick="MSSShowcase.edit(${i})" aria-label="Empty spot ${i + 1} — add a medal"><span class="sc-medal"><span class="sc-plus">${icon('plus', 18)}</span></span></button>`
-      : `<span class="sc-slot sc-empty" aria-hidden="true"><span class="sc-medal"></span></span>`;
-  }
-  const labelHTML = b => `<span class="sc-label">${b ? `<b translate="no">${esc(name(b))}</b><small>${esc(sub(b))}</small>` : ''}</span>`;
-  function draw() {
-    const filled = S.slots.filter(Boolean).length;
-    const shelf = row => { const k3 = [0, 1, 2].map(k => row * 3 + k);
-      return `<div class="sc-shelf">
-        <div class="sc-row">${k3.map(i => slotHTML(S.slots[i], i)).join('')}</div>
-        <div class="sc-ledge" aria-hidden="true"></div>
-        <div class="sc-row sc-labels" aria-hidden="true">${k3.map(i => labelHTML(S.slots[i])).join('')}</div>
-      </div>`; };
-    S.el.innerHTML = `<section class="sc" aria-label="Showcase">
-      <div class="sc-head">
-        <div><h2 class="sc-title">${S.own ? 'Your showcase' : `<span translate="no">${esc(S.name)}</span>’s showcase`}</h2>
-          <div class="sc-sub">${filled} of ${SLOTS} ${S.own && !filled ? '— put the medals you’re proudest of on show' : 'on show'}</div></div>
-        <div class="sc-acts">
-          ${S.own ? `<button type="button" class="sc-btn primary" onclick="MSSShowcase.edit()">${icon('edit', 14)} Edit</button>` : ''}
-          <a class="sc-btn" href="${cabinet()}">${icon('trophy', 14)} All medals</a>
-        </div>
-      </div>
-      <div class="sc-cab sc-s-${S.scheme}${S.bg ? ' has-bg' : ''}">
-        ${S.bg ? `<div class="sc-bg" style="background-image:url('${IMG}w780${esc(S.bg)}')" aria-hidden="true"></div>` : ''}
-        ${shelf(0)}${shelf(1)}${shelf(2)}
-        ${!S.own && !filled ? `<div class="sc-none-msg">No medals on show yet.</div>` : ''}
-      </div>
-    </section>`;
-  }
+  // While it loads: the header row and a stage of plinths, as blocks (mssSkeleton)
+  if (typeof mssSkeleton !== 'undefined') mssSkeleton.define('showcase', () => `<section class="sc3-tab"><div class="sc3-head"><div class="sc3-head-t"><h2>Your showcase</h2><p>9 on show · Spotlight</p></div>
+      <div class="sc3-acts"><span class="tv-btn">Cabinet</span><span class="tv-btn">Edit showcase</span></div></div>
+    <div class="sc3 is-spotlight is-skel f-auto"><ul class="sc3-list"><li class="sc3-pod"><ul class="sc3-row">${['out', 'in', 'hero', 'in', 'out'].map(k =>
+      `<li class="sc3-post is-${k}"><span class="sc3-slot skel"></span><span class="sc3-plinth skel"></span></li>`).join('')}</ul></li></ul></div></section>`);
 
-  /* ── Editor ── */
-  function edit(slot) {
-    E = { slots: S.slots.map(b => b?.id || null), bg: S.bg, scheme: S.scheme, sel: Number.isInteger(slot) ? slot : S.slots.findIndex(b => !b), view: 'medals', hits: [], imgs: [] };
-    if (E.sel < 0) E.sel = 0;
-    let ov = document.getElementById('scEdit');
-    if (!ov) {
-      ov = document.createElement('div'); ov.id = 'scEdit'; ov.className = 'soc-overlay';
-      ov.innerHTML = `<div class="soc-card sc-edit" role="dialog" aria-modal="true" aria-labelledby="scEditTitle">
-          <div class="sf-header"><div class="sf-title" id="scEditTitle">Edit Showcase</div><button type="button" class="sf-close" onclick="MSSShowcase._close()" aria-label="Close">${icon('x', 18)}</button></div>
-          <div class="sf-body" id="scEditBody"></div>
-          <div class="sf-footer"><button type="button" class="sf-clear-btn" onclick="MSSShowcase._close()">Cancel</button>
-            <button type="button" class="sf-apply-btn" id="scSave" onclick="MSSShowcase._save()">Save</button></div></div>`;
-      MSSDialog.bind(ov, close);
-      document.body.appendChild(ov);
-    }
-    document.getElementById('scSave').disabled = false;   // the dialog is reused — a finished save left it switched off
-    drawEdit();
-    MSSDialog.open(ov, { focus: '#scSave' });
-  }
-  const byId = id => S.all.find(b => b.id === id);
-  function drawEdit() {
-    const body = document.getElementById('scEditBody'); if (!body || !E) return;
-    // the editor's shelves are a live preview: the chosen style and picture show here as you pick them
-    const slots = `<div class="sf-section-label">Your shelves <span class="sf-section-hint">tap a spot, then a medal · style and picture preview here</span></div>
-      <div class="sc-cab sc-edit-cab sc-s-${E.scheme}${E.bg ? ' has-bg' : ''}">${E.bg ? `<div class="sc-bg" style="background-image:url('${IMG}w780${esc(E.bg)}')" aria-hidden="true"></div>` : ''}
-      <div class="sc-edit-shelf" role="group" aria-label="Showcase slots">${E.slots.map((id, i) => { const b = id && byId(id);
-        return `<div class="sc-edit-slot${i === E.sel ? ' sel' : ''}">
-          <button type="button" class="sc-edit-pick" onclick="MSSShowcase._sel(${i})" aria-pressed="${i === E.sel}" aria-label="Slot ${i + 1}${b ? ': ' + esc(name(b)) : ', empty'}">${b ? medal(b, 52) : `<span class="sc-plus">${icon('plus', 16)}</span>`}</button>
-          ${b ? `<button type="button" class="sc-edit-x" onclick="MSSShowcase._clear(${i})" aria-label="Take ${esc(name(b))} off">${icon('x', 11)}</button>` : ''}</div>`; }).join('')}</div></div>`;
-    const medals = S.all.length ? `<div class="sc-edit-grid">${S.all.map(b => { const at = E.slots.indexOf(b.id);
-        return `<button type="button" class="sc-edit-medal${at >= 0 ? ' on' : ''}" onclick="MSSShowcase._put(${attrJSON(b.id)})" aria-pressed="${at >= 0}" title="${esc(name(b))} — ${esc(sub(b))}">
-          ${medal(b, 58)}<span translate="no">${esc(name(b))}</span><small>${esc(sub(b))}</small>${at >= 0 ? `<i class="sc-edit-n">${at + 1}</i>` : ''}</button>`; }).join('')}</div>`
-      : `<div class="cab-empty sc-none">No medals yet — finish a challenge or reach an achievement level and they’ll show up here.</div>`;
-    const style = `<div class="sf-section-label">Shelf style</div>
-      <div class="sc-edit-schemes" role="radiogroup" aria-label="Shelf style">${SCHEMES.map(([k, l]) =>
-        `<button type="button" role="radio" class="sc-swatch${E.scheme === k ? ' on' : ''}" aria-checked="${E.scheme === k}" onclick="MSSShowcase._scheme('${k}')">
-          <span class="sc-swatch-chip sc-s-${k}" aria-hidden="true"><i></i><i></i></span><span>${l}</span></button>`).join('')}</div>`;
-    const bg = `<div class="sf-section-label">Background <span class="sf-section-hint">optional — a picture from any title, slightly blurred</span></div>
-      <div class="sc-edit-bg">
-        <span class="sc-edit-bg-prev"${E.bg ? ` style="background-image:url('${IMG}w300${esc(E.bg)}')"` : ''}>${E.bg ? '' : icon('image', 18)}</span>
-        <button type="button" class="rec-btn" onclick="MSSShowcase._bgView()">${icon('search', 14)} ${E.bg ? 'Change' : 'Choose a title'}</button>
-        ${E.bg ? `<button type="button" class="poll-link poll-danger" onclick="MSSShowcase._bg(null)">Remove</button>` : ''}
-      </div>`;
-    body.innerHTML = E.view === 'bg' ? bgPicker() : slots + `<div class="sf-section-label">Your medals <span class="sf-section-hint">${S.all.length}</span></div>` + medals + style + bg;
-    if (E.view === 'bg') setTimeout(() => document.getElementById('scBgQ')?.focus(), 30);
-  }
-  function bgPicker() {
-    return `<button type="button" class="poll-link sc-back" onclick="MSSShowcase._bgBack()">${icon('back', 14)} Back to medals</button>
-      <div class="search-wrap fav-picker-search"><span class="search-icon-wrap">${icon('search', 14)}</span>
-        <input type="search" id="scBgQ" placeholder="Search movies and shows…" aria-label="Search movies and shows" autocomplete="off" enterkeyhint="search" oninput="MSSShowcase._q(this.value)"></div>
-      <div id="scBgHits" class="sc-bg-hits">${hitsHTML()}</div>`;
-  }
-  const hitsHTML = () => E.imgs.length
-    ? `<div class="sf-section-label">Pick a background <span class="sf-section-hint">scenes and posters</span></div><div class="sc-bg-imgs">${E.imgs.map(p => `<button type="button" class="sc-bg-img" onclick="MSSShowcase._bg(${attrJSON(p)})" style="background-image:url('${IMG}w300${esc(p)}')" aria-label="Use this picture"></button>`).join('')}</div>`
-    : E.hits.map((h, i) => `<button type="button" class="pf-r" onclick="MSSShowcase._title(${i})"${MSSAge.attr(h.media_type, h.id)}>
-        <span class="poll-thumb">${h.poster_path ? `<img src="${IMG}w92${esc(h.poster_path)}" alt="" loading="lazy">` : icon('film', 16)}</span>
-        <span class="poll-opt-text"><b translate="no">${esc(h.title || h.name)}</b><small>${esc(((h.release_date || h.first_air_date || '').slice(0, 4)) + (h.media_type === 'movie' ? ' · Movie' : ' · TV Show'))}</small></span></button>`).join('');
-  let qT = null, qLast = '';
-  function search(q) {
-    clearTimeout(qT); qLast = q;
-    qT = setTimeout(async () => {
-      if (!E) return;
-      const hits = q.trim().length < 2 ? [] : (await _tmdbSearch(q.trim(), 8)).filter(h => h.backdrop_path || h.poster_path);
-      if (!E || qLast !== q) return;                   // typed on since
-      E.imgs = []; E.hits = hits;
-      const box = document.getElementById('scBgHits'); if (box) box.innerHTML = hitsHTML();
-    }, MSS_SEARCH_MS);
-  }
-  async function pickTitle(i) {
-    const h = E?.hits[i]; if (!h) return;
-    const box = document.getElementById('scBgHits'); if (box) box.innerHTML = `<div class="page-loading" style="padding:1.5rem"><div class="spinner"></div></div>`;
-    let imgs = [];
-    try {
-      const res = await tmdbFetch(`${TMDB_BASE}/${h.media_type}/${h.id}/images?include_image_language=en,null`);
-      if (res.ok) { const j = await res.json(); imgs = [...(j.backdrops || []).slice(0, 12), ...(j.posters || []).slice(0, 6)].map(x => x.file_path); }
-    } catch {}
-    E.imgs = [...new Set([h.backdrop_path, ...imgs, h.poster_path].filter(Boolean))].slice(0, 20);
-    if (box) box.innerHTML = hitsHTML();
-  }
-  function put(id) {
-    const at = E.slots.indexOf(id);
-    if (at >= 0) { E.slots[at] = null; E.sel = at; }
-    else { E.slots[E.sel] = id; const next = E.slots.findIndex(x => !x); if (next >= 0) E.sel = next; }
-    drawEdit();
-  }
-  function close() { E = null; MSSDialog.close(document.getElementById('scEdit')); }
-  async function save() {
-    if (!E) return;
-    const btn = document.getElementById('scSave'); btn.disabled = true;
-    try {
-      await rpc('set_showcase', { p_slots: E.slots, p_bg: E.bg, p_scheme: E.scheme });
-      // read it back, so what's shown is what was really saved
-      const d = await rpc('get_showcase', { p_user: S.uid, p_all: true });
-      S.slots = Array.from({ length: SLOTS }, (_, i) => d?.slots?.[i] || null);
-      S.bg = d?.bg || null; S.all = Array.isArray(d?.all) ? d.all : S.all;
-      S.scheme = SCHEMES.some(x => x[0] === d?.scheme) ? d.scheme : 'default';
-      close(); draw();
-      showToast(d && d.scheme === undefined ? 'Saved — but the shelf style needs the 063 database update to stick' : 'Showcase saved', d && d.scheme === undefined ? 'err' : 'ok');
-    } catch (err) {
-      btn.disabled = false;
-      const missing = err?.code === 'PGRST202' || /function .*set_showcase/i.test(err?.message || '');
-      showToast(missing ? 'Couldn’t save — the showcase database update (063) hasn’t been run yet.' : err?.hint || err?.message || 'Couldn’t save — try again.', 'err');
-    }
-  }
-
-  return { mount, edit, _close: close, _save: save, _put: put,
-    _sel: i => { E.sel = i; drawEdit(); }, _clear: i => { E.slots[i] = null; E.sel = i; drawEdit(); },
-    _bgView: () => { E.view = 'bg'; E.hits = []; E.imgs = []; drawEdit(); }, _bgBack: () => { E.view = 'medals'; drawEdit(); },
-    _bg: p => { E.bg = p; E.view = 'medals'; drawEdit(); }, _q: search, _title: pickTitle,
-    _scheme: k => { E.scheme = k; drawEdit(); } };
+  return { mount, stageHTML, medal, name, sub, ribbon, cleanLook, read, KIND, FINISHES, LAYOUTS, BLURS, LIGHTS, MAX, IMG, state: () => S, edit };
 })();

@@ -7,254 +7,49 @@
 <script src="js/i18n.js"></script>
 <title>Notes — MyScreenFolio</title>
 <link rel="stylesheet" href="css/fonts.css">
+<link rel="stylesheet" href="css/theme.css">
 <link rel="stylesheet" href="css/style.css">
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#1E5C26">
+<meta name="theme-color" content="#F3EEDC">
+<meta name="color-scheme" content="light dark">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="MyScreenFolio">
-<link rel="apple-touch-icon" href="icons/icon-192.png">
-<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
-<link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
-<style>
-
-/* ── Social note row ── */
-.snote-row-head { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
-.snote-rect-btn {
-  flex:1; display:flex; align-items:center; justify-content:center; gap:8px;
-  padding:11px 0; border-radius:var(--radius-sm); font-size:13.5px; font-weight:600;
-  background:var(--bg-3); border:0.5px solid var(--border-2); color:var(--text-3); cursor:pointer;
-  transition:all .15s;
-}
-.snote-rect-btn:hover { border-color:var(--border-olive); color:var(--text); }
-.snote-rect-btn.active-like { background:var(--olive-faint); border-color:var(--border-olive); color:var(--olive-light); }
-.snote-rect-btn.active-dislike { background:rgba(192,104,90,0.12); border-color:rgba(192,104,90,0.4); color:#c0685a; }
-
-/* ── Header buttons ── */
-.notes-header-btns { display:flex; gap:8px; flex-wrap:wrap; }
-@media(max-width:520px){
-  .notes-header-btns { width:100%; }
-  .notes-header-btns .btn-add-entry { flex:1; font-size:clamp(11px,3vw,13px); padding:10px 12px; }
-}
-
-/* ── Search popup (opened via + Add Note / Edit Note) ── */
-.notes-search-overlay {
-  position:fixed; inset:0; z-index:1150; background:rgba(0,0,0,0.72);
-  -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); display:flex; align-items:flex-start; justify-content:center;
-  padding:16px; padding-top:max(16px, env(safe-area-inset-top)); box-sizing:border-box;
-  opacity:0; pointer-events:none; transition:opacity .2s; overflow-y:auto;
-}
-.notes-search-overlay.open { opacity:1; pointer-events:auto; }
-.notes-search-card {
-  width:100%; max-width:480px; max-height:calc(100dvh - 32px); display:flex; flex-direction:column;
-  background:var(--bg-2); border:1.5px solid var(--olive-light);
-   border-radius:var(--radius-lg);
-  transform:translateY(16px); transition:transform .25s cubic-bezier(.4,0,.2,1);
-  overflow:hidden; margin-top:4vh;
-}
-.notes-search-overlay.open .notes-search-card { transform:translateY(0); }
-.notes-search-card-header {
-  display:flex; align-items:center; justify-content:space-between;
-  padding:18px 20px; border-bottom:0.5px solid var(--border); flex-shrink:0;
-}
-.notes-search-card-title { font-family:var(--serif); font-size:20px; font-weight:500; color:var(--text); }
-.notes-search-card-close { background:none; border:none; color:var(--text-3); cursor:pointer; font-size:20px; line-height:1; }
-.notes-search-card-close:hover { color:var(--text); }
-.notes-search-input-wrap { position:relative; padding:16px 20px 12px; flex-shrink:0; }
-.notes-search-input {
-  width:100%; box-sizing:border-box; padding-block:11px; padding-inline:40px 14px;
-  border-radius:var(--radius-sm); border:1px solid var(--border);
-  background:var(--bg-3); color:var(--text); font-family:var(--sans);
-  font-size:16px; outline:none; transition:border-color .15s;
-}
-.notes-search-input:focus { border-color:var(--olive-light); }
-.notes-search-icon {
-  position:absolute; inset-inline-start:33px; top:50%; transform:translateY(-50%);
-  color:var(--text-3); pointer-events:none;
-}
-.notes-search-results {
-  overflow-y:auto; overscroll-behavior-y:contain; padding:4px 10px 16px;
-}
-.notes-search-item {
-  display:flex; align-items:center; gap:12px; padding:10px 10px;
-  border-radius:var(--radius-sm); cursor:pointer; transition:background-color .12s;
-}
-.notes-search-item:hover, .notes-search-item.active { background:var(--olive-faint); }
-.notes-search-item-poster {
-  width:36px; height:52px; border-radius:var(--radius-xs); flex-shrink:0;
-  background:var(--bg-3); overflow:hidden; display:flex; align-items:center;
-  justify-content:center; font-family:var(--serif); font-size:15px; color:var(--olive-light);
-}
-.notes-search-item-poster img { width:100%; height:100%; object-fit:cover; }
-.notes-search-item-info { flex:1; min-width:0; }
-.notes-search-item-title {
-  font-size:14px; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-}
-.notes-search-item-meta { font-size:11px; color:var(--text-3); margin-top:2px; }
-.notes-search-item-has-note {
-  font-size:9px; letter-spacing:.5px; text-transform:uppercase;
-  color:var(--olive-light); background:var(--olive-faint);
-  border:0.5px solid var(--border-olive); border-radius:20px; padding:2px 7px;
-  flex-shrink:0;
-}
-.notes-search-empty { padding:24px 14px; text-align:center; font-size:13px; color:var(--text-3); }
-
-/* ── Sort bar ── */
-.notes-sort-bar { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:1.25rem; }
-.notes-user-search-wrap { margin-bottom:1.25rem; }
-.username-dropdown {
-  position:fixed;
-  background:var(--bg-3); border:0.5px solid var(--olive-light); border-top:none;
-  border-radius:0 0 var(--radius) var(--radius); z-index:290;
-  
-  overflow-y:auto; overflow-x:hidden; max-height:320px;
-  display:none;
-}
-.username-dropdown.open { display:block; }
-.ud-item {
-  display:flex; align-items:center; gap:12px;
-  padding:10px 14px; cursor:pointer;
-  transition:background .15s;
-  border-bottom:0.5px solid var(--border);
-}
-.ud-item:last-child { border-bottom:none; }
-.ud-item:hover, .ud-item.ud-active { background:var(--olive-faint); }
-.ud-avatar {
-  width:36px; height:36px; border-radius:50%; flex-shrink:0;
-  background:var(--bg-3); border:1px solid var(--border-2);
-  font-family:var(--serif); font-size:16px; color:var(--text-2);
-  display:flex; align-items:center; justify-content:center; overflow:hidden;
-}
-.ud-avatar img { width:100%; height:100%; object-fit:cover; border-radius:50%; }
-.ud-info { flex:1; min-width:0; }
-.ud-username { font-size:14px; font-weight:500; color:var(--text); }
-.ud-username em { color:var(--olive-light); font-style:normal; font-weight:600; }
-.ud-display { font-size:11px; color:var(--text-3); margin-top:2px; }
-.ud-loading, .ud-empty { padding:14px; font-size:13px; color:var(--text-3); text-align:center; }
-.ud-type-tag {
-  font-size:9.5px; font-weight:700; letter-spacing:.5px; text-transform:uppercase;
-  color:var(--olive-light); background:var(--olive-faint); border:0.5px solid var(--border-olive);
-  border-radius:20px; padding:2px 8px; flex-shrink:0;
-}
-.notes-user-search-wrap .fused-search-wrap {
-  display:flex; align-items:stretch;
-  border:1.5px solid var(--border-olive); border-radius:var(--radius-sm); overflow:hidden;
-  background:var(--bg-3); transition:border-color var(--trans) var(--ease), box-shadow var(--trans) var(--ease);
-}
-.notes-user-search-wrap .fused-search-wrap:focus-within { border-color:var(--olive-light); box-shadow:0 0 0 3px var(--olive-faint); }
-.notes-user-search-wrap .add-friend-input {
-  flex:1; min-width:0; background:transparent; border:none;
-  color:var(--text); font-size:16px;
-  padding:18px 20px; outline:none; box-sizing:border-box; transition:none;
-}
-.notes-user-search-wrap .add-friend-input::placeholder { color:var(--text-3); font-size:14px; }
-.notes-user-search-wrap .fused-search-btn {
-  flex-shrink:0; display:flex; align-items:center; gap:8px;
-  padding:0 26px; border:none; cursor:pointer;
-  background:linear-gradient(135deg, var(--olive-light), var(--olive-2)); color:#fff;
-  font-size:14px; font-weight:500; font-family:var(--sans);
-  transition:opacity .15s;
-}
-.notes-user-search-wrap .fused-search-btn:hover { opacity:.9; }
-.notes-user-search-wrap .fused-search-btn svg { width:16px; height:16px; flex-shrink:0; }
-#notesUserFilterBanner {
-  display:flex; align-items:center; justify-content:space-between; gap:12px;
-  background:var(--olive-faint); border:0.5px solid var(--border-olive); border-radius:var(--radius);
-  padding:10px 16px; margin-top:10px; font-size:13.5px; color:var(--olive-light); font-weight:500;
-}
-#notesUserFilterBanner button {
-  background:none; border:none; color:var(--olive-light); font-size:12.5px; font-weight:600; cursor:pointer; text-decoration:underline;
-}
-#notesUserFilterBanner a { color:inherit; font-weight:700; text-decoration:underline; text-underline-offset:2px; }
-
-@media(max-width:640px){
-  .notes-search-card-header { padding:14px 16px; }
-  .notes-search-card-title { font-size:18px; }
-  .notes-search-input-wrap { padding:14px 16px 10px; }
-  .notes-search-input { padding-block:11px; padding-inline:38px 14px; font-size:16px; }
-  .notes-search-icon { inset-inline-start:29px; }
-  .notes-search-item { padding:9px 8px; gap:10px; }
-  .notes-search-item-poster { width:32px; height:46px; font-size:13px; }
-  .notes-search-item-title { font-size:13px; }
-  .notes-search-item-meta { font-size:10px; }
-  .notes-search-item-has-note { font-size:8px; padding:2px 6px; }
-}
-@media(max-width:400px){
-  .notes-search-card-header { padding:12px 14px; }
-  .notes-search-card-title { font-size:16px; }
-  .notes-search-input-wrap { padding:12px 14px 8px; }
-  .notes-search-input { padding-block:10px; padding-inline:34px 12px; }
-  .notes-search-icon { inset-inline-start:25px; width:14px; height:14px; }
-  .notes-search-results { max-height:280px; }
-  .notes-search-item { padding:8px 10px; gap:8px; }
-  .notes-search-item-poster { width:28px; height:40px; font-size:12px; }
-  .notes-search-item-title { font-size:12px; }
-}
-
-@media(max-width:640px) { #notesPageStats { display:grid; grid-template-columns:repeat(2, 1fr); } }
-
-</style>
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" type="image/svg+xml" sizes="any" href="icons/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
 </head>
 <body>
 <div class="page-wrap">
 
   <!-- Header -->
-  <div class="cat-page-header fade-up">
-    <div class="cat-page-header-left">
-      <h1 class="cat-page-title" id="notesPageTitle">My Notes</h1>
-      <div class="cat-page-sub" id="notesPageSub"></div>
+  <div class="cat-page-header lib-head nt-head fade-up">
+    <div class="lib-head-l">
+      <div class="lib-kicker" id="notesKicker">You · Notes</div>
+      <h1 class="cat-page-title">Notes</h1>
+      <div class="cat-page-sub" id="notesPageSub"><span class="skel-txt">00 notes · 0,000 words · 000 per note · 0 likes</span></div>
     </div>
-    <div class="cat-page-header-right notes-header-btns">
-      <button class="btn-add-entry" onclick="openNotesSearchPopup('add')">+ Add Note</button>
-      <button class="btn-add-entry" id="notesEditBtn" onclick="openNotesSearchPopup('edit')">Edit Note</button>
+    <div class="lib-head-r">
+      <button type="button" class="btn-add-entry nt-write" onclick="openNotesSearchPopup()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>Write a note</button>
     </div>
   </div>
 
-  <!-- Mine / Friends / Community -->
-  <div id="notesModeWrap"></div>
-
-  <!-- Stat boxes -->
-  <div class="page-stats fade-up fade-up-1" id="notesPageStats"></div>
-
-  <!-- Social: user search -->
-  <div class="notes-user-search-wrap fade-up fade-up-1" id="notesUserSearchWrap" style="display:none;">
-    <div class="fused-search-wrap" id="notesUserSearchWrapInner">
-      <input id="notesUserSearchInput" class="add-friend-input" placeholder="Search people or titles…" aria-label="Search people or titles"
-             type="search" name="mss-notes-search" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" enterkeyhint="search" data-1p-ignore data-lpignore="true" data-form-type="other"
-             oninput="this.value=this.value.replace(/[^a-zA-Z0-9_ ]/g,'');_nuSearch(this.value);"
-             onkeydown="_nuKeydown(event)">
-      <button type="button" class="fused-search-btn" tabindex="-1" onclick="document.getElementById('notesUserSearchInput').focus()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-        <span>Search</span>
-      </button>
-    </div>
-    <div id="notesUserFilterBanner" style="display:none;"></div>
+  <!-- Toolbar: Mine / Friends / Community · search · Sort · Filter · (phones) the pencil -->
+  <div class="nt-tools fade-up fade-up-1" id="notesTools">
+    <div id="notesModeWrap" style="display:contents"></div>
+    <div class="nt-search" id="notesSearch"></div>
+    <div class="nt-bar" id="notesBar"></div>
+    <button type="button" class="nt-pen" onclick="openNotesSearchPopup()" aria-label="Write a note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
   </div>
+  <div class="lib-tabrow nt-views" id="notesViews"></div>
+  <div class="nt-banner" id="notesUserFilterBanner" style="display:none;"></div>
   <div id="nuDropdown" class="username-dropdown"></div>
 
-  <!-- Toolbar: section label + Sort / Filter (both tabs) -->
-  <div class="mss-toolbar fade-up fade-up-1" id="notesToolbar" style="display:none;"></div>
-
-  <!-- Notes list -->
+  <!-- The featured note + the cards -->
   <div id="notesPageContent" class="fade-up fade-up-2">
     <div class="page-loading" data-skel="notes-page"></div>
   </div>
 
-</div>
-
-<!-- Search popup -->
-<div class="notes-search-overlay" id="notesSearchOverlay" onclick="if(event.target===this)closeNotesSearchPopup()">
-  <div class="notes-search-card">
-    <div class="notes-search-card-header">
-      <div class="notes-search-card-title" id="notesSearchCardTitle">Add Note</div>
-      <button class="notes-search-card-close" onclick="closeNotesSearchPopup()">&#x2715;</button>
-    </div>
-    <div class="notes-search-input-wrap">
-      <svg class="notes-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-      <input type="text" id="notesSearchInput" class="notes-search-input" placeholder="Search your library…" autocomplete="off" oninput="_notesPageSearch(this.value)" onkeydown="_notesPageSearchKeydown(event)">
-    </div>
-    <div class="notes-search-results" id="notesSearchResults"></div>
-  </div>
 </div>
 
 <script src="js/vendor/supabase-2.118.0.js"></script>
@@ -263,26 +58,29 @@
 <script src="js/nav.js"></script>
 <script src="js/sort-filter.js"></script>
 <script src="js/info-popup.js"></script>
-<script src="js/rating-popup.js"></script>
+<script src="js/title-view.js"></script>
 <script src="js/easter-egg.js"></script>
 <script src="js/note-popup.js"></script>
-<script src="js/friend-popups.js"></script>
 <script src="js/list-popup.js"></script>
 <script>
 function esc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-
 let _notesUser = null;
 let _notesEntries = [];
-let _notesActiveId = null;
 let _notesMode = mssViewOf();   // mine | friends | community
+let _notesPin = null;           // your pinned note's entry id (MSSNote.pinnedId)
+let _notesShow = MSSNote.PAGE;  // cards drawn: 20, + 20 per View more
 let _socialNotesRaw = [];
 let _socialNotesMyReactions = {}; // entry_id -> 'like' | 'dislike'
 // From a title page's "View all notes": notes.html?view=community&tmdb=<id>&type=<movie|tv>&t=<name>
 let _notesTitle = (q => q.get('tmdb') ? { id: Number(q.get('tmdb')), type: q.get('type') === 'tv' ? 'tv' : 'movie', name: q.get('t') || 'this title' } : null)(new URLSearchParams(location.search));
 
+const _NOTES_SCOPE = { mine: 'notesMine', friends: 'notesFriends', community: 'notesSocial' };
+const _nWord = (n, one) => `${Number(n).toLocaleString(MSSI18n.locale)} ${n === 1 ? one : one + 's'}`;
+
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('notesModeWrap').innerHTML = mssViewToggleHTML('notesModeToggle', 'Whose notes', _notesMode, 'setNotesMode');
-  attachClearButton('notesUserSearchInput');
+  _notesViews();
+  _notesTools();
   initPage(async (user) => {
     const q = new URLSearchParams(location.search);
     // Guests can read Community notes; their own notes need an account
@@ -299,10 +97,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (q.get('add')) { // (+) → Write a note, from another page
       const url = new URL(location.href); url.searchParams.delete('add');
       history.replaceState(history.state, '', url.pathname + url.search);
-      openNotesSearchPopup('add');
+      openNotesSearchPopup();
     }
   });
 });
+// Pinned / unpinned (the title panel's ⋯) → the featured note follows
+document.addEventListener('mss:notepin', ev => { _notesPin = ev.detail.id; if (_notesMode === 'mine') renderNotesPage(); });
 
 /* A shared note: notes.html?note=<entry id> (sent to you, a friend's) or with
    &k=<token> — its private link (069), which opens it for anyone, guests too. */
@@ -318,52 +118,63 @@ async function _notesOpenLink() {
   if (!e || !(e.notes || '').trim()) { showToast('This note is private, or it doesn’t exist anymore.', 'err'); return; }
   const own = _notesUser && e.user_id === _notesUser.id;
   const profile = own ? null : (await sb.from('profiles').select('id, username, display_name, avatar_url').eq('id', e.user_id).maybeSingle()).data || {};
-  MSSViews.open(e, own ? { start: 'note', own: true } : { start: 'note', profile });
+  MSSViews.open(e, own ? { start: 'note', note: true, own: true } : { start: 'note', note: true, profile });
 }
 
 let _notesReactionCounts = {}; // entry_id -> { like, dislike }
 
-/* Your notes show as soon as your entries arrive; like/dislike counts
+/* Your notes show as soon as your entries arrive; the pin and like / dislike counts
    fill in right after, and Community is fetched quietly in the background
-   so switching tabs is instant. */
+   so switching views is instant. */
 async function loadNotesPage() {
   _notesEntries = await getEntries(_notesUser.id) || [];
+  _notesPin = await MSSNote.pinnedId(_notesUser.id);
   if (_notesMode === 'mine') renderNotesPage();            // ← first paint
   const withNotes = _notesEntries.filter(e => e.notes && e.notes.trim());
   if (withNotes.length) {
-    const { data: reactions } = await sb.from('note_reactions').select('entry_id, is_like').in('entry_id', withNotes.map(e => e.id));
-    _notesReactionCounts = {};
-    (reactions || []).forEach(r => {
-      if (!_notesReactionCounts[r.entry_id]) _notesReactionCounts[r.entry_id] = { like: 0, dislike: 0 };
-      if (r.is_like) _notesReactionCounts[r.entry_id].like++;
-      else _notesReactionCounts[r.entry_id].dislike++;
-    });
+    _notesReactionCounts = await MSSNote.reactionCounts(withNotes.map(e => e.id));
     if (_notesMode === 'mine') renderNotesPage();
   }
   const idle = fn => ('requestIdleCallback' in window) ? requestIdleCallback(fn, { timeout: 2500 }) : setTimeout(fn, 1200);
   idle(() => _fetchSocialNotes().catch(() => {}));            // warm up Community
 }
 
-
-// Section label + count left, Sort / Filter right
-function _renderNotesToolbar(label, count, barHTML) {
-  const el = document.getElementById('notesToolbar');
-  if (!barHTML) { el.style.display = 'none'; el.innerHTML = ''; return; }
-  el.style.display = '';
-  el.innerHTML = mssToolbarHTML(label, count, barHTML, 'note');
+// Phones / tablets: Mine / Friends / Community as the Library's status tabs (Mine with its count)
+function _notesViews() {
+  document.getElementById('notesViews').innerHTML = mssViewTabsHTML('Whose notes', _notesMode, 'setNotesMode', 'notes',
+    _notesUser ? _notesEntries.filter(e => e.notes && e.notes.trim()).length : null);
 }
+
+/* The toolbar for the view: its search (Community: people and titles, from the server) and its Sort / Filter */
+function _notesTools() {
+  const scope = _NOTES_SCOPE[_notesMode];
+  document.getElementById('notesSearch').innerHTML = _notesMode === 'community'
+    ? `<div id="notesUserSearchWrap"><div class="sf-search" id="notesUserSearchWrapInner" role="search">
+        <span class="sf-search-ic" aria-hidden="true">${icon('search', 16)}</span>
+        <input id="notesUserSearchInput" class="sf-search-input" placeholder="Search people or titles…" aria-label="Search people or titles"
+          type="search" name="mss-notes-search" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" enterkeyhint="search" data-1p-ignore data-lpignore="true" data-form-type="other"
+          oninput="this.value=this.value.replace(/[^a-zA-Z0-9_ ]/g,'');_nuSearch(this.value);" onkeydown="_nuKeydown(event)"></div></div>`
+    : SF.searchHTML(scope, _notesMode === 'friends' ? 'Search your friends’ notes…' : 'Search your notes…');
+  document.getElementById('notesBar').innerHTML = SF.bar(scope, 'all');
+}
+const _notesFiltering = scope => !!(SF.query(scope) || SF.filterCount(scope, 'all'));
 
 const _NOTE_LEN_PRESET = { length: { header: 'Note Length', opts: [['note_long', 'Longest'], ['note_short', 'Shortest']] } };
 const _noteLenCompare = {
   note_long:  (a, b) => MSSNote.words(b.notes) - MSSNote.words(a.notes),
   note_short: (a, b) => MSSNote.words(a.notes) - MSSNote.words(b.notes),
 };
+const _noteText = e => MSSRich.plain(e.notes || '');
+// a sort, filter or search starts again at 20 cards
+const _notesRedraw = fn => () => { _notesShow = MSSNote.PAGE; fn(); };
 
 /* Personal Sort & Filter (shared js/sort-filter.js) */
 SF.register('notesMine', {
   watched: () => true,          // Year Watched filter (titles you've finished)
   base: () => _notesEntries.filter(e => e.notes && e.notes.trim()),
-  render: () => renderNotesPage(),
+  render: _notesRedraw(() => renderNotesPage()),
+  onSearch: _notesRedraw(() => renderNotesPage()),
+  searchText: _noteText,
   defaultSort: 'newest',
   addedDate: MSSNote.watchedDate,
   presets: {
@@ -386,7 +197,7 @@ const _snScore = n => Number(n.like_count || 0) - Number(n.dislike_count || 0);
 SF.register('notesSocial', {
   watched: () => true,
   base: () => _socialNotesRaw || [],
-  render: () => renderSocialNotes(),
+  render: _notesRedraw(() => renderSocialNotes()),
   defaultSort: 'popular',
   presets: {
     popularity: { header: 'Popularity', opts: [['popular', 'Most Liked'], ['least_popular', 'Least Liked']] },
@@ -411,98 +222,93 @@ SF.register('notesSocial', {
   }],
 });
 
-
-/* ── Loading skeleton: the toolbar and note cards (yours, or Community's) with sample
-   text masked into placeholders — as many as last time (mssSkeleton, config.js) ── */
+/* ── Loading skeleton: the featured note (your notes) and note cards with sample text masked into
+   placeholders — as many as last time (mssSkeleton, config.js) ── */
 mssSkeleton.define('notes-page', () => {
-  const social = _notesMode !== 'mine', friends = _notesMode === 'friends';
-  const n = Math.min(Math.max(mssSkeleton.shape(friends ? 'notes_f' : social ? 'notes_c' : 'notes')?.n ?? 3, 1), 6);
+  const social = _notesMode === 'community', friends = _notesMode === 'friends';
+  const n = Math.min(Math.max(mssSkeleton.shape(friends ? 'notes_f' : social ? 'notes_c' : 'notes')?.n ?? 4, 1), 6);
   const note = { id: '', entry_id: '', title: 'Sample title', cat: 'tv', genres: ['Drama'], year: 2024, username: 'username', final_score: 8,
-    completed_date: '2026-01-01', status: 'completed', ratings: { story: 8 }, notes: 'A sample note, long enough to run across the card the way a real one does.' };
-  const card = social ? () => _socialNoteCardHTML(note) : () => MSSNote.cardHTML(note, { counts: { like: 0, dislike: 0 } });
-  return `<div class="mss-toolbar">${mssToolbarHTML(friends ? 'Friends’ Notes' : social ? 'Community' : 'Your Notes', n, SF.bar(friends ? 'notesFriends' : social ? 'notesSocial' : 'notesMine', 'all'), 'note')
-      .replace(/class="(mss-toolbar-title|sort-bar[^"]*)"/g, 'class="$1" data-skel-keep')}</div>
-    <div class="nc-grid">${Array.from({ length: n }, card).join('')}</div>`.replace(/ onclick="[^"]*"/g, '');
+    completed_date: '2026-01-01', status: 'completed', ratings: { story: 8 }, notes: 'A sample note, long enough to run across the card the way a real one does, and on to a second line.' };
+  const card = () => MSSNote.cardHTML(note, { author: social || friends ? note : null });
+  return `${!social && !friends ? '<div class="nf-card is-skel" aria-hidden="true"></div>' : ''}<div class="nc-grid">${Array.from({ length: n }, card).join('')}</div>`.replace(/ onclick="[^"]*"/g, '');
 });
-// Header pieces that wait for your notes: the line under the title and the stat boxes
-if (_notesMode === 'mine') {
-  document.getElementById('notesPageSub').textContent = 'Your personal thoughts, reactions, and memories from everything you watch.';
-  mssSkeleton.stats(document.getElementById('notesPageStats'), ['Notes', 'Words Written', 'Avg. Words / Note', 'Likes Received']);
+
+// "View more": the next 20
+function _notesMore() {
+  _notesShow += MSSNote.PAGE;
+  ({ mine: renderNotesPage, friends: renderFriendsNotes, community: renderSocialNotes })[_notesMode]();
 }
+// The grid: the first _notesShow cards, then View more
+function _notesGrid(list, card) {
+  return `<div class="nc-grid">${list.slice(0, _notesShow).map(card).join('')}</div>${MSSNote.more(list.length - _notesShow, '_notesMore()')}`;
+}
+const _notesNoMatch = scope => mssEmpty({ compact: true, art: SF.query(scope) ? 'search' : 'filter',
+  title: SF.query(scope) ? `No luck with “${SF.query(scope)}”` : 'Nothing matches these filters',
+  text: SF.query(scope) ? 'Nothing in these notes matches. Try another word.' : 'Your filters are a little too picky. Loosen one and try again.',
+  actions: [{ label: SF.query(scope) ? 'Clear search' : 'Clear filters', icon: 'x', primary: true,
+    onclick: SF.query(scope) ? `SF._search('${scope}', '', true)` : `SF.clearFilters('${scope}', 'all'); SF.refresh('${scope}', 'all')` }] });
 
 function renderNotesPage() {
   const withNotes = _notesEntries.filter(e => e.notes && e.notes.trim());
+  const wrap = document.getElementById('notesPageContent');
 
-  // Stats: how much you've written, how long your notes run, and how
-  // they've landed with others (likes on your notes from the community)
+  // One line: how much you've written, how long your notes run, and the likes they've had
   const totalWords = withNotes.reduce((t, e) => t + MSSNote.words(e.notes), 0);
   const avgWords = withNotes.length ? Math.round(totalWords / withNotes.length) : 0;
-  const likesReceived = withNotes.reduce((t, e) => t + (_notesReactionCounts[e.id]?.like || 0), 0);
-  document.getElementById('notesPageStats').innerHTML = `
-    <div class="page-stat"><div class="page-stat-num">${withNotes.length}</div><div class="page-stat-label">Notes</div></div>
-    <div class="page-stat"><div class="page-stat-num">${totalWords.toLocaleString()}</div><div class="page-stat-label">Words Written</div></div>
-    <div class="page-stat"><div class="page-stat-num">${avgWords}</div><div class="page-stat-label">Avg. Words / Note</div></div>
-    <div class="page-stat"><div class="page-stat-num">${likesReceived}</div><div class="page-stat-label">Likes Received</div></div>`;
-
-  document.getElementById('notesPageSub').textContent = 'Your personal thoughts, reactions, and memories from everything you watch.';
-
-  _renderNotesToolbar('Your Notes', withNotes.length ? SF.list('notesMine', 'all').length : 0, withNotes.length ? SF.bar('notesMine', 'all') : '');
+  const likes = withNotes.reduce((t, e) => t + (_notesReactionCounts[e.id]?.like || 0), 0);
+  _notesViews();
+  document.getElementById('notesPageSub').textContent = `${_nWord(withNotes.length, 'note')} · ${_nWord(totalWords, 'word')} · ${avgWords} per note · ${_nWord(likes, 'like')}`;
 
   if (!withNotes.length) {
-    document.getElementById('notesPageContent').innerHTML = mssEmpty({ art: 'notes', title: 'No notes yet',
+    wrap.innerHTML = mssEmpty({ art: 'notes', title: 'No notes yet',
       text: 'Hot takes, favourite scenes, that one line you can’t stop quoting. Write it down before you forget it.',
-      actions: [{ label: 'Write a note', icon: 'plus', onclick: "openNotesSearchPopup('add')", primary: true }] });
+      actions: [{ label: 'Write a note', icon: 'plus', onclick: 'openNotesSearchPopup()', primary: true }] });
     return;
   }
-
-  const sorted = SF.list('notesMine', 'all');
   mssSkeleton.shape('notes', { n: withNotes.length });
-  if (!sorted.length) { document.getElementById('notesPageContent').innerHTML = mssEmpty({ compact: true, art: 'filter', title: 'Nothing matches these filters', text: 'Your filters are a little too picky. Loosen one and try again.',
-      actions: [{ label: 'Clear filters', icon: 'x', onclick: "SF.clearFilters('notesMine', 'all'); renderNotesPage()", primary: true }] }); return; }
-  document.getElementById('notesPageContent').innerHTML = `<div class="nc-grid">${sorted.map(e =>
-    MSSNote.cardHTML(e, { counts: _notesReactionCounts[e.id], onclick: `_notesOpen(${attrJSON(e.id)})` })).join('')}</div>`;
+  const list = SF.list('notesMine', 'all');
+  if (!list.length) { wrap.innerHTML = _notesNoMatch('notesMine'); return; }
+  // pinned, else the latest — only when you're not searching or filtering; never repeated below
+  const top = _notesFiltering('notesMine') ? null : MSSNote.featured(withNotes, _notesPin);
+  const card = e => MSSNote.cardHTML(e, { counts: _notesReactionCounts[e.id], open: `_notesOpen(${attrJSON(e.id)})` });
+  wrap.innerHTML = (top ? MSSNote.featuredHTML(top, { open: `_notesOpen(${attrJSON(top.id)})`, pinned: top.id === _notesPin }) : '')
+    + _notesGrid(top ? list.filter(e => e !== top) : list, card);
 }
 
-// Info · Ratings · Note popup, opening on your note (MSSViews, info-popup.js)
-function _notesOpen(id) {
+// The title panel / page, opening on your review (MSSViews, title-view.js); edit → straight into writing it
+function _notesOpen(id, edit) {
   const e = _notesEntries.find(en => en.id === id);
   if (!e) return;
   MSSViews.open(e, {
-    start: 'note', own: true, writeNote: true, from: 'notes.html', counts: _notesReactionCounts[id],
+    start: 'note', note: true, own: true, edit: !!edit, from: 'notes.html',
     onNoteSaved: renderNotesPage, onChange: renderNotesPage,
     onDelete: x => { _notesEntries = _notesEntries.filter(y => y.id !== x.id); renderNotesPage(); },
   });
 }
 
-function setNotesSort(order) { SF.setSort('notesMine', 'all', { latest: 'newest', earliest: 'oldest', az: 'alpha', za: 'zalpha', longest: 'note_long' }[order] || order); }
-
-// The phone toggles: switch in place
-window.mssTabGo = url => { setNotesMode(mssViewOf(url.search)); return true; };
 function setNotesMode(mode) {
   if (mode !== 'community' && mssGuestGate(mode === 'friends' ? 'see your friends’ notes' : 'keep your own notes')) return;
   _notesMode = mode;
+  _notesShow = MSSNote.PAGE;
   mssSetView(mode);
   mssPaintViewToggle('notesModeToggle', mode);
-  document.getElementById('notesPageTitle').textContent = { mine: 'My Notes', friends: 'Friends’ Notes', community: 'Community Notes' }[mode];
-  document.getElementById('notesUserSearchWrap').style.display = mode === 'community' ? '' : 'none';
-  // "+ Add Note" stays in every view (you can add a personal note while reading others');
-  // "Edit Note" only on your own notes
-  document.getElementById('notesEditBtn').hidden = mode !== 'mine';
+  _notesViews();
+  document.getElementById('notesKicker').textContent = { mine: 'You · Notes', friends: 'Friends · Notes', community: 'Community · Notes' }[mode];
+  _notesTools();
   if (mode !== 'community' && _notesTitle) _nuForgetTitle();
   if (mode === 'community') {
     _nuFilterUser = null;
     document.getElementById('notesUserFilterBanner').style.display = 'none';
     if (_notesTitle) { _nuLoadTmdbNotes(); return; }
     loadSocialNotes();
-  } else if (mode === 'friends') {
-    loadFriendsNotes();
   } else {
-    renderNotesPage();
+    document.getElementById('notesUserFilterBanner').style.display = 'none';
+    if (mode === 'friends') loadFriendsNotes(); else renderNotesPage();
   }
 }
 
 /* ── Friends' notes: fetched when the view is first opened ── */
-let _friendsNotes = null, _friendsNotesPromise = null, _friendsNotesWho = {};
+let _friendsNotes = null, _friendsNotesPromise = null, _friendsNotesWho = {}, _friendsCounts = {};
 function _fetchFriendsNotes() {
   return _friendsNotesPromise ||= (async () => {
     const { ids, profiles } = await mssMyFriends(_notesUser.id);
@@ -512,17 +318,14 @@ function _fetchFriendsNotes() {
       .or('notes.not.is.null,note_visibility.neq.anyone').order('updated_at', { ascending: false }).limit(1000);   // Friends / Private notes (069) live elsewhere
     if (error) throw error;
     const rows = await mssWithPrivateNotes(data || []);
-    return (_friendsNotes = rows.filter(e => e.notes && e.notes.trim()));
+    _friendsNotes = rows.filter(e => e.notes && e.notes.trim());
+    MSSNote.reactionCounts(_friendsNotes.map(e => e.id)).then(c => { _friendsCounts = c; if (_notesMode === 'friends') renderFriendsNotes(); }).catch(() => {});
+    return _friendsNotes;
   })().catch(err => { _friendsNotesPromise = null; throw err; });
 }
 async function loadFriendsNotes() {
   const wrap = document.getElementById('notesPageContent');
-  document.getElementById('notesPageSub').textContent = 'What your friends wrote about what they watched.';
-  if (!_friendsNotes) {
-    document.getElementById('notesToolbar').style.display = 'none';
-    document.getElementById('notesPageStats').innerHTML = '';
-    wrap.innerHTML = `<div class="page-loading" data-skel="notes-page"></div>`;
-  }
+  if (!_friendsNotes) wrap.innerHTML = `<div class="page-loading" data-skel="notes-page"></div>`;
   try {
     await _fetchFriendsNotes();
     if (_notesMode === 'friends') renderFriendsNotes();
@@ -533,7 +336,9 @@ async function loadFriendsNotes() {
 }
 SF.register('notesFriends', {
   base: () => _friendsNotes || [],
-  render: () => renderFriendsNotes(),
+  render: _notesRedraw(() => renderFriendsNotes()),
+  onSearch: _notesRedraw(() => renderFriendsNotes()),
+  searchText: e => `${_noteText(e)} ${_friendsNotesWho[e.user_id]?.username || ''} ${_friendsNotesWho[e.user_id]?.display_name || ''}`,
   watched: () => true,          // Year Watched filter
   defaultSort: 'newest',
   addedDate: e => e.completed_date || e.updated_at,
@@ -551,26 +356,21 @@ SF.register('notesFriends', {
 });
 function renderFriendsNotes() {
   const wrap = document.getElementById('notesPageContent'), all = _friendsNotes || [];
+  _notesViews();
   const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-  document.getElementById('notesPageStats').innerHTML = all.length ? `
-    <div class="page-stat"><div class="page-stat-num">${all.length}</div><div class="page-stat-label">Notes</div></div>
-    <div class="page-stat"><div class="page-stat-num">${new Set(all.map(e => e.user_id)).size}</div><div class="page-stat-label">Friends</div></div>
-    <div class="page-stat"><div class="page-stat-num">${new Set(all.map(e => e.tmdb_id ? `${e.tmdb_type}:${e.tmdb_id}` : (e.title || '').trim().toLowerCase())).size}</div><div class="page-stat-label">Titles Discussed</div></div>
-    <div class="page-stat"><div class="page-stat-num">${all.filter(e => new Date(e.updated_at).getTime() >= weekAgo).length}</div><div class="page-stat-label">New This Week</div></div>` : '';
-  const list = SF.list('notesFriends', 'all');
+  document.getElementById('notesPageSub').textContent = [_nWord(all.length, 'note'), _nWord(new Set(all.map(e => e.user_id)).size, 'friend'),
+    _nWord(new Set(all.map(e => e.tmdb_id ? `${e.tmdb_type}:${e.tmdb_id}` : (e.title || '').trim().toLowerCase())).size, 'title'),
+    `${all.filter(e => new Date(e.updated_at).getTime() >= weekAgo).length} this week`].join(' · ');
   mssSkeleton.shape('notes_f', { n: all.length });
-  _renderNotesToolbar('Friends’ Notes', list.length, all.length ? SF.bar('notesFriends', 'all') : '');
   if (!all.length) { wrap.innerHTML = mssEmpty({ art: 'notes', title: 'No notes from friends yet', text: 'Your friends are keeping their hot takes to themselves. For now.' }); return; }
-  if (!list.length) { wrap.innerHTML = mssEmpty({ compact: true, art: 'filter', title: 'Nothing matches these filters', text: 'Your filters are a little too picky. Loosen one and try again.',
-      actions: [{ label: 'Clear filters', icon: 'x', onclick: "SF.clearFilters('notesFriends', 'all'); renderFriendsNotes()", primary: true }] }); return; }
-  wrap.innerHTML = `<div class="nc-grid">${list.map(e => MSSFriendPop.noteCardHTML(e, _friendsNotesWho[e.user_id], `_openFriendNote(${attrJSON(e.id)})`)).join('')}</div>`;
+  const list = SF.list('notesFriends', 'all');
+  if (!list.length) { wrap.innerHTML = _notesNoMatch('notesFriends'); return; }
+  wrap.innerHTML = _notesGrid(list, e => MSSNote.cardHTML(e, { author: _friendsNotesWho[e.user_id] || {}, counts: _friendsCounts[e.id], blur: true, open: `_openFriendNote(${attrJSON(e.id)})` }));
 }
 function _openFriendNote(id) {
   const e = (_friendsNotes || []).find(x => x.id === id);
-  if (e) MSSViews.open(e, { start: 'note', profile: _friendsNotesWho[e.user_id] || {} });
+  if (e) MSSViews.open(e, { start: 'note', note: true, profile: _friendsNotesWho[e.user_id] || {} });
 }
-
-function setSocialNotesSort(val) { SF.setSort('notesSocial', 'all', val === 'latest' ? 'newest' : val); }
 
 // Fetches Community notes once (also used to prefetch in the background)
 let _socialNotesPromise = null, _socialNotesCache = null;
@@ -594,11 +394,7 @@ function _fetchSocialNotes(force) {
 
 async function loadSocialNotes() {
   const wrap = document.getElementById('notesPageContent');
-  document.getElementById('notesPageSub').textContent = 'Discover what the MyScreenFolio community has to say about the titles they’ve watched.';
-  if (!_socialNotesCache) { // not prefetched yet
-    wrap.innerHTML = `<div class="page-loading" data-skel="notes-page"></div>`;
-    document.getElementById('notesPageStats').innerHTML = '';
-  }
+  if (!_socialNotesCache) wrap.innerHTML = `<div class="page-loading" data-skel="notes-page"></div>`;   // not prefetched yet
   try {
     _socialNotesRaw = await _fetchSocialNotes();
     if (_notesMode === 'community') renderSocialNotes();
@@ -772,7 +568,7 @@ async function _nuLoadTitleNotes(title) {
 
   try {
     const { data: entries, error } = await sb.from('entries')
-      .select('id, title, tmdb_id, tmdb_type, poster_url, notes, note_visibility, final_score, created_at, completed_date, user_id, ratings')
+      .select('id, title, year, genres, tmdb_id, tmdb_type, poster_url, notes, note_visibility, final_score, created_at, completed_date, user_id, ratings')
       .ilike('title', title)
       .or('notes.not.is.null,note_visibility.neq.anyone')       // Friends / Private notes (069) live elsewhere
       .order('created_at', { ascending: false });
@@ -790,7 +586,7 @@ async function _nuLoadTitleNotes(title) {
       const p = profileMap[e.user_id] || {};
       return {
         entry_id: e.id, user_id: e.user_id, username: p.username || 'user', avatar_url: p.avatar_url || null,
-        title: e.title, tmdb_id: e.tmdb_id, tmdb_type: e.tmdb_type, poster_url: e.poster_url,
+        title: e.title, year: e.year, genres: e.genres, tmdb_id: e.tmdb_id, tmdb_type: e.tmdb_type, poster_url: e.poster_url,
         notes: e.notes, final_score: e.final_score, created_at: e.created_at, completed_date: e.completed_date, spoiler: mssIsSpoiler(e),
         like_count: 0, dislike_count: 0,
       };
@@ -838,7 +634,6 @@ function _nuForgetTitle() {
 async function _nuLoadTmdbNotes() {
   const t = _notesTitle, wrap = document.getElementById('notesPageContent');
   wrap.innerHTML = `<div class="page-loading" data-skel="notes-page"></div>`;
-  document.getElementById('notesPageStats').innerHTML = '';
   const banner = document.getElementById('notesUserFilterBanner');
   banner.style.display = 'flex';
   banner.innerHTML = `<span>Showing notes for <a href="title.html?id=${t.id}&type=${t.type}" translate="no">${esc(t.name)}</a></span><button onclick="_nuClearFilter()">Clear</button>`;
@@ -875,7 +670,7 @@ async function _nuLoadUserNotes() {
 
   try {
     const { data: entries, error } = await sb.from('entries')
-      .select('id, title, tmdb_id, tmdb_type, poster_url, notes, note_visibility, final_score, created_at, completed_date, user_id, ratings')
+      .select('id, title, year, genres, tmdb_id, tmdb_type, poster_url, notes, note_visibility, final_score, created_at, completed_date, user_id, ratings')
       .eq('user_id', _nuFilterUser.id)
       .or('notes.not.is.null,note_visibility.neq.anyone')       // Friends / Private notes (069) live elsewhere
       .order('created_at', { ascending: false });
@@ -884,7 +679,7 @@ async function _nuLoadUserNotes() {
     const withNotes = (await mssWithPrivateNotes(entries || [])).filter(e => e.notes && e.notes.trim());
     _socialNotesRaw = withNotes.map(e => ({
       entry_id: e.id, user_id: e.user_id, username: _nuFilterUser.username, avatar_url: _nuFilterUser.avatar_url,
-      title: e.title, tmdb_id: e.tmdb_id, tmdb_type: e.tmdb_type, poster_url: e.poster_url,
+      title: e.title, year: e.year, genres: e.genres, tmdb_id: e.tmdb_id, tmdb_type: e.tmdb_type, poster_url: e.poster_url,
       notes: e.notes, final_score: e.final_score, created_at: e.created_at, completed_date: e.completed_date, spoiler: mssIsSpoiler(e),
       like_count: 0, dislike_count: 0,
     }));
@@ -923,20 +718,15 @@ function renderSocialNotes() {
   const wrap = document.getElementById('notesPageContent');
   const all = _socialNotesRaw || [];
   const searching = document.getElementById('notesUserFilterBanner').style.display === 'flex';
+  _notesViews();
   if (!searching) {
-    const writers = new Set(all.map(n => n.user_id)).size;
-    const titles = new Set(all.map(n => n.tmdb_id ? `${n.tmdb_type}:${n.tmdb_id}` : (n.title || '').trim().toLowerCase())).size;
     const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-    const thisWeek = all.filter(n => new Date(n.created_at).getTime() >= weekAgo).length;
-    document.getElementById('notesPageStats').innerHTML = all.length ? `
-      <div class="page-stat"><div class="page-stat-num">${all.length}</div><div class="page-stat-label">Notes</div></div>
-      <div class="page-stat"><div class="page-stat-num">${writers}</div><div class="page-stat-label">Writers</div></div>
-      <div class="page-stat"><div class="page-stat-num">${titles}</div><div class="page-stat-label">Titles Discussed</div></div>
-      <div class="page-stat"><div class="page-stat-num">${thisWeek}</div><div class="page-stat-label">New This Week</div></div>` : '';
+    document.getElementById('notesPageSub').textContent = [_nWord(all.length, 'note'), _nWord(new Set(all.map(n => n.user_id)).size, 'writer'),
+      _nWord(new Set(all.map(n => n.tmdb_id ? `${n.tmdb_type}:${n.tmdb_id}` : (n.title || '').trim().toLowerCase())).size, 'title'),
+      `${all.filter(n => new Date(n.created_at).getTime() >= weekAgo).length} this week`].join(' · ');
   }
   const list = SF.list('notesSocial', 'all');
   if (!searching) mssSkeleton.shape('notes_c', { n: list.length });
-  _renderNotesToolbar(_notesTitle ? 'On This Title' : searching ? 'Search Results' : 'Community', list.length, all.length ? SF.bar('notesSocial', 'all') : '');
   if (!all.length) {
     wrap.innerHTML = searching
       ? mssEmpty({ art: 'search', title: 'No notes here', text: 'Nothing public matches that search yet. Try someone else, or another title.',
@@ -944,32 +734,23 @@ function renderSocialNotes() {
       : mssEmpty({ art: 'notes', title: 'No public notes yet', text: 'The floor is yours. Say something brave about a finale.' });
     return;
   }
-  if (!list.length) { wrap.innerHTML = mssEmpty({ compact: true, art: 'filter', title: 'Nothing matches these filters', text: 'Your filters are a little too picky. Loosen one and try again.',
-      actions: [{ label: 'Clear filters', icon: 'x', onclick: "SF.clearFilters('notesSocial', 'all'); renderSocialNotes()", primary: true }] }); return; }
-
-  wrap.innerHTML = `<div class="nc-grid">${list.map(_socialNoteCardHTML).join('')}</div>`;
-}
-// One Community note card (also drawn, with sample text, as the loading skeleton) — MSSNote, note-popup.js
-function _socialNoteCardHTML(n) {
-  return MSSNote.communityCardHTML(n, { mine: _socialNotesMyReactions[n.entry_id], me: _notesUser?.id, open: '_notesOpenSocial', react: 'reactToSocialNote' });
+  if (!list.length) { wrap.innerHTML = _notesNoMatch('notesSocial'); return; }
+  wrap.innerHTML = _notesGrid(list, n => MSSNote.cardHTML(n, { open: `_notesOpenSocial(${attrJSON(n.entry_id)})`, author: n, blur: n.user_id !== _notesUser?.id,
+    react: { mine: _socialNotesMyReactions[n.entry_id], fn: 'reactToSocialNote' } }));
 }
 
-
-/* ── Social note expand popup ── */
-
-
-// Someone's note (with its reactions + replies) in the Info · Ratings · Note popup, opening on the note
+// Someone's note (with its reactions + replies) in their title's panel / page, opening on the Review
 function _notesOpenSocial(entryId) {
   const n = _socialNotesRaw.find(x => x.entry_id === entryId);
   if (!n) return;
   MSSViews.open({ ...n, id: n.entry_id }, {
-    start: 'note', own: !!_notesUser && n.user_id === _notesUser.id, from: 'notes.html',
+    start: 'note', note: true, own: !!_notesUser && n.user_id === _notesUser.id, from: 'notes.html',
     profile: { id: n.user_id, username: n.username, avatar_url: n.avatar_url },
     onReact: st => _notesSetReact(n, st),
   });
 }
 
-// Like / dislike someone's note: from the card (double-tap) or the note popup
+// Like / dislike someone's note: from the card (double-tap) or the note's panel
 function _notesSetReact(n, st) {
   n.like_count = st.like; n.dislike_count = st.dislike;
   if (st.mine) _socialNotesMyReactions[n.entry_id] = st.mine; else delete _socialNotesMyReactions[n.entry_id];
@@ -983,141 +764,65 @@ function reactToSocialNote(entryId, isLike) {
     st => _notesSetReact(n, st));
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/* ── Search popup (opened via + Add Note / Edit Note) ── */
-let _notesSearchMode = 'add';
-
-
-function openNotesSearchPopup(mode) {
+/* ── Write a note: a side panel S (full page on phones) to pick the title from your library; then the
+   title's own panel opens, writing its review / note in place (title-view.js) ── */
+let _notesSearchPanel = null, _notesPick = null, _notesActiveId = -1, _notesSearchResultsList = [];
+async function openNotesSearchPopup() {
   if (mssGuestGate('write notes')) return;
-  _notesSearchMode = mode;
-  document.getElementById('notesSearchCardTitle').textContent = mode === 'edit' ? 'Edit Note' : 'Add Note';
-  const input = document.getElementById('notesSearchInput');
-  input.value = '';
-  input.placeholder = mode === 'edit' ? 'Search your notes…' : 'Search your library…';
-  document.getElementById('notesSearchResults').innerHTML = '';
   _notesActiveId = -1;
   _notesSearchResultsList = [];
-
-  if (mode === 'edit' && !_notesEntries.some(e => (e.status === 'watching' || e.status === 'ongoing' || e.status === 'completed') && e.notes && e.notes.trim())) {
-    document.getElementById('notesSearchResults').innerHTML = `<div class="notes-search-empty">You haven't written any notes yet — use "+ Add Note" to write your first one.</div>`;
-  }
-
-  document.getElementById('notesSearchOverlay').classList.add('open');
-  mssLockScroll('notesSearchOverlay');
-
-  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-  if (!isMobile) setTimeout(() => input.focus(), 150);
+  await mssLoadScript('js/panel.js');
+  const h = MSSPanel.open({ size: 'S', kind: 'generic', title: 'Write a note',
+    body: `<div class="lyr-search"><span class="lyr-search-ic" aria-hidden="true">${icon('search', 16)}</span>
+        <input type="text" id="notesSearchInput" class="lyr-field" placeholder="Search your library…" aria-label="Search your library" autocomplete="off" enterkeyhint="search" oninput="_notesPageSearch(this.value)" onkeydown="_notesPageSearchKeydown(event)"></div>
+      <div id="notesSearchResults" aria-live="polite"></div>`,
+    onClose: () => {
+      if (_notesSearchPanel === h) _notesSearchPanel = null;
+      const id = _notesPick; _notesPick = null;
+      if (id) _notesOpen(id, true);            // the title's panel, once this one has fully gone (its Back would close a new one)
+    } });
+  _notesSearchPanel = h;
+  if (!h.isPage) document.getElementById('notesSearchInput').focus();
 }
 
-function closeNotesSearchPopup() {
-  const ov = document.getElementById('notesSearchOverlay');
-  if (!ov.classList.contains('open')) return;
-  ov.classList.remove('open');
-  mssUnlockScroll('notesSearchOverlay');
-}
+// rated, or Watched / To Be Continued — the titles with a Review tab (title-view.js's rating design)
+const _notesCanWrite = e => liveScore(e) != null || e.status === 'completed' || e.status === 'ongoing';
 
 /* ── Search (client-side, filters the already-loaded library) ── */
-let _notesSearchResultsList = [];
-
 function _notesPageSearch(query) {
   const resultsEl = document.getElementById('notesSearchResults');
   const q = query.trim().toLowerCase();
   _notesActiveId = -1;
-
-  // Notes only make sense for things you've actually watched some of —
-  // exclude Watchlist (not started) and Taking a Break (paused mid-way).
-  // Applies to both Add and Edit modes.
-  let pool = _notesEntries.filter(e => e.status === 'watching' || e.status === 'ongoing' || e.status === 'completed');
-  if (_notesSearchMode === 'edit') pool = pool.filter(e => e.notes && e.notes.trim());
-
-  if (!q) {
-    // No query yet — for Edit mode, show existing notes to browse; for Add
-    // mode, wait for a search term rather than dumping the whole library.
-    if (_notesSearchMode === 'edit' && pool.length) {
-      _notesSearchResultsList = pool.slice(0, 20);
-      _renderNotesSearchResults();
-    } else {
-      resultsEl.innerHTML = '';
-      _notesSearchResultsList = [];
-    }
-    return;
-  }
-
-  _notesSearchResultsList = pool.filter(e => e.title && e.title.toLowerCase().includes(q)).slice(0, 20);
-
-  if (!_notesSearchResultsList.length) {
-    resultsEl.innerHTML = `<div class="notes-search-empty">No matches${_notesSearchMode === 'edit' ? ' among your notes' : ' in your library'}.</div>`;
-    return;
-  }
-  _renderNotesSearchResults();
-}
-
-function _renderNotesSearchResults() {
-  const resultsEl = document.getElementById('notesSearchResults');
-  resultsEl.innerHTML = _notesSearchResultsList.map((e, i) => {
-    const hasNote = e.notes && e.notes.trim();
-    const posterEl = safeURL(e.poster_url)
-      ? `<img src="${safeURL(e.poster_url)}" loading="lazy">`
-      : esc((e.title||'?')[0].toUpperCase());
-    return `<div class="notes-search-item" data-i="${i}" onclick="_notesPageSearchPick(${i})">
-      <div class="notes-search-item-poster">${posterEl}</div>
-      <div class="notes-search-item-info">
-        <div class="notes-search-item-title" translate="no">${esc(e.title)}</div>
-        <div class="notes-search-item-meta">${CAT_META[e.cat]?.label || ''}${e.year ? ' · ' + e.year : ''}</div>
-      </div>
-      ${hasNote ? `<span class="notes-search-item-has-note">Has Note</span>` : ''}
-    </div>`;
-  }).join('');
+  // A review is written on a rated title's Review tab — titles you haven't rated have no note (Cards 2)
+  _notesSearchResultsList = q ? _notesEntries.filter(e => _notesCanWrite(e) && e.title && e.title.toLowerCase().includes(q)).slice(0, 20) : [];
+  if (!q) { resultsEl.innerHTML = ''; return; }
+  if (!_notesSearchResultsList.length) { resultsEl.innerHTML = `<p class="lyr-rows-msg">No matches in your library.</p>`; return; }
+  resultsEl.innerHTML = `<ul class="lyr-rows">${_notesSearchResultsList.map((e, i) => mssRowHTML({ img: e.poster_url, title: e.title,
+    sub: (CAT_META[e.cat]?.label || '') + (e.year ? ' · ' + e.year : ''), tag: e.notes && e.notes.trim() ? 'Has Note' : '', attrs: `data-i="${i}" onclick="_notesPageSearchPick(${i})"` })).join('')}</ul>`;
 }
 
 function _notesPageSearchKeydown(e) {
   if (!_notesSearchResultsList.length) return;
-  const items = document.querySelectorAll('#notesSearchResults .notes-search-item');
-  if (e.key === 'ArrowDown') {
+  const items = document.querySelectorAll('#notesSearchResults .lyr-row');
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
     e.preventDefault();
-    _notesActiveId = Math.min(_notesActiveId + 1, items.length - 1);
-    items.forEach((el, i) => el.classList.toggle('active', i === _notesActiveId));
-    items[_notesActiveId]?.scrollIntoView({ block: 'nearest' });
-  } else if (e.key === 'ArrowUp') {
-    e.preventDefault();
-    _notesActiveId = Math.max(_notesActiveId - 1, 0);
-    items.forEach((el, i) => el.classList.toggle('active', i === _notesActiveId));
+    _notesActiveId = e.key === 'ArrowDown' ? Math.min(_notesActiveId + 1, items.length - 1) : Math.max(_notesActiveId - 1, 0);
+    items.forEach((el, i) => el.classList.toggle('is-active', i === _notesActiveId));
     items[_notesActiveId]?.scrollIntoView({ block: 'nearest' });
   } else if (e.key === 'Enter') {
     e.preventDefault();
     if (_notesActiveId >= 0) _notesPageSearchPick(_notesActiveId);
     else if (_notesSearchResultsList.length === 1) _notesPageSearchPick(0);
-  } else if (e.key === 'Escape') {
-    closeNotesSearchPopup();
   }
 }
 
 function _notesPageSearchPick(i) {
   const e = _notesSearchResultsList[i];
   if (!e) return;
-  closeNotesSearchPopup();
-  _notesOpen(e.id);
+  _notesPick = e.id;
+  _notesSearchPanel?.closeNow();
 }
 
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape' && document.getElementById('notesSearchOverlay')?.classList.contains('open')) closeNotesSearchPopup();
-});
 </script>
 <script>
 if ('serviceWorker' in navigator) {
@@ -1127,4 +832,3 @@ if ('serviceWorker' in navigator) {
 }
 </script>
 </body>
-</html>

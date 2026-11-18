@@ -1,86 +1,68 @@
-function _injectCreateCardOverlay() {
-  if (document.getElementById('createCardOverlay')) return;
-  const el = document.createElement('div');
-  el.id = 'createCardOverlay';
-  el.innerHTML = `
-    <div id="createCardModal" role="dialog" aria-modal="true" aria-labelledby="createCardHeaderTitle">
-      <div id="createCardHeader">
-        <div id="createCardHeaderTitle">Create Card</div>
-        <button type="button" onclick="closeCreateCard()" id="createCardClose" aria-label="Close">&#x2715;</button>
-      </div>
-      <div id="createCardBody">
-        <div id="createCardPageRow">
-          <button class="card-page-btn active" data-page="1" onclick="setCardPage(1,this)">Card</button>
-          <button class="card-page-btn" data-page="3" onclick="setCardPage(3,this)">Discover Card</button>
-        </div>
-        <div id="createCardThemeRow">
-          <button class="card-theme-btn" data-theme="dark" onclick="setCardTheme('dark',this)">
-            <span class="card-theme-swatch dark"></span> Dark
-          </button>
-          <button class="card-theme-btn active" data-theme="light" onclick="setCardTheme('light',this)">
-            <span class="card-theme-swatch light"></span> Light
-          </button>
-        </div>
-        <div id="createCardPrivRow"></div>
-        <div id="createCardPreviewWrap">
-          <canvas id="createCardCanvas"></canvas>
-        </div>
-        <div id="discoverLinkPrompt" style="display:none;text-align:center;padding:14px 10px 4px;">
-          <button id="discoverLinkBtn" onclick="_linkCardEntryToTMDB()" class="popup-action-btn" style="display:inline-flex;">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-            Search &amp; Link to TMDB
-          </button>
-          <div id="discoverRetry" class="cc-retry" hidden>
-            <span>Couldn’t get this title’s details from TMDB just now — the card is missing its cast, director and synopsis.</span>
-            <button type="button" onclick="_cardRetryTmdb()" class="popup-action-btn" style="display:inline-flex;">${icon('refresh', 13)} Try TMDB again</button>
-          </div>
-        </div>
-      </div>
-      <div id="createCardFooter">
-        <button onclick="closeCreateCard()" class="create-card-cancel">Cancel</button>
-        <button onclick="downloadCard()" class="create-card-download">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          Save Image
-        </button>
-      </div>
-    </div>`;
-  MSSDialog.bind(el, closeCreateCard);
-  document.body.appendChild(el);
-}
+/* ══════════════════════════════════════════════════════════════
+   CREATE CARD — redesigned Nov 2026 (MSF-create-card-redesign.pdf, in git history, + the owner's written feedback,
+   which wins wherever the two differ).
 
+   Three cards, each a phone Wallpaper (1080 × 1920) or an A4 page (2480 × 3508), in Dark,
+   Light or Backdrop:
+     · Ratings  — every rating you gave, grouped and ordered like the Rate panel, with each group's average
+                  (empty groups left out; Overall Enjoyment on its own line, only when rated), then your
+                  favourites / least favourites.
+     · Notes    — your note exactly as the site shows it (MSSRich + .tv-article: Manrope 500, line-height 1.8,
+                  only what you styled is styled). Always one card: sized to fit, and shortened at a sentence only when even
+                  the smallest size won't fit. Spoiler cover; Friends-only / Private notes off unless turned on.
+     · Discover — the title from TMDB: synopsis, director / creator and cast with their photos, credits.
+   Shared rules:
+     · Colours — the site's tokens (css/theme.css); CC_STYLES mirrors them, keep the two in step.
+     · Score  — the Edit page's ring (title-view.js ringOf / MSSViews.ring), on the right; the watch
+                details (watched on, rewatched, episodes) on the left. Scores in their tier's colour (mssScoreTier) —
+                Masterpiece gold from 9.90, never for a dropped title.
+     · Backdrop — always the one picked on the title's Edit page, framed the way it was framed there
+                (MSSBackdrop.url; framed with MSSBackdrop.pos ccwall / cca4 — Adjust framing has a place for each size) — never another image. The top picture and the Backdrop
+                style's blurred background use that same picture.
+   Panel: MSSPanel L (a full page with a bottom bar on phones) — preview, then
+   Card · Size · Style, then the card's own switches; only Copy image · Save image (every size).
+   Opened from My Entry (title-view.js → Create card / Discover card) and the Export Studio:
+     createShareCard(id | entry, page, onlyThatPage)   page: 1 Ratings · 2 Notes · 3 Discover
+══════════════════════════════════════════════════════════════ */
+
+const CC_SIZES = {
+  wall: { key: 'wall', label: 'Portrait · 9:16', W: 1080, H: 1920, px: 1, T: 1,    M: 72, top: 116, bottom: 64, file: 'wallpaper' },
+  a4:   { key: 'a4',   label: 'Print · A4', W: 1240, H: 1754, px: 2, T: 1.08, M: 96, top: 96,  bottom: 72, file: 'a4' },
+};
+// css/theme.css values (dark = :root, light = [data-theme="light"]); Backdrop = the dark set on the photo
+const _CC_DARK = {
+  key: 'dark', name: 'Dark', bg: '#04130A', bg2: '#06190D', card: '#1A2E20',
+  line: '#364738', head: '#F3EEDC', text: '#E9E4D2', text2: '#C7C4B7', muted: '#AEAB9F',
+  link: '#A6CCB1', green: '#A6CCB1', gold: '#D8B872', track: '#26362B', ring: 'rgba(243,238,220,.16)',
+  brand: '#1F4D33', onBrand: '#F3EEDC', warn: '#F2A359', warnBg: '#323B26', warnLine: '#7B633A', low: '#778171',
+  shadow: 'rgba(0,0,0,.5)', alert: '#B5463A',
+};
+const CC_STYLES = {
+  dark: _CC_DARK,
+  light: {
+    key: 'light', name: 'Light', bg: '#F3EEDC', bg2: '#F6F1E1', card: '#FEFCF3',
+    line: '#C7C8BD', head: '#1F4D33', text: '#1E2A22', text2: '#3A453E', muted: '#525E56',
+    link: '#24583A', green: '#1F4D33', gold: '#6E5020', track: '#E6E0CA', ring: 'rgba(30,42,34,.12)',
+    brand: '#1F4D33', onBrand: '#F3EEDC', warn: '#824103', warnBg: '#F1E8D7', warnLine: '#CCB090', low: '#7C827A',
+    shadow: 'rgba(30,42,34,.28)', alert: '#A2342A',
+  },
+  backdrop: { ..._CC_DARK, key: 'backdrop', name: 'Cinematic', card: 'rgba(10,30,18,.72)', line: 'rgba(243,238,220,.16)', track: 'rgba(243,238,220,.16)', ring: 'rgba(243,238,220,.2)' },
+};
+const CC_MAN = '"Manrope", Arial, sans-serif', CC_OSW = '"Oswald", Georgia, serif', CC_BEB = '"Bebas Neue", Arial, sans-serif';
+
+/* ── state ── */
+let _cardPanel = null;
 let _cardEntry = null;
-// Privacy (export plan step 9): hide the note, or only a spoiler note — remembered on this
-// device. A note that's Friends-only / Private (069) starts hidden on every card.
-let _cardPriv = (() => { try { return { hideNote: false, hideSpoiler: true, ...JSON.parse(localStorage.getItem('mss_card_priv') || '{}') }; } catch { return { hideNote: false, hideSpoiler: true }; } })();
-let _cardHideNote = false;
-// the note on the card: 'off', 'show', or 'cover' — a spoiler note drawn blurred behind a spoiler
-// cover (the title's own wording if easter-egg.js has one), so friends see there's a take to go read
-function _cardNoteMode(e) {
-  if (!e?.notes || !e.notes.trim() || _cardHideNote) return 'off';
-  return _cardPriv.hideSpoiler && mssIsSpoiler(e) ? 'cover' : 'show';
-}
-function _cardPrivHTML() {
-  const row = document.getElementById('createCardPrivRow'), e = _cardEntry;
-  if (!row) return;
-  const has = e?.notes && e.notes.trim() && _cardPage === 1;
-  row.hidden = !has;
-  if (!has) { row.innerHTML = ''; return; }
-  const sw = (on, act, label, sub) => `<button type="button" class="xs-switch" role="switch" aria-checked="${on}" onclick="${act}"><span class="xs-switch-text"><b>${label}</b><small>${sub}</small></span><i aria-hidden="true"></i></button>`;
-  const priv = e.note_visibility && e.note_visibility !== 'anyone';
-  row.innerHTML = `<div class="xs-switches">${sw(_cardHideNote, "_cardTogPriv('hideNote')", 'Hide my note', priv ? 'Your note is ' + (e.note_visibility === 'friends' ? 'Friends-only' : 'Private') + ' — hidden unless you turn this off' : 'Leave it off the card — just your scores')}${
-    mssIsSpoiler(e) && !_cardHideNote ? sw(_cardPriv.hideSpoiler, "_cardTogPriv('hideSpoiler')", 'Cover spoiler notes',
-      `Blurred behind ${MSSEgg.spoiler(e) ? 'the first rule' : 'a spoiler cover'} — nobody can read it on the card`) : ''}</div>`;
-}
-function _cardTogPriv(k) {
-  if (k === 'hideNote') { _cardHideNote = !_cardHideNote; _cardPriv.hideNote = _cardHideNote; }
-  else _cardPriv.hideSpoiler = !_cardPriv.hideSpoiler;
-  try { localStorage.setItem('mss_card_priv', JSON.stringify(_cardPriv)); } catch {}
-  _cardPrivHTML();
-  if (!document.getElementById('createCardCanvas')) _resetCanvas();
-  _drawCard();
-}
-let _cardTheme = 'light';
-let _cardPage = 1;
+let _cardRenderToken = 0;
+// Remembered on this device: the spoiler cover (kept from before — mss_card_priv) and the panel's choices
+let _cardPriv = (() => { try { return { hideSpoiler: true, ...JSON.parse(localStorage.getItem('mss_card_priv') || '{}') }; } catch { return { hideSpoiler: true }; } })();
+let _ccPrefs = (() => {
+  const d = { size: 'wall', style: 'backdrop', fav: true, low: true, name: true };
+  try { const p = { ...d, ...JSON.parse(localStorage.getItem('mss_card_prefs') || '{}') }; if (!CC_SIZES[p.size]) p.size = 'wall'; if (!CC_STYLES[p.style]) p.style = 'backdrop'; return p; } catch { return d; }
+})();
+const _ccSavePrefs = () => { try { localStorage.setItem('mss_card_prefs', JSON.stringify(_ccPrefs)); localStorage.setItem('mss_card_priv', JSON.stringify(_cardPriv)); } catch {} };
+let _cc = { card: 'ratings', only: false, showPrivate: false, cards: [], idx: 0, assets: null };
+
 let _cardDiscoverData = null;
 let _cardDiscoverEntryKey = null;
 let _cardDiscoverFailed = false;   // linked to TMDB, but it didn't answer → "Try TMDB again"
@@ -89,72 +71,206 @@ let _cardTmdbReload = false;
 // and the card is drawn with what's there (and offers to try again)
 const _cardTimeout = (p, ms) => Promise.race([p, new Promise((_, no) => setTimeout(() => no(new Error('Timed out')), ms))]);
 
+const _ccHasNote = e => !!(e?.notes && String(e.notes).trim());
+const _ccRated = e => typeof liveScore === 'function' && liveScore(e) != null;
+const _ccPrivate = e => !!e?.note_visibility && e.note_visibility !== 'anyone';
+const _ccIsMovie = e => e?.cat === 'movies' || e?.ratings?._media_type === 'movie' || e?.tmdb_type === 'movie';
+const _ccPage = () => ({ ratings: 1, notes: 2, discover: 3 }[_cc.card]);
+// the open Create card panel's own elements (a panel kept underneath for Back has the same ids)
+const _ccEl = id => _cardPanel?.body?.querySelector('#' + id) || null;
+
+/* ══════════════════════════════════════════════════════════════
+   PANEL
+══════════════════════════════════════════════════════════════ */
 // id: an entry's id on this page — or the entry itself (export.html picks from your whole library)
 async function createShareCard(id, startPage, restrictToStartPage) {
-  _injectCreateCardOverlay();
   const e = typeof id === 'object' ? id : _resolveEntryForCard(id);
   if (!e) { showToast('Entry not found.', 'err'); return; }
+  await mssLoadScript('js/panel.js');
   _cardEntry = e;
-  _cardTheme = 'light';
-  _cardPage = startPage || 1;
-  document.querySelectorAll('.card-theme-btn').forEach(b => {
-    b.classList.toggle('active', b.dataset.theme === 'light');
-  });
-  const pageRow = document.getElementById('createCardPageRow');
-  document.querySelectorAll('.card-page-btn').forEach(b => {
-    b.classList.toggle('active', b.dataset.page === String(_cardPage));
-    b.style.display = restrictToStartPage && b.dataset.page !== String(_cardPage) ? 'none' : '';
-  });
-  if (pageRow) pageRow.style.display = restrictToStartPage ? 'none' : '';
-  _cardHideNote = _cardPriv.hideNote || (!!e.note_visibility && e.note_visibility !== 'anyone');
-  _cardPrivHTML();
-  MSSDialog.open(document.getElementById('createCardOverlay'));
-  _resetCanvas();
+  const want = startPage === 3 ? 'discover' : startPage === 2 ? 'notes' : startPage === 1 ? 'ratings' : null;
+  const first = _ccRated(e) ? 'ratings' : _ccHasNote(e) ? 'notes' : 'discover';
+  _cc = { card: want === 'ratings' && !_ccRated(e) ? first : want === 'notes' && !_ccHasNote(e) ? first : want || first,
+    only: !!restrictToStartPage, showPrivate: false, cards: [], idx: 0, assets: null };
+  const h = MSSPanel.open({ size: 'L', kind: 'title', title: 'Create card', subtitle: e.title, label: `Create card, ${e.title}`,
+    backdrop: e.tmdb_id || MSSBackdrop.chosen(e) ? e : null,
+    body: _ccBodyHTML(),
+    footer: _ccFooter(),
+    onClose: () => { if (_cardPanel === h) { _cardPanel = null; _cardEntry = null; _cardRenderToken++; } } });
+  _cardPanel = h;
+  h.body.addEventListener('click', _ccClick);
+  _ccOptsHTML();
   await _drawCard();
 }
 
-function _resetCanvas() {
-  const wrap = document.getElementById('createCardPreviewWrap');
-  if (!wrap) return;
-  wrap.innerHTML = '';
-  const c = document.createElement('canvas');
-  c.id = 'createCardCanvas';
-  wrap.appendChild(c);
+function _ccBodyHTML() {
+  const e = _cardEntry, seg = (id, label, options, value, key) =>
+    `<div class="lyr-sec cc-sec"><h3 class="lyr-sec-h" id="${id}">${label}</h3>${mssSegHTML({ labelledby: id, options, value, data: { cc: key } })}</div>`;
+  return `<div class="cc-stage">
+      <div class="cc-pv" id="createCardPreviewWrap" aria-live="polite"><div class="cc-pv-load">Making your card…</div></div>
+      <div class="cc-thumbs" id="ccThumbs" hidden></div>
+    </div>
+    <p class="cc-size" id="ccSize"></p>
+    <div id="discoverLinkPrompt" class="cc-prompt" style="display:none">
+      <button id="discoverLinkBtn" type="button" onclick="_linkCardEntryToTMDB()" class="popup-action-btn" style="display:inline-flex;">${icon('search', 13)} Search &amp; Link to TMDB</button>
+      <div id="discoverRetry" class="cc-retry" hidden>
+        <span>Couldn’t get this title’s details from TMDB just now — the card is missing its cast, credits and synopsis.</span>
+        <button type="button" onclick="_cardRetryTmdb()" class="popup-action-btn" style="display:inline-flex;">${icon('refresh', 13)} Try TMDB again</button>
+      </div>
+    </div>
+    <div class="cc-opts">
+      ${_cc.only ? '' : seg('ccCardH', 'Layout', [['ratings', 'Rating Breakdown', !_ccRated(e)], ['notes', 'Review', !_ccHasNote(e)], ['discover', 'Title Overview']], _cc.card, 'card')}
+      ${seg('ccSizeH', 'Format', [['wall', 'Portrait · 9:16'], ['a4', 'Print · A4']], _ccPrefs.size, 'size')}
+      ${seg('ccStyleH', 'Theme', [['dark', 'Dark'], ['light', 'Light'], ['backdrop', 'Cinematic']], _ccPrefs.style, 'style')}
+      <div id="ccMore"></div>
+    </div>`;
 }
 
-function closeCreateCard() {
-  MSSDialog.close(document.getElementById('createCardOverlay'));
-  _cardEntry = null;
+// The card's own options: what to show, and the note's (privacy, spoiler cover, long notes)
+function _ccOptsHTML() {
+  const el = _ccEl('ccMore'), e = _cardEntry;
+  if (!el || !e) return;
+  const sw = (on, key, label, sub) => `<button type="button" class="xs-switch" role="switch" aria-checked="${!!on}" data-ccsw="${key}"><span class="xs-switch-text"><b>${label}</b>${sub ? `<small>${sub}</small>` : ''}</span><i aria-hidden="true"></i></button>`;
+  const r = e.ratings || {}, f = r._favorites || {}, lo = r._lowlights || f._lowlights || {};
+  const has = o => ['character', 'episode', 'season'].some(k => String(o?.[k] || '').trim());
+  let html = '';
+  if (_cc.card === 'notes') {
+    const priv = _ccPrivate(e), shown = !priv || _cc.showPrivate, spoil = mssIsSpoiler(e);
+    const rows = [];
+    if (priv) rows.push(sw(_cc.showPrivate, 'showPrivate', 'Show my note', `Your note is ${e.note_visibility === 'friends' ? 'Friends-only' : 'Private'} — it stays off the card unless you turn this on`));
+    if (shown && spoil) rows.push(sw(_cardPriv.hideSpoiler, 'hideSpoiler', 'Cover spoilers', `Your note is marked as a spoiler — ${typeof MSSEgg !== 'undefined' && MSSEgg.spoiler(e) ? 'covered by the first rule' : 'blurred on the card'}`));
+    if (rows.length) html += `<div class="lyr-sec cc-sec"><h3 class="lyr-sec-h">Your note</h3><div class="xs-switches">${rows.join('')}</div></div>`;
+  }
+  const show = [];
+  if (_cc.card === 'ratings' && has(f)) show.push(sw(_ccPrefs.fav, 'fav', 'Favourites', 'Your favourite character, episode and season'));
+  if (_cc.card === 'ratings' && has(lo)) show.push(sw(_ccPrefs.low, 'low', 'Least favourites', ''));
+  show.push(sw(_ccPrefs.name, 'name', 'Profile credit', 'Your photo and @username in the footer'));
+  html += `<div class="lyr-sec cc-sec"><h3 class="lyr-sec-h">Details</h3><div class="xs-switches">${show.join('')}</div></div>`;
+  el.innerHTML = html;
 }
 
-function setCardTheme(theme, btn) {
-  _cardTheme = theme;
-  document.querySelectorAll('.card-theme-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  if (!document.getElementById('createCardCanvas')) _resetCanvas();
+function _ccClick(ev) {
+  const t = ev.target.closest('.lyr-seg-opt[data-cc], [data-ccsw], [data-ccpick], [data-ccstep]');
+  if (!t) return;
+  if (t.dataset.ccpick != null) { _cc.idx = Number(t.dataset.ccpick); _ccShow(); return; }
+  if (t.dataset.ccstep) { const n = _cc.cards.length; _cc.idx = (_cc.idx + Number(t.dataset.ccstep) + n) % n; _ccShow(); return; }
+  if (t.dataset.ccsw) {
+    const k = t.dataset.ccsw;
+    if (k === 'showPrivate') _cc.showPrivate = !_cc.showPrivate;
+    else if (k === 'hideSpoiler') _cardPriv.hideSpoiler = !_cardPriv.hideSpoiler;
+    else _ccPrefs[k] = !_ccPrefs[k];
+    t.setAttribute('aria-checked', t.getAttribute('aria-checked') !== 'true');
+  } else {
+    const v = mssSegPick(t), k = t.dataset.cc;
+    if (k === 'card') { _cc.card = v; _cc.idx = 0; _ccOptsHTML(); }
+    else _ccPrefs[k] = v;
+  }
+  _ccSavePrefs();
   _drawCard();
 }
 
-function setCardPage(page, btn) {
-  _cardPage = page;
-  document.querySelectorAll('.card-page-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  _cardPrivHTML();
-  if (!document.getElementById('createCardCanvas')) _resetCanvas();
-  _drawCard();
+// (not offered any more — the footer is Copy image · Save image only; kept for the Export Studio / older callers)
+const _ccCanCopy = () => !!(navigator.clipboard?.write && typeof ClipboardItem !== 'undefined');
+const _ccCanShare = () => { try { return !!navigator.canShare && navigator.canShare({ files: [new File([new Blob(['x'], { type: 'image/png' })], 'x.png', { type: 'image/png' })] }); } catch { return false; } };
+function _ccFooter() {
+  // Only two buttons, every size (owner, 17 Nov 2026): Copy image · Save image — no Share, no PDF, no Cancel (the panel's ✕ closes it)
+  const n = _cc.cards.length || 1, off = _ccBlocked();
+  const saveLabel = n > 1 ? `Save ${n} images` : 'Save image';
+  return { secondary: [{ label: n > 1 ? 'Copy this card' : 'Copy image', lead: icon('copy', 15), disabled: off, onClick: () => _ccCopy() }],
+    primary: { label: saveLabel, lead: icon('download', 15), disabled: off, onClick: () => downloadCard() } };
 }
+// a Friends-only / Private note that hasn't been turned on: nothing to save yet
+const _ccBlocked = () => _cc.card === 'notes' && _ccPrivate(_cardEntry) && !_cc.showPrivate;
 
-let _cardRenderToken = 0;
-
+/* ── drawing, then the preview ── */
 async function _drawCard() {
-  const myToken = ++_cardRenderToken;
+  const my = ++_cardRenderToken, e = _cardEntry;
+  if (!e || !_cardPanel) return;
   try {
-    await mssFontsReady();   // the site's fonts, every weight the card uses (config.js)
-    if (_cardPage === 3) await _drawDiscoverCard(myToken);
-    else await _drawCardPage1(myToken);
+    await _ccFontsReady();
+    const A = await _ccAssets(e);
+    if (_cc.card === 'discover') await _ccFaces(A);
+    if (my !== _cardRenderToken || _cardEntry !== e) return;
+    _cardPrompt(A.data);
+    _cc.cards = _ccBuild(e, A);
+    if (_cc.idx >= _cc.cards.length) _cc.idx = 0;
+    _ccShow();
+    _cardPanel?.setFooter(_ccFooter());
   } catch (err) {
     console.error('Card render error:', err);
+    const wrap = _ccEl('createCardPreviewWrap');
+    if (wrap && my === _cardRenderToken) wrap.innerHTML = '<div class="cc-pv-load">Couldn’t draw the card — try again.</div>';
   }
+}
+
+function _ccShow() {
+  const wrap = _ccEl('createCardPreviewWrap'), th = _ccEl('ccThumbs'), sz = _ccEl('ccSize');
+  const c = _cc.cards[_cc.idx];
+  if (!wrap || !c) return;
+  const n = _cc.cards.length, Z = CC_SIZES[_ccPrefs.size], S = CC_STYLES[_ccPrefs.style];
+  c.canvas.className = 'cc-canvas' + (Z.key === 'a4' ? ' is-a4' : '');
+  c.canvas.setAttribute('role', 'img');
+  c.canvas.setAttribute('aria-label', `${{ ratings: 'Rating Breakdown', notes: 'Review', discover: 'Title Overview' }[_cc.card]} card for ${_cardEntry.title}${n > 1 ? `, card ${_cc.idx + 1} of ${n}` : ''}`);
+  wrap.replaceChildren(c.canvas);
+  if (n > 1) wrap.insertAdjacentHTML('beforeend', `<button type="button" class="cc-step is-prev" data-ccstep="-1" aria-label="Previous card">${icon('chevleft', 18)}</button><button type="button" class="cc-step is-next" data-ccstep="1" aria-label="Next card">${icon('chevright', 18)}</button>`);
+  th.hidden = n < 2;
+  if (n > 1) {
+    th.innerHTML = _cc.cards.map((x, i) => `<button type="button" class="cc-thumb${i === _cc.idx ? ' is-on' : ''}" data-ccpick="${i}" aria-label="Card ${i + 1} of ${n}"${i === _cc.idx ? ' aria-current="true"' : ''}><span>${i + 1}</span></button>`).join('');
+    th.querySelectorAll('.cc-thumb').forEach((b, i) => {
+      const src = _cc.cards[i].canvas, t = document.createElement('canvas'), w = 120;
+      t.width = w; t.height = Math.round(w * src.height / src.width);
+      const x = t.getContext('2d'); x.imageSmoothingQuality = 'high'; x.drawImage(src, 0, 0, t.width, t.height);
+      b.prepend(t);
+    });
+  }
+  sz.textContent = `${Z.label} · ${Z.W * Z.px} × ${Z.H * Z.px} px · ${S.name}${n > 1 ? ` · Card ${_cc.idx + 1} of ${n}` : ''}`;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   ASSETS — fonts, poster, the chosen backdrop, your photo, TMDB details (kept while the panel is open)
+══════════════════════════════════════════════════════════════ */
+function _ccFontsReady() {
+  const base = typeof mssFontsReady === 'function' ? mssFontsReady() : Promise.resolve();
+  if (!document.fonts?.load) return base;
+  return Promise.all([base, ...['700 20px Manrope', 'italic 500 20px Manrope', 'italic 700 20px Manrope'].map(f => document.fonts.load(f))]).catch(() => {});
+}
+
+async function _ccAssets(e) {
+  const key = [e.id, e.tmdb_type, e.tmdb_id, e.poster_url, e.ratings?._backdrop, JSON.stringify(e.ratings?._backdrop_pos || null)].join('|');
+  if (_cc.assets?.key === key) return _cc.assets;
+  const wrap = _ccEl('createCardPreviewWrap');
+  if (wrap && !wrap.querySelector('canvas')) wrap.innerHTML = '<div class="cc-pv-load">Getting the poster and backdrop…</div>';
+  const img = u => u ? _loadImage(u).catch(() => null) : Promise.resolve(null);
+  // the backdrop picked on the Edit page — or TMDB's own when none was picked (MSSBackdrop, the same everywhere)
+  const bdUrl = (typeof MSSBackdrop !== 'undefined' && (e.tmdb_id || MSSBackdrop.chosen(e))) ? MSSBackdrop.url(e, 'w1280').catch(() => null) : Promise.resolve(null);
+  const dataP = _fetchDiscoverData(e);
+  const [data, poster, avatar, logo, bd, tlogo] = await Promise.all([dataP, img(e.poster_url), img(_cardAvatarUrl()), img('icons/logo-nav.png'), bdUrl.then(img),
+    dataP.then(d => img(d?.titleLogo?.src))]);   // the title's own name artwork (TMDB logo); none → the written title
+  // its own framing per size (Edit page → Adjust framing → Create Card: Wallpaper / A4); unframed → the title page header's
+  const pos = typeof MSSBackdrop !== 'undefined' ? { wall: MSSBackdrop.pos(e, 'ccwall'), a4: MSSBackdrop.pos(e, 'cca4') } : {};
+  return (_cc.assets = { key, data, poster, avatar, logo, bd, pos, tlogo });
+}
+// the Discover card's photos (directors / creators, then the cast) — loaded the first time that card is drawn
+function _ccFaces(A) {
+  if (A.faces) return A.faces;
+  const d = A.data, urls = [...(d?.people || []), ...(d?.castRaw || []).slice(0, 8)].map(p => p.photo).filter(Boolean);
+  return (A.faces = Promise.all(urls.map(u => _loadImage(u).then(im => [u, im]).catch(() => [u, null]))).then(l => (A.faceImg = Object.fromEntries(l))));
+}
+
+function _loadImage(src) {
+  return _cardTimeout(new Promise((res, rej) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => res(img);
+    img.onerror = () => {
+      const img2 = new Image();
+      img2.crossOrigin = 'anonymous';
+      img2.onload  = () => res(img2);
+      img2.onerror = () => rej(new Error('Image load failed'));
+      img2.src = src + (src.includes('?') ? '&' : '?') + '_cb=' + Date.now();
+    };
+    img.src = src;
+  }), 12000);
 }
 
 function _cardUsername() {
@@ -178,668 +294,830 @@ function _cardAvatarUrl() {
     null;
 }
 
-function _cardPalette(D) {
-  return {
-    BG:      D ? '#1e2219' : '#f4efe5',
-    BG_POST: D ? '#2a2f24' : '#e6e0d4',
-    BG_DARK: D ? '#12140f' : '#232920',
-    TEXT_ON_DARK:  '#eae6de',
-    TEXT2_ON_DARK: D ? '#9aa392' : '#a8ad9f',
-    TEXT:    D ? '#eae6de' : '#18180f',
-    TEXT2:   D ? '#9a9488' : '#5a5248',
-    OLIVE:   D ? '#7a9262' : '#3e5c35',
-    OLIVEL:  D ? '#aac48c' : '#3e5c35',
-    DIVIDER: D ? 'rgba(170,196,140,0.18)' : 'rgba(62,92,53,0.14)',
-    PILL_BG: D ? 'rgba(122,146,98,0.14)' : 'rgba(62,92,53,0.08)',
-    LOW:     D ? '#e08585' : '#a33333',
-    LOW_BG:  D ? 'rgba(224,133,133,0.14)' : 'rgba(153,27,27,0.08)',
-    BOX_BORDER: D ? 'rgba(170,196,140,0.35)' : 'rgba(62,92,53,0.3)',
-  };
+/* ══════════════════════════════════════════════════════════════
+   DRAWING HELPERS
+══════════════════════════════════════════════════════════════ */
+function _rrect(ctx, x, y, w, h, r) {
+  r = Math.max(0, Math.min(r, w / 2, h / 2));
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
 }
-
-function _loadImage(src) {
-  return _cardTimeout(new Promise((res, rej) => {
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = () => res(img);
-    img.onerror = () => {
-      const img2 = new Image();
-      img2.crossOrigin = 'anonymous';
-      img2.onload  = () => res(img2);
-      img2.onerror = () => rej(new Error('Image load failed'));
-      img2.src = src + (src.includes('?') ? '&' : '?') + '_cb=' + Date.now();
-    };
-    img.src = src;
-  }), 12000);
+function _ccLs(ctx, px) { if ('letterSpacing' in ctx) ctx.letterSpacing = (px || 0) + 'px'; }
+function _ccW(ctx, t, font, ls) { ctx.save(); ctx.font = font; _ccLs(ctx, ls); const w = ctx.measureText(t).width; ctx.restore(); return w; }
+function _ccTxt(ctx, t, x, y, font, color, align = 'left', ls = 0, base = 'alphabetic') {
+  ctx.save(); ctx.font = font; ctx.fillStyle = color; ctx.textAlign = align; ctx.textBaseline = base; _ccLs(ctx, ls); ctx.fillText(t, x, y); ctx.restore();
 }
-
-function _wrap(ctx, text, maxW) {
-  const words = String(text).split(' ');
-  const lines = []; let line = '';
-  for (const w of words) {
-    const test = line ? line + ' ' + w : w;
-    if (ctx.measureText(test).width > maxW && line) { lines.push(line); line = w; }
-    else line = test;
-  }
+function _ccFitText(ctx, t, font, maxW, ls) {
+  let s = String(t);
+  if (_ccW(ctx, s, font, ls) <= maxW) return s;
+  while (s.length > 1 && _ccW(ctx, s + '…', font, ls) > maxW) s = s.slice(0, -1);
+  return s.replace(/\s+$/, '') + '…';
+}
+function _ccWrapWords(ctx, text, font, maxW, ls) {
+  const words = String(text).split(/\s+/).filter(Boolean), lines = [];
+  let line = '';
+  words.forEach(w => { const t = line ? line + ' ' + w : w; if (line && _ccW(ctx, t, font, ls) > maxW) { lines.push(line); line = w; } else line = t; });
   if (line) lines.push(line);
   return lines;
 }
-
-function _truncate(ctx, text, maxW) {
-  let str = String(text);
-  if (ctx.measureText(str).width <= maxW) return str;
-  while (str.length > 1 && ctx.measureText(str + '…').width > maxW) {
-    str = str.slice(0, -1);
-  }
-  return str + '…';
+// an image filling a box, cropped like the site does: focal point x% y% (MSSBackdrop.pos; default centred, 25% down) and zoom
+function _ccCover(ctx, img, x, y, w, h, pos) {
+  const p = pos || { x: 50, y: 25, z: 1 };
+  const s = Math.max(w / img.width, h / img.height) * (p.z || 1), dw = img.width * s, dh = img.height * s;
+  ctx.save(); ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
+  ctx.drawImage(img, x + (w - dw) * (p.x / 100), y + (h - dh) * (p.y / 100), dw, dh);
+  ctx.restore();
+}
+const _ccRGBA = (hex, a) => { const n = parseInt(hex.slice(1), 16); return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${a})`; };
+const _ccMix = (a, b, t) => { const p = parseInt(a.slice(1), 16), q = parseInt(b.slice(1), 16), c = s => Math.round(((p >> s) & 255) * t + ((q >> s) & 255) * (1 - t));
+  return `rgb(${c(16)},${c(8)},${c(0)})`; };
+const _ccTwo = v => Number(v).toFixed(2);
+function _ccDate(d) {
+  try { return new Date(String(d).slice(0, 10) + 'T00:00:00').toLocaleDateString(typeof MSSI18n !== 'undefined' ? MSSI18n.locale : undefined, { day: 'numeric', month: 'long', year: 'numeric' }); }
+  catch { return String(d); }
 }
 
-function _rrect(ctx, x, y, w, h, r) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.lineTo(x + w - r, y); ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-  ctx.lineTo(x + w, y + h - r); ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-  ctx.lineTo(x + r, y + h); ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-  ctx.lineTo(x, y + r); ctx.quadraticCurveTo(x, y, x + r, y);
-  ctx.closePath();
+// The Edit page's score ring (title-view.js ringOf): a track, the fill to score / 10 from the top with round ends,
+// a score's colour on this card: its tier (the rating scale), the light or dark values to match the card style
+function _ccTier(v, S, dropped) { return mssScoreTier(v, { dark: S.key !== 'light', dropped }); }
+// the score in Bebas Neue in the middle — in its tier's colour; Masterpiece's ring is the gold gradient (never for a dropped title)
+function _ccRing(ctx, cx, cy, d, v, S, dropped) {
+  const t = _ccTier(v, S, dropped), r = d * 0.44, f = Math.max(0, Math.min(1, v / 10)), col = t.ink;
+  let stroke = col;
+  if (t.gold) { stroke = ctx.createLinearGradient(cx - r, cy - r, cx + r, cy + r); MSS_GOLD_STOPS.forEach(([p, c]) => stroke.addColorStop(p, c)); }
+  ctx.save();
+  ctx.lineWidth = d * 0.07; ctx.strokeStyle = S.ring;
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke();
+  if (f > 0) { ctx.strokeStyle = stroke; ctx.lineCap = 'round'; ctx.beginPath(); ctx.arc(cx, cy, r, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * f); ctx.stroke(); }
+  const fs = d * 40 / 116;
+  ctx.font = `400 ${fs}px ${CC_BEB}`; ctx.fillStyle = col; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+  ctx.fillText(_ccTwo(v), cx, cy + fs * 0.36);
+  ctx.restore();
 }
 
 /* ══════════════════════════════════════════════════════════════
-   PAGE 1 — Card
-   Plain canvas drawing — poster (with a diagonal year badge) /
-   info / score box header, a bottom-anchored favorites+lowlights
-   block, a dark percentage-breakdown bar (Core/Enjoyment/Bonus =
-   Final Score), a three-column ratings section, and a personal
-   note. All colors and fonts come from the site's own palette.
+   BUILD — the card(s) for the current choices → [{ canvas }]
 ══════════════════════════════════════════════════════════════ */
-async function _drawCardPage1(myToken) {
-  const canvas = document.getElementById('createCardCanvas');
-  if (!canvas || !_cardEntry) return;
-  const e = _cardEntry;
-
-  const wrap = document.getElementById('createCardPreviewWrap');
-  const needsFetch = e.tmdb_id && e.tmdb_type && _cardDiscoverEntryKey !== (e.tmdb_type + ':' + e.tmdb_id);
-  if (needsFetch && wrap && !document.getElementById('discoverCardLoading')) {
-    canvas.style.display = 'none';
-    const loadEl = document.createElement('div');
-    loadEl.id = 'discoverCardLoading';
-    loadEl.style.cssText = 'padding:3rem 1rem;text-align:center;color:var(--text-3);font-size:13px;';
-    loadEl.textContent = 'Fetching details from TMDB…';
-    wrap.appendChild(loadEl);
-  }
-  const discoverData = await _fetchDiscoverData(e);
-  const loadEl = document.getElementById('discoverCardLoading');
-  if (loadEl) loadEl.remove();
-  canvas.style.display = '';
-  if (myToken !== _cardRenderToken || _cardPage !== 1 || _cardEntry !== e) return;
-
-  _cardPrompt(discoverData);
-
-  const D = _cardTheme === 'dark';
-  // Site color palette (matching style.css exactly), applied to the
-  // reference layout's structure. INK-toned panels (breakdown bar,
-  // ratings background, corner badge) are the opposite brightness of
-  // the main card background in each theme — dark panel on the light
-  // card, light panel on the dark card — so they always read as a
-  // distinct, contrasting section rather than blending into whichever
-  // background surrounds them.
-  // Real website theme values (from style.css's :root / [data-theme="light"]
-  // blocks) instead of the previous made-up approximations, so the card
-  // actually matches the site's own olive palette in both modes.
-  const ACCENT = D ? '#7EB86C' : '#1E5C26'; // --olive-light
-  const INK = D ? '#4A6741' : '#1A4520'; // --olive — solid badge/panel fill
-  // Text/accent colors for content sitting on the INK panel — INK is a
-  // solid olive fill in both themes (matching .w-ep-badge elsewhere on
-  // the site), so text on it stays white-based in both modes too,
-  // rather than inverting per theme.
-  const PANEL_ACCENT = '#ffffff';
-  const PANEL_TEXT = 'rgba(255,255,255,0.92)';
-  const PANEL_TEXT2 = 'rgba(255,255,255,0.68)';
-  const BG = D ? '#0A0A0E' : '#E2DAD0'; // --bg
-  const BG_POST = D ? '#19191F' : '#CEC5B8'; // --bg-3
-  const BG_BORDER = D ? 'rgba(74,103,65,0.44)' : 'rgba(26,69,32,0.45)'; // --border-olive
-  const MUTED = D ? '#808080' : '#6A6A6A'; // --text-3
-  const TEXT = D ? '#EDEDED' : '#1A1A1A'; // --text
-  const TEXT2 = D ? '#A8A8A8' : '#4A4A4A'; // --text-2
-  const LOW = D ? '#f87171' : '#c0392b';
-  const TRACK_BG = D ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.12)'; // --border
-
-  const W = 1000, PAD = 28;
-
-  let posterImg = null;
-  if (e.poster_url) { try { posterImg = await _loadImage(e.poster_url); } catch { posterImg = null; } }
-  let avatarImg = null;
-  const avatarUrl = _cardAvatarUrl();
-  if (avatarUrl) { try { avatarImg = await _loadImage(avatarUrl); } catch { avatarImg = null; } }
-  let logoImg = null;
-  try { logoImg = await _loadImage('icons/logo-nav.png'); } catch { logoImg = null; }
-
-  if (myToken !== _cardRenderToken || _cardPage !== 1 || _cardEntry !== e) return;
-
-  const score = (typeof liveScore === 'function' && liveScore(e) != null)
-    ? Number(liveScore(e)).toFixed(2) : null;
-
-  const POSTER_W = 290, GAP = 28, SCORE_W = 220;
-  const INFO_X = PAD + POSTER_W + GAP;
-  const SCORE_X = W - PAD - SCORE_W;
-  const INFO_W = SCORE_X - GAP - INFO_X;
-
-  function layout(ctx, draw) {
-    const pillRow = (items, xx, yy, maxW, textColor, bgColor, borderColor) => {
-      ctx.save();
-      ctx.font = '600 12px \"Manrope\", Arial, sans-serif';
-      const pPX = 12, pPY = 5, pGap = 8, pR = 6;
-      const pillH = 12 + pPY * 2;
-      let gx = xx, rows = 1;
-      items.forEach(it => {
-        const label = it.toUpperCase();
-        const gw = ctx.measureText(label).width + pPX * 2;
-        if (gx + gw > xx + maxW && gx > xx) { gx = xx; rows++; }
-        if (draw) {
-          const ry = yy + (rows - 1) * (pillH + 8);
-          ctx.fillStyle = bgColor;
-          _rrect(ctx, gx, ry, gw, pillH, pR); ctx.fill();
-          ctx.strokeStyle = borderColor; ctx.lineWidth = 1;
-          _rrect(ctx, gx, ry, gw, pillH, pR); ctx.stroke();
-          ctx.fillStyle = textColor;
-          ctx.textBaseline = 'middle';
-          ctx.fillText(label, gx + pPX, ry + pillH / 2);
-        }
-        gx += gw + pGap;
-      });
-      ctx.restore();
-      return rows * pillH + (rows - 1) * 8;
-    };
-    if (draw) { ctx.fillStyle = BG; ctx.fillRect(0, 0, W, workCanvas.height); }
-
-    // ── Info column content, measured first so the header row's overall
-    // height (and therefore the poster/score column heights) is known ──
-    let iy = PAD;
-    const title = e.title || '';
-    const tFS = title.length > 22 ? 32 : title.length > 14 ? 38 : 42;
-    ctx.save();
-    ctx.font = `600 ${tFS}px "Oswald", Georgia, serif`;
-    ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
-    const titleLines = _wrap(ctx, title, INFO_W).slice(0, 2);
-    if (draw) {
-      ctx.fillStyle = TEXT;
-      // Baseline-aligned per line (not 'top') so the year drawn below
-      // can share the exact same baseline as the title's last line —
-      // aligning both texts' bottoms regardless of their size difference.
-      titleLines.forEach((ln, i) => ctx.fillText(ln, INFO_X, iy + (i + 1) * (tFS + 2) - 6));
-      if (e.year) {
-        const lastLineIdx = titleLines.length - 1;
-        const lastLineW = ctx.measureText(titleLines[lastLineIdx]).width;
-        const titleBaselineY = iy + (lastLineIdx + 1) * (tFS + 2) - 6;
-        ctx.save();
-        ctx.font = `400 ${Math.round(tFS * 0.5)}px "Bebas Neue", Georgia, serif`;
-        ctx.fillStyle = TEXT2;
-        ctx.textBaseline = 'alphabetic';
-        ctx.fillText(String(e.year), INFO_X + lastLineW + 10, titleBaselineY);
-        ctx.restore();
-      }
-    }
-    ctx.restore();
-    iy += titleLines.length * (tFS + 2) + 14;
-
-    const genres = mssGenreList(e.genres).slice(0, 4);
-    if (genres.length) {
-      const gh = pillRow(genres, INFO_X, iy, INFO_W, '#ffffff', INK, INK);
-      iy += gh + 14;
-    }
-
-    const desc = (e.description || '').trim();
-    let descLines = [];
-    if (desc) {
-      ctx.save();
-      ctx.font = '400 15px "Manrope", Arial, sans-serif';
-      ctx.textBaseline = 'top';
-      const dwords = desc.split(/\s+/);
-      const dshort = dwords.length > 55 ? dwords.slice(0, 55).join(' ') + '…' : desc;
-      descLines = _wrap(ctx, dshort, INFO_W).slice(0, 5);
-      if (draw) { ctx.fillStyle = TEXT; descLines.forEach((ln, i) => ctx.fillText(ln, INFO_X, iy + i * 21)); }
-      ctx.restore();
-      iy += descLines.length * 21;
-    }
-
-    // Favorites/Lowlights block — measured, then anchored to the bottom
-    // of the header row once the overall header height is known.
-    const favs = e.ratings?._favorites || {};
-    const lows = e.ratings?._lowlights || e.ratings?._favorites?._lowlights || {};
-    const favVals = [
-      favs.character ? { label: 'Favorite Character', value: favs.character } : null,
-      favs.episode   ? { label: 'Favorite Episode', value: favs.episode } : null,
-      favs.season    ? { label: 'Favorite Season', value: favs.season } : null,
-    ].filter(Boolean);
-    const lowVals = [
-      lows.character ? { label: 'Lowlight Character', value: lows.character } : null,
-      lows.episode   ? { label: 'Lowlight Episode', value: lows.episode } : null,
-      lows.season    ? { label: 'Lowlight Season', value: lows.season } : null,
-    ].filter(Boolean);
-    const hasLow = lowVals.length > 0;
-    const favRowH = hasLow ? 60 : 72;
-    const favBlockH = (favVals.length ? favRowH : 0) + (hasLow ? favRowH : 0);
-    const favBlockGap = (favVals.length || hasLow) ? 20 : 0;
-
-    const infoContentH = iy + favBlockGap + favBlockH;
-
-    // ── Poster + badge + score column minimums ──
-    const POSTER_H = POSTER_W * 1.5;
-    const SCORE_MIN_H = 168;
-    const headerH = Math.max(POSTER_H, infoContentH, SCORE_MIN_H);
-
-    // Poster column — fixed 2:3 aspect ratio, top-aligned (doesn't
-    // stretch to match the header row's full height, which was forcing
-    // aggressive cover-fit cropping whenever the info column made
-    // headerH much taller than a normal poster's proportions).
-    if (draw) {
-      ctx.save();
-      _rrect(ctx, PAD, PAD, POSTER_W, POSTER_H, 16); ctx.clip();
-      if (posterImg) {
-        const imgRatio = posterImg.width / posterImg.height;
-        const areaRatio = POSTER_W / POSTER_H;
-        let dw, dh, dx, dy;
-        if (imgRatio > areaRatio) { dh = POSTER_H; dw = POSTER_H * imgRatio; dx = PAD - (dw - POSTER_W) / 2; dy = PAD; }
-        else { dw = POSTER_W; dh = POSTER_W / imgRatio; dx = PAD; dy = PAD - (dh - POSTER_H) / 2; }
-        ctx.drawImage(posterImg, dx, dy, dw, dh);
-      } else {
-        ctx.fillStyle = BG_POST;
-        ctx.fillRect(PAD, PAD, POSTER_W, POSTER_H);
-        ctx.save();
-        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.font = '500 60px "Oswald", Georgia, serif';
-        ctx.fillStyle = ACCENT;
-        ctx.fillText((e.title || '?')[0].toUpperCase(), PAD + POSTER_W / 2, PAD + POSTER_H / 2);
-        ctx.restore();
-      }
-      ctx.restore();
-    }
-
-    // Score column — height reaches down to just above the
-    // favorites/lowlights box (small gap between), text centered.
-    const SCORE_BOX_H = (favVals.length || hasLow)
-      ? Math.max(140, headerH - favBlockH - 20)
-      : 168;
-    if (draw) {
-      ctx.strokeStyle = BG_BORDER; ctx.lineWidth = 1;
-      _rrect(ctx, SCORE_X, PAD, SCORE_W, SCORE_BOX_H, 14); ctx.stroke();
-      const cx = SCORE_X + SCORE_W / 2;
-      const midY = PAD + SCORE_BOX_H / 2;
-      ctx.save();
-      ctx.font = '700 12px "Oswald", Arial, sans-serif';
-      ctx.fillStyle = MUTED;
-      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText('OVERALL SCORE', cx, midY - 48);
-      ctx.restore();
-      ctx.save();
-      const scoreLabel = score ? `★ ${score}` : '—';
-      let scoreFS = 66;
-      ctx.font = `400 ${scoreFS}px "Bebas Neue", Georgia, serif`;
-      while (ctx.measureText(scoreLabel).width > SCORE_W - 24 && scoreFS > 40) {
-        scoreFS -= 4;
-        ctx.font = `400 ${scoreFS}px "Bebas Neue", Georgia, serif`;
-      }
-      ctx.fillStyle = ACCENT;
-      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText(scoreLabel, cx, midY);
-      ctx.restore();
-      ctx.save();
-      ctx.font = '700 11px "Oswald", Arial, sans-serif';
-      ctx.fillStyle = MUTED;
-      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText('OUT OF 10', cx, midY + 48);
-      ctx.restore();
-    }
-
-    // Favorites/Lowlights block — bottom-anchored within the header
-    // row, spanning the info column + score box only (width capped so
-    // it never runs under the poster).
-    if (favVals.length || hasLow) {
-      const blockY = PAD + headerH - favBlockH;
-      const blockX = INFO_X;
-      const fullW = W - PAD - blockX;
-      if (draw) {
-        ctx.strokeStyle = BG_BORDER; ctx.lineWidth = 1;
-        _rrect(ctx, blockX, blockY, fullW, favBlockH, 10); ctx.stroke();
-      }
-      const drawFavRow = (items, rowY, rowH, isLow) => {
-        const colW = fullW / items.length;
-        items.forEach((it, i) => {
-          const cx = blockX + colW * i;
-          if (draw) {
-            const barColor = isLow ? LOW : ACCENT;
-            ctx.fillStyle = barColor;
-            ctx.fillRect(cx + 14, rowY + 9, 3, rowH - 18);
-            ctx.save();
-            ctx.font = `600 ${hasLow ? 8.5 : 9.5}px "Manrope", Arial, sans-serif`;
-            ctx.fillStyle = MUTED;
-            ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-            ctx.fillText(it.label.toUpperCase(), cx + 24, rowY + 9);
-            ctx.restore();
-            ctx.save();
-            const valFS = hasLow ? 11 : 12.5;
-            ctx.font = `600 ${valFS}px "Manrope", Arial, sans-serif`;
-            ctx.fillStyle = TEXT;
-            ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-            const maxW = colW - 34;
-            let vLines = _wrap(ctx, it.value, maxW).slice(0, 2);
-            if (vLines.length === 2) {
-              let lastLine = vLines[1];
-              while (ctx.measureText(lastLine + '…').width > maxW && lastLine.length > 1) {
-                lastLine = lastLine.slice(0, -1);
-              }
-              vLines[1] = lastLine.replace(/\s+$/, '') + '…';
-            }
-            vLines.forEach((ln, li) => ctx.fillText(ln, cx + 24, rowY + 22 + li * (valFS + 3)));
-            ctx.restore();
-          }
-        });
-      };
-      if (favVals.length) drawFavRow(favVals, blockY, favRowH, false);
-      if (hasLow) {
-        if (draw && favVals.length) {
-          ctx.strokeStyle = BG_BORDER; ctx.lineWidth = 1;
-          ctx.beginPath(); ctx.moveTo(blockX, blockY + favRowH); ctx.lineTo(blockX + fullW, blockY + favRowH); ctx.stroke();
-        }
-        drawFavRow(lowVals, blockY + (favVals.length ? favRowH : 0), favRowH, true);
-      }
-    }
-
-    let y = PAD + headerH + 30;
-
-    // ── Ratings: one tile per core group (name, average, bar), 2 to a row with an odd one out spanning
-    // the width, then up to 3 of the highest bonus ratings as small highlights ──
-    const groups = mssRatedGroups(e.ratings, e.cat, e.cat === 'movies' || e.ratings?._media_type === 'movie');
-    const tiles = groups.filter(g => g.kind === 'core');
-    const tops = groups.filter(g => g.kind === 'bonus').flatMap(g => g.items).sort((p, q) => q.v - p.v).slice(0, 3);
-    const avgTxt = v => v.toFixed(2).replace(/0$/, '');
-    if (tiles.length) {
-      const gap = 14, tileH = 76, boxW = W - PAD * 2, half = (boxW - gap) / 2;
-      tiles.forEach((g, i) => {
-        const wide = i === tiles.length - 1 && i % 2 === 0;
-        const tx = PAD + (i % 2) * (half + gap), ty = y + Math.floor(i / 2) * (tileH + gap), tw = wide ? boxW : half;
-        if (!draw) return;
-        ctx.strokeStyle = BG_BORDER; ctx.lineWidth = 1;
-        _rrect(ctx, tx, ty, tw, tileH, 12); ctx.stroke();
-        ctx.save();
-        ctx.textBaseline = 'alphabetic';
-        ctx.font = '400 34px "Bebas Neue", Arial, sans-serif';
-        ctx.fillStyle = ACCENT; ctx.textAlign = 'right';
-        const num = avgTxt(g.avg);
-        ctx.fillText(num, tx + tw - 20, ty + 44);
-        const nameW = tw - 60 - ctx.measureText(num).width;
-        let fs = 14;
-        ctx.font = `700 ${fs}px "Oswald", Arial, sans-serif`;
-        const name = g.name.toUpperCase();
-        while (ctx.measureText(name).width > nameW && fs > 10) { fs -= 0.5; ctx.font = `700 ${fs}px "Oswald", Arial, sans-serif`; }
-        ctx.fillStyle = TEXT; ctx.textAlign = 'left';
-        ctx.fillText(name, tx + 20, ty + 40);
-        ctx.restore();
-        const barW = tw - 40;
-        ctx.fillStyle = TRACK_BG; _rrect(ctx, tx + 20, ty + 55, barW, 6, 3); ctx.fill();
-        ctx.fillStyle = ACCENT; _rrect(ctx, tx + 20, ty + 55, Math.max(barW * Math.min(1, g.avg / 10), 6), 6, 3); ctx.fill();
-      });
-      y += Math.ceil(tiles.length / 2) * (tileH + gap) - gap + 22;
-    }
-    if (tops.length) {
-      // "TOP BONUS" then pills, shrunk together until the line fits the card
-      let fs = 13;
-      const parts = () => tops.map(t => ({ t, label: t.label, num: t.v.toFixed(1) }));
-      const pillW = it => { ctx.font = `600 ${fs}px "Manrope", Arial, sans-serif`; const a = ctx.measureText(it.label).width; ctx.font = `400 ${fs + 5}px "Bebas Neue", Arial, sans-serif`; return a + ctx.measureText(it.num).width + 40; };
-      const lead = () => { ctx.font = `700 ${fs}px "Oswald", Arial, sans-serif`; return ctx.measureText('TOP BONUS').width + 16; };
-      const items = parts();
-      ctx.save();
-      const total = () => lead() + items.reduce((w, it) => w + pillW(it) + 10, -10);
-      while (total() > W - PAD * 2 && fs > 9) fs -= 0.5;
-      const pillH = fs + 20;
-      if (draw) {
-        let x = (W - total()) / 2;
-        const mid = y + pillH / 2;
-        ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
-        ctx.font = `700 ${fs}px "Oswald", Arial, sans-serif`; ctx.fillStyle = MUTED;
-        ctx.fillText('TOP BONUS', x, mid + 1.5); x += lead();
-        items.forEach(it => {
-          const w = pillW(it);
-          ctx.strokeStyle = BG_BORDER; ctx.lineWidth = 1;
-          _rrect(ctx, x, y, w, pillH, pillH / 2); ctx.stroke();
-          ctx.font = `600 ${fs}px "Manrope", Arial, sans-serif`; ctx.fillStyle = TEXT;
-          ctx.fillText(it.label, x + 16, mid);
-          const lw = ctx.measureText(it.label).width;
-          ctx.font = `400 ${fs + 5}px "Bebas Neue", Arial, sans-serif`; ctx.fillStyle = ACCENT;
-          ctx.fillText(it.num, x + 16 + lw + 8, mid + 1);
-          x += w + 10;
-        });
-      }
-      ctx.restore();
-      y += pillH + 24;
-    }
-
-    // ── Personal note ──
-    // Shows the whole note (up to the 500-word limit). Short notes keep the
-    // original single-column look; longer ones switch to two columns with
-    // slightly smaller text so the card grows gently instead of turning
-    // into a long strip. Paragraph breaks from the note are kept.
-    const noteMode = _cardNoteMode(e);
-    const note = noteMode !== 'off' ? MSSRich.plain(e.notes).trim() : '';     // the image shows the words, not the ** / > markers
-    if (noteMode === 'cover') y = coveredNote(ctx, draw, y, note);
-    else if (note) {
-      const boxPadTop = 34, boxPadBottom = 26, boxPadX = 30, colGap = 34;
-      const wordCount = note.split(/\s+/).filter(Boolean).length;
-      const twoCol = wordCount > 170;
-      const FS = wordCount > 350 ? 13.5 : twoCol ? 14 : 15;
-      const LINE_H = Math.round(FS * 1.62);
-      const NOTE_FONT = `italic 400 ${FS}px "Manrope", Georgia, serif`;
-      const innerW = W - PAD * 2 - boxPadX * 2;
-      const colW = twoCol ? (innerW - colGap) / 2 : innerW;
-
-      // Wrap each paragraph; '' marks the small gap between paragraphs
-      ctx.save();
-      ctx.font = NOTE_FONT;
-      const lines = [];
-      note.split(/\n+/).map(p => p.trim()).filter(Boolean).forEach((para, i) => {
-        if (i) lines.push('');
-        lines.push(..._wrap(ctx, para.replace(/\s+/g, ' '), colW));
-      });
-      ctx.restore();
-
-      // Split into two balanced columns (never starting a column on a gap)
-      let cols = [lines];
-      if (twoCol) {
-        let cut = Math.ceil(lines.length / 2);
-        while (cut < lines.length && lines[cut] === '') cut++;
-        cols = [lines.slice(0, cut), lines.slice(cut)];
-        if (cols[1][0] === '') cols[1].shift();
-      }
-      const colH = c => c.reduce((h, ln) => h + (ln === '' ? LINE_H * 0.5 : LINE_H), 0);
-      const textH = Math.max(...cols.map(colH));
-      const boxH = boxPadTop + textH + boxPadBottom;
-      const boxY = y;
-      if (draw) {
-        ctx.strokeStyle = BG_BORDER; ctx.lineWidth = 1;
-        _rrect(ctx, PAD, boxY, W - PAD * 2, boxH, 10); ctx.stroke();
-        ctx.fillStyle = ACCENT;
-        ctx.fillRect(PAD, boxY, 4, boxH);
-        ctx.save();
-        ctx.font = '700 12.5px "Oswald", Arial, sans-serif';
-        ctx.fillStyle = TEXT;
-        ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-        ctx.fillText('PERSONAL NOTE', PAD + boxPadX, boxY + 10);
-        ctx.restore();
-        if (twoCol) {   // hairline between the two columns
-          ctx.save();
-          ctx.strokeStyle = BG_BORDER; ctx.lineWidth = 1;
-          const lx = PAD + boxPadX + colW + colGap / 2;
-          ctx.beginPath(); ctx.moveTo(lx, boxY + boxPadTop); ctx.lineTo(lx, boxY + boxPadTop + textH); ctx.stroke();
-          ctx.restore();
-        }
-        ctx.save();
-        ctx.font = NOTE_FONT;
-        ctx.fillStyle = TEXT;
-        ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-        cols.forEach((col, ci) => {
-          const x = PAD + boxPadX + ci * (colW + colGap);
-          let ty = boxY + boxPadTop;
-          col.forEach(ln => {
-            if (ln === '') { ty += LINE_H * 0.5; return; }
-            ctx.fillText(ln, x, ty); ty += LINE_H;
-          });
-        });
-        ctx.restore();
-      }
-      y = boxY + boxH + 24;
-    }
-
-    return y;
-  }
-
-  // A spoiler note, covered: the box as usual with the first lines blurred past reading
-  // (drawn tiny, then stretched back), and the spoiler pill on top
-  function coveredNote(ctx, draw, y, note) {
-    const boxPadTop = 36, boxPadX = 30, FS = 15, LINE_H = Math.round(FS * 1.62), boxH = 168;
-    const egg = MSSEgg.spoiler(e), RED = '#c8372d';
-    if (draw) {
-      const bx = PAD, bw = W - PAD * 2;
-      ctx.strokeStyle = BG_BORDER; ctx.lineWidth = 1;
-      _rrect(ctx, bx, y, bw, boxH, 10); ctx.stroke();
-      ctx.fillStyle = egg ? RED : ACCENT; ctx.fillRect(bx, y, 4, boxH);
-      ctx.save();
-      ctx.font = '700 12.5px "Oswald", Arial, sans-serif'; ctx.fillStyle = TEXT; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-      ctx.fillText('PERSONAL NOTE', bx + boxPadX, y + 10);
-      ctx.restore();
-      // the blur: real lines, drawn at 1/8 size and scaled back up
-      const tw = bw - boxPadX * 2, th = boxH - boxPadTop - 18, k = 8;
-      const small = document.createElement('canvas'); small.width = Math.ceil(tw / k); small.height = Math.ceil(th / k);
-      const sc = small.getContext('2d');
-      sc.scale(1 / k, 1 / k); sc.font = `italic 400 ${FS}px "Manrope", Georgia, serif`; sc.fillStyle = TEXT; sc.textBaseline = 'top';
-      const rows = Math.floor(th / LINE_H), one = note.replace(/\s+/g, ' ');
-      let text = one; while (_wrap(sc, text, tw).length < rows && text.length < 4000) text += ' ' + one;   // a short note still fills the box
-      _wrap(sc, text, tw).slice(0, rows).forEach((ln, i) => sc.fillText(ln, 0, i * LINE_H));
-      ctx.save(); ctx.globalAlpha = 0.55; ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
-      ctx.drawImage(small, bx + boxPadX, y + boxPadTop, tw, th);
-      ctx.restore();
-      // the pill — like the site's spoiler cover
-      const title = egg ? egg.title : 'Spoiler', sub = egg ? egg.cardSub : 'Read it on MyScreenFolio';
-      ctx.save();
-      ctx.font = '700 17px "Manrope", Arial, sans-serif'; const t1 = ctx.measureText(title).width;
-      ctx.font = '500 13px "Manrope", Arial, sans-serif'; const t2 = ctx.measureText(sub).width;
-      const ic = 42, pw = 14 + ic + 14 + Math.max(t1, t2) + 26, ph = 64, px = W / 2 - pw / 2, py = y + boxPadTop + (boxH - boxPadTop) / 2 - ph / 2 - 4;
-      ctx.shadowColor = 'rgba(0,0,0,0.22)'; ctx.shadowBlur = 22; ctx.shadowOffsetY = 8;
-      ctx.fillStyle = BG_POST; _rrect(ctx, px, py, pw, ph, ph / 2); ctx.fill();
-      ctx.shadowColor = 'transparent';
-      ctx.strokeStyle = egg ? 'rgba(200,55,45,0.6)' : BG_BORDER; ctx.lineWidth = 1.5; _rrect(ctx, px, py, pw, ph, ph / 2); ctx.stroke();
-      const cx = px + 14 + ic / 2, cy = py + ph / 2;
-      ctx.fillStyle = egg ? RED : INK; ctx.beginPath(); ctx.arc(cx, cy, ic / 2, 0, Math.PI * 2); ctx.fill();
-      if (egg) {   // "#1", like the cover on the site
-        ctx.font = '400 21px "Bebas Neue", Arial, sans-serif'; ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillText(egg.tag.replace(/^Rule /, ''), cx, cy + 1);
-      } else {     // an eye with a slash
-        ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.lineCap = 'round';
-        ctx.beginPath(); ctx.ellipse(cx, cy, 10, 6.5, 0, 0, Math.PI * 2); ctx.stroke();
-        ctx.beginPath(); ctx.arc(cx, cy, 2.6, 0, Math.PI * 2); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(cx - 11, cy - 10); ctx.lineTo(cx + 11, cy + 10); ctx.stroke();
-      }
-      ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
-      ctx.font = '700 17px "Manrope", Arial, sans-serif'; ctx.fillStyle = TEXT; ctx.fillText(title, cx + ic / 2 + 14, cy - 3);
-      ctx.font = '500 13px "Manrope", Arial, sans-serif'; ctx.fillStyle = MUTED; ctx.fillText(sub, cx + ic / 2 + 14, cy + 16);
-      ctx.restore();
-    }
-    return y + boxH + 24;
-  }
-
-  const FOOTER_H = 56;
-  let workCanvas = document.createElement('canvas');
-  workCanvas.width = W;
-  workCanvas.height = 2600;
-  const measureCtx = workCanvas.getContext('2d');
-  const contentBottom = layout(measureCtx, false);
-  const totalH = Math.round(contentBottom + FOOTER_H);
-
-  if (myToken !== _cardRenderToken || _cardPage !== 1 || _cardEntry !== e) return;
-
-  // Render the full card at its natural height onto an off-screen buffer
-  workCanvas = document.createElement('canvas');
-  workCanvas.width = W;
-  workCanvas.height = totalH;
-  const ctx = workCanvas.getContext('2d');
-  ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = 'high';
-
-  layout(ctx, true);
-
-  // ── Footer ──
-  ctx.fillStyle = BG;
-  ctx.fillRect(-1, totalH - FOOTER_H, W + 2, FOOTER_H);
-  const username = _cardUsername();
-  const footerMidY = totalH - FOOTER_H / 2;
-  if (username) {
-    const avatarR = 14;
-    const avatarCX = PAD + avatarR, avatarCY = footerMidY;
-    ctx.save();
-    if (avatarImg) {
-      ctx.beginPath(); ctx.arc(avatarCX, avatarCY, avatarR, 0, Math.PI * 2); ctx.clip();
-      const ir = avatarImg.width / avatarImg.height;
-      let dw, dh, dx, dy;
-      if (ir > 1) { dh = avatarR * 2; dw = dh * ir; dx = avatarCX - dw / 2; dy = avatarCY - avatarR; }
-      else { dw = avatarR * 2; dh = dw / ir; dx = avatarCX - avatarR; dy = avatarCY - dh / 2; }
-      ctx.drawImage(avatarImg, dx, dy, dw, dh);
-    } else {
-      // Solid olive fill + white initial — same treatment as the site's
-      // own badges, so it reads clearly in both light and dark mode
-      // instead of the previous low-contrast accent-on-accent look.
-      ctx.fillStyle = INK;
-      ctx.beginPath(); ctx.arc(avatarCX, avatarCY, avatarR, 0, Math.PI * 2); ctx.fill();
-      ctx.font = '600 13px \"Manrope\", Arial, sans-serif';
-      ctx.fillStyle = '#ffffff';
-      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText((username.replace('@', '')[0] || '?').toUpperCase(), avatarCX, avatarCY + 1);
-    }
-    ctx.restore();
-    ctx.save();
-    ctx.font = '600 13.5px \"Manrope\", Arial, sans-serif';
-    ctx.fillStyle = ACCENT;
-    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-    ctx.fillText(username, PAD + avatarR * 2 + 10, footerMidY);
-    ctx.restore();
-  }
-  ctx.save();
-  ctx.font = '700 14px "Oswald", Arial, sans-serif';
-  ctx.fillStyle = ACCENT;
-  ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
-  const msLabel = 'MyScreenFolio';
-  const msW = ctx.measureText(msLabel).width;
-  ctx.fillText(msLabel, W - PAD, footerMidY);
-  if (logoImg) {
-    const logoH = 20, logoW = logoImg.width * (logoH / logoImg.height);
-    ctx.drawImage(logoImg, W - PAD - msW - 8 - logoW, footerMidY - logoH / 2, logoW, logoH);
-  }
-  ctx.restore();
-
-  // Copy the naturally-rendered content straight across at its own
-  // height — no forced paper-size padding or scaling.
-  canvas.width = W;
-  canvas.height = totalH;
-  const maxW = Math.min(340, window.innerWidth - 64);
-  canvas.style.width = maxW + 'px';
-  canvas.style.height = (maxW * totalH / W) + 'px';
-  const finalCtx = canvas.getContext('2d');
-  finalCtx.imageSmoothingEnabled = true;
-  finalCtx.imageSmoothingQuality = 'high';
-  finalCtx.drawImage(workCanvas, 0, 0);
+function _ccBuild(e, A) {
+  const Z = CC_SIZES[_ccPrefs.size], S = CC_STYLES[_ccPrefs.style];
+  if (_cc.card === 'notes') return _ccBuildNotes(e, A, Z, S);
+  const { canvas, ctx } = _ccCanvas(Z);
+  if (_cc.card === 'discover') _ccDiscover(ctx, e, A, Z, S); else _ccRatings(ctx, e, A, Z, S);
+  return [{ canvas }];
+}
+function _ccCanvas(Z) {
+  const canvas = document.createElement('canvas');
+  canvas.width = Z.W * Z.px; canvas.height = Z.H * Z.px;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(Z.px, Z.px); ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+  return { canvas, ctx };
 }
 
+/* ── the frame every card shares: background, the backdrop, poster + title, then the footer ──
+   Every style (like the owner's reference picture): the chosen backdrop across the top, behind the poster, title and score, fading into the card.
+   Backdrop style: the same picture, blurred, also fills the whole card under a deep-forest shade. */
+// the backdrop (or the poster when there's none) blurred to fill the card — made at a quarter size, kept per size
+function _ccBlurred(A, Z) {
+  A.blur ||= {};
+  if (A.blur[Z.key] !== undefined) return A.blur[Z.key];
+  const img = A.bd || A.poster;
+  if (!img) return (A.blur[Z.key] = null);
+  const w = Math.round(Z.W / 4), h = Math.round(Z.H / 4), c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  const x = c.getContext('2d');
+  if ('filter' in x) { x.filter = 'blur(8px) saturate(1.4)'; _ccCover(x, img, -24, -24, w + 48, h + 48, A.bd ? A.pos[Z.key] : null); }
+  else {   // no canvas filters (older Safari): shrink hard, then stretch back — the same soft blur
+    const s = document.createElement('canvas'); s.width = Math.round(w / 10); s.height = Math.round(h / 10);
+    _ccCover(s.getContext('2d'), img, 0, 0, s.width, s.height, A.bd ? A.pos[Z.key] : null);
+    x.imageSmoothingQuality = 'high'; x.drawImage(s, 0, 0, w, h);
+  }
+  return (A.blur[Z.key] = c);
+}
+function _ccBackground(ctx, A, Z, S, bandH) {
+  const { W, H } = Z;
+  ctx.fillStyle = S.bg; ctx.fillRect(0, 0, W, H);
+  if (S.key === 'backdrop') {
+    const b = _ccBlurred(A, Z);
+    if (b) { ctx.save(); ctx.imageSmoothingQuality = 'high'; ctx.drawImage(b, 0, 0, W, H); ctx.restore(); }
+    if (A.bd && bandH) {   // the sharp picture at the top, melting into the blurred one
+      const m = document.createElement('canvas'); m.width = W * Z.px; m.height = Math.ceil(bandH * Z.px);
+      const mx = m.getContext('2d'); mx.scale(Z.px, Z.px); mx.imageSmoothingQuality = 'high';
+      _ccCover(mx, A.bd, 0, 0, W, bandH, A.pos[Z.key]);
+      const f = mx.createLinearGradient(0, 0, 0, bandH); f.addColorStop(0, '#000'); f.addColorStop(0.55, '#000'); f.addColorStop(1, 'rgba(0,0,0,0)');
+      mx.globalCompositeOperation = 'destination-in'; mx.fillStyle = f; mx.fillRect(0, 0, W, bandH);
+      ctx.drawImage(m, 0, 0, W, bandH);
+    }
+    const g = ctx.createLinearGradient(0, 0, 0, H), top = Math.min(0.9, (bandH || 0) / H);
+    g.addColorStop(0, 'rgba(4,14,8,.22)'); g.addColorStop(top * 0.35, 'rgba(4,14,8,.52)'); g.addColorStop(top, 'rgba(4,14,8,.60)'); g.addColorStop(1, 'rgba(4,14,8,.66)');   // darker behind the title so it reads
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    return;
+  }
+  if (!A.bd || !bandH) return;
+  // Dark / Light: the backdrop as a band at the top, fading into the card
+  _ccCover(ctx, A.bd, 0, 0, W, bandH, A.pos[Z.key]);
+  const g = ctx.createLinearGradient(0, 0, 0, bandH), c = S.bg;
+  if (S.key === 'light') { g.addColorStop(0, _ccRGBA(c, .10)); g.addColorStop(0.28, _ccRGBA(c, .58)); g.addColorStop(0.6, _ccRGBA(c, .9)); g.addColorStop(1, c); }
+  else { g.addColorStop(0, _ccRGBA(c, .15)); g.addColorStop(0.28, _ccRGBA(c, .55)); g.addColorStop(0.62, _ccRGBA(c, .9)); g.addColorStop(1, c); }
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, bandH + 1);
+}
+
+function _ccPoster(ctx, A, e, x, y, w, S, T) {
+  const h = w * 1.5, r = 14 * T;
+  ctx.save();
+  ctx.shadowColor = S.shadow; ctx.shadowBlur = 44 * T; ctx.shadowOffsetY = 16 * T;
+  ctx.fillStyle = S.track; _rrect(ctx, x, y, w, h, r); ctx.fill();
+  ctx.restore();
+  ctx.save(); _rrect(ctx, x, y, w, h, r); ctx.clip();
+  if (A.poster) _ccCover(ctx, A.poster, x, y, w, h, { x: 50, y: 50, z: 1 });
+  else _ccTxt(ctx, (e.title || '?')[0].toUpperCase(), x + w / 2, y + h / 2 + 30 * T, `600 ${90 * T}px ${CC_OSW}`, S.link, 'center');
+  ctx.restore();
+  ctx.save(); ctx.strokeStyle = 'rgba(243,238,220,.10)'; ctx.lineWidth = 1.5; _rrect(ctx, x, y, w, h, r); ctx.stroke(); ctx.restore();
+  return h;
+}
+
+// The title logo to draw for a style. Light: if the logo is mostly light (its visible pixels' average brightness), a copy
+// filled with the style's heading colour — kept per style; otherwise (or if the pixels can't be read) the logo itself.
+function _ccLogoFor(A, S) {
+  const lg = A.tlogo;
+  if (S.key !== 'light') return lg;
+  A.tlogoTint ||= {};
+  if (A.tlogoTint[S.key] !== undefined) return A.tlogoTint[S.key] || lg;
+  let out = null;
+  try {
+    const s = 64, c = document.createElement('canvas'), k = Math.min(1, s / Math.max(lg.naturalWidth, lg.naturalHeight));
+    c.width = Math.max(1, Math.round(lg.naturalWidth * k)); c.height = Math.max(1, Math.round(lg.naturalHeight * k));
+    const x = c.getContext('2d'); x.drawImage(lg, 0, 0, c.width, c.height);
+    const d = x.getImageData(0, 0, c.width, c.height).data;
+    let sum = 0, n = 0;
+    for (let i = 0; i < d.length; i += 4) if (d[i + 3] > 40) { sum += (0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2]) / 255; n++; }
+    if (n && sum / n > 0.62) {   // light logo → the heading colour, full size
+      const t = document.createElement('canvas'); t.width = lg.naturalWidth; t.height = lg.naturalHeight;
+      const tx = t.getContext('2d'); tx.drawImage(lg, 0, 0);
+      tx.globalCompositeOperation = 'source-in'; tx.fillStyle = S.head; tx.fillRect(0, 0, t.width, t.height);
+      out = t;
+    }
+  } catch { out = null; }
+  A.tlogoTint[S.key] = out;
+  return out || lg;
+}
+// the title block beside the poster: eyebrow, title, meta line, genre tags → its height (measure: draw = false)
+function _ccTitleBlock(ctx, e, A, x, y, w, S, T, o, draw) {
+  let cy = y;
+  const ebF = `700 ${16 * T}px ${CC_MAN}`;
+  if (draw) _ccTxt(ctx, o.eyebrow, x, cy + 16 * T, ebF, S.link, 'left', 3.2 * T);
+  cy += 16 * T + 20 * T;
+  // The title's own name artwork (TMDB's logo, as on its title page — owner, 17 Nov 2026), in every style and card: as wide as
+  // the column, at most about two title lines tall. Dark / Backdrop: as it is, with a soft shadow so it reads on any backdrop.
+  // Light: a light logo (most are white) is recoloured to the card's heading colour so it doesn't vanish on the cream;
+  // a dark or colourful one stays as it is (_ccLogoFor). No logo: the written title.
+  const lg = A.tlogo && A.tlogo.naturalWidth ? _ccLogoFor(A, S) : null;
+  if (lg) {
+    const nw = lg.naturalWidth || lg.width, nh = lg.naturalHeight || lg.height;
+    const maxH = o.titleMax * T * 1.9, k = Math.min(w / nw, maxH / nh), lw = nw * k, lh2 = nh * k;
+    if (draw) {
+      ctx.save();
+      if (S.key === 'light') { ctx.shadowColor = 'rgba(255,255,255,.6)'; ctx.shadowBlur = 10 * T; }
+      else { ctx.shadowColor = 'rgba(0,0,0,.55)'; ctx.shadowBlur = 18 * T; ctx.shadowOffsetY = 3 * T; }
+      ctx.drawImage(lg, x, cy + 4 * T, lw, lh2); ctx.restore();
+    }
+    cy += lh2 + 8 * T + 18 * T;
+  } else {
+    let fs = o.titleMax * T, lines;
+    for (;;) {
+      lines = _ccWrapWords(ctx, e.title || '', `600 ${fs}px ${CC_OSW}`, w);
+      if (lines.length <= 2 || fs <= 50 * T) break;
+      fs -= 2;
+    }
+    if (lines.length > 2) lines = [lines[0], _ccFitText(ctx, lines.slice(1).join(' '), `600 ${fs}px ${CC_OSW}`, w)];
+    const lh = fs * 1.08;
+    lines.forEach((ln, i) => { if (draw) _ccTxt(ctx, ln, x, cy + lh * i + fs * 0.86, `600 ${fs}px ${CC_OSW}`, S.head); });
+    cy += lh * lines.length + 14 * T;
+  }
+  const meta = _ccMeta(e, A.data);
+  if (meta) {
+    const mf = `500 ${22 * T}px ${CC_MAN}`;
+    if (draw) _ccTxt(ctx, _ccFitText(ctx, meta, mf, w), x, cy + 22 * T, mf, S.text2);
+    cy += 22 * T + 18 * T;
+  }
+  const genres = typeof mssGenreList === 'function' ? mssGenreList(e.genres || []).slice(0, 3) : [];
+  if (genres.length) {
+    const gf = `700 ${14 * T}px ${CC_MAN}`, ph = 32 * T, px = 12 * T;
+    let gx = x;
+    genres.forEach(g => {
+      const label = g.toUpperCase(), gw = _ccW(ctx, label, gf, 1.4 * T) + px * 2;
+      if (gx + gw > x + w) return;
+      if (draw) { ctx.fillStyle = S.brand; _rrect(ctx, gx, cy, gw, ph, 6 * T); ctx.fill(); _ccTxt(ctx, label, gx + px, cy + ph / 2 + 1, gf, S.onBrand, 'left', 1.4 * T, 'middle'); }
+      gx += gw + 8 * T;
+    });
+    cy += ph;
+  } else cy -= 18 * T;
+  return cy - y;
+}
+// "2008 – 2013 · AMC · 5 seasons · 62 episodes" · "2019 · 2h 3m · R"
+function _ccMeta(e, d) {
+  const bits = [], y1 = (d?.releaseDate || '').slice(0, 4) || String(e.year || '');
+  if (_ccIsMovie(e)) {
+    if (y1) bits.push(y1);
+    const mins = d?.runtime || (Number(e.runtime_h) || 0) * 60 + (Number(e.runtime_m) || 0);
+    if (mins) bits.push(`${Math.floor(mins / 60) ? Math.floor(mins / 60) + 'h ' : ''}${mins % 60 ? mins % 60 + 'm' : ''}`.trim());
+    if (d?.certification) bits.push(d.certification);
+  } else {
+    const y2 = (d?.lastDate || '').slice(0, 4);
+    if (y1) bits.push(y2 && y2 !== y1 && /Ended|Canceled/i.test(d?.status || '') ? `${y1} – ${y2}` : y1);
+    if (d?.network) bits.push(d.network);
+    const seasons = d?.seasons || Number(e.total_seasons) || 0, eps = d?.episodes || Number(e.total_eps) || 0;
+    if (seasons) bits.push(`${seasons} ${seasons === 1 ? 'season' : 'seasons'}`);
+    if (eps) bits.push(`${eps} ${eps === 1 ? 'episode' : 'episodes'}`);
+  }
+  return bits.join(' · ');
+}
+
+// The header, the same in every style: poster on the left, eyebrow / title / meta / genres beside it, all over the
+// backdrop, which runs on behind the score row (o.band: how far below the header it reaches) → the y under the header
+// o.ring: your score's ring (its diameter) on the right, level with the title (owner, 17 Nov 2026), "My score" under it
+function _ccHeader(ctx, e, A, Z, S, o) {
+  const { W, M, T } = Z, pw = o.poster * T, ph = pw * 1.5, gap = 36 * T;
+  const v = o.ring && typeof liveScore === 'function' ? liveScore(e) : null, d = v != null ? o.ring * T : 0, ringH = d ? d + 34 * T : 0;
+  const tx = M + pw + gap, tw = W - M - tx - (d ? d + 32 * T : 0);
+  const th = _ccTitleBlock(ctx, e, A, tx, 0, tw, S, T, o, false), hb = Math.max(ph, th, ringH);
+  const top = Z.top + (A.bd ? o.lead * T : 0), bottom = top + hb;
+  _ccBackground(ctx, A, Z, S, A.bd ? bottom + o.band * T : 0);
+  _ccPoster(ctx, A, e, M, top + hb - ph, pw, S, T);
+  _ccTitleBlock(ctx, e, A, tx, top + hb - th, tw, S, T, o, true);
+  if (d) {   // centred on the title block (eyebrow to genres), kept inside the header
+    const ry = Math.min(Math.max(top + hb - th / 2 - ringH / 2, top), bottom - ringH), cx = W - M - d / 2, cy = ry + d / 2;
+    _ccRing(ctx, cx, cy, d, v, S, e.status === 'dropped');
+    _ccTxt(ctx, 'My score', cx, cy + d / 2 + 30 * T, `600 ${16 * T}px ${CC_MAN}`, S.muted, 'center');
+  }
+  return bottom;
+}
+
+// The score row: the watch details on the left, the ring on the right (d = 0: the ring is in the header) → its height (0 when there's nothing)
+function _ccScoreRow(ctx, e, Z, S, y, d) {
+  const { W, M, T } = Z, v = d && typeof liveScore === 'function' ? liveScore(e) : null, info = _ccWatchInfo(e);
+  if (v == null && !info.length) return 0;
+  const lf = `700 ${14 * T}px ${CC_MAN}`, vf = `600 ${26 * T}px ${CC_MAN}`, itemH = 14 * T + 12 * T + 26 * T, gap = 24 * T;
+  const infoH = info.length ? info.length * itemH + (info.length - 1) * gap : 0;
+  const ringH = v != null ? d + 34 * T : 0, h = Math.max(infoH, ringH);
+  let iy = y + (h - infoH) / 2;
+  const iw = W - M * 2 - (v != null ? d + 48 * T : 0);
+  info.forEach(([label, value]) => {
+    _ccTxt(ctx, label.toUpperCase(), M, iy + 14 * T, lf, S.muted, 'left', 2.4 * T);
+    _ccTxt(ctx, _ccFitText(ctx, value, vf, iw), M, iy + 14 * T + 12 * T + 24 * T, vf, S.text);
+    iy += itemH + gap;
+  });
+  if (v != null) {
+    const cx = W - M - d / 2, cy = y + (h - ringH) / 2 + d / 2;
+    _ccRing(ctx, cx, cy, d, v, S, e.status === 'dropped');
+    _ccTxt(ctx, 'My score', cx, cy + d / 2 + 30 * T, `600 ${16 * T}px ${CC_MAN}`, S.muted, 'center');
+  }
+  return h;
+}
+// [label, value] — when you watched it, rewatches, episodes (shows) or runtime (movies)
+function _ccWatchInfo(e) {
+  const out = [], STATUS = { queue: 'On my watchlist', up_next: 'Up next', watching: 'Watching', paused: 'Taking a break', ongoing: 'To be continued', dropped: 'Dropped' };
+  if (e.completed_date) out.push(['Watched on', _ccDate(e.completed_date)]);
+  else if (STATUS[e.status]) out.push(['Status', STATUS[e.status]]);
+  const n = typeof mssRewatchCount === 'function' ? mssRewatchCount(e) : 1;
+  if (n > 1) out.push(['Rewatched', n === 2 ? 'Once' : n === 3 ? 'Twice' : `${n - 1} times`]);
+  const total = Number(e.total_eps) || 0;
+  if (!_ccIsMovie(e) && total) {
+    const seen = e.status === 'completed' ? Math.max(Number(e.watched) || 0, total) : Math.min(Number(e.watched) || 0, total);
+    out.push(['Episodes watched', `${seen} of ${total}`]);
+  }   // a film's runtime: already in the header's details line ("2026 · 1h 36m · R"), not repeated here
+  return out.slice(0, 3);
+}
+
+// The footer: your photo and @username (My name) on the left, the MSF mark on the right → the y above it
+function _ccFooter_draw(ctx, A, Z, S) {
+  const { W, H, M, T } = Z, d = 54 * T, cy = H - Z.bottom - d / 2, lineY = cy - d / 2 - 30 * T;
+  ctx.save(); ctx.strokeStyle = S.line; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(M, lineY); ctx.lineTo(W - M, lineY); ctx.stroke(); ctx.restore();
+  const user = _cardUsername();
+  if (_ccPrefs.name && user) {
+    ctx.save(); ctx.beginPath(); ctx.arc(M + d / 2, cy, d / 2, 0, Math.PI * 2); ctx.clip();
+    if (A.avatar) _ccCover(ctx, A.avatar, M, cy - d / 2, d, d, { x: 50, y: 50, z: 1 });
+    else { ctx.fillStyle = S.brand; ctx.fillRect(M, cy - d / 2, d, d); _ccTxt(ctx, (user.replace('@', '')[0] || '?').toUpperCase(), M + d / 2, cy + 1, `700 ${22 * T}px ${CC_MAN}`, S.onBrand, 'center', 0, 'middle'); }
+    ctx.restore();
+    _ccTxt(ctx, user, M + d + 18 * T, cy + 1, `700 ${22 * T}px ${CC_MAN}`, S.text, 'left', 0, 'middle');
+  }
+  const bf = `600 ${26 * T}px ${CC_OSW}`, bw = _ccW(ctx, 'MyScreenFolio', bf);
+  _ccTxt(ctx, 'MyScreenFolio', W - M, cy + 1, bf, S.head, 'right', 0, 'middle');
+  if (A.logo) { const lh = 40 * T, lw = A.logo.width * lh / A.logo.height; ctx.drawImage(A.logo, W - M - bw - 12 * T - lw, cy - lh / 2, lw, lh); }   // the logo in its own colours, as in the nav
+  return lineY;
+}
+
+const _ccTypeLabel = e => (typeof mssTypeOf === 'function' ? mssTypeOf(e.cat, _ccIsMovie(e)).label : _ccIsMovie(e) ? 'Movie' : 'TV Show').toUpperCase();
+
+/* ══════════════════════════════════════════════════════════════
+   RATINGS CARD
+══════════════════════════════════════════════════════════════ */
+function _ccRatings(ctx, e, A, Z, S) {
+  const { W, M, T } = Z;
+  const groups = mssRatedGroups(e.ratings, e.cat, e.cat === 'movies' || e.ratings?._media_type === 'movie');
+  // A4 is a shorter page for its width than a wallpaper: a smaller header and ring leave the ratings their room
+  const count = groups.reduce((n, g) => n + g.items.length, 0), dense = count > 16, a4 = Z.key === 'a4';
+  const ring = a4 ? (dense ? 130 : 150) : dense ? 170 : 200;
+  const hb = _ccHeader(ctx, e, A, Z, S, { poster: dense || a4 ? 180 : 220, eyebrow: `MY RATINGS · ${_ccTypeLabel(e)}`, titleMax: dense || a4 ? 70 : 80,
+    lead: a4 ? 10 : dense ? 30 : 60, band: 200, ring: ring * 0.85 });
+  let y = hb + (a4 ? 34 : 44) * T;
+  const rowH = _ccScoreRow(ctx, e, Z, S, y, 0);
+  y += rowH + (rowH ? (a4 ? 36 : 48) * T : 0);
+  const footY = _ccFooter_draw(ctx, A, Z, S);
+  // favourites, anchored above the footer
+  const favH = _ccFavs(ctx, e, Z, S, 0, false);
+  const favTop = footY - 40 * T - favH;
+  if (favH) _ccFavs(ctx, e, Z, S, favTop, true);
+  const room = (favH ? favTop - 40 * T : footY - 40 * T) - y;
+  // the biggest type that fits (×1.18 down to ×0.56 — every field filled on A4), then any spare room spread between the sections
+  let s = 1.18, lay;
+  for (; s >= 0.56; s -= 0.02) { lay = _ccRatingsLayout(ctx, groups, Z, S, s, W - M * 2, 0); if (lay.h <= room) break; }
+  s = Math.max(s, 0.56);
+  const spare = Math.max(0, room - lay.h);
+  lay = _ccRatingsLayout(ctx, groups, Z, S, s, W - M * 2, Math.min(spare / Math.max(1, lay.sections + 1), 70 * T));
+  const top = y + Math.max(0, room - lay.h) * 0.3;
+  lay.draw(M, top);
+}
+
+// Groups in two balanced columns (a group is never split), Overall Enjoyment on its own line between
+// Core and Bonus; one line per rating: name · short bar · score → { h, sections, draw(x, y) }
+function _ccRatingsLayout(ctx, groups, Z, S, s, w, extra) {
+  const T = Z.T, k = T * s;
+  const m = { sec: 15 * k, secAfter: 32 * k, name: 15 * k, avg: 36 * k, row: 19 * k, val: 30 * k, rowH: 42 * k, gGap: 30 * k, secGap: 50 * k + extra, colGap: 56 * T, bar: 6 * k };
+  const colW = (w - m.colGap) / 2;
+  const nameF = `700 ${m.name}px ${CC_MAN}`, avgF = `400 ${m.avg}px ${CC_BEB}`, rowF = `600 ${m.row}px ${CC_MAN}`, valF = `400 ${m.val}px ${CC_BEB}`;
+  const avgW = _ccW(ctx, '10.00', avgF), valW = _ccW(ctx, '10.0', valF);
+  // one bar width for every row, so the bars line up: 20% of the column, 17% when a name would otherwise be cut short
+  const longest = Math.max(0, ...groups.flatMap(g => g.items.map(it => _ccW(ctx, it.label, rowF))));
+  const barW = longest > colW * 0.8 - valW - 34 * k ? colW * 0.17 : colW * 0.2;
+  const enjoy = groups.find(g => g.id === 'overall');
+  const core = groups.filter(g => g.kind === 'core' && g.id !== 'overall'), bonus = groups.filter(g => g.kind === 'bonus');
+  const nameLines = g => _ccWrapWords(ctx, g.name.toUpperCase(), nameF, colW - avgW - 16 * k, 1.5 * k).slice(0, 2);
+  const gH = g => (nameLines(g).length > 1 ? m.name * 1.35 : 0) + 40 * k + g.items.length * m.rowH;
+  // split the groups in order so both columns end at about the same height
+  const split = list => {
+    const hs = list.map(gH);
+    let best = [list, []], bestH = Infinity;
+    for (let i = 1; i <= list.length; i++) {
+      const a = hs.slice(0, i).reduce((x, y) => x + y, 0) + (i - 1) * m.gGap, b = hs.slice(i).reduce((x, y) => x + y, 0) + Math.max(0, list.length - i - 1) * m.gGap;
+      if (Math.max(a, b) < bestH) { bestH = Math.max(a, b); best = [list.slice(0, i), list.slice(i)]; }
+    }
+    return { cols: best, h: bestH };
+  };
+  const secs = [];
+  if (core.length) secs.push({ label: 'Core ratings', count: `${core.reduce((n, g) => n + g.items.length, 0)} rated`, ...split(core) });
+  if (enjoy) secs.push({ enjoy: enjoy.items[0] });
+  if (bonus.length) secs.push({ label: 'Bonus ratings', count: `${bonus.reduce((n, g) => n + g.items.length, 0)} picked`, ...split(bonus) });
+  const secH = sc => sc.enjoy ? 46 * k : m.sec + m.secAfter + sc.h;
+  const h = secs.reduce((a, sc) => a + secH(sc), 0) + Math.max(0, secs.length - 1) * m.secGap;
+  const colour = v => _ccTier(v, S).ink;
+  function bar(x, cy, bw, v) {
+    ctx.fillStyle = S.track; _rrect(ctx, x, cy - m.bar / 2, bw, m.bar, m.bar / 2); ctx.fill();
+    ctx.fillStyle = _ccTier(v, S).ink; _rrect(ctx, x, cy - m.bar / 2, Math.max(m.bar, bw * Math.min(1, v / 10)), m.bar, m.bar / 2); ctx.fill();
+  }
+  function group(g, x, y) {
+    const lines = nameLines(g);
+    lines.forEach((ln, i) => _ccTxt(ctx, ln, x, y + m.name + i * m.name * 1.35 + 6 * k, nameF, S.text2, 'left', 1.5 * k));
+    _ccTxt(ctx, _ccTwo(g.avg), x + colW, y + m.avg * 0.86, avgF, colour(g.avg), 'right');
+    let ry = y + (lines.length > 1 ? m.name * 1.35 : 0) + 40 * k;
+    g.items.forEach(it => {
+      const bw = barW, lmax = colW - valW - 16 * k - bw - 18 * k, mid = ry + m.rowH / 2;
+      _ccTxt(ctx, _ccFitText(ctx, it.label, rowF, lmax), x, mid + m.row * 0.36, rowF, S.text);
+      bar(x + colW - valW - 16 * k - bw, mid, bw, it.v);
+      _ccTxt(ctx, mssR1(it.v), x + colW, mid + m.val * 0.36, valF, colour(it.v), 'right');
+      ry += m.rowH;
+    });
+    return gH(g);
+  }
+  function draw(x, y) {
+    secs.forEach((sc, i) => {
+      if (i) y += m.secGap;
+      if (sc.enjoy) {
+        const mid = y + 23 * k, label = 'OVERALL ENJOYMENT', lw = _ccW(ctx, label, nameF, 1.5 * k), vw = _ccW(ctx, _ccTwo(sc.enjoy.v), avgF);
+        _ccTxt(ctx, label, x, mid + m.name * 0.36, nameF, S.text2, 'left', 1.5 * k);
+        bar(x + lw + 26 * k, mid, w - lw - 26 * k - vw - 20 * k, sc.enjoy.v);
+        _ccTxt(ctx, _ccTwo(sc.enjoy.v), x + w, mid + m.avg * 0.34, avgF, colour(sc.enjoy.v), 'right');
+        y += 46 * k;
+        return;
+      }
+      const lf = `700 ${m.sec}px ${CC_MAN}`, cf = `600 ${m.sec}px ${CC_MAN}`, label = sc.label.toUpperCase();
+      const lw = _ccW(ctx, label, lf, 3 * k), cw = _ccW(ctx, sc.count, cf);
+      _ccTxt(ctx, label, x, y + m.sec, lf, S.link, 'left', 3 * k);
+      _ccTxt(ctx, sc.count, x + w, y + m.sec, cf, S.muted, 'right');
+      ctx.save(); ctx.strokeStyle = S.line; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x + lw + 18 * k, y + m.sec * 0.62); ctx.lineTo(x + w - cw - 18 * k, y + m.sec * 0.62); ctx.stroke(); ctx.restore();
+      const gy = y + m.sec + m.secAfter;
+      sc.cols.forEach((col, ci) => { let cy = gy; col.forEach(g => { cy += group(g, x + ci * (colW + m.colGap), cy) + m.gGap; }); });
+      y = gy + sc.h;
+    });
+  }
+  return { h, sections: secs.length, draw };
+}
+
+// Favourites (green rule) and least favourites (grey rule) → height
+function _ccFavs(ctx, e, Z, S, y, draw) {
+  const { W, M, T } = Z, r = e.ratings || {}, f = r._favorites || {}, lo = r._lowlights || f._lowlights || {};
+  const pick = (o, pre) => ['character', 'episode', 'season'].filter(k => String(o?.[k] || '').trim()).map(k => [`${pre} ${k}`, String(o[k]).trim()]);
+  const rows = [];
+  if (_ccPrefs.fav) { const a = pick(f, 'Favourite'); if (a.length) rows.push({ items: a, rule: S.green }); }
+  if (_ccPrefs.low) { const a = pick(lo, 'Least favourite'); if (a.length) rows.push({ items: a, rule: S.low }); }
+  if (!rows.length) return 0;
+  const colW = (W - M * 2 - 28 * T * 2) / 3, lf = `700 ${13 * T}px ${CC_MAN}`, vf = `700 ${22 * T}px ${CC_MAN}`, vlh = 29 * T;
+  let h = 0;
+  rows.forEach((row, ri) => {
+    const vals = row.items.map(([, v]) => { const ls = _ccWrapWords(ctx, v, vf, colW - 20 * T); return ls.length > 2 ? [ls[0], _ccFitText(ctx, ls.slice(1).join(' '), vf, colW - 20 * T)] : ls; });
+    const rh = 13 * T + 14 * T + Math.max(...vals.map(v => v.length)) * vlh;
+    if (draw) row.items.forEach(([label], i) => {
+      const x = M + i * (colW + 28 * T), ry = y + h;
+      ctx.fillStyle = row.rule; ctx.fillRect(x, ry, 3 * T, rh);
+      _ccTxt(ctx, _ccFitText(ctx, label.toUpperCase(), lf, colW - 20 * T, 1.8 * T), x + 18 * T, ry + 13 * T, lf, S.muted, 'left', 1.8 * T);
+      vals[i].forEach((ln, li) => _ccTxt(ctx, ln, x + 18 * T, ry + 13 * T + 14 * T + li * vlh + 21 * T, vf, ri === 0 && row.rule === S.green ? S.text : S.text2));
+    });
+    h += rh + (ri < rows.length - 1 ? 26 * T : 0);
+  });
+  return h;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   NOTES CARD — the note as the site shows it (MSSRich.html + .tv-article)
+══════════════════════════════════════════════════════════════ */
+// MSSRich's HTML → blocks: { quote, runs: [{ t, b, i, u, s } | { br }] }
+function _ccNoteBlocks(text) {
+  const box = document.createElement('div');
+  box.innerHTML = MSSRich.html(text, { paras: true });
+  return [...box.children].map(el => {
+    const runs = [];
+    const walk = (n, st) => {
+      if (n.nodeType === 3) { if (n.nodeValue) runs.push({ t: n.nodeValue, ...st }); return; }
+      if (n.nodeType !== 1) return;
+      if (n.tagName === 'BR') { runs.push({ br: true }); return; }
+      const s2 = { ...st }, t = n.tagName;
+      if (t === 'STRONG' || t === 'B') s2.b = true;
+      if (t === 'EM' || t === 'I') s2.i = true;
+      if (t === 'U') s2.u = true;
+      if (t === 'S') s2.s = true;
+      n.childNodes.forEach(c => walk(c, s2));
+    };
+    walk(el, {});
+    return { quote: el.tagName === 'BLOCKQUOTE', runs };
+  }).filter(b => b.runs.some(r => r.br || r.t.trim()));
+}
+// one block → lines of styled pieces, wrapped at spaces (a word longer than the line breaks anywhere, like overflow-wrap:anywhere)
+function _ccWrapBlock(ctx, blk, size, width) {
+  // a quote is italic, and italic inside it reads upright (.mss-rq em)
+  const fontOf = st => `${(blk.quote ? !st.i : st.i) ? 'italic ' : ''}${st.b ? 700 : 500} ${size}px ${CC_MAN}`;
+  const meas = (t, st) => { ctx.font = fontOf(st); return ctx.measureText(t).width; };
+  const words = [];
+  let cur = null;
+  blk.runs.forEach(r => {
+    if (r.br) { if (cur) words.push(cur); cur = null; words.push({ br: true }); return; }
+    r.t.split(/(\s+)/).forEach(part => {
+      if (!part) return;
+      if (/^\s+$/.test(part)) { if (cur) words.push(cur); cur = null; words.push({ space: r }); return; }
+      (cur ||= { pieces: [] }).pieces.push({ t: part, st: r });
+    });
+  });
+  if (cur) words.push(cur);
+  const lines = [];
+  let line = [], lw = 0, sp = null;
+  const flush = () => { lines.push({ segs: line, w: lw }); line = []; lw = 0; sp = null; };
+  words.forEach(wd => {
+    if (wd.br) { flush(); return; }
+    if (wd.space) { if (line.length) sp = wd.space; return; }
+    const ww = wd.pieces.reduce((a, p) => a + meas(p.t, p.st), 0), sw = sp ? meas(' ', sp) : 0;
+    if (line.length && lw + sw + ww > width) flush();
+    else if (line.length && sp) { line.push({ t: ' ', st: sp }); lw += sw; }
+    sp = null;
+    if (ww > width) wd.pieces.forEach(p => { for (const ch of p.t) { const cw = meas(ch, p.st); if (lw + cw > width && line.length) flush(); line.push({ t: ch, st: p.st }); lw += cw; } });
+    else { wd.pieces.forEach(p => line.push(p)); lw += ww; }
+  });
+  if (line.length) flush();
+  return lines.map(l => ({ ...l, fontOf }));
+}
+// blocks → rows (lines and the gaps between paragraphs / around quotes, with collapsing margins like the page)
+function _ccNoteRows(ctx, blocks, fs, width) {
+  const rows = [];
+  let prev = 0;
+  blocks.forEach((b, bi) => {
+    const size = b.quote ? fs * 17 / 16 : fs, lh = size * 1.8, mt = b.quote ? fs * 22 / 16 : 0, mb = b.quote ? fs * 22 / 16 : fs;
+    const pad = b.quote ? fs * 4 / 16 : 0, indent = b.quote ? fs * 21 / 16 : 0;
+    if (bi) rows.push({ gap: Math.max(prev, mt) });
+    const ls = _ccWrapBlock(ctx, b, size, width - indent);
+    ls.forEach((l, li) => rows.push({ line: l, size, lh, indent, padTop: li === 0 ? pad : 0, h: lh + (li === 0 ? pad : 0) + (li === ls.length - 1 ? pad : 0),
+      quote: b.quote ? bi + 1 : 0, colour: b.quote || bi === 0 ? 'text' : 'article', end: li === ls.length - 1 }));
+    prev = mb;
+  });
+  return rows;
+}
+// rows → pages that fit caps[0] (the first card) and caps[1] (each card after)
+function _ccPaginate(rows, caps) {
+  const pages = [];
+  let cur = [], h = 0, gap = 0, cap = caps[0];
+  rows.forEach(r => {
+    if (r.gap != null) { if (cur.length) gap = r.gap; return; }
+    if (cur.length && h + gap + r.h > cap) { pages.push(cur); cur = []; h = 0; gap = 0; cap = caps[1]; }
+    if (gap) { cur.push({ gap }); h += gap; gap = 0; }
+    cur.push(r); h += r.h;
+  });
+  if (cur.length) pages.push(cur);
+  return pages;
+}
+const _ccRowsH = rows => rows.reduce((a, r) => a + (r.gap != null ? r.gap : r.h), 0);
+// where a note can be cut: after each sentence, and at the end of each paragraph
+function _ccCuts(blocks) {
+  const cuts = [];
+  blocks.forEach((b, bi) => {
+    b.runs.forEach((r, ri) => { if (r.br) return; const re = /[.!?…]+["”’)\]]*(?=\s|$)/g; let mt; while ((mt = re.exec(r.t))) cuts.push({ bi, ri, ci: mt.index + mt[0].length }); });
+    cuts.push({ bi, ri: b.runs.length, ci: 0 });
+  });
+  return cuts;
+}
+function _ccCutBlocks(blocks, c) {
+  const out = blocks.slice(0, c.bi), b = blocks[c.bi], runs = b.runs.slice(0, c.ri);
+  if (c.ri < b.runs.length && c.ci > 0) runs.push({ ...b.runs[c.ri], t: b.runs[c.ri].t.slice(0, c.ci) });
+  if (runs.length) out.push({ ...b, runs });
+  return out;
+}
+
+function _ccDrawRows(ctx, rows, x, y, S, o = {}) {
+  const article = _ccMix(S.text, S.text2, 0.86), quotes = {};
+  let cy = y;
+  rows.forEach((r, i) => {
+    if (r.gap != null) { cy += r.gap; return; }
+    const mid = cy + r.padTop + r.lh / 2, col = r.colour === 'text' ? S.text : article;
+    if (r.quote) { const q = quotes[r.quote] ||= { top: cy, bottom: 0 }; q.bottom = cy + r.h; }
+    let sx = x + r.indent;
+    if (i === 0 && o.lead) _ccTxt(ctx, '…', sx - 6, mid, r.line.fontOf({}), col, 'right', 0, 'middle');   // hangs in the margin
+    r.line.segs.forEach(seg => {
+      ctx.font = r.line.fontOf(seg.st); ctx.fillStyle = col; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; _ccLs(ctx, 0);
+      ctx.fillText(seg.t, sx, mid);
+      const w = ctx.measureText(seg.t).width, th = Math.max(1, r.size * 0.07);
+      if (seg.st.u) ctx.fillRect(sx, mid + r.size * 0.46, w, th);
+      if (seg.st.s) ctx.fillRect(sx, mid + r.size * 0.04, w, th);
+      sx += w;
+    });
+    if (i === rows.length - 1 && o.trail) _ccTxt(ctx, '…', sx + 2, mid, r.line.fontOf({}), col, 'left', 0, 'middle');
+    cy += r.h;
+  });
+  // a quote's olive line down its side (.tv-article .mss-rq: 3px)
+  Object.values(quotes).forEach(q => { ctx.fillStyle = S.link; ctx.fillRect(x, q.top, Math.max(2, rows.find(r => r.size)?.size * 3 / 17 || 3), q.bottom - q.top); });
+  return cy;
+}
+
+function _ccBuildNotes(e, A, Z, S) {
+  const { W, M, T } = Z, priv = _ccPrivate(e) && !_cc.showPrivate, spoil = mssIsSpoiler(e), covered = !priv && spoil && _cardPriv.hideSpoiler;
+  const blocks = _ccNoteBlocks(e.notes || '');
+  // one card, always: the note gets smaller (down to min) to fit, and is only shortened when even that isn't enough
+  const sizes = Z.key === 'a4' ? { max: 30, min: 16 } : { max: 32, min: 18 };
+  const first = _ccCanvas(Z);
+  const hb = _ccHeader(first.ctx, e, A, Z, S, { poster: 180, eyebrow: `MY NOTE · ${_ccTypeLabel(e)}`, titleMax: 72, lead: Z.key === 'a4' ? 10 : 40, band: 200, ring: 130 });
+  let y = hb + 40 * T;
+  const rowH = _ccScoreRow(first.ctx, e, Z, S, y, 0);
+  y += rowH + (rowH ? 46 * T : 0);
+  const footY = _ccFooter_draw(first.ctx, A, Z, S);
+  const headY = y, textTop = y + 15 * T + 34 * T, bottom = footY - 44 * T;
+  const textX = M + 30 * T, textW = W - M - textX, capFirst = bottom - textTop;
+
+  const ctx = first.ctx;
+  const noteHead = (c, num) => {
+    const lf = `700 ${15 * T}px ${CC_MAN}`, lw = _ccW(c, 'MY NOTE', lf, 3 * T);
+    _ccTxt(c, 'MY NOTE', M, headY + 15 * T, lf, S.link, 'left', 3 * T);
+    if (spoil && !covered && !priv) {   // shown: the SPOILERS tag (warning colours, like the site's spoiler tag)
+      const egg = typeof MSSEgg !== 'undefined' ? MSSEgg.spoiler(e) : null, tf = `700 ${12 * T}px ${CC_MAN}`, tag = (egg ? egg.tag : 'Spoilers').toUpperCase();
+      const tw = _ccW(c, tag, tf, 1.6 * T) + 20 * T, tx = M + lw + 16 * T, th = 26 * T, ty = headY + 15 * T / 2 - th / 2 + 1;
+      c.fillStyle = S.warnBg; _rrect(c, tx, ty, tw, th, 6 * T); c.fill();
+      c.strokeStyle = S.warnLine; c.lineWidth = 1; _rrect(c, tx, ty, tw, th, 6 * T); c.stroke();
+      _ccTxt(c, tag, tx + 10 * T, ty + th / 2 + 1, tf, S.warn, 'left', 1.6 * T, 'middle');
+    }
+    if (num) _ccTxt(c, num, W - M, headY + 15 * T, `600 ${15 * T}px ${CC_MAN}`, S.muted, 'right');
+  };
+  // the note's olive line down its side (.tv-read)
+  const sideLine = (c, top, bot) => {
+    const g = c.createLinearGradient(0, top, 0, bot);
+    g.addColorStop(0, S.link); g.addColorStop(1, _ccRGBA(S.link.length === 7 ? S.link : '#A6CCB1', .15));
+    c.fillStyle = g; _rrect(c, M, top, 4 * T, Math.max(8, bot - top), 2 * T); c.fill();
+  };
+
+  if (priv) {   // Friends-only / Private: off the card until it's turned on
+    noteHead(ctx, '');
+    const mf = `500 ${24 * T}px ${CC_MAN}`;
+    _ccWrapWords(ctx, `Your note is ${e.note_visibility === 'friends' ? 'Friends-only' : 'Private'}. Turn on “Show my note” to put it on this card.`, mf, textW)
+      .forEach((ln, i) => _ccTxt(ctx, ln, textX, textTop + 30 * T + i * 40 * T, mf, S.muted));
+    return [{ canvas: first.canvas }];
+  }
+  if (covered) {   // the spoiler cover: the note blurred past reading, with the cover on top — always one card
+    noteHead(ctx, '');
+    const boxH = Math.min(capFirst, 560 * T), fs = sizes.min + 4, k = 10;
+    const small = document.createElement('canvas'); small.width = Math.ceil(textW / k); small.height = Math.ceil(boxH / k);
+    const sc = small.getContext('2d'); sc.scale(1 / k, 1 / k);
+    let rows = _ccNoteRows(sc, blocks, fs, textW);
+    while (_ccRowsH(rows) < boxH && rows.length < 400) rows = rows.concat([{ gap: fs }], _ccNoteRows(sc, blocks, fs, textW));   // a short note still fills the box
+    _ccDrawRows(sc, _ccPaginate(rows, [boxH, boxH])[0], 0, 0, S);
+    ctx.save(); ctx.globalAlpha = 0.55; ctx.drawImage(small, textX, textTop, textW, boxH); ctx.restore();
+    const egg = typeof MSSEgg !== 'undefined' ? MSSEgg.spoiler(e) : null;
+    const t1 = egg ? egg.title : 'Contains spoilers', t2 = egg ? egg.cardSub : 'Read it on MyScreenFolio';
+    const f1 = `700 ${26 * T}px ${CC_MAN}`, f2 = `500 ${19 * T}px ${CC_MAN}`, ic = 60 * T;
+    const pw = 22 * T + ic + 20 * T + Math.max(_ccW(ctx, t1, f1), _ccW(ctx, t2, f2)) + 34 * T, ph = 96 * T;
+    const px = W / 2 - pw / 2, py = textTop + boxH / 2 - ph / 2;
+    ctx.save(); ctx.shadowColor = S.shadow; ctx.shadowBlur = 40 * T; ctx.shadowOffsetY = 14 * T;
+    ctx.fillStyle = S.key === 'light' ? S.card : '#1D3124'; _rrect(ctx, px, py, pw, ph, ph / 2); ctx.fill(); ctx.restore();
+    ctx.strokeStyle = S.warnLine; ctx.lineWidth = 1.5; _rrect(ctx, px, py, pw, ph, ph / 2); ctx.stroke();
+    const cx = px + 22 * T + ic / 2, cy = py + ph / 2;
+    ctx.fillStyle = egg ? S.alert : S.brand; ctx.beginPath(); ctx.arc(cx, cy, ic / 2, 0, Math.PI * 2); ctx.fill();
+    if (egg) _ccTxt(ctx, egg.tag.replace(/^Rule /, ''), cx, cy + 11 * T, `400 ${32 * T}px ${CC_BEB}`, '#F3EEDC', 'center');
+    else {   // an eye with a slash
+      ctx.save(); ctx.strokeStyle = '#F3EEDC'; ctx.lineWidth = 3 * T; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.ellipse(cx, cy, 15 * T, 10 * T, 0, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(cx, cy, 4 * T, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx - 17 * T, cy - 15 * T); ctx.lineTo(cx + 17 * T, cy + 15 * T); ctx.stroke(); ctx.restore();
+    }
+    _ccTxt(ctx, t1, cx + ic / 2 + 20 * T, cy - 4 * T, f1, S.head);
+    _ccTxt(ctx, t2, cx + ic / 2 + 20 * T, cy + 26 * T, f2, S.muted);
+    return [{ canvas: first.canvas }];
+  }
+
+  // the biggest size that fits on one card
+  let fs = sizes.max, rows;
+  for (; fs >= sizes.min; fs--) { rows = _ccNoteRows(ctx, blocks, fs, textW); if (_ccRowsH(rows) <= capFirst) break; }
+  if (fs >= sizes.min) {
+    noteHead(ctx, '');
+    const end = _ccDrawRows(ctx, rows, textX, textTop, S);
+    sideLine(ctx, textTop + 4 * T, end - 6 * T);
+    return [{ canvas: first.canvas }];
+  }
+  // Still too long at the smallest size: cut at the end of a sentence, then "Read the full note on MyScreenFolio · @you"
+  const user = _cardUsername();
+  fs = sizes.min;
+  const more = `Read the full note on MyScreenFolio${user ? ' · ' + user : ''}`, mf = `600 ${fs * 0.9}px ${CC_MAN}`, moreH = fs * 0.9 + fs * 1.4;
+  const cuts = _ccCuts(blocks);
+  let lo = 0, hi = cuts.length - 1, best = -1;
+  while (lo <= hi) { const mid = (lo + hi) >> 1; if (_ccRowsH(_ccNoteRows(ctx, _ccCutBlocks(blocks, cuts[mid]), fs, textW)) + moreH <= capFirst) { best = mid; lo = mid + 1; } else hi = mid - 1; }
+  let trail = false;
+  if (best >= 0) rows = _ccNoteRows(ctx, _ccCutBlocks(blocks, cuts[best]), fs, textW);
+  else { rows = _ccPaginate(_ccNoteRows(ctx, blocks, fs, textW), [capFirst - moreH, capFirst])[0]; trail = true; }   // one very long sentence: cut at a word
+  noteHead(ctx);
+  const end = _ccDrawRows(ctx, rows, textX, textTop, S, { trail });
+  sideLine(ctx, textTop + 4 * T, end - 6 * T);
+  _ccTxt(ctx, _ccFitText(ctx, more, mf, textW), textX, end + fs * 0.9 + fs * 0.9, mf, S.link);
+  return [{ canvas: first.canvas }];
+}
+
+/* ══════════════════════════════════════════════════════════════
+   DISCOVER CARD — the title from TMDB
+══════════════════════════════════════════════════════════════ */
+function _ccDiscover(ctx, e, A, Z, S) {
+  const { W, M, T } = Z, d = A.data;
+  // about the title, not you: no score ring or watch details on this one (owner, 17 Nov 2026)
+  const hb = _ccHeader(ctx, e, A, Z, S, { poster: 220, eyebrow: `DISCOVER · ${_ccTypeLabel(e)}`, titleMax: 80, lead: Z.key === 'a4' ? 30 : 140, band: 120 });
+  let y = hb + 60 * T;
+  const footY = _ccFooter_draw(ctx, A, Z, S), bottom = footY - 44 * T, w = W - M * 2;
+  const label = (t, yy) => _ccTxt(ctx, t.toUpperCase(), M, yy + 15 * T, `700 ${15 * T}px ${CC_MAN}`, S.link, 'left', 3 * T);
+  // the director(s) / creator(s) with their photos, the other credits, then the cast as photos — measured first,
+  // so the synopsis gets the room that's left
+  const movie = _ccIsMovie(e), faces = A.faceImg || {};
+  const people = (d?.people || []).length ? d.people : (d?.director ? [{ name: d.director, photo: '' }] : []);
+  const credits = [
+    ['Written by', d?.writers],
+    [movie ? 'Production' : 'Network', movie ? (d?.production || []).slice(0, 2).join(', ') : d?.network || (d?.production || [])[0]],
+    [movie ? 'Released' : 'First aired', d?.releaseDate ? _ccDate(d.releaseDate) : ''],
+  ].filter(([, v]) => v);
+  const cast = (d?.castRaw || []).filter(c => c.actor).slice(0, 8);
+  const cf = `700 ${13 * T}px ${CC_MAN}`, vf = `600 ${22 * T}px ${CC_MAN}`, gapX = 28 * T;
+  const pd = 96 * T, peopleH = people.length ? 13 * T + 16 * T + pd : 0;
+  const credH = credits.length ? 13 * T + 12 * T + 30 * T : 0;
+  const per = Math.max(1, Math.min(5, cast.length)), cellW = (w - gapX * (per - 1)) / per, cd = Math.min(cellW * 0.8, 150 * T), castRows = Math.ceil(cast.length / per);
+  const cellH = cd + 18 * T + 24 * T + 22 * T, castH = cast.length ? 15 * T + 34 * T + castRows * cellH + (castRows - 1) * 26 * T : 0;
+  const tagline = (d?.tagline || '').trim(), synopsis = (d?.overview || e.description || '').trim();
+  const tf = `italic 600 ${28 * T}px ${CC_MAN}`, sf = `500 ${24 * T}px ${CC_MAN}`, slh = 24 * T * 1.7;
+  let room = bottom - y - peopleH - credH - castH - [peopleH, credH, castH].filter(Boolean).length * 46 * T;
+  // a round photo (or the initial on a quiet circle when TMDB has none)
+  const face = (cx, cy, dd, url, name) => {
+    const im = url ? faces[url] : null;
+    ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, dd / 2, 0, Math.PI * 2); ctx.closePath();
+    if (im) { ctx.clip(); _ccCover(ctx, im, cx - dd / 2, cy - dd / 2, dd, dd, { x: 50, y: 22, z: 1 }); }
+    else { ctx.fillStyle = S.track; ctx.fill(); _ccTxt(ctx, (name || '?').trim()[0].toUpperCase(), cx, cy + dd * 0.13, `600 ${dd * 0.36}px ${CC_OSW}`, S.link, 'center'); }
+    ctx.restore();
+    ctx.save(); ctx.strokeStyle = S.line; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(cx, cy, dd / 2, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
+  };
+  if (tagline) { const tl = _ccWrapWords(ctx, `“${tagline}”`, tf, w).slice(0, 2); tl.forEach((ln, i) => _ccTxt(ctx, ln, M, y + 28 * T + i * 40 * T, tf, S.head)); y += tl.length * 40 * T + 26 * T; room -= tl.length * 40 * T + 26 * T; }
+  if (synopsis && room > slh) {
+    let ls = _ccWrapWords(ctx, synopsis, sf, w);
+    const max = Math.max(1, Math.floor(room / slh));
+    if (ls.length > max) ls = [...ls.slice(0, max - 1), _ccFitText(ctx, ls.slice(max - 1).join(' '), sf, w)];
+    ls.forEach((ln, i) => _ccTxt(ctx, ln, M, y + i * slh + 24 * T, sf, S.text2));
+    y += ls.length * slh + 44 * T;
+  }
+  if (people.length) {   // Directed by / Created by: photo + name, up to two side by side
+    _ccTxt(ctx, (movie ? 'Directed by' : 'Created by').toUpperCase(), M, y + 13 * T, cf, S.muted, 'left', 2 * T);
+    const py = y + 13 * T + 16 * T, colW = (w - gapX) / 2, nf = `700 ${24 * T}px ${CC_MAN}`;
+    people.forEach((p, i) => {
+      const x = M + i * (colW + gapX);
+      face(x + pd / 2, py + pd / 2, pd, p.photo, p.name);
+      _ccTxt(ctx, _ccFitText(ctx, p.name, nf, colW - pd - 22 * T), x + pd + 22 * T, py + pd / 2 + 8 * T, nf, S.text);
+    });
+    y += peopleH + 46 * T;
+  }
+  if (credits.length) {   // the other credits, one row of columns
+    const colW = (w - gapX * (credits.length - 1)) / credits.length;
+    credits.forEach(([l, v], i) => {
+      const x = M + i * (colW + gapX);
+      _ccTxt(ctx, l.toUpperCase(), x, y + 13 * T, cf, S.muted, 'left', 2 * T);
+      _ccTxt(ctx, _ccFitText(ctx, v, vf, colW), x, y + 13 * T + 12 * T + 22 * T, vf, S.text);
+    });
+    y += credH + 46 * T;
+  }
+  if (cast.length) {   // Starring: round photos, up to five to a row, name and character under each
+    label('Starring', y);
+    ctx.save(); ctx.strokeStyle = S.line; ctx.lineWidth = 1; const lw = _ccW(ctx, 'STARRING', `700 ${15 * T}px ${CC_MAN}`, 3 * T);
+    ctx.beginPath(); ctx.moveTo(M + lw + 18 * T, y + 9 * T); ctx.lineTo(W - M, y + 9 * T); ctx.stroke(); ctx.restore();
+    y += 15 * T + 34 * T;
+    const nf = `700 ${19 * T}px ${CC_MAN}`, rf = `500 ${16 * T}px ${CC_MAN}`;
+    cast.forEach((c, i) => {
+      const cx = M + (i % per) * (cellW + gapX) + cellW / 2, top = y + Math.floor(i / per) * (cellH + 26 * T);
+      face(cx, top + cd / 2, cd, c.photo, c.actor);
+      _ccTxt(ctx, _ccFitText(ctx, c.actor, nf, cellW), cx, top + cd + 18 * T + 19 * T, nf, S.text, 'center');
+      if (c.character) _ccTxt(ctx, _ccFitText(ctx, c.character, rf, cellW), cx, top + cd + 18 * T + 24 * T + 18 * T, rf, S.muted, 'center');
+    });
+  }
+  if (!d) _ccTxt(ctx, e.tmdb_id ? 'TMDB didn’t answer — showing what’s saved.' : 'Not linked to TMDB — showing what’s saved.', W / 2, bottom - 10 * T, `500 ${18 * T}px ${CC_MAN}`, S.muted, 'center');
+}
+
+/* ══════════════════════════════════════════════════════════════
+   EXPORT — Save image(s), Save PDF (A4), Copy, Share
+══════════════════════════════════════════════════════════════ */
+const _ccName = (i, n) => {
+  const t = (_cardEntry?.title || 'card').replace(/[^a-z0-9]+/gi, '_').replace(/^_|_$/g, '').toLowerCase();
+  return `msf_${t}_${_cc.card}_${CC_SIZES[_ccPrefs.size].file}${n > 1 ? `_${i + 1}of${n}` : ''}`;
+};
+const _ccBlob = (c, type = 'image/png', q) => new Promise((res, rej) => c.toBlob(b => b ? res(b) : rej(new Error('toBlob returned null')), type, q));
+
+async function downloadCard() {
+  const cards = _cc.cards, n = cards.length;
+  if (!n || _ccBlocked()) return;
+  try {
+    if (n === 1) { await mssSaveImage(cards[0].canvas, _ccName(0, 1) + '.png', cards[0].canvas.parentElement); return; }
+    // more than one card: one share sheet with every image where there is one; otherwise one download each
+    const files = await Promise.all(cards.map(async (c, i) => new File([await _ccBlob(c.canvas)], _ccName(i, n) + '.png', { type: 'image/png' })));
+    if (navigator.canShare && navigator.canShare({ files })) {
+      try { await navigator.share({ files, title: 'MyScreenFolio' }); return; } catch (err) { if (err?.name === 'AbortError') return; }
+    }
+    for (const f of files) {
+      const url = URL.createObjectURL(f), a = document.createElement('a');
+      a.download = f.name; a.href = url; a.style.display = 'none'; document.body.appendChild(a); a.click();
+      setTimeout(() => { a.remove(); URL.revokeObjectURL(url); }, 1500);
+      await new Promise(r => setTimeout(r, 350));
+    }
+    showToast(`Saved ${n} images.`);
+  } catch (err) {
+    console.error('Save card:', err);
+    showToast('Save blocked by browser. Try a different browser.', 'err');
+  }
+}
+
+async function _ccSavePDF() {
+  if (!_cc.cards.length || _ccBlocked()) return;
+  if (!window.jspdf) await mssLoadScript('js/vendor/jspdf-2.5.1.umd.min.js');
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait', compress: true });
+  _cc.cards.forEach((c, i) => { if (i) doc.addPage('a4', 'portrait'); doc.addImage(c.canvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, 210, 297, undefined, 'FAST'); });
+  doc.save(_ccName(0, 1) + '.pdf');
+  showToast(_cc.cards.length > 1 ? `Saved a ${_cc.cards.length}-page PDF.` : 'Saved the PDF.');
+}
+
+async function _ccCopy() {
+  const c = _cc.cards[_cc.idx];
+  if (!c || _ccBlocked()) return;
+  try {
+    await navigator.clipboard.write([new ClipboardItem({ 'image/png': _ccBlob(c.canvas) })]);
+    showToast(_cc.cards.length > 1 ? `Card ${_cc.idx + 1} copied.` : 'Card copied — paste it anywhere.');
+  } catch (err) { console.error('Copy card:', err); showToast('Couldn’t copy the image here — use Save image instead.', 'err'); }
+}
+
+async function _ccShare() {
+  if (!_cc.cards.length || _ccBlocked()) return;
+  try {
+    const n = _cc.cards.length, files = await Promise.all(_cc.cards.map(async (c, i) => new File([await _ccBlob(c.canvas)], _ccName(i, n) + '.png', { type: 'image/png' })));
+    await navigator.share({ files, title: _cardEntry?.title || 'MyScreenFolio' });
+  } catch (err) { if (err?.name !== 'AbortError') { console.error('Share card:', err); showToast('Couldn’t share it here.', 'err'); } }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   TMDB — details for the header line, the Discover card and the retry / link prompts
+══════════════════════════════════════════════════════════════ */
 // Under the preview: not linked to TMDB → "Search & Link to TMDB"; linked but TMDB didn't
 // answer (busy, offline, timed out) → "Try TMDB again"; everything there → nothing
 function _cardPrompt(data) {
-  const el = document.getElementById('discoverLinkPrompt');
+  const el = _ccEl('discoverLinkPrompt');
   if (!el) return;
   const linked = !!(_cardEntry?.tmdb_id && _cardEntry?.tmdb_type);
   el.style.display = data ? 'none' : '';
-  document.getElementById('discoverLinkBtn').style.display = linked ? 'none' : 'inline-flex';
-  document.getElementById('discoverRetry').hidden = !(linked && _cardDiscoverFailed);
+  _ccEl('discoverLinkBtn').style.display = linked ? 'none' : 'inline-flex';
+  _ccEl('discoverRetry').hidden = !(linked && _cardDiscoverFailed);
 }
 function _cardRetryTmdb() {
-  _cardDiscoverEntryKey = null; _cardDiscoverData = null; _cardDiscoverFailed = false; _cardTmdbReload = true;
-  document.getElementById('discoverRetry').hidden = true;
+  _cardDiscoverEntryKey = null; _cardDiscoverData = null; _cardDiscoverFailed = false; _cardTmdbReload = true; _cc.assets = null;
+  _ccEl('discoverRetry').hidden = true;
   _drawCard();
 }
 
@@ -849,102 +1127,72 @@ async function _fetchDiscoverData(e) {
   if (!e.tmdb_id || !e.tmdb_type) { _cardDiscoverData = null; _cardDiscoverEntryKey = key; _cardDiscoverFailed = false; return null; }
   try {
     const extra = e.tmdb_type === 'movie' ? 'credits,release_dates' : 'credits,aggregate_credits,content_ratings';
-    const url = `${TMDB_BASE}/${e.tmdb_type}/${e.tmdb_id}?language=en-US&append_to_response=${extra}`;
+    // + images: the title's name artwork (logos, as on its title page — tmdbLogo, nav.js)
+    const url = `${TMDB_BASE}/${e.tmdb_type}/${e.tmdb_id}?language=en-US&append_to_response=${extra},images&include_image_language=en,null`;
     // Try again: straight to TMDB, not the request that didn't answer (nor a saved copy)
     const res = await _cardTimeout(tmdbFetch(url, _cardTmdbReload ? { cache: 'reload' } : {}), 12000);
     _cardTmdbReload = false;
     if (!res.ok) throw new Error('TMDB fetch failed: ' + res.status);
     const data = await res.json();
 
-    let director = '';
-    if (e.tmdb_type === 'movie') {
-      const d = (data.credits?.crew || []).find(c => c.job === 'Director');
-      director = d ? d.name : '';
-    } else {
-      director = (data.created_by || []).map(c => c.name).join(', ');
-    }
-    const writers = [...new Set(
-      (data.credits?.crew || [])
-        .filter(c => ['Writer', 'Screenplay', 'Story'].includes(c.job))
-        .map(c => c.name)
-    )].slice(0, 3).join(', ');
-    // Character-first cast (shared with the info popup, nav.js). Animated
-    // titles get character artwork from AniList when it has the show.
+    // directors (movies) / creators (shows), with their TMDB photos for the Discover card
+    const people = (e.tmdb_type === 'movie' ? (data.credits?.crew || []).filter(c => c.job === 'Director') : (data.created_by || []))
+      .filter((c, i, a) => a.findIndex(x => x.id === c.id) === i).slice(0, 2)
+      .map(c => ({ name: c.name, photo: c.profile_path ? `https://image.tmdb.org/t/p/w185${c.profile_path}` : '' }));
+    const director = people.map(p => p.name).join(', ');
+    const writers = [...new Set((data.credits?.crew || []).filter(c => ['Writer', 'Screenplay', 'Story'].includes(c.job)).map(c => c.name))].slice(0, 3).join(', ');
+    // Character-first cast (shared with the info popup, nav.js) — with their photos (character art for animated titles, like the site)
     const animated = (data.genres || []).some(g => g.id === 16) || e.cat === 'anime' || e.cat === 'cartoons';
-    const cast = (await _cardTimeout(mssFetchCast({
+    const castRaw = (await _cardTimeout(mssFetchCast({
       tmdb_id: e.tmdb_id, tmdb_type: e.tmdb_type, title: e.title || data.title || data.name,
       year: e.year || (data.release_date || data.first_air_date || '').slice(0, 4), animated,
       origin_country: data.origin_country, original_language: data.original_language,
-    }), 10000).catch(() => []))
-      // The card draws `name` bold and `character` muted underneath — so the
-      // character goes on top and the actor / voice actor underneath.
-      .map(c => ({ name: c.character || c.actor, character: c.character ? c.actor : '', photo: c.photo, isCharacterImage: c.isCharacterImage }));
-    const production = (data.production_companies || []).map(c => c.name).slice(0, 3).filter(Boolean);
-    const overview = (data.overview || '').trim();
-    const releaseDate = e.tmdb_type === 'movie' ? (data.release_date || '') : (data.first_air_date || '');
-    const budget = e.tmdb_type === 'movie' && data.budget ? data.budget : null;
-
+    }), 10000).catch(() => [])).map(c => ({ actor: c.actor || '', character: c.character || '', photo: c.photo || '' }));
     let certification = '';
     if (e.tmdb_type === 'movie') {
       const usRel = (data.release_dates?.results || []).find(r => r.iso_3166_1 === 'US');
-      const withCert = (usRel?.release_dates || []).find(rd => rd.certification);
-      certification = withCert?.certification || '';
-    } else {
-      const usCert = (data.content_ratings?.results || []).find(r => r.iso_3166_1 === 'US');
-      certification = usCert?.rating || '';
-    }
+      certification = (usRel?.release_dates || []).find(rd => rd.certification)?.certification || '';
+    } else certification = (data.content_ratings?.results || []).find(r => r.iso_3166_1 === 'US')?.rating || '';
 
-    const result = { director, writers, cast, production, overview, releaseDate, budget, certification };
-    _cardDiscoverData = result;
-    _cardDiscoverEntryKey = key;
-    _cardDiscoverFailed = false;
+    const result = {
+      director, people, writers, castRaw, certification,
+      production: (data.production_companies || []).map(c => c.name).slice(0, 3).filter(Boolean),
+      overview: (data.overview || '').trim(), tagline: (data.tagline || '').trim(),
+      releaseDate: e.tmdb_type === 'movie' ? (data.release_date || '') : (data.first_air_date || ''),
+      lastDate: data.last_air_date || '', status: data.status || '', network: (data.networks || [])[0]?.name || '',
+      seasons: data.number_of_seasons || 0, episodes: data.number_of_episodes || 0, runtime: data.runtime || 0,
+      titleLogo: typeof tmdbLogo === 'function' ? tmdbLogo(data) : null,
+    };
+    _cardDiscoverData = result; _cardDiscoverEntryKey = key; _cardDiscoverFailed = false;
     return result;
   } catch (err) {
-    console.error('Discover card fetch error:', err);
-    _cardDiscoverData = null;
-    _cardDiscoverEntryKey = key;
-    _cardDiscoverFailed = true;
+    console.error('Card TMDB fetch error:', err);
+    _cardDiscoverData = null; _cardDiscoverEntryKey = key; _cardDiscoverFailed = true;
     return null;
   }
 }
 
 /* ══════════════════════════════════════════════════════════════
-   Search & Link to TMDB — shown when an entry has no tmdb_id/type
-   yet, letting the person search and link one so Director/Genres/
-   Discover Card data can be fetched for it.
+   Search & Link to TMDB — shown when an entry has no tmdb_id/type yet, so its details can be fetched
 ══════════════════════════════════════════════════════════════ */
 let _cardLinkResults = [];
 let _cardLinkSearchTimer = null;
 
-function _injectCardLinkPicker() {
-  if (document.getElementById('cardLinkOverlay')) return;
-  const el = document.createElement('div');
-  el.id = 'cardLinkOverlay';
-  el.innerHTML = `<div id="cardLinkCard" role="dialog" aria-modal="true" aria-labelledby="cardLinkTitle">
-    <div class="rf-header">
-      <div class="rf-title" id="cardLinkTitle">Link to TMDB</div>
-      <button type="button" class="rf-close" onclick="_closeCardLinkPicker()" aria-label="Close">${icon('x', 18)}</button>
-    </div>
-    <div class="card-link-input-wrap">
-      <input class="card-link-input" id="cardLinkSearchInput" placeholder="Search movies and shows…" aria-label="Search movies and shows" oninput="_onCardLinkSearchInput(this.value)">
-    </div>
-    <div class="rf-list" id="cardLinkResultsList"></div>
-  </div>`;
-  MSSDialog.bind(el, _closeCardLinkPicker);
-  document.body.appendChild(el);
-}
-
-function _linkCardEntryToTMDB() {
-  _injectCardLinkPicker();
-  const input = document.getElementById('cardLinkSearchInput');
-  input.value = '';
-  document.getElementById('cardLinkResultsList').innerHTML = '';
+// a side panel S (full page on phones); opened from Create card it replaces it, and Back returns to it
+let _cardLinkPanel = null;
+async function _linkCardEntryToTMDB() {
   _cardLinkResults = [];
-  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-  MSSDialog.open(document.getElementById('cardLinkOverlay'), { focus: isMobile ? null : input });
+  await mssLoadScript('js/panel.js');
+  const h = MSSPanel.open({ size: 'S', kind: 'generic', title: 'Link to TMDB',
+    body: `<div class="lyr-search"><span class="lyr-search-ic" aria-hidden="true">${icon('search', 16)}</span>
+        <input class="lyr-field" id="cardLinkSearchInput" placeholder="Search movies and shows…" aria-label="Search movies and shows" autocomplete="off" enterkeyhint="search" oninput="_onCardLinkSearchInput(this.value)"></div>
+      <div id="cardLinkResultsList" aria-live="polite"></div>`,
+    onClose: () => { if (_cardLinkPanel === h) _cardLinkPanel = null; } });
+  _cardLinkPanel = h;
+  if (!h.isPage) document.getElementById('cardLinkSearchInput').focus();
 }
 
-function _closeCardLinkPicker() { MSSDialog.close(document.getElementById('cardLinkOverlay')); }
+function _closeCardLinkPicker() { _cardLinkPanel?.closeNow(); }
 
 function _onCardLinkSearchInput(query) {
   clearTimeout(_cardLinkSearchTimer);
@@ -954,26 +1202,10 @@ function _onCardLinkSearchInput(query) {
   _cardLinkSearchTimer = setTimeout(async () => {
     const results = await _tmdbSearch(q, 8);
     _cardLinkResults = results;
-    if (!results.length) {
-      listEl.innerHTML = `<div class="card-link-msg">No matches found.</div>`;
-      return;
-    }
-    listEl.innerHTML = results.map((r, i) => {
-      const title = r.title || r.name || 'Untitled';
-      const date = r.release_date || r.first_air_date || '';
-      const year = date ? date.slice(0, 4) : '';
-      const typeLabel = r.media_type === 'movie' ? 'Movie' : 'TV Show';
-      const posterEl = r.poster_path
-        ? `<img src="${escHTML(TMDB_FULL + r.poster_path)}" alt="" loading="lazy">`
-        : escHTML((title[0] || '?').toUpperCase());
-      return `<button type="button" class="card-link-result" onclick="_pickCardLinkMatch(${i})"${MSSAge.attr(r.media_type, r.id)}>
-        <span class="card-link-result-poster">${posterEl}</span>
-        <span>
-          <span class="card-link-result-title" translate="no">${escHTML(title)}</span>
-          <span class="card-link-result-meta">${typeLabel}${year ? ' · ' + escHTML(year) : ''}</span>
-        </span>
-      </button>`;
-    }).join('');
+    if (!results.length) { listEl.innerHTML = `<p class="lyr-rows-msg">No matches found.</p>`; return; }
+    listEl.innerHTML = `<ul class="lyr-rows">${results.map((r, i) => { const date = r.release_date || r.first_air_date || '';
+      return mssRowHTML({ img: r.poster_path ? TMDB_FULL + r.poster_path : null, title: r.title || r.name || 'Untitled',
+        sub: (r.media_type === 'movie' ? 'Movie' : 'TV Show') + (date ? ' · ' + date.slice(0, 4) : ''), attrs: `onclick="_pickCardLinkMatch(${i})"${MSSAge.attr(r.media_type, r.id)}` }); }).join('')}</ul>`;
   }, 350);
 }
 
@@ -988,469 +1220,12 @@ async function _pickCardLinkMatch(i) {
     if (error) throw error;
     e.tmdb_id = r.id;
     e.tmdb_type = tmdbType;
+    _cc.assets = null;
     showToast('Linked to TMDB!');
     await _drawCard();
   } catch (err) {
     showToast('Error linking to TMDB.', 'err');
     console.error(err);
-  }
-}
-
-
-/* ══════════════════════════════════════════════════════════════
-   PAGE 3 — Discover Card
-   TMDB-sourced info card: poster + title header (matching the main
-   card's layout language), genre pills, director, cast headshots,
-   and production — all in the same outlined-box style as page 1.
-══════════════════════════════════════════════════════════════ */
-async function _drawDiscoverCard(myToken) {
-  const canvas = document.getElementById('createCardCanvas');
-  if (!canvas || !_cardEntry) return;
-  const e = _cardEntry;
-
-  const wrap = document.getElementById('createCardPreviewWrap');
-  if (wrap && !document.getElementById('discoverCardLoading')) {
-    canvas.style.display = 'none';
-    const loadEl = document.createElement('div');
-    loadEl.id = 'discoverCardLoading';
-    loadEl.style.cssText = 'padding:3rem 1rem;text-align:center;color:var(--text-3);font-size:13px;';
-    loadEl.textContent = 'Fetching details from TMDB…';
-    wrap.appendChild(loadEl);
-  }
-
-  const data = await _fetchDiscoverData(e);
-
-  const loadEl = document.getElementById('discoverCardLoading');
-  if (loadEl) loadEl.remove();
-  canvas.style.display = '';
-  if (myToken !== _cardRenderToken || _cardPage !== 3 || _cardEntry !== e) return;
-
-  _cardPrompt(data);
-
-  const D = _cardTheme === 'dark';
-  const BG      = D ? '#0A0A0E' : '#E2DAD0'; // --bg
-  const CARD_BG = D ? '#0A0A0E' : '#E2DAD0'; // --bg
-  const TEXT    = D ? '#EDEDED' : '#1A1A1A'; // --text
-  const TEXT2   = D ? '#A8A8A8' : '#4A4A4A'; // --text-2
-  const MUTED   = D ? '#808080' : '#6A6A6A'; // --text-3
-  const ACCENT  = D ? '#7EB86C' : '#1E5C26'; // --olive-light
-  const INK     = D ? '#4A6741' : '#1A4520'; // --olive
-  const BORDER  = D ? 'rgba(74,103,65,0.44)' : 'rgba(26,69,32,0.45)'; // --border-olive
-  const PILL_BG = D ? 'rgba(74,103,65,0.11)' : 'rgba(26,69,32,0.1)'; // --olive-faint
-  const BG_POST = D ? '#19191F' : '#CEC5B8'; // --bg-3
-
-  const W = 1000, PAD = 40, GAP = 32;
-  const POSTER_W = 280, POSTER_H = 420;
-  const FOOTER_H = 70;
-
-  let posterImg = null;
-  if (e.poster_url) { try { posterImg = await _loadImage(e.poster_url); } catch { posterImg = null; } }
-  let avatarImg = null;
-  const avatarUrl = _cardAvatarUrl();
-  if (avatarUrl) { try { avatarImg = await _loadImage(avatarUrl); } catch { avatarImg = null; } }
-  let logoImg = null;
-  try { logoImg = await _loadImage('icons/logo-nav.png'); } catch { logoImg = null; }
-
-  // Pre-load cast headshots (best-effort — missing photos just fall back to initials)
-  let castPhotos = [];
-  if (data?.cast?.length) {
-    castPhotos = await Promise.all(data.cast.map(async c => {
-      if (!c.photo) return null;
-      try { return await _loadImage(c.photo); } catch { return null; }
-    }));
-  }
-
-  if (myToken !== _cardRenderToken || _cardPage !== 3 || _cardEntry !== e) return;
-
-  function layout(ctx, draw) {
-    const drawBox = (yy, h) => {
-      if (draw) { ctx.strokeStyle = BORDER; ctx.lineWidth = 1; _rrect(ctx, PAD, yy, W - PAD * 2, h, 14); ctx.stroke(); }
-    };
-    const sectionLabel = (label, xx, yy) => {
-      if (draw) {
-        ctx.save();
-        ctx.font = '700 12px "Oswald", Arial, sans-serif';
-        ctx.fillStyle = ACCENT;
-        ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-        ctx.letterSpacing = '2px';
-        ctx.fillText(label.toUpperCase(), xx, yy);
-        ctx.letterSpacing = '0px';
-        ctx.restore();
-      }
-      return yy + 12 + 14;
-    };
-    const pillRow = (items, xx, yy, maxW) => {
-      ctx.save();
-      ctx.font = '600 12px "Manrope", Arial, sans-serif';
-      const pPX = 12, pPY = 5, pGap = 8, pR = 6;
-      const pillH = 12 + pPY * 2;
-      let gx = xx, rows = 1;
-      items.forEach(it => {
-        const label = it.toUpperCase();
-        const gw = ctx.measureText(label).width + pPX * 2;
-        if (gx + gw > xx + maxW && gx > xx) { gx = xx; rows++; }
-        if (draw) {
-          const ry = yy + (rows - 1) * (pillH + 8);
-          // Solid olive fill + white text — same treatment as the
-          // site's own genre badges (.w-ep-badge), for real contrast
-          // in both themes instead of a translucent tinted pill.
-          ctx.fillStyle = INK;
-          _rrect(ctx, gx, ry, gw, pillH, pR); ctx.fill();
-          ctx.strokeStyle = INK; ctx.lineWidth = 1;
-          _rrect(ctx, gx, ry, gw, pillH, pR); ctx.stroke();
-          ctx.fillStyle = '#ffffff';
-          ctx.textBaseline = 'middle';
-          ctx.fillText(label, gx + pPX, ry + pillH / 2);
-        }
-        gx += gw + pGap;
-      });
-      ctx.restore();
-      return rows * pillH + (rows - 1) * 8;
-    };
-
-    if (draw) { ctx.fillStyle = BG; ctx.fillRect(0, 0, W, workCanvas.height); }
-
-    // ── Header: poster (left) + title/meta (right), like the main card ──
-    if (draw) {
-      ctx.save();
-      _rrect(ctx, PAD, PAD, POSTER_W, POSTER_H, 16); ctx.clip();
-      ctx.fillStyle = BG_POST;
-      ctx.fillRect(PAD, PAD, POSTER_W, POSTER_H);
-      if (posterImg) {
-        const imgRatio = posterImg.width / posterImg.height;
-        const areaRatio = POSTER_W / POSTER_H;
-        let dw, dh, dx, dy;
-        if (imgRatio > areaRatio) { dh = POSTER_H; dw = POSTER_H * imgRatio; dx = PAD - (dw - POSTER_W) / 2; dy = PAD; }
-        else { dw = POSTER_W; dh = POSTER_W / imgRatio; dx = PAD; dy = PAD - (dh - POSTER_H) / 2; }
-        ctx.drawImage(posterImg, dx, dy, dw, dh);
-      } else {
-        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.font = '500 64px "Oswald", Georgia, serif';
-        ctx.fillStyle = ACCENT;
-        ctx.fillText((e.title || '?')[0].toUpperCase(), PAD + POSTER_W / 2, PAD + POSTER_H / 2);
-      }
-      ctx.restore();
-      ctx.strokeStyle = BORDER; ctx.lineWidth = 1;
-      _rrect(ctx, PAD, PAD, POSTER_W, POSTER_H, 16); ctx.stroke();
-    }
-
-    const infoX = PAD + POSTER_W + GAP;
-    const infoW = W - PAD - infoX;
-    let hy = PAD;
-
-    if (draw) {
-      ctx.save();
-      ctx.font = '700 11px "Oswald", Arial, sans-serif';
-      ctx.fillStyle = ACCENT;
-      ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-      ctx.letterSpacing = '2.5px';
-      ctx.fillText('DISCOVER', infoX, hy);
-      ctx.letterSpacing = '0px';
-      ctx.restore();
-    }
-    hy += 11 + 18;
-
-    const title = e.title || '';
-    const titleFS = title.length > 26 ? 32 : title.length > 16 ? 38 : 44;
-    ctx.save();
-    ctx.font = `600 ${titleFS}px "Oswald", Georgia, serif`;
-    ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-    const titleLines = _wrap(ctx, title, infoW).slice(0, 3);
-    if (draw) { ctx.fillStyle = TEXT; titleLines.forEach((ln, i) => ctx.fillText(ln, infoX, hy + i * (titleFS + 4))); }
-    ctx.restore();
-    hy += titleLines.length * (titleFS + 4) + 10;
-
-    const metaBits = [];
-    if (data?.releaseDate) {
-      metaBits.push(new Date(data.releaseDate + 'T00:00:00').toLocaleDateString(MSSI18n.locale, { year: 'numeric', month: 'long', day: 'numeric' }));
-    } else if (e.year) {
-      metaBits.push(String(e.year));
-    }
-    metaBits.push(e.tmdb_type === 'tv' ? 'TV Series' : 'Movie');
-    if (data?.certification) metaBits.push(data.certification);
-    if (draw) {
-      ctx.save();
-      ctx.font = '400 15px "Manrope", Arial, sans-serif';
-      ctx.fillStyle = TEXT2;
-      ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-      ctx.fillText(_truncate(ctx, metaBits.join('  ·  '), infoW), infoX, hy);
-      ctx.restore();
-    }
-    hy += 15 + 22;
-
-    if (e.genres?.length && infoW > 0) {
-      hy += pillRow(mssGenreList(e.genres).slice(0, 4), infoX, hy, infoW) + 12;
-    }
-
-    if (data?.budget) {
-      if (draw) {
-        ctx.save();
-        ctx.font = '700 11px "Oswald", Arial, sans-serif';
-        ctx.fillStyle = MUTED;
-        ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-        ctx.letterSpacing = '1.5px';
-        ctx.fillText('BUDGET', infoX, hy);
-        ctx.letterSpacing = '0px';
-        ctx.restore();
-      }
-      hy += 11 + 6;
-      if (draw) {
-        ctx.save();
-        ctx.font = '400 20px "Bebas Neue", Georgia, serif';
-        ctx.fillStyle = ACCENT;
-        ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-        ctx.fillText(_truncate(ctx, '$' + data.budget.toLocaleString('en-US'), infoW), infoX, hy);
-        ctx.restore();
-      }
-      hy += 20 + 16;
-    }
-
-    // ── Credits — Director, Writers, and Production together ──
-    const creditRow = (label, value) => {
-      if (!value) return;
-      if (draw) {
-        ctx.save();
-        ctx.font = '700 11px "Oswald", Arial, sans-serif';
-        ctx.fillStyle = MUTED;
-        ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-        ctx.letterSpacing = '1.5px';
-        ctx.fillText(label, infoX, hy);
-        ctx.letterSpacing = '0px';
-        ctx.restore();
-      }
-      hy += 11 + 6;
-      ctx.save();
-      ctx.font = '500 15.5px "Manrope", Arial, sans-serif';
-      const allLines = _wrap(ctx, value, infoW);
-      const lines = allLines.slice(0, 2);
-      const truncated = allLines.length > 2;
-      if (draw) {
-        ctx.fillStyle = TEXT; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-        lines.forEach((ln, i) => {
-          const isLast = i === lines.length - 1;
-          ctx.fillText(isLast && truncated ? _truncate(ctx, ln + '…', infoW) : ln, infoX, hy + i * 20);
-        });
-      }
-      ctx.restore();
-      hy += lines.length * 20 + 14;
-    };
-    creditRow(e.tmdb_type === 'tv' ? 'CREATED BY' : 'DIRECTED BY', data?.director);
-    creditRow('WRITTEN BY', data?.writers);
-    creditRow('PRODUCTION', data?.production?.join(', '));
-
-    let y = Math.max(PAD + POSTER_H, hy) + 36;
-
-    // ── Description ──
-    const description = (data?.overview || e.description || '').trim();
-    if (description) {
-      const boxPadX = 30, boxPadY = 24;
-      const maxTextW = W - PAD * 2 - boxPadX * 2;
-      ctx.save();
-      ctx.font = '400 15.5px "Manrope", Arial, sans-serif';
-      const allDescLines = _wrap(ctx, description, maxTextW);
-      const descLines = allDescLines.slice(0, 5);
-      if (allDescLines.length > 5 && descLines.length) {
-        descLines[descLines.length - 1] = _truncate(ctx, descLines[descLines.length - 1] + '…', maxTextW);
-      }
-      ctx.restore();
-      const lineH = 24;
-      const boxH = boxPadY * 2 + 14 + 10 + descLines.length * lineH;
-      drawBox(y, boxH);
-      let dy = sectionLabel('Description', PAD + boxPadX, y + boxPadY - 6) + 4;
-      ctx.save();
-      ctx.font = '400 15.5px "Manrope", Arial, sans-serif';
-      ctx.fillStyle = TEXT2;
-      ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-      if (draw) descLines.forEach((ln, i) => ctx.fillText(ln, PAD + boxPadX, dy + i * lineH));
-      ctx.restore();
-      y += boxH + 24;
-    }
-
-    // ── Starring — cast headshots in a row ──
-    if (data?.cast?.length) {
-      const capH = 34;
-      const boxInnerPad = 24;
-      const avatarD = 84, castGap = 20;
-      const nCols = Math.min(data.cast.length, 6);
-      const cellW = (W - PAD * 2 - boxInnerPad * 2 - castGap * (nCols - 1)) / nCols;
-      const textW = Math.min(cellW, avatarD + 40);
-      const castRow = data.cast.slice(0, nCols);
-
-      // Pre-wrap each character name (max 2 lines) so the box can grow to
-      // fit the tallest one instead of letting long names spill out.
-      ctx.save();
-      ctx.font = '400 11.5px "Manrope", Arial, sans-serif';
-      const charLinesList = castRow.map(c => {
-        if (!c.character) return [];
-        const allLines = _wrap(ctx, c.character, textW);
-        const lines = allLines.slice(0, 2);
-        if (allLines.length > 2 && lines.length) {
-          lines[lines.length - 1] = _truncate(ctx, lines[lines.length - 1] + '…', textW);
-        }
-        return lines;
-      });
-      ctx.restore();
-      const maxCharLines = Math.max(1, ...charLinesList.map(l => l.length));
-      const charLineH = 15;
-
-      const rowH = avatarD + 14 + 16 + (maxCharLines * charLineH) + 6;
-      const boxH = capH + rowH + 40;
-      drawBox(y, boxH);
-      let cy = y + 22;
-      cy = sectionLabel('Starring', PAD + boxInnerPad, cy) + 10;
-      castRow.forEach((c, i) => {
-        const ccx = PAD + boxInnerPad + i * (cellW + castGap) + cellW / 2;
-        const img = castPhotos[i];
-        if (draw) {
-          ctx.save();
-          ctx.beginPath(); ctx.arc(ccx, cy + avatarD / 2, avatarD / 2, 0, Math.PI * 2); ctx.clip();
-          if (img) {
-            const ir = img.width / img.height;
-            let dw, dh, dx, dy;
-            if (ir > 1) { dh = avatarD; dw = avatarD * ir; dx = ccx - dw / 2; dy = cy; }
-            else { dw = avatarD; dh = avatarD / ir; dx = ccx - avatarD / 2; dy = cy + avatarD / 2 - dh / 2; }
-            ctx.drawImage(img, dx, dy, dw, dh);
-          } else {
-            ctx.fillStyle = PILL_BG; ctx.fillRect(ccx - avatarD / 2, cy, avatarD, avatarD);
-            ctx.fillStyle = ACCENT; ctx.font = '600 28px "Oswald", Georgia, serif';
-            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-            ctx.fillText((c.name || '?')[0].toUpperCase(), ccx, cy + avatarD / 2);
-          }
-          ctx.restore();
-          ctx.strokeStyle = BORDER; ctx.lineWidth = 1;
-          ctx.beginPath(); ctx.arc(ccx, cy + avatarD / 2, avatarD / 2, 0, Math.PI * 2); ctx.stroke();
-
-          ctx.save();
-          ctx.font = '600 13px "Manrope", Arial, sans-serif';
-          ctx.fillStyle = TEXT;
-          ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-          ctx.fillText(_truncate(ctx, c.name, textW), ccx, cy + avatarD + 12);
-          ctx.restore();
-
-          const charLines = charLinesList[i];
-          if (charLines.length) {
-            ctx.save();
-            ctx.font = '400 11.5px "Manrope", Arial, sans-serif';
-            ctx.fillStyle = MUTED;
-            ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-            charLines.forEach((ln, li) => ctx.fillText(ln, ccx, cy + avatarD + 30 + li * charLineH));
-            ctx.restore();
-          }
-        }
-      });
-      y += boxH + 24;
-    }
-
-    if (!data) {
-      ctx.save();
-      ctx.font = '400 15px "Manrope", Arial, sans-serif';
-      ctx.fillStyle = MUTED;
-      ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-      if (draw) ctx.fillText("This title isn't linked to TMDB — showing available details only.", W / 2, y);
-      ctx.restore();
-      y += 24;
-    }
-
-    return y;
-  }
-
-  let workCanvas = document.createElement('canvas');
-  workCanvas.width = W;
-  workCanvas.height = PAD + POSTER_H + 900;
-  const measureCtx = workCanvas.getContext('2d');
-  const contentBottom = layout(measureCtx, false);
-  const totalH = Math.round(contentBottom + FOOTER_H);
-
-  if (myToken !== _cardRenderToken || _cardPage !== 3 || _cardEntry !== e) return;
-
-  workCanvas = document.createElement('canvas');
-  workCanvas.width = W;
-  workCanvas.height = totalH;
-  const ctx = workCanvas.getContext('2d');
-  ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = 'high';
-
-  layout(ctx, true);
-
-  // ── Footer — theme-matched, consistent with page 1 ──
-  ctx.fillStyle = CARD_BG;
-  ctx.fillRect(-1, totalH - FOOTER_H, W + 2, FOOTER_H);
-  const username = _cardUsername();
-  const footerMidY = totalH - FOOTER_H / 2;
-  if (username) {
-    const avatarR = 14;
-    const avatarCX = PAD + avatarR, avatarCY = footerMidY;
-    ctx.save();
-    if (avatarImg) {
-      ctx.beginPath(); ctx.arc(avatarCX, avatarCY, avatarR, 0, Math.PI * 2); ctx.clip();
-      const ir = avatarImg.width / avatarImg.height;
-      let dw, dh, dx, dy;
-      if (ir > 1) { dh = avatarR * 2; dw = dh * ir; dx = avatarCX - dw / 2; dy = avatarCY - avatarR; }
-      else { dw = avatarR * 2; dh = dw / ir; dx = avatarCX - avatarR; dy = avatarCY - dh / 2; }
-      ctx.drawImage(avatarImg, dx, dy, dw, dh);
-    } else {
-      ctx.fillStyle = INK;
-      ctx.beginPath(); ctx.arc(avatarCX, avatarCY, avatarR, 0, Math.PI * 2); ctx.fill();
-      ctx.font = '600 13px \"Manrope\", Arial, sans-serif';
-      ctx.fillStyle = '#ffffff';
-      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText((username.replace('@', '')[0] || '?').toUpperCase(), avatarCX, avatarCY + 1);
-    }
-    ctx.restore();
-    ctx.save();
-    ctx.font = '600 13.5px \"Manrope\", Arial, sans-serif';
-    ctx.fillStyle = ACCENT;
-    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-    ctx.fillText(username, PAD + avatarR * 2 + 10, footerMidY);
-    ctx.restore();
-  }
-  ctx.save();
-  ctx.font = '700 14px "Oswald", Arial, sans-serif';
-  ctx.fillStyle = ACCENT;
-  ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
-  const msLabel = 'MyScreenFolio';
-  const msW = ctx.measureText(msLabel).width;
-  ctx.fillText(msLabel, W - PAD, footerMidY);
-  if (logoImg) {
-    const logoH = 20, logoW = logoImg.width * (logoH / logoImg.height);
-    ctx.drawImage(logoImg, W - PAD - msW - 8 - logoW, footerMidY - logoH / 2, logoW, logoH);
-  }
-  ctx.restore();
-
-  canvas.width = W;
-  canvas.height = totalH;
-  const maxW = Math.min(340, window.innerWidth - 64);
-  canvas.style.width = maxW + 'px';
-  canvas.style.height = (maxW * totalH / W) + 'px';
-  const finalCtx = canvas.getContext('2d');
-  finalCtx.imageSmoothingEnabled = true;
-  finalCtx.imageSmoothingQuality = 'high';
-  finalCtx.drawImage(workCanvas, 0, 0);
-}
-
-async function downloadCard() {
-  const canvas = document.getElementById('createCardCanvas');
-  if (!canvas) return;
-  const title = (_cardEntry?.title || 'card').replace(/[^a-z0-9]/gi, '_').toLowerCase();
-  const filename = _cardPage === 3 ? `msf_${title}_discover.png` : `msf_${title}.png`;
-  const attemptSave = () => mssSaveImage(canvas, filename, document.getElementById('createCardPreviewWrap'));
-
-  try {
-    await attemptSave();
-  } catch(e) {
-    const _saved = _cardEntry;
-    const _savedUrl = _saved.poster_url;
-    _saved.poster_url = null;
-    await _drawCard();
-    try {
-      await attemptSave();
-    } catch(e2) {
-      showToast('Save blocked by browser. Try a different browser.', 'err');
-      console.error(e2);
-    } finally {
-      _saved.poster_url = _savedUrl;
-      await _drawCard();
-    }
   }
 }
 

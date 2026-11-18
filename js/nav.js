@@ -2,6 +2,51 @@
    nav.js — Chrome injection + auth guard
 ══════════════════════════════════════════ */
 
+/* Where you came from (the "‹ Back / Discover / This page" trail above a backdrop header).
+   Every page remembers its own name as you leave it (sessionStorage 'mssPrevPage'); the next page
+   reads it back when it matches the page you arrived from, else names that page by its file. */
+const _NAV_PAGE_NAMES = { 'index.html': 'Home', 'discover.html': 'Discover', 'library.html': 'Library', 'browse.html': 'Browse',
+  'discover-list.html': 'Discover', 'episodes.html': 'Episodes', 'title.html': 'Title', 'person.html': 'Person', 'item.html': 'Title',
+  'season.html': 'Season', 'episode.html': 'Episode', 'lists.html': 'Lists', 'list-view.html': 'List', 'profile.html': 'Profile',
+  'profile-view.html': 'Profile', 'user.html': 'Profile', 'friends.html': 'Friends', 'activity.html': 'Activity', 'diary.html': 'Diary',
+  'ratings.html': 'Ratings', 'notes.html': 'Notes', 'movies.html': 'Movies', 'tv-shows.html': 'TV Shows', 'anime.html': 'Anime',
+  'cartoons.html': 'Cartoons', 'notifications.html': 'Notifications', 'messages.html': 'Messages', 'challenges.html': 'Challenges',
+  'compare.html': 'Compare', 'blend.html': 'Blend', 'movie-night.html': 'Movie Night', 'polls.html': 'Polls', 'detail.html': 'Edit' };
+const _navFile = u => (u.pathname.split('/').pop() || 'index.html');
+function _navPageLabel() {
+  const t = (document.title || '').replace(/\s*[—·-]\s*MyScreenFolio\s*$/, '').trim();
+  return t && t !== 'MyScreenFolio' && t.length <= 48 ? t : (_NAV_PAGE_NAMES[_navFile(location)] || 'Previous page');
+}
+addEventListener('pagehide', () => {
+  try { sessionStorage.setItem('mssPrevPage', JSON.stringify({ url: _navFile(location) + location.search, label: _navPageLabel() })); } catch {}
+});
+// → { href, label } for the page you came from on this site, or null (opened directly / from another site)
+function mssCameFrom() {
+  try {
+    if (!document.referrer) return null;
+    const r = new URL(document.referrer);
+    if (r.origin !== location.origin) return null;
+    const href = _navFile(r) + r.search;
+    if (href === _navFile(location) + location.search) return null;
+    const p = JSON.parse(sessionStorage.getItem('mssPrevPage') || 'null');
+    return { href, label: p && p.url === href && p.label ? p.label : (_NAV_PAGE_NAMES[_navFile(r)] || 'Previous page') };
+  } catch { return null; }
+}
+// The trail itself: ‹ Back / <where you came from> / <this page>. fallback = { href, label } when you came from nowhere on the site.
+// back: the Back link's onclick (it goes back in history when there is a page to go back to)
+function mssCrumbHTML(current, fallback, back = 'return mssGoBack()') {
+  const from = mssCameFrom() || fallback;
+  const href = from?.href || 'index.html';
+  return `<div class="tv-crumb mss-crumb" role="navigation" aria-label="Breadcrumb">
+    <a href="${esc(href)}" onclick="${back}">${icon('back', 14)}<span>Back</span></a>
+    ${from ? `<span aria-hidden="true">/</span><a href="${esc(from.href)}" translate="no">${esc(from.label)}</a>` : ''}
+    <span aria-hidden="true">/</span><span aria-current="page" translate="no">${esc(current || '')}</span></div>`;
+}
+function mssGoBack() {
+  if (mssCameFrom() && history.length > 1) { history.back(); return false; }
+  return true;
+}
+
 /* New episodes + movie releases → notifications, on whatever page you open
    (tv-schedule.js, loaded here when the page doesn't have it; it waits 3 hours
    between checks). Runs once the page has settled so it never slows it down. */
@@ -25,43 +70,39 @@ document.addEventListener('mss:watched', async ev => {
   if (!opts.length) return;
   _navPickAsk(e, opts);
 });
-function _navPickAsk(e, opts) {
-  let ov = document.getElementById('pickAskOverlay');
-  if (!ov) {
-    ov = document.createElement('div'); ov.id = 'pickAskOverlay'; ov.className = 'soc-overlay';
-    ov.innerHTML = `<div class="soc-card pick-ask" role="dialog" aria-modal="true" aria-labelledby="pickAskTitle">
-        <div class="sf-header"><div class="sf-title" id="pickAskTitle">Does this count?</div><button type="button" class="sf-close" aria-label="Close">${icon('x', 18)}</button></div>
-        <div class="sf-body" id="pickAskBody"></div><div class="sf-footer" id="pickAskFoot"></div></div>`;
-    ov.querySelector('.sf-close').onclick = () => _navPickDone(false);
-    MSSDialog.bind(ov, () => _navPickDone(false));
-    document.body.appendChild(ov);
+// "Does this count?" after marking a title Watched: one challenge → the shared confirm; several → a side panel S
+// (full page on phones) with a box to tick for each
+let _navPickPanel = null;
+async function _navPickAsk(e, opts) {
+  if (opts.length === 1) {
+    const o = opts[0];
+    const ok = await showConfirm({ title: 'Does this count?', message: `${e.title || 'This title'} — you just marked it Watched. Count it for “${o.title}” (${o.progress} / ${o.goal} so far)?`,
+      confirmText: 'Count it', cancelText: 'Doesn’t count', iconName: 'trophy', danger: false });
+    return _navPickDone(e, opts, ok ? opts : []);
   }
-  ov._pick = { e, opts };
-  const poster = safeURL(e.poster_url);
-  document.getElementById('pickAskBody').innerHTML = `
-    <div class="pick-ask-title"><span class="pick-ask-poster">${poster ? `<img src="${poster}" alt="">` : escHTML((e.title || '?')[0])}</span>
-      <span><b translate="no">${escHTML(e.title || 'This title')}</b><small>You just marked it Watched</small></span></div>
-    <p class="pick-ask-q">Tick the challenges it counts for:</p>
-    <div class="pick-ask-list">${opts.map((o, i) => `<label class="pick-ask-opt"><input type="checkbox" value="${i}" checked>
-        <span>${icon('trophy', 15)}<b translate="no">${escHTML(o.title)}</b><small>${o.progress} / ${o.goal} so far</small></span></label>`).join('')}</div>`;
-  document.getElementById('pickAskFoot').innerHTML = `<button type="button" class="sf-clear-btn" onclick="_navPickDone(false)">Doesn’t count</button>
-    <button type="button" class="sf-apply-btn" onclick="_navPickDone(true)">${icon('check', 14)} Count it</button>`;
-  MSSDialog.open(ov, { focus: '#pickAskFoot .sf-apply-btn' });
+  await mssLoadScript('js/panel.js');
+  let answered = false;
+  const h = MSSPanel.open({ size: 'S', kind: 'generic', title: 'Does this count?',
+    body: `<div class="lyr-card-sec pick-ask-title"><span class="pick-ask-poster">${safeURL(e.poster_url) ? `<img src="${safeURL(e.poster_url)}" alt="">` : escHTML((e.title || '?')[0])}</span>
+        <span><b translate="no">${escHTML(e.title || 'This title')}</b><small>You just marked it Watched</small></span></div>
+      <div class="lyr-sec"><h3 class="lyr-sec-h">Tick the challenges it counts for:</h3>
+        <div class="pick-ask-list">${opts.map((o, i) => `<label class="pick-ask-opt"><input type="checkbox" value="${i}" checked>
+          <span>${icon('trophy', 15)}<b translate="no">${escHTML(o.title)}</b><small>${o.progress} / ${o.goal} so far</small></span></label>`).join('')}</div></div>`,
+    footer: { secondary: [{ label: 'Doesn’t count', onClick: x => x.close() }],
+      primary: { label: 'Count it', lead: icon('check', 16), onClick: x => { answered = true; const on = [...x.body.querySelectorAll('.pick-ask-opt input:checked')].map(i => opts[+i.value]); x.closeNow(); _navPickDone(e, opts, on); } } },
+    onClose: () => { if (_navPickPanel !== h) return; _navPickPanel = null; if (!answered) _navPickDone(e, opts, []); } });
+  _navPickPanel = h;
 }
-async function _navPickDone(save) {
-  const ov = document.getElementById('pickAskOverlay'), st = ov?._pick; if (!st) return;
-  ov._pick = null;
-  const on = save ? [...ov.querySelectorAll('.pick-ask-opt input:checked')].map(i => st.opts[+i.value]) : [];
-  MSSDialog.close(ov);
+async function _navPickDone(e, opts, on) {
   try {   // remember the ones left unticked, so they aren't asked again
     const seen = JSON.parse(localStorage.getItem('mss_pick_asked') || '{}');
-    st.opts.filter(o => !on.includes(o)).forEach(o => { seen[o.id + ':' + st.e.id] = 1; });
+    opts.filter(o => !on.includes(o)).forEach(o => { seen[o.id + ':' + e.id] = 1; });
     localStorage.setItem('mss_pick_asked', JSON.stringify(seen));
   } catch {}
   if (!on.length) return;
   let finished = null;
   for (const o of on) {
-    try { const { data, error } = await sb.rpc('set_challenge_pick', { p_ch: o.id, p_entry: st.e.id, p_on: true }); if (error) throw error; if (data?.finished) finished = o; }
+    try { const { data, error } = await sb.rpc('set_challenge_pick', { p_ch: o.id, p_entry: e.id, p_on: true }); if (error) throw error; if (data?.finished) finished = o; }
     catch (err) { showToast(err?.hint || 'Couldn’t count it — try again.', 'err'); return; }
   }
   if (finished) _navFinishCheck(300, true);   // the "You finished!" popup
@@ -84,7 +125,7 @@ function _navFinishCheck(delay, force) {
 }
 async function _navFinRun() {
   if (_navFinBusy || !window._navUser) return;
-  if (MSSDialog.top() || document.querySelector('.modal-overlay.open, .mss-views.open')) { _navFinTimer = setTimeout(_navFinRun, 1500); return; }
+  if (MSSDialog.top()) { _navFinTimer = setTimeout(_navFinRun, 1500); return; }
   _navFinBusy = true;
   try {
     try { localStorage.setItem('mss_fin_chk', String(Date.now())); } catch {}
@@ -104,46 +145,53 @@ function _navLoadScript(src) {
   return new Promise((res, rej) => { const sc = document.createElement('script'); sc.src = src; sc.async = true; sc.onload = res; sc.onerror = rej; document.head.appendChild(sc); });
 }
 
-/* Switch account — every account signed in on this device, one tap to become
-   it (config.js MSSAccounts keeps the sessions). */
+/* Switch account — every account signed in on this device, one tap to become it (config.js MSSAccounts
+   keeps the sessions). A side panel S / full page; the You menu closes first. */
+let _navAccPanel = null;
 async function _navAccounts() {
   _navCloseAll();
-  let ov = document.getElementById('accSwitchOverlay');
-  if (!ov) {
-    ov = document.createElement('div'); ov.id = 'accSwitchOverlay'; ov.className = 'soc-overlay';
-    ov.innerHTML = `<div class="soc-card acc-sw" role="dialog" aria-modal="true" aria-labelledby="accSwTitle">
-        <div class="sf-header"><div class="sf-title" id="accSwTitle">Switch account</div><button type="button" class="sf-close" aria-label="Close">${icon('x', 18)}</button></div>
-        <div class="sf-body" id="accSwBody"></div>
-        <div class="sf-footer"><button type="button" class="sf-apply-btn acc-sw-add" onclick="MSSAccounts.add()">${icon('plus', 14)} Add account</button></div></div>`;
-    ov.querySelector('.sf-close').onclick = () => MSSDialog.close(ov);
-    MSSDialog.bind(ov, () => MSSDialog.close(ov));
-    document.body.appendChild(ov);
-  }
+  await mssLoadScript('js/panel.js');
+  const h = MSSPanel.open({ size: 'S', kind: 'generic', title: 'Switch account', body: '',
+    footer: { secondary: [{ label: 'Close', only: 'side', onClick: x => x.close() }], primary: { label: '+ Add account', onClick: () => MSSAccounts.add() } },
+    onClose: () => { if (_navAccPanel === h) _navAccPanel = null; } });
+  _navAccPanel = h;
+  h.body.addEventListener('click', ev => {
+    const go = ev.target.closest('[data-go]'), more = ev.target.closest('[data-more]');
+    if (go) _navAccountGo(go, go.dataset.go);
+    if (more) _navAccountMore(more, more.dataset.more);
+  });
   _navAccountsFill();
-  MSSDialog.open(ov, { focus: '#accSwBody .acc-sw-row:not([aria-current]), .acc-sw-add' });
 }
 function _navAccountsFill() {
-  const me = window._navUser?.id;
-  const rows = MSSAccounts.list().sort((a, b) => (b.id === me) - (a.id === me));
+  const h = _navAccPanel; if (!h) return;
+  const me = window._navUser?.id, all = MSSAccounts.list(), cur = all.find(a => a.id === me), others = all.filter(a => a.id !== me);
+  h.setTitle('Switch account', `${all.length} ${all.length === 1 ? 'account' : 'accounts'} on this device`);
   const ava = a => { const u = safeURL(a.avatar_url);
     return `<span class="acc-sw-ava" aria-hidden="true">${u ? `<img src="${u}" alt="">` : escHTML((a.username || '?')[0].toUpperCase())}</span>`; };
-  document.getElementById('accSwBody').innerHTML = `<div class="acc-sw-list">${rows.map(a => {
-      const cur = a.id === me, name = `<span class="acc-sw-name"><b translate="no">${escHTML(a.display_name || a.username)}</b><small translate="no">@${escHTML(a.username)}</small></span>`;
-      return `<div class="acc-sw-item">${cur
-        ? `<div class="acc-sw-row" aria-current="true">${ava(a)}${name}<span class="acc-sw-cur">${icon('check', 14)} Signed in</span></div>`
-        : `<button type="button" class="acc-sw-row" onclick="_navAccountGo(this,'${a.id}')">${ava(a)}${name}</button>
-           <button type="button" class="acc-sw-x" aria-label="Remove @${escHTML(a.username)} from this device" title="Remove from this device" onclick="_navAccountForget('${a.id}')">${icon('x', 14)}</button>`}</div>`;
-    }).join('')}</div>
-    <p class="acc-sw-note">Accounts stay signed in on this device only. Add one once and switch any time without the password.</p>`;
+  const name = a => `<span class="acc-sw-name"><b translate="no">${escHTML(a.display_name || a.username)}</b><small translate="no">@${escHTML(a.username)}</small></span>`;
+  h.setBody(`${cur ? `<div class="acc-sw-row is-current" aria-current="true">${ava(cur)}${name(cur)}<span class="acc-sw-cur">${icon('check', 14)} Signed in</span></div>` : ''}
+    <p class="lyr-hint">Accounts stay signed in on this device only. Add one once and switch any time without the password.</p>
+    <div class="lyr-sec"><h3 class="lyr-sec-h">On this device</h3>
+      ${others.length ? `<ul class="acc-sw-list">${others.map(a => `<li class="acc-sw-item">
+          <button type="button" class="acc-sw-row" data-go="${escHTML(a.id)}">${ava(a)}${name(a)}<span class="sr-only">, switch to this account</span></button>
+          <button type="button" class="acc-sw-more" data-more="${escHTML(a.id)}" aria-label="Options for @${escHTML(a.username)}">${icon('moreV', 18)}</button></li>`).join('')}</ul>`
+        : '<p class="acc-sw-empty">No other accounts yet.</p>'}</div>`);
 }
 async function _navAccountGo(btn, id) {
-  btn.disabled = true; btn.classList.add('is-busy');
-  if (!(await MSSAccounts.switchTo(id))) { btn.disabled = false; btn.classList.remove('is-busy'); _navAccountsFill(); }
+  btn.disabled = true; btn.classList.add('is-busy'); btn.setAttribute('aria-busy', 'true');
+  if (!(await MSSAccounts.switchTo(id))) _navAccountsFill();
 }
-function _navAccountForget(id) {
-  MSSAccounts.forget(id);
-  _navAccountsFill();
-  document.querySelector('#accSwBody .acc-sw-row, .acc-sw-add')?.focus();
+// ⋯ on an account: Remove from this device (asks first)
+function _navAccountMore(btn, id) {
+  const a = MSSAccounts.list().find(x => x.id === id); if (!a) return;
+  MSSPopover.open(btn, { title: `@${a.username}`, label: `Options for @${a.username}`, items: [{ label: 'Remove from this device', icon: 'trash', danger: true, onSelect: async () => {
+    const ok = await showConfirm({ title: `Remove @${a.username} from this device?`, message: 'You’ll need the password to add it here again. The account itself isn’t changed.', confirmText: 'Remove', iconName: 'trash' });
+    if (!ok) return;
+    MSSAccounts.forget(id);
+    _navAccountsFill();
+    showToast(`Removed @${a.username} from this device`);
+    _navAccPanel?.body.querySelector('.acc-sw-row[data-go]')?.focus();
+  } }] });
 }
 
 /* Achievements (060): save newly reached levels now and then — every 30 minutes
@@ -168,6 +216,7 @@ function _navMemberMedal(uid) {
     let b = null;
     try { const r = await sb.rpc('member_medal'); if (r.error) return; b = r.data; } catch { return; }
     if (!b || b.seen) { try { localStorage.setItem(key, '1'); } catch {} return; }
+    await mssAfterLaunch();
     for (let i = 0; i < 40 && (MSSDialog.top() || document.querySelector('.soc-overlay.open')); i++) await new Promise(r => setTimeout(r, 1500));
     if (MSSDialog.top()) return;                            // still busy — next page
     try {
@@ -190,11 +239,10 @@ function _navAvatarShrink(uid, profile) {
     try {
       const old = await (await fetch(url, { cache: 'no-store' })).blob();
       if (old.size > MSS_AVATAR.max) {
-        // redraw it smaller; kept as it is if that wouldn't save anything
-        const img = await createImageBitmap(old), n = Math.min(MSS_AVATAR.px, img.width, img.height);
-        const c = document.createElement('canvas'); c.width = c.height = n;
-        c.getContext('2d').drawImage(img, (img.width - Math.min(img.width, img.height)) / 2, (img.height - Math.min(img.width, img.height)) / 2,
-          Math.min(img.width, img.height), Math.min(img.width, img.height), 0, 0, n, n);
+        // redraw it smaller, the same shape (square from before, or a 2:3 portrait); kept as it is if that wouldn't save anything
+        const img = await createImageBitmap(old), k = Math.min(1, MSS_AVATAR.px / img.width);
+        const c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
         const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', MSS_AVATAR.q));
         if (blob && blob.size < old.size) {
           const path = `${uid}/avatar.jpg`;
@@ -211,17 +259,39 @@ function _navAvatarShrink(uid, profile) {
   }, 6000);                                                  // after the page has settled
 }
 
+/* Welcome to MyScreenFolio + Set up your folio (js/onboarding.js): once per account (profiles.onboarding, sql/134 —
+   until it runs, once per device), and back to the rating step after rating a Top 5 title (?setup=rate).
+   The module only loads when there's something to show. */
+function _navOnboarding(user, profile) {
+  let due = new URLSearchParams(location.search).has('setup');
+  if (!due) {
+    let st = null;                                   // welcome not seen yet, or setup left half-way (a refresh)
+    if (profile && 'onboarding' in profile) st = profile.onboarding || {};
+    else try { st = JSON.parse(localStorage.getItem('mss_onboarding_' + user.id) || '{}') || {}; } catch {}
+    due = !!st && (!st.welcome || (!!st.step && !st.closed));
+  }
+  if (!due || /(login|detail|admin|404|offline)\.html$/.test(location.pathname)) return;
+  window._mssOnboarding = true;
+  mssLoadScript('js/onboarding.js').then(() => typeof MSSOnboarding !== 'undefined' ? MSSOnboarding.auto() : mssOnboardingDone());
+}
+// the welcome / setup closed (or never opened): the popups waiting in mssAfterLaunch go ahead
+function mssOnboardingDone() {
+  if (!window._mssOnboarding) return;
+  window._mssOnboarding = false;
+  document.dispatchEvent(new CustomEvent('mss:onboarding-done'));
+}
+
 function _navSpotlight() {
   // Home page only, once each time the app is opened (sessionStorage resets when it's closed)
   if (!/\/(index\.html)?$/.test(location.pathname)) return;
   try { if (sessionStorage.getItem('mss_spot_open')) return; } catch { return; }
-  setTimeout(async () => {
+  mssAfterLaunch().then(() => setTimeout(async () => {
     try {
       if (typeof MSSMedal === 'undefined') await _navLoadScript('js/medals.js');
       if (typeof MSSSpotlight === 'undefined') await _navLoadScript('js/spotlights.js');
       MSSSpotlight.check();
     } catch {}
-  }, 900);
+  }, 900));
 }
 
 // On This Day (115): the day's grouped notification (once a day per device, once per account in the
@@ -234,7 +304,7 @@ function _navOnThisDay(user, profile) {
   mssLoadScript('js/on-this-day.js').then(() => {
     if (typeof MSSOtd === 'undefined') return;
     MSSOtd.daily(user);
-    if (home) MSSOtd.home(user, profile);
+    if (home) mssAfterLaunch().then(() => MSSOtd.home(user, profile));
   });
 }
 
@@ -260,6 +330,7 @@ async function _fillNavUser(user) {
   _navAdminCheck();
   _navAgeCheck(user.id);
   _navAccountCheck(profile);
+  _navOnboarding(user, profile);                     // first: the popups below wait while it's due (mssAfterLaunch)
   _navSessionCheck();
   _navReleaseCheck(user);
   _navSpotlight();
@@ -269,55 +340,17 @@ async function _fillNavUser(user) {
   _navFinishCheck(2500);
   _navTimeZone(user.id, profile);
   _navOnThisDay(user, profile);
-  const username = profile?.username || user.email?.split('@')[0] || 'You';
-  const initial  = username[0].toUpperCase();
-
-  const ini    = document.getElementById('navUserInitial');
-  const iniMob = document.getElementById('navUserInitialMobile');
-  const nm     = document.getElementById('navUserName');
-
-  if (safeURL(profile?.avatar_url)) {
-    const imgStyle = 'width:100%;height:100%;object-fit:cover;border-radius:50%';
-    if (ini)    { ini.innerHTML    = `<img src="${safeURL(profile.avatar_url)}" style="${imgStyle}">`; ini.style.padding    = '0'; }
-    if (iniMob) { iniMob.innerHTML = `<img src="${safeURL(profile.avatar_url)}" style="${imgStyle}">`; iniMob.style.padding = '0'; }
-  } else {
-    if (ini)    ini.textContent    = initial;
-    if (iniMob) iniMob.textContent = initial;
-  }
-  if (nm) nm.textContent = username;
-  // the account menu's header: you (avatar, name, @username) → your profile
-  document.querySelectorAll('.nav-dd-head').forEach(h => {
-    h.href = 'profile.html';
-    h.querySelector('.nav-dd-av').innerHTML = safeURL(profile?.avatar_url) ? `<img src="${safeURL(profile.avatar_url)}" alt="">` : escHTML(initial);
-    h.querySelector('b').textContent = profile?.display_name || username;
-    h.querySelector('small').textContent = '@' + username + ' · View profile';
-  });
-
-  if (pending > 0) {
-    document.querySelectorAll('[data-page="friends.html"]').forEach(el => {
-      el.innerHTML += `<span class="nav-badge">${pending}</span>`;
-    });
-  }
+  _shellUserPaint(profile);
+  // the menus' counts and cards (and the Friends chip), ready before the first hover
+  ('requestIdleCallback' in window) ? requestIdleCallback(() => _shellSummary(), { timeout: 3000 }) : setTimeout(_shellSummary, 1500);
   _bnavDot(pending);
   return profile;
 }
-
-/* The account menu (avatar → dropdown), the same on phones and desktop:
-   you at the top (→ your profile) · Medals · Export · Settings · Admin (owners only) ·
-   Switch account · Sign out. Notifications live on the bell right next to it; a guest
-   gets "Sign in" at the top. */
-function _navAcctMenuHTML() {
-  return `<a class="nav-dd-head" href="login.html"><span class="nav-dd-av">?</span><span class="nav-dd-who"><b translate="no">Guest</b><small>Sign in or create an account</small></span></a>
-    <div class="nav-dd-sec">
-      <a href="cabinet.html">${icon('trophy', 15)} Medals</a>
-      <a href="export.html">${icon('download', 15)} Export</a>
-      <a href="settings.html">${icon('settings', 15)} Settings</a>
-      <a href="admin.html" class="nav-admin-link" hidden>${icon('lock', 15)} Admin</a>
-    </div>
-    <div class="nav-dd-sec nav-auth-only">
-      <a href="#" onclick="_navAccounts();return false">${icon('users', 15)} Switch account</a>
-      <a href="#" class="nav-dd-out" onclick="handleLogout();return false">${icon('logout', 15)} Sign out</a>
-    </div>`;
+// Your photo (or initial) on the header's avatar buttons
+function _shellUserPaint(profile) {
+  const name = profile?.username || window._navUser?.email?.split('@')[0] || 'You', av = safeURL(profile?.avatar_url);
+  ['navUserInitial', 'navUserInitialMobile'].forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = av ? `<img src="${av}" alt="">` : escHTML(name[0].toUpperCase()); });
+  document.querySelectorAll('#navUserBtn, #navTopUser').forEach(b => b.setAttribute('aria-label', `Your account, @${name}`));
 }
 
 // Admin link (account menu) for the site's owners — app_admins, migration 036.
@@ -374,7 +407,7 @@ async function _navAgeCheck(uid) {
 function _navAgeLocked() {
   if (document.getElementById('mssAgeLockOverlay')) return;
   const el = document.createElement('div');
-  el.className = 'confirm-overlay';
+  el.className = 'confirm-overlay mss-block';
   el.id = 'mssAgeLockOverlay';
   el.innerHTML = `<div class="confirm-card" role="alertdialog" aria-modal="true" aria-labelledby="mssAgeLockT" aria-describedby="mssAgeLockM">
       <div class="confirm-icon" aria-hidden="true">${icon('lock', 36)}</div>
@@ -386,24 +419,32 @@ function _navAgeLocked() {
   document.body.appendChild(el);
   MSSDialog.open(el, { focus: el.querySelector('button') });
 }
+// The date-of-birth question (088): a full screen in the sign-up page's look — the poster stage with the logo, the question
+// on a card beside it (a poster band on top on phones). It can't be skipped — only saved, or signed out.
 function _navBirthPopup(uid) {
   if (document.getElementById('mssBirthOverlay')) return;
   const el = document.createElement('div');
-  el.className = 'confirm-overlay';
+  el.className = 'confirm-overlay mss-block mss-gate';
   el.id = 'mssBirthOverlay';
-  el.innerHTML = `<div class="confirm-card mss-rename" role="dialog" aria-modal="true" aria-labelledby="mssBirthT" aria-describedby="mssBirthMsg"><form class="mss-birth-form" novalidate>
-      <div class="confirm-icon" aria-hidden="true">${icon('user', 36)}</div>
-      <div class="confirm-title" id="mssBirthT">What’s your date of birth?</div>
-      <div class="confirm-msg" id="mssBirthMsg">Everyone on MyScreenFolio gives it once, so age-restricted titles stay away from younger members. It’s private — it never shows on your profile — and it can’t be changed later.</div>
-      <div class="mss-birth-row" role="group" aria-label="Date of birth" id="mssBirthRow"></div>
-      <div class="mss-rename-hint bad" id="mssBirthHint" aria-live="polite"></div>
-      <div class="confirm-actions">
-        <button type="button" class="confirm-cancel" onclick="handleLogout()">Sign out</button>
-        <button type="submit" class="confirm-ok is-safe" id="mssBirthSave" disabled>Save</button>
-      </div>
-    </form></div>`;
+  const li = (ic, t) => `<li><span aria-hidden="true">${icon(ic, 16)}</span>${t}</li>`;
+  el.innerHTML = `<div class="gate" role="dialog" aria-modal="true" aria-labelledby="mssBirthT" aria-describedby="mssBirthMsg">
+      <aside class="gate-stage"><div class="pw-wall" aria-hidden="true"></div><img class="gate-logo" src="icons/logo-dark.svg" alt="MyScreenFolio" width="142" height="60">
+        <div class="gate-copy"><span class="gate-eb">One quick thing</span><h2>Before you <em>dive in.</em></h2>
+          <ul class="gate-feats">${li('lock', 'Private — it never shows on your profile')}${li('eye', 'Keeps age-restricted titles away from younger members')}${li('check', 'Asked once — it can’t be changed later')}</ul></div></aside>
+      <div class="gate-main"><form class="gate-card" novalidate>
+        <span class="gate-eb is-card">Your account</span>
+        <h1 class="gate-t" id="mssBirthT">What’s your date of birth?</h1>
+        <p class="gate-msg" id="mssBirthMsg">Everyone on MyScreenFolio gives it once, so age-restricted titles stay away from younger members.</p>
+        <div class="mss-birth-row" role="group" aria-label="Date of birth" id="mssBirthRow"></div>
+        <div class="mss-rename-hint bad" id="mssBirthHint" aria-live="polite"></div>
+        <div class="gate-acts">
+          <button type="button" class="gate-b is-t" onclick="handleLogout()">Sign out</button>
+          <button type="submit" class="gate-b is-p" id="mssBirthSave" disabled>Save ${icon('chevright', 16)}</button>
+        </div>
+      </form></div></div>`;
   MSSDialog.bind(el, () => {});                        // can't be skipped — only saved, or signed out
   document.body.appendChild(el);
+  mssLoadScript('js/poster-wall.js').then(() => { if (el.isConnected && typeof MSSPosterWall !== 'undefined') el._wall = MSSPosterWall.mount(el.querySelector('.pw-wall')); });
   const save = el.querySelector('#mssBirthSave'), hint = el.querySelector('#mssBirthHint');
   mssDateFields(el.querySelector('#mssBirthRow'), 'mssBirth', { label: 'Date of birth', view: 'years', onChange: () => { save.disabled = !mssBirthValue('mssBirth'); hint.textContent = ''; } });
   el.querySelector('form').addEventListener('submit', async ev => {
@@ -413,9 +454,9 @@ function _navBirthPopup(uid) {
     if (v === 'invalid') { hint.textContent = 'That date doesn’t exist — check the day.'; return; }
     save.disabled = true; save.textContent = 'Saving…';
     const { data, error } = await sb.rpc('set_birth_date', { p_birth: v });
-    if (error) { hint.textContent = error.hint || 'Couldn’t save — try again.'; save.disabled = false; save.textContent = 'Save'; return; }
+    if (error) { hint.textContent = error.hint || 'Couldn’t save — try again.'; save.disabled = false; save.innerHTML = `Save ${icon('chevright', 16)}`; return; }
     MSSDialog.close(el);
-    setTimeout(() => el.remove(), 300);
+    setTimeout(() => { el._wall?.stop(); el.remove(); }, 300);
     MSSAge.setGroup(uid, data);
     if (data === 'child') _navAgeLocked();
     else { showToast('Saved — thanks!'); if (data !== 'adult') setTimeout(() => location.reload(), 600); }
@@ -426,7 +467,7 @@ function _navBirthPopup(uid) {
 function _navSuspended(until) {
   if (document.getElementById('mssSuspendedOverlay')) return;
   const el = document.createElement('div');
-  el.className = 'confirm-overlay';
+  el.className = 'confirm-overlay mss-block';
   el.id = 'mssSuspendedOverlay';
   el.innerHTML = `<div class="confirm-card" role="alertdialog" aria-modal="true" aria-labelledby="mssSuspTitle" aria-describedby="mssSuspMsg">
       <div class="confirm-icon" aria-hidden="true">${icon('lock', 36)}</div>
@@ -442,7 +483,7 @@ function _navSuspended(until) {
 }
 function _navRenamePopup(uid, name) {
   const el = document.createElement('div');
-  el.className = 'confirm-overlay';
+  el.className = 'confirm-overlay mss-block';
   el.id = 'mssRenameOverlay';
   el.innerHTML = `<form class="confirm-card mss-rename" role="dialog" aria-modal="true" aria-labelledby="mssRenameTitle" aria-describedby="mssRenameMsg" novalidate>
       <div class="confirm-icon" aria-hidden="true">${icon('user', 36)}</div>
@@ -477,8 +518,7 @@ function _navRenamePopup(uid, name) {
     try {
       const p = await updateProfile(uid, { username: okName });
       window._navUserProfile = p;
-      document.querySelectorAll('#navUserName').forEach(n => { n.textContent = p.username; });
-      document.querySelectorAll('.nav-dd-head small').forEach(n => { n.textContent = '@' + p.username + ' · View profile'; });
+      _shellUserPaint(p);
       try { sessionStorage.setItem('mss_account_ok', uid + ':' + p.username); } catch {}
       MSSDialog.close(el);
       setTimeout(() => el.remove(), 300);
@@ -492,30 +532,25 @@ function _navRenamePopup(uid, name) {
   MSSDialog.open(el, { focus: input });
 }
 
-function _updateMobileNavForGuest() {
+// Signed out: Library / Social / You locked, Sign in + Create account in the header (mssGuestGate, config.js)
+const _isGuest = () => !!window._navGuest || document.documentElement.classList.contains('mss-guest');
+function _shellGuest() {
   MSSAge.setGroup(null, null);   // guests see every title (088)
-  window._navGuest = true;                                     // mssGuestGate (config.js)
+  window._navGuest = true;
+  document.documentElement.classList.add('mss-guest');
   document.querySelectorAll('.nav-auth-only').forEach(el => el.style.display = 'none');
-  document.getElementById('bnav')?.classList.add('guest');    // (+) → Sign In
 }
 
 async function initPage(onReady) {
   injectChrome();
   const user = await getCurrentUser();
   if (!user) {
-    // Guest nav: swap avatar → Sign In, hide Add
-    const userWrap = document.querySelector('.nav-user-wrap');
-    if (userWrap) userWrap.outerHTML =
-      `<a href="login.html" class="btn-add" style="text-decoration:none">${icon('logout',14)} Sign In</a>`;
-    const mobileUser = document.getElementById('navTopUser');
-    if (mobileUser) mobileUser.outerHTML =
-      `<a href="login.html" style="text-decoration:none;font-size:12px;font-weight:600;padding:0 10px;color:var(--olive-light);white-space:nowrap">Sign In</a>`;
-    document.querySelector('.btn-add:not([href])')?.remove();
-    _updateMobileNavForGuest();
+    _shellGuest();
     // Still call callback with null so pages can render their own empty/guest state
     if (typeof onReady === 'function') await onReady(null, null);
     return;
   }
+  document.documentElement.classList.remove('mss-guest');
   await _runPageReady(user, onReady);
 }
 
@@ -532,6 +567,9 @@ async function initPage(onReady) {
 const _mssScrollKey = () => 'mss_scroll:' + location.pathname + location.search;   // read live: pages keep their tab in the URL
 const _mssNavType = (performance.getEntriesByType('navigation')[0] || {}).type;
 const _mssReturning = _mssNavType === 'back_forward' || _mssNavType === 'reload';
+// Filters, sorts, type picks (owner, 17 Nov 2026): every visit to a page starts from its defaults (a link, the nav, a
+// reload); only Back / Forward brings back what you had. Saved defaults and list / grid views (your choices) aren't filters.
+const _mssBackForward = _mssNavType === 'back_forward';
 if (_mssReturning && 'scrollRestoration' in history) history.scrollRestoration = 'manual';
 window.addEventListener('pagehide', () => {
   if (window.MSS_OWN_SCROLL) return;
@@ -581,230 +619,230 @@ async function _runPageReady(user, onReady) {
   }
 }
 
-/* Guest-friendly init — no redirect; shows Sign In button in nav for unauthenticated visitors */
+/* Guest-friendly init — the same; pages that work signed out (Home, Discover, titles, people…) */
 async function initPageGuest(onReady) {
   injectChrome();
   const user = await getCurrentUser();
-
   if (!user) {
-    // Swap desktop user-wrap → Sign In link
-    const userWrap = document.querySelector('.nav-user-wrap');
-    if (userWrap) userWrap.outerHTML =
-      `<a href="login.html" class="btn-add" style="text-decoration:none">${icon('logout',14)} Sign In</a>`;
-    // Swap mobile top-user icon → Sign In link
-    const mobileUser = document.getElementById('navTopUser');
-    if (mobileUser) mobileUser.outerHTML =
-      `<a href="login.html" style="text-decoration:none;font-size:12px;font-weight:600;padding:0 10px;color:var(--olive-light);white-space:nowrap">Sign In</a>`;
-    // Hide the Add button (no watchlist to add to)
-    document.querySelector('.btn-add:not([href])')?.remove();
-    _updateMobileNavForGuest();
+    _shellGuest();
     try { if (typeof onReady === 'function') await onReady(null, null); }
     finally { _mssRestoreScroll(); }
     return;
   }
-
+  document.documentElement.classList.remove('mss-guest');
   await _runPageReady(user, onReady);
 }
 
-/* ── Inject all chrome ── */
-function injectChrome() {
-  const page = window.location.pathname.split('/').pop() || 'index.html';
+/* ══════════════════════════════════════════════════════════════════════
+   The shell — everything around every page (.claude/plans/shell-guest-entry-plan.md)
+     Header (desktop ≥1200px): logo · Home · Discover · Library ▾ · Social ▾ · You ▾ ·
+       search · Create (+) · Messages · Notifications · avatar. The names never change;
+       only the olive pill moves, decided from the page's URL before the first paint.
+     Menus: one panel joined under the header, as wide as it — links with counts on the
+       left, a live card on the right (_dm*). Hover (short delay), click / tap, keyboard.
+     Account (avatar): a menu on desktop, a full page on phones (shellAccountHTML).
+     Phones / tablets: the top bar (wayfinding · search · bell · avatar), the bottom bar (Home · Discover ·
+       Library · Social · You — the last three open their section sheet), the round Create button.
+     Guests: Library / Social / You are locked — one promo per section (_shellPromo*).
+     Footer: link columns, the Light / Dark switch, credits and the TMDB notice.
+══════════════════════════════════════════════════════════════════════ */
+// The Library menu (owner, 14 Nov 2026): the four kinds in one group, your Library, Episodes and Diary in the other (Episodes moved from You, 16 Nov 2026) —
+// Watched is a tab on the Library pages now, not a page of its own
+const LIBRARY_PAGES = [
+  ['By type', [
+    { href: 'movies.html',    icon: 'film',      label: 'Movies',   count: 'movies',   card: 'movie',    info: 'Watchlist to rated' },
+    { href: 'tv-shows.html',  icon: 'tv',        label: 'TV Shows', count: 'tv',       card: 'tv',       info: 'Watching, waiting, finished' },
+    { href: 'anime.html',     icon: 'animeFace', label: 'Anime',    count: 'anime',    card: 'anime',    info: 'Series and films' },
+    { href: 'cartoons.html',  icon: 'crown',     label: 'Cartoons', count: 'cartoons', card: 'cartoons', info: 'Animated shows and films' },
+  ]],
+  ['Your library', [
+    { href: 'library.html',   icon: 'list',      label: 'Library',  count: 'all',      card: 'any',      info: 'Everything, in one place', desc: 'All your titles by status', also: ['season.html', 'episode.html'] },   // a season / an episode: Library lit (Season & Episode redesign)
+    { href: 'episodes.html',  icon: 'episodes',  label: 'Episodes',  n: 'eps', card: 'eps',      info: 'Ratings and charts', desc: 'Your episode ratings' },
+    { href: 'diary.html',     icon: 'calendar',  label: 'Diary',                       card: 'diary',    info: 'Every watch, by day', desc: 'Every watch, day by day' },
+  ]],
+];
+const _VIEWS = page => [['Mine', page], ['Friends', `${page}?view=friends`], ['Community', `${page}?view=community`]];
+const SHELL_TABS = [
+  { k: 'home', label: 'Home', icon: 'home', href: 'index.html' },
+  { k: 'discover', label: 'Discover', icon: 'compass', href: 'discover.html', also: ['discover-list.html', 'browse.html'] },
+  // sheet: the phone / tablet section sheet (Mobile nav v2) — the same pages, laid out as cards, rows or a 2-column grid
+  { k: 'lib', label: 'Library', icon: 'grid', href: 'library.html', groups: LIBRARY_PAGES, sheet: { sub: 'Everything you track', groups: [
+    [null, 'cards', ['library.html', 'episodes.html', 'diary.html']],
+    ['By type', 'grid', ['tv-shows.html', 'movies.html', 'anime.html', 'cartoons.html']]] } },
+  { k: 'social', label: 'Social', icon: 'users', href: 'friends.html', sheet: { sub: 'Friends and things to do together', groups: [
+    ['People', 'rows', ['friends.html', 'activity.html', 'messages.html']],
+    ['Together', 'grid', ['compare.html', 'blend.html', 'movie-night.html', 'challenges.html', 'polls.html', 'episode-chat.html']]] }, groups: [
+    ['People', [
+      { label: 'Friends', icon: 'users', href: 'friends.html', count: 'friends', req: true, card: 'friends', info: 'Requests and suggestions', desc: 'Friends, following, followers' },
+      { label: 'Activity', icon: 'activity', href: 'activity.html', card: 'lately', info: 'What friends watched and rated', desc: 'What friends just did' },
+      { label: 'Compare', icon: 'compare', href: 'compare.html', card: 'compare', info: 'Your taste side by side' },
+      { label: 'Blend', icon: 'shuffle', href: 'blend.html', card: 'blend', info: 'Picks you’ll both enjoy' },
+    ]],
+    ['Together', [
+      { label: 'Movie Night', icon: 'film', href: 'movie-night.html', card: 'night', waiting: 'night_invites', info: 'Pick something together' },
+      { label: 'Challenges', icon: 'trophy', href: 'challenges.html', card: 'challenge', info: 'Race to a watching goal' },
+      { label: 'Polls', icon: 'poll', href: 'polls.html', card: 'poll', info: 'Ask what to watch next' },
+      { label: 'Episode Chat', icon: 'comment', href: 'episode-chat.html', card: 'epchat', info: 'Talk about episodes' },
+      { label: 'Messages', icon: 'inbox', href: 'messages.html', msg: true, sep: true, card: 'msgs', info: 'Your chats', desc: 'Chats and recommendations' },
+    ]],
+  ] },
+  // You (owner, 16 Nov 2026): your profile, medals and export in one group, Lists and Notes in the other (Made by you — Tier lists will join it)
+  { k: 'you', label: 'You', icon: 'user', href: 'profile.html', sheet: { account: true, groups: [
+    [null, 'rows', ['profile.html', 'lists.html', 'notes.html']],
+    [null, 'rows', ['cabinet.html', 'export.html']]] }, groups: [
+    ['Your profile', [
+      { label: 'Profile', icon: 'user', href: 'profile.html', card: 'you', info: 'Stats, favourites, taste', desc: 'Overview, library, showcase' },
+      { label: 'Medals', icon: 'trophy', href: 'cabinet.html', n: 'medals', card: 'medals', info: 'Achievements you’ve earned', desc: 'Achievement Cabinet' },
+      { label: 'Export', icon: 'download', href: 'export.html', card: 'export', info: 'Cards, PDFs, backups', desc: 'PDFs, images, backups' },
+    ]],
+    ['Made by you', [
+      { label: 'Lists', icon: 'layers', href: 'lists.html', sub: _VIEWS('lists.html'), n: 'lists', card: 'list', info: 'Yours, friends’, community', desc: 'Yours, friends’, community' },
+      { label: 'Notes', icon: 'notebook', href: 'notes.html', sub: _VIEWS('notes.html'), n: 'notes', card: 'note', info: 'Your thoughts on what you watch', desc: 'Everything you wrote' },
+    ]],
+  ] },
+];
+const _shellItems = t => (t?.groups || []).flatMap(([, items]) => items);
+// Social in three sections — People · Together · Messages (the desktop tab bar, social-nav.js)
+const _socialSections = t => {
+  const [people = [], together = []] = (t?.groups || []).map(([, items]) => items);
+  return [{ label: 'People', icon: 'users', items: people }, { label: 'Together', icon: 'film', items: together.filter(it => !it.msg) },
+    { label: 'Messages', icon: 'inbox', items: together.filter(it => it.msg) }];
+};
+const _SHELL_YOU_PAGES = ['notifications.html', 'settings.html', 'admin.html'];
 
-  /* ── TOP NAV ── */
+/* Where a URL sits: { tab, href (the item it is), sub (the Mine / Friends / Community view) } */
+function _mtabKey(u) {
+  const page = u.pathname.split('/').pop() || 'index.html';
+  if (page === 'lists.html' || page === 'notes.html') { const v = mssViewOf(u.search); return v === 'mine' ? page : `${page}?view=${v}`; }
+  return page;
+}
+function shellWhere(href = location.href, viaRef) {
+  const key = _mtabKey(new URL(href, location.href)), page = key.split('?')[0];
+  for (const t of SHELL_TABS) {
+    if (!t.groups && (t.href === key || t.also?.includes(page))) return { tab: t.k, href: t.href, sub: null };
+    for (const it of _shellItems(t)) {
+      const s = it.sub?.find(([, h]) => h === key);
+      if (s) return { tab: t.k, href: it.href, sub: s[1] };
+      if (it.href === key) return { tab: t.k, href: it.href, sub: it.sub ? it.sub[0][1] : null };
+      if (it.also?.includes(page)) return { tab: t.k, href: null, sub: null };   // the tab lit, no page of it marked (no switcher)
+    }
+  }
+  if (_SHELL_YOU_PAGES.includes(page)) return { tab: 'you', href: null, sub: null };
+  // a title, a person… → the tab of the page you came from (this site's previous page, else the last one this visit);
+  // nothing known → no tab lit (owner, 13 Nov 2026: never an unrelated one)
+  let last = null;
+  try {
+    const ref = document.referrer && new URL(document.referrer);
+    if (!viaRef && ref && ref.origin === location.origin && ref.href !== location.href) { const w = shellWhere(ref.href, true); if (w.tab) last = w.tab; }
+  } catch {}
+  if (!last) { try { last = sessionStorage.getItem('mss_tab'); } catch {} }
+  return { tab: SHELL_TABS.some(t => t.k === last) ? last : null, href: null, sub: null };
+}
+
+/* ── Building it (before the page's first paint) ── */
+function injectChrome() {
+  const where = shellWhere();
+  const ownSearch = ['index.html', 'discover.html'].includes(_mtabKey(new URL(location.href)));   // Home and Discover have their own search field: none in the bar
+  try { if (where.tab) sessionStorage.setItem('mss_tab', where.tab); } catch {}
+  // signed in or not, as far as this device knows (splash.js) — corrected once auth answers (_shellGuest)
+  document.documentElement.classList.toggle('mss-guest', window.mssSignedInHint === false);
+
   const navEl = document.createElement('nav');
   navEl.id = 'mainNav';
+  navEl.setAttribute('aria-label', 'Site');
   navEl.innerHTML = `
-    <!-- PHONE / TABLET ROW: search | logo (centred) | bell + avatar -->
     <div class="nav-top" id="navTop">
-      <div class="nav-top-left">
-        <button class="nav-icon-btn" onclick="toggleMobileSearch()" aria-label="Search">
-          ${icon('search', 17)}
-        </button>
-      </div>
-      <a class="nav-logo" href="index.html"><img src="icons/logo-nav.png" alt="MyScreenFolio" class="nav-logo-img"></a>
+      <div class="ntop-l" id="ntopL">${_ntopLeftHTML(where)}</div>
       <div class="nav-top-controls">
-        <button class="notif-btn notif-btn-mobile nav-auth-only" onclick="toggleNotifPanel(event)" aria-label="Notifications">
-          ${icon('bell', 17)}<span class="notif-badge" data-notif-badge></span>
-        </button>
-        <div class="nav-top-user" id="navTopUser" onclick="toggleMobileUser(event)">
-          <div class="nav-user-avatar" id="navUserInitialMobile">?</div>
-          <div class="nav-user-dropdown" id="userMenuDropdownMobile">${_navAcctMenuHTML()}</div>
-        </div>
+        ${ownSearch ? '' : `<button type="button" class="ntop-btn" id="navSearchBtn" onclick="mssOpenSearch()" aria-label="Search" aria-haspopup="dialog">${icon('search', 18)}</button>`}
+        <button type="button" class="ntop-btn notif-btn nav-auth-only" onclick="toggleNotifPanel(event)" aria-label="Notifications">
+          ${icon('bell', 18)}<span class="notif-badge" data-notif-badge></span></button>
+        <button type="button" class="nav-top-user nav-auth-only" id="navTopUser" onclick="shellAccountPage()" aria-label="Your account" aria-haspopup="dialog">
+          <span class="nav-user-avatar" id="navUserInitialMobile">?</span></button>
+        <a class="nav-top-signin guest-only" href="login.html">Sign in</a>
       </div>
     </div>
-    <!-- MOBILE SEARCH BAR -->
-    <div class="mobile-search-bar" id="mobileSearchBar">
-      <div class="mobile-search-inner fused-search-wrap">
-        <span class="mobile-search-icon-circle">${icon('search', 13)}</span>
-        <input type="text" id="mobileSearchInput" placeholder="Search titles or people…" autocomplete="off">
-        <button type="button" class="mobile-search-close" id="mobileSearchX" onclick="_mobileSearchX()" aria-label="Close search">${icon('x', 16)}</button>
-      </div>
-    </div>
-    <!-- PHONE / TABLET TOP TOGGLES (filled by _mtogRender) -->
-    <div class="mtog" id="mtog" hidden><div class="mtog-in" id="mtogIn"></div></div>
-    <!-- DESKTOP: the floating bar — the phone bar's four tabs, each with a mega menu (_dnavInit) -->
     <div class="nav-inner" id="dnav">
-      <a class="nav-logo" href="index.html"><img src="icons/logo-nav.png" alt="MyScreenFolio" class="nav-logo-img"></a>
-      <div class="dnav-tabs" role="navigation" aria-label="Main">${_dnavTabsHTML()}</div>
+      <a class="nav-logo" href="index.html" aria-label="MyScreenFolio home">${mssLogoSVG('nav-logo-img')}</a>
+      <ul class="dnav-tabs" aria-label="Main">${_shellTabsHTML(where)}</ul>
       <div class="nav-right">
-        <div class="search-wrap fused-search-wrap">
-          <span class="search-icon-wrap">${icon('search')}</span>
-          <input type="text" id="globalSearch" placeholder="Search… (/)" aria-label="Search titles or people" title="Search titles or people" autocomplete="off">
-        </div>
-        <button class="btn-add" onclick="openAddModal()">
-          ${icon('plus', 14)} Add
-        </button>
-        <a class="notif-btn notif-btn-desktop nav-auth-only nav-msg-btn" href="messages.html" aria-label="Messages">
-          ${icon('inbox', 17)}<span class="notif-badge" data-msg-badge></span>
-        </a>
-        <button class="notif-btn notif-btn-desktop nav-auth-only" onclick="toggleNotifPanel(event)" aria-label="Notifications">
-          ${icon('bell', 17)}<span class="notif-badge" data-notif-badge></span>
-        </button>
-        <div class="nav-user-wrap" onclick="toggleUserMenu(event)">
-          <div class="nav-user-avatar" id="navUserInitial">?</div>
-          <span class="nav-user-name" id="navUserName" translate="no">…</span>
-          <span class="nav-chevron">${icon('chevdown', 12)}</span>
-          <div class="nav-user-dropdown" id="userMenuDropdown">${_navAcctMenuHTML()}</div>
-        </div>
+        ${ownSearch ? '' : `<div class="shs-wrap" id="shsWrap">
+          <span class="shs-ic" aria-hidden="true">${icon('search', 15)}</span>
+          <input type="text" id="globalSearch" placeholder="Search titles, people…" aria-label="Search titles and people" autocomplete="off" spellcheck="false">
+          <kbd class="shs-key" aria-hidden="true">/</kbd>
+        </div>`}
+        <button type="button" class="nav-add-btn nav-auth-only" id="navCreate" onclick="shellCreate(event)" aria-haspopup="menu" aria-expanded="false">${icon('plus', 15)}<span>Add</span></button>
+        <a class="nav-ic-btn notif-btn notif-btn-desktop nav-auth-only nav-msg-btn" href="messages.html" aria-label="Messages">${icon('inbox', 17)}<span class="notif-badge" data-msg-badge></span></a>
+        <button type="button" class="nav-ic-btn notif-btn notif-btn-desktop nav-auth-only" onclick="toggleNotifPanel(event)" aria-label="Notifications">${icon('bell', 17)}<span class="notif-badge" data-notif-badge></span></button>
+        <button type="button" class="nav-user-btn nav-auth-only" id="navUserBtn" aria-label="Your account" aria-haspopup="true" aria-expanded="false" aria-controls="acctMenu">
+          <span class="nav-user-avatar" id="navUserInitial">?</span><span class="nav-chevron" aria-hidden="true">${icon('chevdown', 12)}</span></button>
+        <a class="nav-guest-btn guest-only" href="login.html">Sign in</a>
+        <a class="nav-guest-btn is-main guest-only" href="login.html#signup">Create account</a>
+        <div class="acct-menu" id="acctMenu" hidden></div>
       </div>
-      <div class="dnav-mega" id="dnavMega" role="region" aria-label="Menu" hidden><div class="dnav-mega-in" id="dnavMegaIn"></div></div>
+      <div class="dnav-mega" id="dnavMega" hidden><div class="dnav-mega-in" id="dnavMegaIn"></div></div>
     </div>`;
 
-  /* ── BOTTOM BAR (phones / tablets) ── */
-  const bottomNavEl = _bnavEl();
+  const bottomNavEl = _bnavEl(where);
   _navPortraitOnPhones();
-
-  /* ── THEME TOGGLE ── */
-  const curTheme = document.documentElement.getAttribute('data-theme') || 'dark';
-  const themeEl = document.createElement('div');
-  themeEl.className = 'theme-toggle-pill';
-  themeEl.id = 'themeTogglePill';
-  themeEl.innerHTML = `
-    <button class="ttp-btn ${curTheme==='dark'?'active':''}"  id="ttpDark"  onclick="setTheme('dark')"  title="Dark mode">${icon('moon',17)}</button>
-    <button class="ttp-btn ${curTheme==='light'?'active':''}" id="ttpLight" onclick="setTheme('light')" title="Light mode">${icon('sun',17)}</button>`;
-
-  /* ── MODAL ── */
-  const modalEl = document.createElement('div');
-  modalEl.className = 'modal-overlay';
-  modalEl.id = 'addModal';
-  modalEl.innerHTML = `
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="addModalTitle">
-      <div class="modal-title" id="addModalTitle">Add New Entry</div>
-      <div class="modal-row"><label class="modal-label" for="mTitle">Title</label>
-        <div style="position:relative">
-          <input class="modal-input" id="mTitle" placeholder="Search or type a title…" autocomplete="off">
-        </div></div>
-      <div class="modal-row"><div class="modal-label">Category</div>
-        ${_selDDHTML('mCat', [
-          { value:'tv', label:'TV Show' },
-          { value:'movies', label:'Movie' },
-          { value:'anime', label:'Anime' },
-          { value:'cartoons', label:'Cartoon' },
-        ], null, '_updateModalStatus', 'Select category…')}</div>
-      <div class="modal-row"><div class="modal-label">Status</div>
-        <div id="mStatusWrap">${_selDDHTML('mStatus', [
-          { value:'queue', label:'Watchlist' },
-          { value:'up_next', label:'Up Next' },
-          { value:'watching', label:'Currently Watching' },
-          { value:'paused', label:'Taking a Break' },
-          { value:'completed', label:'Watched' },
-          { value:'ongoing', label:'To Be Continued' },
-          { value:'dropped', label:'Dropped' },
-        ], null, null, 'Select status…')}</div></div>
-      <div class="modal-row"><div class="modal-label">Year</div>
-        <input class="modal-input" id="mYear" type="number" min="1900" max="2030" placeholder="e.g. 2024"></div>
-      <div id="mValidationMsg" style="display:none;font-size:12px;color:#e0a45c;background:rgba(224,164,92,0.1);border:0.5px solid rgba(224,164,92,0.3);border-radius:var(--radius-sm);padding:8px 12px;margin-top:4px;">Please select a category and status before adding.</div>
-      <div class="modal-actions">
-        <button type="button" class="btn-modal-cancel" onclick="closeModal()">Cancel</button>
-        <button type="button" class="btn-modal-save" id="mSaveBtn" onclick="modalQuickCreate()" disabled>Add &amp; Edit →</button>
-      </div>
-    </div>`;
 
   /* ── CONFIRM DIALOG ── */
   const confirmEl = document.createElement('div');
   confirmEl.className = 'confirm-overlay';
   confirmEl.id = 'confirmOverlay';
   confirmEl.innerHTML = `
-    <div class="confirm-card" role="dialog" aria-modal="true" aria-labelledby="confirmTitle" aria-describedby="confirmMsg">
-      <div class="confirm-icon"  id="confirmIcon" aria-hidden="true"></div>
-      <div class="confirm-title" id="confirmTitle">Are you sure?</div>
-      <div class="confirm-msg"   id="confirmMsg"></div>
+    <div class="confirm-card is-confirm" role="alertdialog" aria-modal="true" aria-labelledby="confirmTitle" aria-describedby="confirmMsg">
+      <span class="cf-handle" aria-hidden="true"></span>
+      <div class="cf-head">
+        <div class="confirm-icon" id="confirmIcon" aria-hidden="true"></div>
+        <div class="cf-text">
+          <div class="confirm-title" id="confirmTitle">Are you sure?</div>
+          <div class="confirm-msg"   id="confirmMsg"></div>
+        </div>
+      </div>
       <div class="confirm-choices" id="confirmChoices" role="radiogroup" aria-labelledby="confirmTitle" hidden></div>
       <div class="confirm-actions">
+        <button type="button" class="confirm-cancel confirm-alt" id="confirmAlt" hidden></button>
         <button type="button" class="confirm-cancel" id="confirmCancel">Cancel</button>
         <button type="button" class="confirm-ok"     id="confirmOk">Confirm</button>
       </div>
     </div>`;
 
   /* ── TOAST ── */
-  const toastEl = document.createElement('div');
-  toastEl.className = 'toast';
-  toastEl.id = 'toast';
+  // (one may already be up — e.g. a delete's Undo carried over from the page before)
+  const toastEl = document.getElementById('toast') || Object.assign(document.createElement('div'), { className: 'toast', id: 'toast' });
 
-  /* ── INSERT into DOM (direct elements, no wrapper div) ── */
   const first = document.body.firstChild;
   document.body.insertBefore(toastEl,    first);
   document.body.insertBefore(confirmEl,  first);
-  document.body.insertBefore(modalEl,    first);
-  MSSDialog.bind(modalEl, closeModal);
-
-  // Init TMDB search now that #mTitle exists in DOM
-  setTimeout(_initTMDBOnModal, 300);
-  document.body.insertBefore(themeEl,    first);
-  _navInitBackToTop(themeEl);
-  document.body.insertBefore(bottomNavEl,first);
+  document.body.insertBefore(bottomNavEl, first);
+  document.body.insertBefore(_shellFabEl(), first);
   document.body.insertBefore(navEl,      first);
+  _navInitBackToTop();
+  document.body.appendChild(_shellFooterEl());
 
-  /* ── FOOTER ── */
-  const footerEl = document.createElement('footer');
-  footerEl.className = 'site-footer';
-  footerEl.innerHTML =
-    '<div class="footer-row footer-row-main">'
-      +'<span class="footer-created">Created by </span>'
-      +'<span class="footer-name">Mohammad &amp; Narimaan</span>'
-      +'<span class="footer-sep">&nbsp;&middot;&nbsp;</span>'
-      +'<span class="footer-copy">&copy; 2026 MyScreenFolio</span>'
-    +'</div>'
-    +'<div class="footer-row footer-row-tmdb">'
-      +'<a href="https://www.themoviedb.org" target="_blank" rel="noopener" class="footer-tmdb-link">'
-        +'Movie &amp; TV metadata provided by <span class="footer-tmdb-name">TMDB</span>'
-      +'</a>'
-    +'</div>';
-  document.body.appendChild(footerEl);
-
-  _mtogInit();
-  _dnavInit();
-
-  // Discover dropdown on both nav search inputs (desktop + mobile)
-  initDiscoverSearch('globalSearch', { max: 20, connected: true, includePersons: true });
-  initDiscoverSearch('mobileSearchInput', { max: 20, connected: true, includePersons: true });
-  attachClearButton('globalSearch');
-  // one ✕ on the phone search bar: clears what you typed, then (empty) closes the bar
-  document.getElementById('mobileSearchInput')?.addEventListener('input', ev => {
-    document.getElementById('mobileSearchX').setAttribute('aria-label', ev.target.value ? 'Clear search' : 'Close search');
-  });
+  _ntopInit();
+  _bnavLongInit(bottomNavEl);
+  _dmInit();
+  _acctInit();
+  // Search: the header field on every page but Home and Discover (they have their own); shell-search.js does the rest
+  if (!ownSearch) mssLoadScript('js/shell-search.js').then(() => { if (typeof MSSSearch !== 'undefined') MSSSearch.mount(document.getElementById('globalSearch')); });
 }
 
-/* ── Library group (TV Shows / Movies / Anime / Cartoons combined) ── */
-const LIBRARY_PAGES = [
-  { href: 'library.html', iconName: 'list',     label: 'Library'  },
-  { href: 'tv-shows.html', iconName: 'tv',       label: 'TV Shows' },
-  { href: 'movies.html',   iconName: 'film',     label: 'Movies'   },
-  { href: 'anime.html',    iconName: 'animeFace', label: 'Anime'    },
-  { href: 'cartoons.html', iconName: 'crown',    label: 'Cartoons' },
-  { href: 'completed.html',iconName: 'check',    label: 'Watched'},
-  { href: 'diary.html',    iconName: 'calendar', label: 'Diary'},
-];
-function _isLibraryPage(page) {
-  return LIBRARY_PAGES.some(p => p.href === page);
+// Search: the header field (desktop), the full-page search (phones) — shell-search.js
+function mssOpenSearch(q) { mssLoadScript('js/shell-search.js').then(() => { if (typeof MSSSearch !== 'undefined') MSSSearch.open(q); }); }
+
+function _shellTabsHTML(w) {
+  return SHELL_TABS.map(t => {
+    const on = t.k === w.tab;
+    if (!t.groups) return `<li><a class="dnav-tab${on ? ' active' : ''}" href="${t.href}"${on ? ` aria-current="${location.pathname.endsWith('/' + t.href) || (t.k === 'home' && /\/$/.test(location.pathname)) ? 'page' : 'true'}"` : ''}>${t.label}</a></li>`;
+    return `<li><button type="button" class="dnav-tab${on ? ' active' : ''}" id="dnavTab-${t.k}" data-tab="${t.k}" aria-expanded="false" aria-controls="dnavMega"${on ? ' aria-current="true"' : ''}>
+      <span>${t.label}</span><span class="dnav-lock guest-only" aria-hidden="true">${icon('lock', 12)}</span><span class="sr-only guest-only">, needs an account</span><span class="dnav-chev" aria-hidden="true">${icon('chevdown', 12)}</span></button></li>`;
+  }).join('');
 }
 
-/* ── Back to top ──
-   A round olive button that floats just above the dark / light toggle once
-   you've scrolled down a good way and start scrolling back up; tap it to
-   glide to the top. It sits centred over the toggle on every screen size
-   (it measures the toggle, so it follows it on phones too). */
-function _navInitBackToTop(themeEl) {
+/* ── Back to top: a round olive button bottom-right once you've scrolled a good way and start back up ── */
+function _navInitBackToTop() {
   const btn = document.createElement('button');
   btn.type = 'button';
   btn.className = 'back-to-top';
@@ -818,19 +856,10 @@ function _navInitBackToTop(themeEl) {
     btn.blur();
   });
   document.body.appendChild(btn);
-
-  const place = () => {
-    const r = themeEl.getBoundingClientRect();
-    if (!r.width) return;
-    const size = btn.offsetWidth || 46;
-    btn.style.right = Math.round(window.innerWidth - (r.left + r.width / 2) - size / 2) + 'px';
-    btn.style.bottom = Math.round(window.innerHeight - r.top + 12) + 'px';
-  };
   let lastY = window.scrollY, upFor = 0, shown = false;
   const show = on => {
     if (on === shown) return;
     shown = on;
-    if (on) place();
     btn.classList.toggle('show', on);
     btn.tabIndex = on ? 0 : -1;
   };
@@ -841,7 +870,6 @@ function _navInitBackToTop(themeEl) {
     if (dy < 0) { upFor += -dy; if (upFor > 40) show(true); }        // scrolling back up
     else if (dy > 0) { upFor = 0; if (dy > 4) show(false); }          // scrolling on down
   }, { passive: true });
-  window.addEventListener('resize', () => { if (shown) place(); });
 }
 
 /* ── Phones stay upright ──
@@ -860,528 +888,1245 @@ function _navPortraitOnPhones() {
   if (phone && app) screen.orientation?.lock?.('portrait').catch(() => {});
 }
 
-/* ── Toggle functions ──
-   Only one top-bar panel is open at a time: opening search, notifications,
-   the profile menu or the (+) sheet closes the others first. */
+/* Only one header panel at a time: opening a menu, search, notifications, the account menu
+   or the Create sheet closes the others first. */
 function _navCloseAll(except) {
-  if (except !== 'add')    _bnavSheet(false);
-  if (except !== 'search') document.getElementById('mobileSearchBar')?.classList.remove('open');
-  if (except !== 'user') {
-    document.getElementById('userMenuDropdown')?.classList.remove('open');
-    document.getElementById('userMenuDropdownMobile')?.classList.remove('open');
-  }
+  if (except !== 'add' && typeof MSSPopover !== 'undefined') MSSPopover.close();
+  if (except !== 'user') _acctHide();
+  if (except !== 'search' && typeof MSSSearch !== 'undefined') MSSSearch.close();
   if (except !== 'notif' && typeof closeNotifPanel === 'function') closeNotifPanel();
-  if (except !== 'mega') _dnavHide();
+  if (except !== 'mega') _dmHide();
+  if (except !== 'ntop') _ntopDropHide();
 }
 
-function toggleMobileSearch() {
-  const bar = document.getElementById('mobileSearchBar');
-  if (!bar) return;
-  if (!bar.classList.contains('open')) _navCloseAll('search');
-  bar.classList.toggle('open');
-  if (bar.classList.contains('open')) document.getElementById('mobileSearchInput')?.focus();
-}
+/* ═════════ Desktop menus: Library · Social · You ═════════ */
+let _dmCur = null, _dmOpenT = 0, _dmCloseT = 0, _dmAt = 0, _dmPick = null;
+let _dmPinned = false;    // opened (or kept) with a click: stays until a click outside, Esc or the tab again — not when the pointer leaves
+let _shellSum = null;     // shell_summary() (117): counts + the live cards' titles
 
-function _mobileSearchX() {
-  const input = document.getElementById('mobileSearchInput');
-  if (!input?.value) { toggleMobileSearch(); return; }
-  input.value = '';
-  input.dispatchEvent(new Event('input', { bubbles: true }));
-  input.focus();
-}
-
-function toggleMobileUser(e) {
-  e.stopPropagation();
-  const dd = document.getElementById('userMenuDropdownMobile');
-  if (!dd) return;
-  if (!dd.classList.contains('open')) _navCloseAll('user');
-  dd.classList.toggle('open');
-}
-
-function toggleUserMenu(e) {
-  e.stopPropagation();
-  // desktop: your account opens in the same panel as the tabs (_dnavAcct)
-  if (matchMedia('(min-width:1200px)').matches) { _dnavCur === 'acct' ? _dnavHide() : _dnavShow('acct'); return; }
-  const dd = document.getElementById('userMenuDropdown');
-  if (!dd) return;
-  if (!dd.classList.contains('open')) _navCloseAll('user');
-  dd.classList.toggle('open');
-}
-
-/* Close dropdowns when clicking outside */
-document.addEventListener('click', () => {
-  document.getElementById('userMenuDropdown')?.classList.remove('open');
-  document.getElementById('userMenuDropdownMobile')?.classList.remove('open');
-});
-
-/* ═════════════════════════════════════════════════════════════
-   Desktop (≥1200px) — the top bar + mega menu
-   The same four tabs as the phone bar (Home · Library · Social · You — MSS_TABS).
-   Click a tab (or ↓ on it) and a panel drops under the bar, exactly as wide as it —
-   click it again, click outside or press Esc to close: the tab's pages as cards (no sub-shortcuts —
-   the pages have their own toggles), and on the far right a showcase
-   card for the page you're pointing at, in the Start Exploring cards' look
-   (index.html .xp-card). The tab you're in is olive with an underline, like before, and
-   shows the page you're on in place of its name ("TV Shows" for Library…).
-═════════════════════════════════════════════════════════════ */
-const DNAV_INFO = {
-  'blend.html':       'A mix of picks you and a friend will both enjoy.',
-  'index.html':                 'Your portfolio at a glance — what you’re watching, what’s next and what friends are up to.',
-  'discover.html':              'Trending now, the Top 250s and hidden gems — find your next obsession.',
-  'library.html':               'Everything you’ve added, in one place — watching, watchlist and watched.',
-  'tv-shows.html':              'The shows you’re watching, waiting on and have finished.',
-  'movies.html':                'Your films, from the watchlist to the ones you’ve rated.',
-  'anime.html':                 'Your anime — series and films.',
-  'cartoons.html':              'Your animated shows and films.',
-  'completed.html':             'Everything you’ve finished, ranked by your scores.',
-  'diary.html':                 'Every movie and episode you’ve watched, on the day you watched it. Only you can see it.',
-  'friends.html':               'Your friends, requests and people you might know.',
-  'activity.html':    'What your friends have been watching and rating.',
-  'compare.html':     'Line your taste up with a friend’s, side by side.',
-  'episode-chat.html':      'Talk about episodes with your friends.',
-  'movie-night.html':       'Pick something to watch together.',
-  'challenges.html':  'Race your friends to a watching goal.',
-  'polls.html':       'Ask your friends what to watch next.',
-  'profile.html':               'Your profile — stats, favourites and taste.',
-  'lists.html':                 'Your lists, ones shared with you and the community’s.',
-  'notes.html':                 'Your thoughts on everything you watch.',
-  'episodes.html':              'Rate episodes and see every show’s chart.',
-  'cabinet.html':               'The medals and achievements you’ve earned.',
-  'export.html':                'Cards, PDFs, spreadsheets and backups of your library.',
-};
-const DNAV_TONE = { home: ['#1E5C26', '#0F2D14'], lib: ['#1D4A7A', '#0B1F36'], social: ['#5B2D7A', '#22102E'], you: ['#8A5A14', '#33210A'], acct: ['#1F5E5B', '#0B2624'] };
-// The account menu (avatar) on desktop opens in the same panel — you, Medals, Export, Settings,
-// Admin (owners), Switch account, Sign out (the phone keeps its small dropdown: _navAcctMenuHTML)
-function _dnavAcct() {
-  const p = window._navUserProfile || {}, name = p.username || 'you';
-  let admin = false; try { admin = (sessionStorage.getItem('mss_admin') || '').endsWith(':1'); } catch {}
-  return { k: 'acct', label: 'Account', items: [
-    { label: p.display_name || name, icon: 'user', href: 'profile.html', info: '@' + name + ' · your profile, stats and favourites.', me: true },
-    { label: 'Medals', icon: 'trophy', href: 'cabinet.html' },
-    { label: 'Export', icon: 'download', href: 'export.html' },
-    { label: 'Settings', icon: 'settings', href: 'settings.html', info: 'Your account, privacy, notifications, language and look.' },
-    ...(admin ? [{ label: 'Admin', icon: 'lock', href: 'admin.html', info: 'Reports, pictures waiting for review, users and site settings.' }] : []),
-    { label: 'Switch account', icon: 'users', act: '_navAccounts()', info: 'Hop to another account you’ve signed in with on this device.' },
-    { label: 'Sign out', icon: 'logout', act: 'handleLogout()', info: 'Sign out of MyScreenFolio on this device.', out: true },
-  ] };
-}
-const _dnavTab = k => k === 'acct' ? _dnavAcct() : _dnavTabs().find(x => x.k === k);
-const _dnavInfo = it => it.info || DNAV_INFO[it.href] || '';
-// Desktop's Social menu, in two groups. (On phones the same groups are the top toggles.)
-const DNAV_GROUPS = { social: [
-  ['People', [
-    { label: 'Friends', icon: 'users', href: 'friends.html' },
-    { label: 'Activity', icon: 'activity', href: 'activity.html' },
-    { label: 'Compare', icon: 'compare', href: 'compare.html' },
-    { label: 'Blend', icon: 'shuffle', href: 'blend.html' },
-  ]],
-  ['Together', [
-    { label: 'Movie Night', icon: 'film', href: 'movie-night.html' },
-    { label: 'Challenges', icon: 'trophy', href: 'challenges.html' },
-    { label: 'Polls', icon: 'poll', href: 'polls.html' },
-    { label: 'Episode Chat', icon: 'comment', href: 'episode-chat.html' },
-  ]],
-] };
-const _dnavTabs = () => MSS_TABS.filter(t => t.items).map(t => DNAV_GROUPS[t.k] ? { ...t, groups: DNAV_GROUPS[t.k], items: DNAV_GROUPS[t.k].flatMap(([, items]) => items) } : t);
-// Where you are, by the desktop tabs: everything in a group belongs to Social here
-function _dnavWhere() {
-  const key = _mtabKey(new URL(location.href));
-  for (const t of _dnavTabs()) {
-    const i = t.groups ? t.items.findIndex(it => it.href === key) : -1;
-    if (i >= 0) return { tab: t.k, item: i };
-  }
-  const w = _mtabWhere(), t = _dnavTabs().find(x => x.k === w.tab);
-  const it = w.item >= 0 && w.tab !== 'social' ? MSS_TABS.find(x => x.k === w.tab).items[w.item] : null;
-  return { tab: w.tab, item: it ? t.items.findIndex(x => x.href === it.href) : -1 };
-}
-// the phone toggles shorten "TV Shows" to "TV" — here there's room for the full name
-const _dnavLabel = it => LIBRARY_PAGES.find(p => p.href === it.href)?.label || it.label;
-function _dnavTabsHTML() {
-  const where = _dnavWhere();
-  // the tab you're in shows the page you're on — "TV Shows" in place of Library, "Lists" in place of You…
-  return _dnavTabs().map(t => {
-    const it = t.k === where.tab && where.item >= 0 ? t.items[where.item] : null;
-    return `<button type="button" class="dnav-tab${t.k === where.tab ? ' active' : ''}" data-tab="${t.k}"${t.k === 'social' ? ' data-page="friends.html"' : ''} aria-haspopup="true" aria-expanded="false" aria-controls="dnavMega"${it ? ` aria-label="${escHTML(t.label + ': ' + _dnavLabel(it))}"` : ''}>${icon(it ? it.icon : t.icon, 16)}<span>${escHTML(it ? _dnavLabel(it) : t.label)}</span>${icon('chevdown', 12)}</button>`;
-  }).join('');
-}
-let _dnavCur = null;
-function _dnavShowcase(t, it) {
-  const [a, b] = DNAV_TONE[t.k] || DNAV_TONE.home;
-  const av = it.me && safeURL(window._navUserProfile?.avatar_url);
-  return `<a class="dnav-show" ${it.act ? `href="#" onclick="${it.act};return false"` : `href="${it.href}"`} style="--xp-a:${a};--xp-b:${b}" tabindex="-1" aria-hidden="true">
-      <span class="dnav-show-ghost">${escHTML(_dnavLabel(it))}</span>
-      <span class="dnav-show-orb${av ? ' has-av' : ''}"><span class="dnav-show-ring"></span><span class="dnav-show-ring r2"></span>${av ? `<img src="${av}" alt="">` : icon(it.icon, 54)}</span>
-      <span class="dnav-show-tx">
-        <span class="dnav-show-badge">${escHTML(t.label)}</span>
-        <span class="dnav-show-title">${escHTML(_dnavLabel(it))}</span>
-        <span class="dnav-show-sub">${escHTML(_dnavInfo(it))}</span>
-        <span class="dnav-show-cta">${it.act ? escHTML(it.label) : 'Open'} ${icon('arrowRight', 13)}</span>
-      </span>
-    </a>`;
-}
-function _dnavPick(i) {
-  const t = _dnavTab(_dnavCur), it = t?.items[i];
-  if (!it) return;
-  document.querySelectorAll('#dnavMegaIn .dnav-item').forEach((el, j) => el.classList.toggle('on', j === i));
-  const slot = document.getElementById('dnavShow');
-  if (slot.dataset.i === String(i)) return;
-  slot.dataset.i = i;
-  slot.innerHTML = _dnavShowcase(t, it);
-}
-function _dnavShow(k) {
-  const t = _dnavTab(k), mega = document.getElementById('dnavMega');
-  if (!t || !mega) return;
-  document.querySelectorAll('#dnav .dnav-tab').forEach(a => { const on = a.dataset.tab === k; a.classList.toggle('open', on); a.setAttribute('aria-expanded', on); });
-  document.querySelector('#dnav .nav-user-wrap')?.classList.toggle('open', k === 'acct');
-  if (_dnavCur === k && !mega.hidden) return;
-  if (mega.hidden) _navCloseAll('mega');
-  _dnavCur = k;
-  const where = _dnavWhere(), page = location.pathname.split('/').pop() || 'index.html';
-  const here = k === 'acct' ? t.items.findIndex(it => it.href === page) : where.tab === k ? where.item : -1;
-  const me = safeURL(window._navUserProfile?.avatar_url);
-  mega.setAttribute('aria-label', t.label);
-  const card = (it, i) => `
-      <div class="dnav-item${i === here ? ' here' : ''}${it.out ? ' is-out' : ''}" data-i="${i}">
-        <a class="dnav-item-main" ${it.act ? `href="#" role="button" onclick="${it.act};return false"` : `href="${it.href}"`}${i === here ? ' aria-current="page"' : ''}>
-          <span class="dnav-item-ic${it.me && me ? ' is-av' : ''}" style="--xp-a:${(DNAV_TONE[k] || DNAV_TONE.home)[0]}">${it.me && me ? `<img src="${me}" alt="">` : icon(it.icon, 19)}</span>
-          <span class="dnav-item-tx"><b translate="${it.me ? 'no' : 'yes'}">${escHTML(_dnavLabel(it))}</b><small>${escHTML(_dnavInfo(it))}</small></span>
-        </a>
-      </div>`;
-  let at = 0;
-  document.getElementById('dnavMegaIn').innerHTML = `
-    ${t.groups ? `<div class="dnav-groups" style="--cols:${t.groups.length}">${t.groups.map(([label, items]) => `<div class="dnav-group" role="group" aria-label="${label}"><div class="dnav-group-h">${label}</div>${items.map(it => card(it, at++)).join('')}</div>`).join('')}</div>`
-      : `<div class="dnav-items" style="--cols:${t.items.length > 6 ? 4 : t.items.length > 2 ? 3 : 2}">${t.items.map(card).join('')}</div>`}
-    <div class="dnav-show-slot" id="dnavShow" data-i=""></div>`;
-  _dnavPick(Math.max(0, here));
-  mega.hidden = false;
-  requestAnimationFrame(() => mega.classList.add('open'));
-}
-function _dnavHide() {
-  const mega = document.getElementById('dnavMega');
-  if (!mega || mega.hidden) return;
-  mega.classList.remove('open'); mega.hidden = true; _dnavCur = null;
-  document.querySelectorAll('#dnav .dnav-tab').forEach(a => { a.classList.remove('open'); a.setAttribute('aria-expanded', 'false'); });
-  document.querySelector('#dnav .nav-user-wrap')?.classList.remove('open');
-}
-function _dnavInit() {
+function _dmInit() {
   const bar = document.getElementById('dnav'), mega = document.getElementById('dnavMega');
   if (!bar || !mega) return;
-  bar.querySelectorAll('.dnav-tab').forEach(t => {
-    t.addEventListener('click', ev => { ev.stopPropagation(); if (!mega.hidden && _dnavCur === t.dataset.tab) _dnavHide(); else _dnavShow(t.dataset.tab); });
-    t.addEventListener('keydown', ev => {
-      if (ev.key === 'ArrowDown') { ev.preventDefault(); _dnavShow(t.dataset.tab); mega.querySelector('.dnav-item-main')?.focus(); }
-      if (ev.key === 'Escape') _dnavHide();
+  bar.querySelectorAll('button.dnav-tab').forEach(t => {
+    const k = t.dataset.tab;
+    t.addEventListener('click', ev => {
+      ev.stopPropagation();
+      if (_dmCur === k && _dmPinned) { _dmHide(); return; }               // a second click closes it
+      if (_dmCur !== k) _dmShow(k);
+      _dmPinned = true;                                                   // a click keeps it open (also one opened by hovering)
+      if (ev.detail === 0) _dmFocus(0);                                   // Enter / Space → into the menu
     });
+    t.addEventListener('keydown', ev => {
+      if (ev.key === 'ArrowDown') { ev.preventDefault(); if (_dmCur !== k) _dmShow(k); _dmFocus(0); }
+      if (ev.key === 'ArrowUp' && _dmCur === k) { ev.preventDefault(); _dmFocus(-1); }
+    });
+    t.addEventListener('pointerenter', ev => {
+      if (ev.pointerType !== 'mouse') return;
+      clearTimeout(_dmCloseT); clearTimeout(_dmOpenT);
+      if (_dmCur !== k) _dmOpenT = setTimeout(() => _dmShow(k), _dmCur ? 80 : 150);
+    });
+    t.addEventListener('pointerleave', ev => { if (ev.pointerType === 'mouse') { clearTimeout(_dmOpenT); _dmLeave(); } });
   });
+  mega.addEventListener('pointerenter', () => clearTimeout(_dmCloseT));
+  mega.addEventListener('pointerleave', ev => { if (ev.pointerType === 'mouse') _dmLeave(); });
   mega.addEventListener('click', ev => ev.stopPropagation());
-  document.addEventListener('click', () => _dnavHide());                // a click anywhere else closes it
-  mega.addEventListener('mouseover', ev => { const it = ev.target.closest('.dnav-item'); if (it) _dnavPick(Number(it.dataset.i)); });
-  mega.addEventListener('focusin', ev => { const it = ev.target.closest('.dnav-item'); if (it) _dnavPick(Number(it.dataset.i)); });
-  document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && !mega.hidden) { const k = _dnavCur; _dnavHide(); bar.querySelector(`.dnav-tab[data-tab="${k}"]`)?.focus(); } });
-}
-
-/* ═════════════════════════════════════════════════════════════
-   Phones / tablets (<1200px) — bottom bar + top toggles (bottom-nav-plan.md)
-
-   Bottom bar: Home · Library · (+) · Social · You. The open tab sits in an
-   olive circle that rises out of a cut-out in the bar; moving to another tab
-   slides it across (it starts where the last page's tab was).
-   (+) opens a small menu: Add a title · Write a note · New list · New poll.
-
-   Top toggles: the Lists / Notes toggle made for phones — full width, pinned
-   under the top bar, one row per tab (You: two rows of three).
-   Social's groups, Lists and Notes get a second, joined row (Social's scrolls sideways). Every item is a link to
-   a real page (or a ?view= of one); a page can switch in place instead
-   by setting window.mssTabGo(url) → true. Pages that change their own URL
-   call mssTabsRefresh(). Scrolling down folds the toggles away; scrolling up
-   brings them back.
-
-   Pages outside the tabs (a title, a person, a list…) keep the tab you came
-   from lit (sessionStorage); Notifications and Settings light You.
-═════════════════════════════════════════════════════════════ */
-const MSS_TABS = [
-  { k: 'home', label: 'Home', icon: 'home', href: 'index.html', items: [
-    { label: 'Home', icon: 'home', href: 'index.html' },
-    { label: 'Discover', icon: 'compass', href: 'discover.html' },
-  ] },
-  { k: 'lib', label: 'Library', icon: 'grid', href: 'library.html',
-    items: LIBRARY_PAGES.map(p => ({ label: p.label === 'TV Shows' ? 'TV' : p.label, icon: p.iconName, href: p.href })) },
-  { k: 'add' },
-  { k: 'social', label: 'Social', icon: 'users', href: 'friends.html', items: [
-    { label: 'People', icon: 'users', href: 'friends.html', scroll: true, sub: [['Friends', 'friends.html'], ['Activity', 'activity.html'], ['Compare', 'compare.html'], ['Blend', 'blend.html']] },
-    { label: 'Together', icon: 'film', href: 'movie-night.html', scroll: true, sub: [['Movie Night', 'movie-night.html'], ['Challenges', 'challenges.html'], ['Polls', 'polls.html'], ['Episode Chat', 'episode-chat.html']] },
-    { label: 'Messages', icon: 'inbox', href: 'messages.html', msg: true },   // desktop: the icon next to the bell
-  ] },
-  { k: 'you', label: 'You', icon: 'user', href: 'profile.html', rows: 3, items: [
-    { label: 'Profile', icon: 'user', href: 'profile.html' },
-    { label: 'Lists', icon: 'layers', href: 'lists.html', sub: [['Mine', 'lists.html'], ['Friends', 'lists.html?view=friends'], ['Community', 'lists.html?view=community']] },
-    { label: 'Notes', icon: 'notebook', href: 'notes.html', sub: [['Mine', 'notes.html'], ['Friends', 'notes.html?view=friends'], ['Community', 'notes.html?view=community']] },
-    { label: 'Episodes', icon: 'episodes', href: 'episodes.html' },
-    { label: 'Medals', icon: 'trophy', href: 'cabinet.html' },
-    { label: 'Export', icon: 'download', href: 'export.html' },
-  ] },
-];
-const _BNAV_YOU_PAGES = ['notifications.html', 'settings.html'];
-
-/* Where this URL sits: { tab, item, sub } (item / sub are indexes, -1 = none) */
-function _mtabKey(u) {
-  const page = u.pathname.split('/').pop() || 'index.html';
-  if (page === 'lists.html' || page === 'notes.html') { const v = mssViewOf(u.search); return v === 'mine' ? page : `${page}?view=${v}`; }
-  return page;
-}
-function _mtabWhere(href = location.href) {
-  const key = _mtabKey(new URL(href, location.href));
-  for (const t of MSS_TABS) {
-    if (!t.items) continue;
-    for (let i = 0; i < t.items.length; i++) {
-      const it = t.items[i];
-      const si = (it.sub || []).findIndex(([, h]) => h === key);
-      if (si >= 0) return { tab: t.k, item: i, sub: si };
-      if (it.href === key) return { tab: t.k, item: i, sub: it.sub ? 0 : -1 };
-    }
-  }
-  if (_BNAV_YOU_PAGES.includes(key)) return { tab: 'you', item: -1, sub: -1 };
-  let last = null; try { last = sessionStorage.getItem('mss_tab'); } catch {}
-  return { tab: MSS_TABS.some(t => t.k === last) ? last : 'home', item: -1, sub: -1 };
-}
-const _bnavX = k => (MSS_TABS.findIndex(t => t.k === k) * 20 + 10) + '%';
-
-function _bnavEl() {
-  const el = document.createElement('nav');
-  el.className = 'bnav'; el.id = 'bnav';
-  el.setAttribute('aria-label', 'Main');
-  el.innerHTML = `<div class="bnav-bg" aria-hidden="true"></div><div class="bnav-ring" aria-hidden="true"></div><span class="bnav-orb" aria-hidden="true"></span>
-    ${MSS_TABS.map(t => t.k === 'add'
-      ? `<button type="button" class="bnav-item bnav-add" id="bnavAdd" aria-label="Add" aria-haspopup="menu" aria-expanded="false" aria-controls="bnavSheet" onclick="_bnavAdd(event)"><span class="bnav-ic">${icon('plus', 24)}</span></button>`
-      : `<a class="bnav-item" href="${t.href}" data-tab="${t.k}"><span class="bnav-ic">${icon(t.icon, 23)}</span><span class="bnav-lb">${t.label}</span></a>`).join('')}
-    <div class="bnav-sheet" id="bnavSheet" role="menu" aria-label="Add" hidden>
-      ${[['title', 'film', 'Add a title', 'Search TMDB or type it in'], ['note', 'edit', 'Write a note', 'Pick a title from your library'],
-         ['list', 'layers', 'New list', 'Opens List Studio'], ['poll', 'poll', 'New poll', 'Ask your friends']].map(([k, ic, l, sub]) =>
-        `<button type="button" role="menuitem" class="bnav-sheet-item" onclick="_bnavDo('${k}')"><span class="bnav-sheet-ic" aria-hidden="true">${icon(ic, 18)}</span><span><b>${l}</b><small>${sub}</small></span></button>`).join('')}
-    </div>`;
-  const where = _mtabWhere();
-  let from = null; try { from = sessionStorage.getItem('mss_tab'); sessionStorage.setItem('mss_tab', where.tab); } catch {}
-  const lit = k => {
-    el.style.setProperty('--x', _bnavX(k));
-    el.querySelectorAll('[data-tab]').forEach(a => a.classList.toggle('on', a.dataset.tab === k));
-  };
-  el.querySelector(`[data-tab="${where.tab}"]`)?.setAttribute('aria-current', 'page');
-  // slide in from the last page's tab (no slide when motion is turned down)
-  const slide = from && from !== where.tab && MSS_TABS.some(t => t.k === from) && !matchMedia('(prefers-reduced-motion: reduce)').matches;
-  lit(slide ? from : where.tab);
-  if (slide) requestAnimationFrame(() => requestAnimationFrame(() => lit(where.tab)));
-  el.addEventListener('keydown', e => {
-    if (e.key === 'Escape' && !document.getElementById('bnavSheet').hidden) { e.stopPropagation(); _bnavSheet(false, true); }
-    const items = [...el.querySelectorAll('.bnav-sheet-item')], i = items.indexOf(document.activeElement);
-    if (i < 0 || !['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key)) return;
-    e.preventDefault();
-    const n = e.key === 'Home' ? 0 : e.key === 'End' ? items.length - 1 : (i + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length;
-    items[n].focus();
+  document.addEventListener('click', () => _dmHide());
+  // the live card follows the row you point at or move to
+  const pick = ev => { const a = ev.target.closest?.('[data-card]'); if (a) _dmCard(a.dataset.card); };
+  mega.addEventListener('pointerover', pick);
+  mega.addEventListener('focusin', pick);
+  mega.addEventListener('keydown', ev => {
+    const links = [...mega.querySelectorAll('.dm-link, .dm-card a, .dm-card button, .shp-acts a')], i = links.indexOf(document.activeElement);
+    if (ev.key === 'Escape') { ev.preventDefault(); const k = _dmCur; _dmHide(); document.getElementById('dnavTab-' + k)?.focus(); return; }
+    if (i < 0 || !['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(ev.key)) return;
+    ev.preventDefault();
+    const n = ev.key === 'Home' ? 0 : ev.key === 'End' ? links.length - 1 : (i + (ev.key === 'ArrowDown' ? 1 : -1) + links.length) % links.length;
+    links[n].focus();
   });
-  return el;
+  // leaving the menu and its tab with Tab closes it
+  bar.addEventListener('focusout', ev => {
+    if (!_dmCur) return;
+    const to = ev.relatedTarget;
+    if (to && (mega.contains(to) || to.id === 'dnavTab-' + _dmCur)) return;
+    setTimeout(() => { if (!mega.contains(document.activeElement) && document.activeElement?.id !== 'dnavTab-' + _dmCur) _dmHide(); }, 0);
+  });
 }
-function _bnavSheet(open, refocus) {
-  const sh = document.getElementById('bnavSheet'), btn = document.getElementById('bnavAdd');
-  if (!sh || sh.hidden === !open) return;
-  sh.hidden = !open;
-  btn.setAttribute('aria-expanded', open);
-  btn.classList.toggle('open', open);
-  if (open) sh.querySelector('.bnav-sheet-item')?.focus();
-  else if (refocus) btn.focus();
+function _dmLeave() { clearTimeout(_dmCloseT); if (_dmPinned) return; _dmCloseT = setTimeout(() => { if (!document.getElementById('dnavMega')?.contains(document.activeElement)) _dmHide(); }, 250); }
+function _dmFocus(i) {
+  const links = [...document.querySelectorAll('#dnavMega .dm-link, #dnavMega .shp-acts a')];
+  (i < 0 ? links[links.length - 1] : links[i])?.focus();
 }
-function _bnavAdd(e) {
-  e.stopPropagation();
+function _dmShow(k) {
+  const t = SHELL_TABS.find(x => x.k === k), mega = document.getElementById('dnavMega');
+  if (!t?.groups || !mega) return;
+  clearTimeout(_dmCloseT);
+  if (mega.hidden) _navCloseAll('mega');
+  _dmCur = k; _dmAt = Date.now();
+  document.querySelectorAll('#dnav button.dnav-tab').forEach(b => { const on = b.dataset.tab === k; b.classList.toggle('open', on); b.setAttribute('aria-expanded', on); });
+  mega.setAttribute('aria-labelledby', 'dnavTab-' + k);
+  mega.setAttribute('role', 'region');
+  mega.dataset.tab = k;
+  document.getElementById('dnavMegaIn').innerHTML = _isGuest() ? _shellPromoHTML(k) : _dmHTML(t);
+  if (_isGuest()) _shellPromoPosters(document.getElementById('dnavMegaIn'), k);
+  else { _dmPick = null; _dmCard(_DM_FIRST[k]); if (!_shellSum) _shellSummary(); }
+  mega.hidden = false;
+  _dmPlace();
+  requestAnimationFrame(() => mega.classList.add('open'));
+}
+const _DM_FIRST = { lib: 'any', social: 'lately', you: 'you' };
+// The panel floats a little under the bar, its left edge lined up with the tab that opened it
+// (kept 16px inside the bar on both sides, so "You" on the right slides back in)
+function _dmPlace() {
+  const mega = document.getElementById('dnavMega'), bar = document.getElementById('dnav');
+  if (!mega || !bar) return;
+  const box = (mega.offsetParent || bar).getBoundingClientRect();
+  const tab = document.querySelector(`#dnav button.dnav-tab[data-tab="${_dmCur}"]`);
+  const want = tab ? tab.getBoundingClientRect().left - box.left : (box.width - mega.offsetWidth) / 2;
+  mega.style.left = Math.round(Math.max(16, Math.min(want, box.width - mega.offsetWidth - 16))) + 'px';
+}
+addEventListener('resize', () => { if (_dmCur) _dmPlace(); });
+function _dmHide() {
+  clearTimeout(_dmOpenT);
+  const mega = document.getElementById('dnavMega');
+  if (!mega || mega.hidden) return;
+  mega.classList.remove('open'); mega.hidden = true; _dmCur = null; _dmPinned = false;
+  document.querySelectorAll('#dnav button.dnav-tab').forEach(b => { b.classList.remove('open'); b.setAttribute('aria-expanded', 'false'); });
+}
+// The menu's columns of rows — the desktop menu and the phone top bar's ▾ menu (pre: their id prefix)
+function _dmColsHTML(t, pre) {
+  const w = shellWhere();
+  return t.groups.map(([h, items], gi) => `<div class="dm-col${items.length > 5 ? ' is-split' : ''}" style="--rows:${Math.ceil(items.length / 2)}"${h ? ` role="group" aria-labelledby="${pre}H-${t.k}-${gi}"` : ''}>
+      ${h ? `<div class="dm-h" id="${pre}H-${t.k}-${gi}">${h}</div>` : ''}
+      <ul class="dm-list">${items.map(it => {
+        const here = w.href === it.href;
+        return `<li${it.sep ? ' class="dm-sep"' : ''}><a class="dm-link${it.msg ? ' nav-msg-btn' : ''}${here ? ' here' : ''}" href="${it.href}" data-card="${it.card || t.k}"${here ? ' aria-current="page"' : ''}>
+          <span class="dm-ic" aria-hidden="true">${icon(it.icon, 16)}</span><span class="dm-name"><b>${it.label}</b><small>${it.info}</small></span>
+          ${it.count ? `<span class="dm-n" data-count="${it.count}">${_dmCount(it.count)}</span>` : ''}${it.msg ? '<span class="notif-badge dm-badge" data-msg-badge></span>' : ''}
+          ${it.req ? '<span class="nav-badge dm-req" data-req-badge hidden></span>' : ''}${here ? `<span class="dm-here" aria-hidden="true">${icon('check', 16)}</span>` : ''}</a></li>`;
+      }).join('')}</ul></div>`).join('');
+}
+function _dmHTML(t) {
+  return `<div class="dm-cols" style="--cols:${t.groups.length}">${_dmColsHTML(t, 'dm')}</div><div class="dm-card" id="dmCard"></div>`;
+}
+const _dmCount = k => { const S = _shellSum; if (!S) return ''; const n = k === 'friends' ? S.friends : S.counts?.[k]; return n == null ? '' : `<span class="sr-only">, </span>${Number(n).toLocaleString(MSSI18n.locale)}`; };
+function _dmPaintCounts() {
+  document.querySelectorAll('#dnavMega [data-count], #ntopDrop [data-count]').forEach(el => { el.innerHTML = _dmCount(el.dataset.count); });
+  _navMsgBadge(_navMsgCount); _bnavDotPaint();
+}
+
+// shell_summary (117), kept for 2 minutes this session; anything you log drops it (mss:watched / progress)
+async function _shellSummary(force) {
+  const uid = window._navUser?.id;
+  if (!uid) return null;
+  if (!force && !_shellSum) try { const c = JSON.parse(sessionStorage.getItem('mss_shell_sum') || 'null'); if (c?.uid === uid && Date.now() - c.at < 120000) _shellSum = c.v; } catch {}
+  if (_shellSum && !force) { _dmPaintCounts(); _dmRefresh(); return _shellSum; }
+  try {
+    const { data, error } = await sb.rpc('shell_summary');
+    if (error) throw error;
+    _shellSum = data || {};
+    try { sessionStorage.setItem('mss_shell_sum', JSON.stringify({ uid, at: Date.now(), v: _shellSum })); } catch {}
+  } catch (err) { console.warn('Menu summary:', err?.message || err); _shellSum = _shellSum || null; }
+  _dmPaintCounts();
+  _dmRefresh();
+  return _shellSum;
+}
+function _shellSumDrop() { _shellSum = null; try { sessionStorage.removeItem('mss_shell_sum'); } catch {} }
+['mss:watched', 'mss:progress', 'mss:library-changed'].forEach(n => document.addEventListener(n, () => { _shellSumDrop(); if (_dmCur) _shellSummary(true); }));
+function _dmRefresh() {
+  if (!_dmCur || _isGuest()) return;
+  _dmPaintCounts();
+  const k = _dmPick; _dmPick = null; _dmCard(k || _DM_FIRST[_dmCur]);
+}
+
+/* The live card on the right */
+const _dmPoster = (url, title, cls = 'dm-poster') => { const u = safeURL(url); return `<span class="${cls}" aria-hidden="true">${u ? `<img src="${u}" alt="" loading="lazy">` : escHTML((title || '?')[0].toUpperCase())}</span>`; };
+const _dmTitleHref = e => e?.tmdb_id && e?.tmdb_type ? `title.html?type=${encodeURIComponent(e.tmdb_type)}&id=${encodeURIComponent(e.tmdb_id)}` : 'library.html';
+function _dmCard(kind) {
+  const box = document.getElementById('dmCard');
+  if (!box || kind === _dmPick) return;
+  _dmPick = kind;
+  const S = _shellSum;
+  if (!S && !['lately', 'msgs', 'export', 'night', 'challenge', 'poll', 'epchat', 'medals'].includes(kind)) {     // loading: the site's skeleton lines (.skel)
+    box.innerHTML = `<div class="dm-card-in" aria-busy="true"><span class="skel skel-line" style="width:40%"></span><div class="dm-title-row"><span class="dm-poster skel"></span>
+      <span class="dm-tx" style="flex:1"><span class="skel skel-line" style="width:70%"></span><span class="skel skel-line" style="width:45%"></span></span></div></div>`;
+    _dmPick = null; return;
+  }
+  const W = S?.watching || {};
+  const html = ({
+    any: () => S.watching_any && _dmWatchCard(S.watching_any),
+    tv: () => _dmCatCard('tv'), anime: () => _dmCatCard('anime'), cartoons: () => _dmCatCard('cartoons'), movie: () => _dmCatCard('movies'),
+    diary: () => S.diary && _dmDiaryCard(S.diary),
+    lately: _dmFriendsLately, friends: _dmFriendsCard, compare: () => _dmFacesCard('compare'), blend: () => _dmFacesCard('blend'),
+    night: _dmNightCard, challenge: _dmChallengeCard, poll: _dmPollCard, epchat: _dmEpChatCard, msgs: _dmMsgsCard,
+    you: _dmYouCard, list: _dmListCard, note: _dmNoteCard, eps: _dmEpsCard, medals: _dmMedalsCard, export: _dmExportCard,
+  }[kind] || (() => ''))();
+  box.innerHTML = html || (['any', 'diary'].includes(kind)
+    ? (S.watching_any ? _dmWatchCard(S.watching_any) : `<div class="dm-card-in dm-empty">${icon('play', 18)}<b>Nothing in progress yet</b>
+      <span>Start a show and it waits for you here.</span><button type="button" class="dm-btn is-main" onclick="_dmHide();openAddModal()">${icon('plus', 14)} Add a title</button></div>`) : '');
+  mssFillEpNames(box);
+  _dmBackdrops(box);
+  _dmTopPosters(box);
+}
+/* TV Shows / Movies / Anime / Cartoons: only that category — what you're watching, else the last one you
+   finished, else the newest on your Watchlist; with none of it yet, its Top 250 like Home's Explore cards */
+function _dmCatCard(cat) {
+  const S = _shellSum, W = S.watching || {}, P = S.paused_by || {}, D = S.done_by || {}, Q = S.queue_by || {};
+  if (cat === 'movies' && S.up_next_movie) return _dmMovieCard(S.up_next_movie);
+  if (W[cat]) return _dmWatchCard(W[cat]);
+  if (P[cat]) return _dmPausedCard(P[cat]);
+  if (D[cat]) return _dmDoneCard(D[cat]);
+  if (Q[cat]) return _dmQueueCard(Q[cat]);
+  return _dmTopCard(cat);
+}
+function _dmQueueCard(e) {
+  const movie = e.cat === 'movies' || e.tmdb_type === 'movie';
+  return _dmHero(e, e.status === 'up_next' ? 'Up next' : 'On your Watchlist', `${_dmHeroTitle(_dmTitleHref(e), e.title)}
+      <span class="dm-hero-sub">${escHTML(CAT_META[e.cat]?.label || (movie ? 'Movie' : 'TV Show'))}${e.year ? ' · ' + escHTML(String(e.year).slice(0, 4)) : ''}</span>`,
+    `<button type="button" class="dm-btn is-main" onclick="_dmStart(this, '${escHTML(e.id)}')">${icon('play', 13)} Start watching</button><a class="dm-btn is-ghost" href="${_dmTitleHref(e)}">Open</a>`);
+}
+function _dmPausedCard(e) {
+  const total = _dmTotal(e), done = Number(e.watched) || 0;
+  return _dmHero(e, 'Taking a break', `${_dmHeroTitle(_dmTitleHref(e), e.title)}
+      <span class="dm-hero-sub">${+e.episode ? `Stopped at S${Number(e.season) || 1} E${Number(e.episode)}` : 'Paused'}${total ? ` · ${done} of ${total} episodes` : ''}</span>`,
+    `<button type="button" class="dm-btn is-main" onclick="_dmStart(this, '${escHTML(e.id)}')">${icon('play', 13)} Resume</button><a class="dm-btn is-ghost" href="${_dmTitleHref(e)}">Open</a>`);
+}
+// Start watching (from the Watchlist) / Resume (Taking a Break) — the same changes as the category pages' buttons
+async function _dmStart(btn, id) {
+  const S = _shellSum || {}, e = [...Object.values(S.queue_by || {}), ...Object.values(S.paused_by || {})].find(x => x?.id === id);
+  if (!e || btn.disabled) return;
+  btn.disabled = true;
+  const movie = e.cat === 'movies' || e.ratings?._media_type === 'movie', fresh = e.status === 'queue';
+  const updates = fresh && !movie ? { status: 'watching', season: e.season || 1, episode: 0, watched: 0 } : { status: 'watching' };
+  try {
+    await updateProgress(e.id, window._navUser.id, updates);
+    showToast(e.status === 'paused' ? 'Resumed!' : 'Moved to Currently Watching!');
+    if (!movie && typeof _refreshTmdbSeasonData === 'function') _refreshTmdbSeasonData(Object.assign(e, updates), window._navUser.id);
+    document.dispatchEvent(new CustomEvent('mss:progress', { detail: { entry: e } }));
+  } catch (err) { console.error(err); showToast('Couldn’t start it — try again.', 'err'); btn.disabled = false; }
+}
+const _DM_CAT_PAGE = { tv: 'tv-shows.html', movies: 'movies.html', anime: 'anime.html', cartoons: 'cartoons.html' };
+// the same lists, colours and saved posters as Home's Explore cards (index.html, 'mss_explore_posters_v1')
+const _DM_TOP = { tv: ['top250_shows', 'Top 250 Shows', 'the best TV ever made', '#2F5F8A', '#0C1D2E'], movies: ['top250_movies', 'Top 250 Movies', 'the best movies ever', '#9C3D1C', '#2E1007'],
+  anime: ['top250_anime', 'Top 250 Anime', 'the best anime', '#7A3E78', '#240F24'], cartoons: ['top250_cartoons', 'Top 250 Cartoons', 'the best cartoons', '#3F7A6E', '#0D2520'] };
+const _DM_XP_STORE = 'mss_explore_posters_v1';
+function _dmTopCard(cat) {
+  const [key, title, what, a, b] = _DM_TOP[cat];
+  return `<a class="dm-card-in dm-top" href="discover-list.html?list=${key}&title=${encodeURIComponent(title)}" style="--xp-a:${a};--xp-b:${b}" data-top="${key}">
+      <span class="dm-top-num" aria-hidden="true">250</span>
+      <span class="dm-eyebrow">Nothing here yet</span>
+      <span class="dm-top-t">${title}</span>
+      <span class="dm-top-s">Start with ${what}, ranked.</span>
+      <span class="dm-btn is-ghost">Explore ${icon('arrowRight', 13)}</span>
+      <span class="dm-top-fan" aria-hidden="true"><span class="dm-top-p"></span><span class="dm-top-p"></span><span class="dm-top-p"></span></span></a>`;
+}
+async function _dmTopPosters(box) {
+  const card = box.querySelector('[data-top]'); if (!card) return;
+  const key = card.dataset.top, fill = list => card.isConnected && card.querySelectorAll('.dm-top-p').forEach((p, i) => { const u = safeURL(list[i]); p.innerHTML = u ? `<img src="${u}" alt="">` : ''; });
+  let saved = null; try { saved = JSON.parse(localStorage.getItem(_DM_XP_STORE) || '{}')[key]; } catch {}
+  if (saved?.posters?.length) { fill(saved.posters); return; }
+  try {   // not seen on Home yet: ask Discover for it, and keep it for Home too
+    await mssLoadScript('js/discover-categories.js');
+    const items = await getDiscoverCategory(key)?.fetch(1);
+    const posters = (items || []).map(it => it.poster_url).filter(u => safeURL(u)).slice(0, 3);
+    if (!posters.length) return;
+    try { const all = JSON.parse(localStorage.getItem(_DM_XP_STORE) || '{}'); all[key] = { t: Date.now(), posters }; localStorage.setItem(_DM_XP_STORE, JSON.stringify(all)); } catch {}
+    fill(posters);
+  } catch {}
+}
+// Library-style cards: the title's backdrop (wide scene art — MSSBackdrop, so a chosen one shows)
+function _dmBackdrops(box) {
+  box.querySelectorAll('img[data-bd]').forEach(img => MSSBackdrop.path(img.dataset.bd).then(path => {
+    if (!path || !img.isConnected) return;
+    img.onload = () => img.classList.add('in'); img.src = `https://image.tmdb.org/t/p/w780${path}`;
+  }));
+}
+function _dmNext(e) {    // the episode after where you are: { s, e } (null when we don't know)
+  const b = Array.isArray(e.ratings?._season_breakdown) ? e.ratings._season_breakdown.map(Number).filter(n => n > 0) : [];
+  const s = Number(e.season) || 1, ep = Number(e.episode) || 0;
+  if (b.length && ep >= (b[s - 1] || 0)) return s < b.length ? { s: s + 1, e: 1 } : null;
+  return { s, e: ep + 1 };
+}
+function _dmTotal(e) { const b = Array.isArray(e.ratings?._season_breakdown) ? e.ratings._season_breakdown.map(Number).filter(n => n > 0) : []; return b.length ? b.reduce((a, c) => a + c, 0) : Number(e.total_eps) || 0; }
+// Library cards: the title's poster fills the card under a dark wash (the PDF's "Continue watching" card)
+function _dmHero(e, eyebrow, body, acts) {
+  const u = safeURL(e.poster_url);
+  const bg = e.tmdb_id ? `<img class="dm-hero-bg is-bd" data-bd="${escHTML(MSSBackdrop.key(e))}" alt="">` : u ? `<img class="dm-hero-bg in" src="${u}" alt="" loading="lazy">` : '';
+  return `<div class="dm-card-in dm-hero">${bg}
+      <div class="dm-eyebrow">${eyebrow}</div>
+      <div class="dm-hero-row">${u ? `<span class="dm-hero-poster" aria-hidden="true"><img src="${u}" alt="" loading="lazy"></span>` : ''}<div class="dm-hero-body">${body}</div></div>
+      ${acts ? `<div class="dm-acts">${acts}</div>` : ''}</div>`;
+}
+const _dmHeroTitle = (href, title) => `<a class="dm-hero-t" href="${href}" translate="no">${escHTML(title)}</a>`;
+function _dmWatchCard(e) {
+  const nx = _dmNext(e), total = _dmTotal(e), done = Number(e.watched) || 0, pct = total ? Math.min(100, Math.round(done / total * 100)) : null;
+  const movie = e.cat === 'movies' || e.ratings?._media_type === 'movie';
+  return _dmHero(e, movie ? 'Watching now' : 'Continue watching',
+    `${_dmHeroTitle(_dmTitleHref(e), e.title)}
+      ${nx && !movie ? `<span class="dm-hero-sub">Next: S${nx.s} E${nx.e}</span>${e.tmdb_id && e.tmdb_type === 'tv' ? mssEpNameHTML(e.tmdb_id, nx.s, nx.e, 'dm-ep') : ''}` : ''}
+      ${pct != null ? `<span class="dm-prog"><span class="w-prog-track"><span class="w-prog-fill" style="width:${pct}%"></span></span>
+        <span class="dm-prog-l">${done} of ${total} episodes · ${pct}%</span></span>` : ''}`,
+    `${movie ? '' : `<button type="button" class="dm-btn is-main" onclick="_dmPlusOne(this, '${escHTML(e.id)}')">${icon('plus', 14)} 1 episode</button>`}<a class="dm-btn is-ghost" href="${_dmTitleHref(e)}">Open</a>`);
+}
+function _dmMovieCard(e) {
+  return _dmHero(e, 'Next in Up Next', `${_dmHeroTitle(_dmTitleHref(e), e.title)}${e.year ? `<span class="dm-hero-sub">Movie · ${escHTML(String(e.year).slice(0, 4))}</span>` : ''}`,
+    `<button type="button" class="dm-btn is-main" onclick="_dmMovieDone(this, '${escHTML(e.id)}')">${icon('check', 14)} Mark watched</button><a class="dm-btn is-ghost" href="${_dmTitleHref(e)}">Open</a>`);
+}
+function _dmDoneCard(e) {
+  const sc = liveScore(e);
+  const when = e.completed_date ? ' · ' + escHTML(new Date(e.completed_date + 'T12:00').toLocaleDateString(MSSI18n.locale, { day: 'numeric', month: 'short' })) : '';
+  return _dmHero(e, 'Last finished', `${_dmHeroTitle(_dmTitleHref(e), e.title)}<span class="dm-hero-sub">${e.status === 'ongoing' ? 'To Be Continued' : 'Watched'}${when}</span>
+      ${sc != null ? `<span class="dm-score">${scoreBadge(sc, 'sm')}<span class="dm-hero-sub">your score</span></span>` : '<span class="dm-hero-sub">Not rated yet</span>'}`,
+    `<a class="dm-btn is-ghost" href="library.html?sec=watched">All watched ${icon('arrowRight', 13)}</a>`);
+}
+function _dmDiaryCard(d) {
+  const when = d.watched_at ? new Date(d.watched_at) : d.watched_date ? new Date(d.watched_date + 'T12:00') : null;
+  const day = when ? when.toLocaleDateString(MSSI18n.locale, { weekday: 'short', day: 'numeric', month: 'short' }) : 'No date';
+  const time = d.watched_at ? when.toLocaleTimeString(MSSI18n.locale, { hour: 'numeric', minute: '2-digit' }) : '';
+  return _dmHero(d, 'Last in your Diary', `${_dmHeroTitle('diary.html', d.title)}
+      ${+d.episode ? `<span class="dm-hero-sub">S${Number(d.season) || 1} E${Number(d.episode)}</span>${d.tmdb_id && d.tmdb_type === 'tv' ? mssEpNameHTML(d.tmdb_id, d.season, d.episode, 'dm-ep') : ''}` : ''}
+      <span class="dm-hero-sub">${escHTML(day)}${time ? ' · ' + escHTML(time) : ''}</span>`,
+    `<a class="dm-btn is-ghost" href="diary.html">Open Diary ${icon('arrowRight', 13)}</a>`);
+}
+/* You: your profile's backdrop and the first three stats you chose for its header (Edit profile › Profile stats).
+   profile-v2.js picks and counts them (the same numbers as your profile); it and your library load the first time
+   this card shows, then stay for this visit. Until then the three tiles wait as placeholders. */
+let _dmYou = null, _dmYouBusy = false;
+function _dmYouDrop() { _dmYou = null; }   // your stats or backdrop changed (profile-v2.js)
+async function _dmYouLoad() {
+  if (_dmYou || _dmYouBusy || !window._navUser) return;
+  _dmYouBusy = true;
+  try {
+    await mssLoadScript('js/profile-v2.js');
+    const p = window._navUserProfile || {}, uid = window._navUser.id, keys = MSSProfile.statKeys(p).slice(0, 3);
+    const count = q => q.then(r => r.count ?? null, () => null);
+    const [entries, lists, diary] = await Promise.all([getEntries(uid).then(async es => { if (keys.some(k => k === 'eptime' || k === 'totaltime')) await mssFillEpRuntimes(es, uid, 20); return es; }),
+      keys.includes('lists') ? count(sb.from('favorite_lists').select('id', { count: 'exact', head: true }).eq('user_id', uid).eq('cat', 'custom')) : null,
+      keys.includes('diary') ? count(sb.from('diary_watches').select('id', { count: 'exact', head: true }).eq('user_id', uid)) : null]);
+    const vals = MSSProfile.statValues(entries, { lists, diary, time: MSSProfile.timeOf(p) }), bd = await MSSProfile.bannerURL(p, entries).catch(() => null);
+    _dmYou = { stats: keys.map(k => [vals[k] ?? '—', MSSProfile.statLabel(k)]), bd: bd?.url ? bd.url.replace('/w1280/', '/w780/') : null };
+    document.querySelectorAll('.dm-you').forEach(el => { el.outerHTML = _dmYouCard(); });
+  } catch (err) { console.warn('You card:', err); }
+  finally { _dmYouBusy = false; }
+}
+function _dmYouCard() {
+  const p = window._navUserProfile || {}, name = p.username || '', Y = _dmYou;
+  const av = safeURL(p.avatar_url);
+  if (!Y) _dmYouLoad();
+  const tiles = Y ? Y.stats.map(([v, l]) => `<span><b>${escHTML(v)}</b><small>${escHTML(l)}</small></span>`).join('')
+    : '<span><b class="skel skel-line"></b><small>&nbsp;</small></span>'.repeat(3);
+  return `<a class="dm-card-in dm-you${Y?.bd ? ' has-bd' : ''}" href="profile.html" aria-label="Open your profile"${Y ? '' : ' aria-busy="true"'}>
+      ${Y?.bd ? `<span class="dm-you-bg" style="background-image:${cssURL(Y.bd)}" aria-hidden="true"></span>` : ''}
+      <span class="dm-you-top"><span class="dm-you-av" aria-hidden="true">${av ? `<img src="${av}" alt="">` : escHTML((name || '?')[0].toUpperCase())}</span>
+        <span class="dm-tx"><b translate="no">${escHTML(p.display_name || name || 'You')}</b><small translate="no">@${escHTML(name)}</small></span></span>
+      <span class="dm-you-stats">${tiles}</span>
+      <span class="dm-you-cta">Open profile ${icon('arrowRight', 13)}</span></a>`;
+}
+// Social / You: one card per row (shell_summary, 118)
+const _dmFaces = (list, n = 5) => `<span class="dm-faces" aria-hidden="true">${(list || []).slice(0, n).map(p => { const u = safeURL(p.avatar_url);
+  return `<span class="dm-face">${u ? `<img src="${u}" alt="">` : escHTML((p.username || '?')[0].toUpperCase())}</span>`; }).join('')}</span>`;
+const _dmWhen = d => d ? escHTML(new Date(d).toLocaleDateString(MSSI18n.locale, { weekday: 'short', day: 'numeric', month: 'short' })) : '';
+const _dmPlain = (eyebrow, title, sub, extra, acts, cls = '') => `<div class="dm-card-in dm-plain${cls}"><div class="dm-eyebrow">${eyebrow}</div>
+    <div class="dm-plain-t">${title}</div>${sub ? `<div class="dm-plain-s">${sub}</div>` : ''}${extra || ''}${acts ? `<div class="dm-acts">${acts}</div>` : ''}</div>`;
+const _dmGo = (href, label, main) => `<a class="dm-btn${main ? ' is-main' : ''}" href="${href}">${label} ${icon('arrowRight', 13)}</a>`;
+const _dmFace = (p, size = '') => { const u = safeURL(p?.avatar_url); return `<span class="dm-face${size}">${u ? `<img src="${u}" alt="">` : escHTML(((p?.display_name || p?.username || '?')[0]).toUpperCase())}</span>`; };
+const _dmMe = () => { const p = window._navUserProfile || {}; return { username: p.username, display_name: p.display_name, avatar_url: p.avatar_url }; };
+function _dmFriendsCard() {
+  const S = _shellSum || {}, n = Number(S.friends) || 0, f = S.friend_faces || [];
+  return `<div class="dm-card-in dm-plain dm-people"><div class="dm-eyebrow">Your friends</div>
+      <div class="dm-plain-t">${n ? `${n} friend${n === 1 ? '' : 's'}` : 'No friends yet'}${_bnavReq > 0 ? ` <span class="dm-pill">${_bnavReq} request${_bnavReq === 1 ? '' : 's'}</span>` : ''}</div>
+      ${f.length ? `<ul class="dm-roster">${f.slice(0, 4).map(p => `<li>${_dmFace(p, ' is-lg')}<span translate="no">${escHTML(p.display_name || p.username)}</span></li>`).join('')}</ul>`
+        : '<div class="dm-plain-s">Follow people you know — when they follow you back, you’re friends.</div>'}
+      <div class="dm-acts">${_dmGo(_bnavReq > 0 ? 'friends.html?view=requests' : 'friends.html', _bnavReq > 0 ? 'See requests' : n ? 'All friends' : 'Find friends', true)}</div></div>`;
+}
+function _dmFacesCard(kind) {
+  const S = _shellSum || {}, f = S.friend_faces || [], first = f[0];
+  if (!first) return _dmPlain(kind === 'compare' ? 'Compare' : 'Blend', 'Better with a friend', 'Follow a friend to compare your taste and blend your picks.', '', _dmGo('friends.html', 'Find friends', true));
+  if (kind === 'compare') {
+    return `<div class="dm-card-in dm-plain dm-versus"><div class="dm-eyebrow">Compare</div>
+        <div class="dm-vs">${_dmFace(_dmMe(), ' is-xl')}<span class="dm-vs-mid" aria-hidden="true">${icon('compare', 18)}</span>${_dmFace(first, ' is-xl')}</div>
+        <div class="dm-plain-t">You &amp; <span translate="no">${escHTML(first.display_name || first.username)}</span></div>
+        <div class="dm-plain-s">Line your scores up side by side — where you agree, and where you really don’t.</div>
+        <div class="dm-acts">${_dmGo('compare.html', 'Compare taste', true)}</div></div>`;
+  }
+  const posters = [...Object.values(S.queue_by || {}), ...Object.values(S.watching || {}), ...Object.values(S.done_by || {})].map(e => safeURL(e?.poster_url)).filter(Boolean).slice(0, 3);
+  return `<div class="dm-card-in dm-plain dm-blend"><div class="dm-eyebrow">Blend</div>
+      <div class="dm-plain-t">One list for you and your friends</div>
+      <div class="dm-plain-s">Picks you’ll all enjoy, from what each of you loves and wants to watch.</div>
+      <div class="dm-blend-row">${_dmFaces([_dmMe(), ...f], 4)}${posters.length ? `<span class="dm-top-fan dm-mini-fan" aria-hidden="true">${posters.map(u => `<span class="dm-top-p"><img src="${u}" alt=""></span>`).join('')}</span>` : ''}</div>
+      <div class="dm-acts">${_dmGo('blend.html', 'Make a blend', true)}</div></div>`;
+}
+/* Movie Night, Challenges, Polls, Episode Chat and Medals come from their pages' own functions (they decide who
+   sees what): each is asked the first time its row is shown, and kept for this session for 2 minutes. */
+const _dmSoc = {}, _DM_SOC = { nights: ['get_movie_nights'], challenges: ['get_challenges', { p_ended: false }], polls: ['get_polls', { p_scope: 'friends', p_offset: 0 }],
+  chats: ['my_episode_chats'], badges: ['my_badges'] };
+function _dmSocGet(k) {
+  if (k in _dmSoc && !(_dmSoc[k] instanceof Promise)) return _dmSoc[k];
+  const uid = window._navUser?.id;
+  try { const c = JSON.parse(sessionStorage.getItem('mss_shell_' + k) || 'null'); if (c?.uid === uid && Date.now() - c.at < 120000) return (_dmSoc[k] = c.v); } catch {}
+  if (!(_dmSoc[k] instanceof Promise)) {
+    const [fn, args] = _DM_SOC[k];
+    _dmSoc[k] = sb.rpc(fn, args).then(r => r.error ? [] : (Array.isArray(r.data) ? r.data : []), () => []).then(v => {
+      _dmSoc[k] = v;
+      try { sessionStorage.setItem('mss_shell_' + k, JSON.stringify({ uid, at: Date.now(), v })); } catch {}
+      if (_dmCur) { const kind = _dmPick; _dmPick = null; _dmCard(kind); }
+      return v;
+    });
+  }
+  return null;            // still loading
+}
+const _dmLoading = eyebrow => `<div class="dm-card-in dm-plain" aria-busy="true"><div class="dm-eyebrow">${eyebrow}</div><span class="skel skel-line" style="width:70%"></span><span class="skel skel-line" style="width:45%"></span></div>`;
+const _dmWhenTime = d => d ? escHTML(new Date(d).toLocaleString(MSSI18n.locale, { weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })) : '';
+function _dmNightCard() {
+  const all = _dmSocGet('nights'); if (!all) return _dmLoading('Movie Night');
+  const n = all.find(x => x.status === 'open' || (x.status === 'decided' && (!x.scheduled_at || new Date(x.scheduled_at) > Date.now() - 6 * 3600000)));
+  if (!n) return _dmPlain('Movie Night', 'Nothing planned', 'Pick something to watch together and let everyone vote.', '', _dmGo('movie-night.html', 'Plan one', true));
+  const going = (n.members || []).filter(m => m.status === 'going' || m.host), pick = (n.options || []).find(o => o.id === n.pick_id);
+  const when = n.scheduled_at ? _dmWhenTime(n.scheduled_at) : 'No date yet';
+  if (pick) return _dmHero({ tmdb_id: pick.tmdb_id, tmdb_type: pick.tmdb_type, poster_url: pick.poster_path ? 'https://image.tmdb.org/t/p/w342' + pick.poster_path : null }, 'Next Movie Night',
+    `${_dmHeroTitle('movie-night.html', n.title || 'Movie Night')}<span class="dm-hero-sub">Watching <b translate="no">${escHTML(pick.title)}</b></span><span class="dm-hero-sub">${when} · ${going.length} going</span>${_dmFaces(going, 5)}`,
+    `<a class="dm-btn is-main" href="movie-night.html">Open</a>`);
+  const opts = (n.options || []).slice(0, 3);
+  return `<div class="dm-card-in dm-plain"><div class="dm-eyebrow">${n.status === 'open' && n.voting ? 'Voting now' : 'Next Movie Night'}</div>
+      <div class="dm-plain-t" translate="no">${escHTML(n.title || 'Movie Night')}</div><div class="dm-plain-s">${when} · ${going.length} going${n.voting ? ` · ${(n.options || []).length} options` : ''}</div>
+      ${opts.length ? `<span class="dm-covers" aria-hidden="true">${opts.map(o => o.poster_path ? `<img src="https://image.tmdb.org/t/p/w185${escHTML(o.poster_path)}" alt="">` : '').join('')}</span>` : _dmFaces(going, 5)}
+      <div class="dm-acts">${_dmGo('movie-night.html', n.voting && !n.my_vote && n.status === 'open' ? 'Vote' : 'Open', true)}</div></div>`;
+}
+function _dmChallengeCard() {
+  const all = _dmSocGet('challenges'); if (!all) return _dmLoading('Challenges');
+  const c = all.find(x => x.my_status === 'joined' && x.state === 'live' && !x.my_finished_at) || all.find(x => x.my_status === 'joined' && x.state === 'upcoming') || all.find(x => x.state !== 'ended');
+  if (!c) return _dmPlain('Challenges', 'No challenge running', 'Race your friends to a watching goal.', '', _dmGo('challenges.html', 'Start one', true));
+  const goal = Number(c.goal) || 1, got = Math.min(goal, Number(c.my_progress) || 0), pct = Math.round(got / goal * 100), done = !!c.my_finished_at;
+  const ends = c.ends_on ? escHTML(new Date(c.ends_on + 'T12:00').toLocaleDateString(MSSI18n.locale, { day: 'numeric', month: 'short' })) : '';
+  // the medal it's for — the same art as the Challenges page (an official one, or gold · silver · bronze)
+  if (typeof MSSMedal === 'undefined') mssLoadScript('js/medals.js').then(() => { if (_dmPick === 'challenge') { _dmPick = null; _dmCard('challenge'); } });
+  const medal = typeof MSSMedal === 'undefined' ? `<span class="dm-medal-ic">${icon('trophy', 26)}</span>`
+    : c.official && c.medal ? MSSMedal.official(c.medal, { size: 74, locked: !done })
+    : `<span class="dm-medal-set">${[2, 1, 3].map(pl => MSSMedal.challenge(pl, c.cat, { size: pl === 1 ? 52 : 40 })).join('')}</span>`;
+  return `<div class="dm-card-in dm-plain dm-chal"><div class="dm-eyebrow">${c.state === 'upcoming' ? 'Starting soon' : done ? 'Finished' : 'Your challenge'}</div>
+      <div class="dm-chal-top"><div class="dm-chal-tx"><div class="dm-plain-t" translate="no">${escHTML(c.title)}</div>
+        <div class="dm-plain-s">${got} of ${goal}${ends ? ` · ends ${ends}` : ''}</div></div>
+        <span class="dm-chal-medal" aria-hidden="true">${medal}</span></div>
+      <div class="dm-meter" role="img" aria-label="${got} of ${goal}"><i style="width:${pct}%"></i></div>
+      ${_dmFaces((c.members || c.board || []).filter(m => m.status === 'joined'), 6)}
+      <div class="dm-acts">${_dmGo('challenges.html', 'Open', true)}</div></div>`;
+}
+function _dmPollCard() {
+  const all = _dmSocGet('polls'); if (!all) return _dmLoading('Polls');
+  const p = all.find(x => x.is_open) || all[0];
+  if (!p) return _dmPlain('Polls', 'No polls yet', 'Ask your friends what to watch next.', '', _dmGo('polls.html?new=1', 'New poll', true));
+  const a = p.author || {}, total = Number(p.total_votes) || 0, results = !!p.show_results;
+  const left = (() => {      // "ends in 2 days" / "ended"
+    const ms = new Date(p.closes_at) - Date.now(); if (!(ms > 0)) return 'ended';
+    const [v, u] = ms < 3600000 ? [ms / 60000, 'minute'] : ms < 86400000 ? [ms / 3600000, 'hour'] : [ms / 86400000, 'day'];
+    try { return 'ends ' + new Intl.RelativeTimeFormat(MSSI18n.locale, { numeric: 'auto' }).format(Math.max(1, Math.round(v)), u); } catch { return ''; }
+  })();
+  const opts = (p.options || []).slice(0, 4), top = Math.max(1, ...opts.map(o => Number(o.votes) || 0));
+  const row = o => {
+    const n = Number(o.votes) || 0, pct = results && total ? Math.round(n / total * 100) : 0, mine = p.my_vote === o.id, lead = results && n === top && n > 0;
+    return `<li class="dm-po${mine ? ' is-mine' : ''}${lead ? ' is-lead' : ''}">${results ? `<i class="dm-po-bar" style="width:${pct}%"></i>` : ''}
+        ${o.image_path ? `<img src="https://image.tmdb.org/t/p/w92${escHTML(o.image_path)}" alt="">` : `<span class="dm-po-dot" aria-hidden="true">${mine ? icon('check', 11) : ''}</span>`}
+        <span class="dm-po-l" translate="no">${escHTML(o.label || '')}</span>${results ? `<b class="dm-po-n">${pct}%</b>` : ''}</li>`;
+  };
+  return `<div class="dm-card-in dm-plain dm-poll">
+      <div class="dm-poll-head">${_dmFace(a)}<span class="dm-poll-who"><b translate="no">${escHTML(a.display_name || a.username || '')}</b><small>asks${left ? ' · ' + escHTML(left) : ''}</small></span>
+        <span class="dm-pill${p.is_open ? '' : ' is-off'}">${p.is_open ? 'Open' : 'Closed'}</span></div>
+      <div class="dm-poll-q" translate="no">${escHTML(p.question)}</div>
+      ${opts.length ? `<ul class="dm-po-list">${opts.map(row).join('')}</ul>` : ''}
+      <div class="dm-poll-foot"><span>${icon('poll', 14)} ${total} vote${total === 1 ? '' : 's'}${p.my_vote ? ' · you voted' : ''}</span>${_dmGo('polls.html', p.is_open && !p.my_vote ? 'Vote' : 'See results', true)}</div></div>`;
+}
+function _dmEpChatCard() {
+  const all = _dmSocGet('chats'); if (!all) return _dmLoading('Episode Chat');
+  const c = all[0];
+  if (!c) return _dmPlain('Episode Chat', 'Quiet for now', 'Talk about an episode with your friends.', '', _dmGo('episode-chat.html', 'Open', true));
+  return _dmHero({ tmdb_id: c.tmdb_id, tmdb_type: 'tv', poster_url: c.poster_path ? 'https://image.tmdb.org/t/p/w342' + c.poster_path : null }, c.new ? `Episode Chat · ${Number(c.new)} new` : 'Episode Chat',
+    `${_dmHeroTitle('episode-chat.html', c.show_title || 'A show')}<span class="dm-hero-sub">S${Number(c.season) || 1} E${Number(c.episode) || 1} · ${Number(c.count) || 0} message${Number(c.count) === 1 ? '' : 's'} · ${escHTML(_notifTimeAgo(c.last_at))}</span>
+      ${c.unlocked && c.last ? `<span class="dm-quote" translate="no">${c.last.mine ? 'You' : escHTML(c.last.name || '')}: “${escHTML(c.last.body)}”</span>` : '<span class="dm-hero-sub">Watch the episode to read it.</span>'}`,
+    `<a class="dm-btn is-main" href="episode-chat.html">Join in</a>`);
+}
+function _dmMsgsCard() {
+  const n = typeof _navMsgCount !== 'undefined' ? _navMsgCount : 0, f = _shellSum?.friend_faces || [];
+  return `<div class="dm-card-in dm-plain dm-msgs"><div class="dm-eyebrow">Messages</div>
+      <div class="dm-msgs-top"><span class="dm-msgs-ic" aria-hidden="true">${icon('inbox', 24)}${n ? `<span class="dm-msgs-n">${n > 9 ? '9+' : n}</span>` : ''}</span>
+        <span class="dm-chal-tx"><span class="dm-plain-t">${n ? `${n} new message${n === 1 ? '' : 's'}` : 'All caught up'}</span>
+        <span class="dm-plain-s">${f.length ? `Chat with <span translate="no">${f.slice(0, 2).map(x => escHTML(x.display_name || x.username)).join(', ')}</span>${f.length > 2 ? ' and more' : ''}` : 'Private chats with your friends'}</span></span></div>
+      ${f.length ? _dmFaces(f, 5) : ''}
+      <div class="dm-e2e">${icon('lock', 13)} End-to-end encrypted — only the people in a chat can read it</div>
+      <div class="dm-acts">${_dmGo('messages.html', n ? 'Read them' : 'Open Messages', true)}</div></div>`;
+}
+function _dmListCard() {
+  const l = _shellSum?.list;
+  if (!l) return _dmPlain('Lists', 'No lists yet', 'Rank your favourites, plan a marathon, share it.', '', _dmGo('lists.html?new=1', 'New list', true));
+  const covers = (l.posters || []).map(safeURL).filter(Boolean), n = Number(l.count) || 0;
+  return `<div class="dm-card-in dm-plain dm-listcard"><div class="dm-eyebrow">Your latest list</div>
+      <div class="dm-plain-t" translate="no">${escHTML(l.title)}</div>
+      <div class="dm-plain-s">${n} title${n === 1 ? '' : 's'}</div>
+      ${covers.length ? `<span class="dm-top-fan dm-list-fan" aria-hidden="true">${covers.map(u => `<span class="dm-top-p"><img src="${u}" alt=""></span>`).join('')}</span>` : ''}
+      <div class="dm-acts">${_dmGo('lists.html', 'Your lists', true)}<a class="dm-btn" href="lists.html?new=1">${icon('plus', 13)} New list</a></div></div>`;
+}
+function _dmNoteCard() {
+  const n = _shellSum?.note;
+  if (!n) return _dmPlain('Notes', 'No notes yet', 'Write what you thought of anything you watch.', '', _dmGo('notes.html?add=1', 'Write a note', true));
+  return _dmHero(n, 'Your latest note', `${_dmHeroTitle('notes.html', n.title)}<span class="dm-quote" translate="no">“${escHTML(String(n.text || '').slice(0, 120))}${String(n.text || '').length > 120 ? '…' : ''}”</span>`,
+    `<a class="dm-btn is-ghost" href="notes.html">All notes ${icon('arrowRight', 13)}</a>`);
+}
+function _dmEpsCard() {
+  const r = _shellSum?.ep_rating;
+  if (!r) return _dmPlain('Episodes', 'No episodes rated yet', 'Rate episodes and see each season’s chart.', '', _dmGo('episodes.html', 'Open Episodes', true));
+  return _dmHero({ ...r, tmdb_type: 'tv' }, 'Last episode you rated', `${_dmHeroTitle('episodes.html?show=' + encodeURIComponent(r.tmdb_id || ''), r.title)}
+      <span class="dm-hero-sub">S${Number(r.season) || 1} E${Number(r.episode) || 1}</span>${r.tmdb_id ? mssEpNameHTML(r.tmdb_id, r.season, r.episode, 'dm-ep') : ''}
+      ${r.score != null ? `<span class="dm-score">${scoreBadge(r.score, 'sm')}</span>` : ''}`, `<a class="dm-btn is-ghost" href="episodes.html">Episodes ${icon('arrowRight', 13)}</a>`);
+}
+function _dmMedalsCard() {
+  const all = _dmSocGet('badges'); if (!all) return _dmLoading('Medals');
+  const n = all.length, last = all[0];
+  if (typeof MSSMedal === 'undefined' && n) mssLoadScript('js/medals.js').then(() => { if (_dmPick === 'medals') { _dmPick = null; _dmCard('medals'); } });
+  const draw = b => typeof MSSMedal === 'undefined' ? icon('trophy', 26)        // the same medals as the cabinet (showcase.js)
+    : b.kind === 'member' ? MSSMedal.member({ size: 50 }) : b.kind === 'secret' ? MSSMedal.secret(b.medal, { size: 58 })
+    : b.kind === 'achievement' ? MSSMedal.achievement(b.ach_key, b.ach_level, { size: 58, at: b.at })
+    : b.kind === 'official' ? MSSMedal.official(b.medal, { size: 58 }) : MSSMedal.challenge(b.place, b.cat, { size: 48 });
+  const name = b => b.kind === 'achievement' ? (typeof MSSMedal !== 'undefined' && MSSMedal.ACH?.[b.ach_key]?.name) || b.title : b.title;
+  return `<div class="dm-card-in dm-plain"><div class="dm-eyebrow">Medals</div>
+      <div class="dm-plain-t">${n ? `${n} medal${n === 1 ? '' : 's'}` : 'Your cabinet is waiting'}</div>
+      ${n ? `<div class="dm-shelf" aria-hidden="true">${all.slice(0, 4).map(b => `<span class="dm-shelf-m">${draw(b)}</span>`).join('')}</div>
+        <div class="dm-plain-s">Newest: <span translate="no">${escHTML(name(last) || 'a medal')}</span> · ${_dmWhen(last.earned_at)}</div>`
+        : '<div class="dm-plain-s">Earn them by watching, rating and finishing challenges.</div>'}
+      <div class="dm-acts">${_dmGo('cabinet.html', 'Open the cabinet', true)}</div></div>`;
+}
+function _dmExportCard() {
+  const n = _shellSum?.counts?.all;
+  const tile = (fmt, ic, l) => `<a class="dm-ex-t" href="export.html?format=${fmt}"><span class="dm-ex-ic" aria-hidden="true">${icon(ic, 18)}</span>${l}</a>`;
+  return `<div class="dm-card-in dm-plain dm-export"><div class="dm-eyebrow">Export</div>
+      <div class="dm-plain-t">Take your folio anywhere</div>
+      <div class="dm-plain-s">${n != null ? `All ${Number(n).toLocaleString(MSSI18n.locale)} titles, ` : ''}your scores and notes — pick a format to start.</div>
+      <div class="dm-ex">${tile('pdf', 'download', 'PDF')}${tile('image', 'image', 'Image')}${tile('csv', 'list', 'Spreadsheet')}${tile('backup', 'layers', 'Full backup')}</div>
+      <div class="dm-acts">${_dmGo('export.html', 'Open Export', true)}</div></div>`;
+}
+// Friends lately: the newest friend activity among the notifications already loaded on this page
+const _DM_FRIEND_TYPES = ['friend_started', 'friend_episode', 'friend_finished', 'friend_rated', 'friend_note', 'friend_watchlist', 'friend_dropped', 'friend_list', 'friend_poll'];
+function _dmFriendsLately() {
+  const items = (typeof _notifItems !== 'undefined' ? _notifItems : []).filter(n => _DM_FRIEND_TYPES.includes(n.type)).slice(0, 4);
+  const row = n => {
+    const m = n.meta || {}, href = m.tmdb_id && m.tmdb_type ? `title.html?type=${encodeURIComponent(m.tmdb_type)}&id=${encodeURIComponent(m.tmdb_id)}`
+      : n.actor_id ? `profile-view.html?id=${encodeURIComponent(n.actor_id)}` : 'activity.html';
+    return `<li><a class="dm-fl" href="${href}">${_dmPoster(m.poster_url || n.actor?.avatar_url, m.title || n.actor?.username, 'dm-fl-pic')}
+      <span class="dm-tx"><span class="dm-fl-t">${_notifShortText(n)}</span><small>${escHTML(_notifTimeAgo(n.created_at))}</small></span></a></li>`;
+  };
+  return `<div class="dm-card-in dm-lately"><div class="dm-eyebrow">Friends lately</div>
+      ${items.length ? `<ul class="dm-fl-list">${items.map(row).join('')}</ul>` : `<div class="dm-empty"><span>No friend activity yet.</span></div>`}
+      <div class="dm-acts"><a class="dm-btn" href="${items.length ? 'activity.html' : 'friends.html'}">${items.length ? 'All activity' : 'Find friends'} ${icon('arrowRight', 13)}</a></div></div>`;
+}
+// +1 episode — the shared steps (db.js mssStepEpisode); the Diary logs it by itself
+async function _dmPlusOne(btn, id) {
+  const S = _shellSum, e = [S?.watching_any, ...Object.values(S?.watching || {})].find(x => x?.id === id);
+  if (!e || btn.disabled) return;
+  btn.disabled = true;
+  try {
+    if (typeof MSSEp === 'undefined') await mssLoadScript('js/episode-ratings.js');
+    const r = await mssStepEpisode(e, 1, window._navUser.id);
+    if (r === 'finish') {
+      _dmHide();
+      const st = await showConfirm({ title: `Finished “${e.title}”`, message: 'Has the show ended, or are more seasons coming?', confirmText: 'Save', danger: false,
+        iconName: 'trophy', choices: [['completed', 'Watched', 'The show has ended'], ['ongoing', 'To Be Continued', 'More seasons coming']] });
+      if (st) { await mssFinishShow(e, window._navUser.id, st); showToast(`Added to ${st === 'ongoing' ? 'To Be Continued' : 'Watched'}.`); }
+    } else showToast(r === 'movie_done' ? `“${e.title}” marked as watched!` : 'Progress updated');
+    document.dispatchEvent(new CustomEvent('mss:progress', { detail: { entry: e } }));
+  } catch (err) { console.error(err); showToast('Error updating progress.', 'err'); }
+  finally { btn.disabled = false; }
+}
+async function _dmMovieDone(btn, id) {
+  const e = _shellSum?.up_next_movie;
+  if (!e || e.id !== id || btn.disabled) return;
+  btn.disabled = true;
+  try {
+    const done = { status: 'completed', completed_date: mssToday() };
+    await updateProgress(e.id, window._navUser.id, done);
+    Object.assign(e, done);
+    showToast(`“${e.title}” marked as watched!`);
+    document.dispatchEvent(new CustomEvent('mss:watched', { detail: e }));
+  } catch (err) { console.error(err); showToast('Error marking complete.', 'err'); btn.disabled = false; }
+}
+
+/* ═════════ Guests: one promo per locked section (desktop panel · phone sheet) ═════════ */
+const SHELL_PROMO = {
+  lib: { eyebrow: 'Your library lives here', h: 'Movies, shows, anime and cartoons, all tracked.',
+    p: 'Make a free account to tick off every episode, see your progress at a glance, and keep a Diary of every watch.' },
+  social: { eyebrow: 'Better with friends', h: 'Compare, blend and watch together.',
+    p: 'Make a free account to follow friends, compare and blend your taste, and plan movie nights, challenges and polls.' },
+  you: { eyebrow: 'Your folio lives here', h: 'Profile, lists, notes and medals, all yours.',
+    p: 'Make a free account to track what you watch, rate it, and share your top picks.' },
+};
+function _shellPromoHTML(k, sheet) {
+  const P = SHELL_PROMO[k];
+  return `<div class="shp${sheet ? ' is-sheet' : ''}">
+      <div class="shp-tx">
+        <div class="dm-eyebrow">${P.eyebrow}</div>
+        <div class="shp-h"${sheet ? ' id="shellPromoT"' : ''}>${P.h}</div>
+        <p class="shp-p">${P.p}</p>
+        <div class="shp-acts"><a class="dm-btn is-main" href="login.html#signup">Create your folio</a><a class="dm-btn" href="login.html">Sign in</a></div>
+      </div>
+      <div class="shp-posters" aria-hidden="true"></div>
+    </div>`;
+}
+function _shellPromoPosters(root, k) {
+  mssLoadScript('js/folio-cards.js').then(() => {
+    const box = root.querySelector('.shp-posters');
+    if (!box || typeof MSSFolio === 'undefined') return;
+    box.innerHTML = MSSFolio.promo(k).slice(0, 4).map(p => `<span class="shp-poster"><img src="https://image.tmdb.org/t/p/w342${escHTML(p.poster)}" alt="" loading="lazy"></span>`).join('');
+  });
+}
+function shellPromoSheet(k) {
+  let ov = document.getElementById('shellPromo');
+  if (!ov) {
+    ov = document.createElement('div');
+    ov.id = 'shellPromo'; ov.className = 'soc-overlay shell-sheet-ov';
+    ov.innerHTML = `<div class="soc-card shell-sheet" role="dialog" aria-modal="true" aria-labelledby="shellPromoT">
+        <div class="sf-header"><span></span><button type="button" class="sf-close" aria-label="Close">${icon('x', 18)}</button></div>
+        <div class="sf-body" id="shellPromoBody"></div></div>`;
+    ov.querySelector('.sf-close').onclick = () => MSSDialog.close(ov);
+    MSSDialog.bind(ov, () => MSSDialog.close(ov));
+    document.body.appendChild(ov);
+  }
+  const body = document.getElementById('shellPromoBody');
+  body.innerHTML = _shellPromoHTML(k, true);
+  _shellPromoPosters(body, k);
+  MSSDialog.open(ov, { focus: '.shp-acts a' });
+}
+
+/* ═════════ Account: a menu under the avatar (desktop), a full page (phones) ═════════ */
+function shellAccountHTML() {
+  const p = window._navUserProfile || {}, name = p.username || '';
+  const av = safeURL(p.avatar_url), n = typeof MSSAccounts !== 'undefined' ? MSSAccounts.list().length : 1;
+  let admin = false; try { admin = (sessionStorage.getItem('mss_admin') || '').endsWith(':1'); } catch {}
+  const ic = (name, cls = '') => `<span class="acct-ic${cls}" aria-hidden="true">${icon(name, 16)}</span>`, go = `<span class="acct-chev" aria-hidden="true">${icon('chevright', 14)}</span>`;
+  return `<a class="acct-head" href="profile.html"><span class="acct-av" aria-hidden="true">${av ? `<img src="${av}" alt="">` : escHTML((name || '?')[0].toUpperCase())}</span>
+      <span class="acct-who"><b translate="no">${escHTML(p.display_name || name || 'You')}</b><small><span translate="no">@${escHTML(name)}</span> · View profile</small></span></a>
+    <ul class="acct-list">
+      <li><a class="acct-row" href="settings.html">${ic('settings')}<span class="acct-l">Settings</span>${go}</a></li>
+      <li class="nav-admin-link"${admin ? '' : ' hidden'}><a class="acct-row" href="admin.html">${ic('lock')}<span class="acct-l">Admin</span><span class="acct-owner">Owner</span>${go}</a></li>
+      <li><div class="acct-row acct-theme">${ic('sun')}<span class="acct-l" id="acctThemeL">Theme</span>${mssThemeSwitch('acctThemeL')}</div></li>
+      <li><button type="button" class="acct-row" onclick="_acctHide();_navAccounts()">${ic('users')}<span class="acct-l">Switch account</span><span class="acct-meta">${n} on this device</span>${go}</button></li>
+      <li class="acct-sep"><button type="button" class="acct-row is-out" onclick="handleLogout()">${ic('logout', ' is-out')}<span class="acct-l">Sign out</span></button></li>
+    </ul>`;
+}
+function _acctInit() {
+  const btn = document.getElementById('navUserBtn'), menu = document.getElementById('acctMenu');
+  if (!btn || !menu) return;
+  btn.addEventListener('click', ev => { ev.stopPropagation(); menu.hidden ? _acctShow(ev.detail === 0) : _acctHide(); });
+  btn.addEventListener('keydown', ev => { if (ev.key === 'ArrowDown') { ev.preventDefault(); _acctShow(true); } });
+  menu.addEventListener('click', ev => {
+    ev.stopPropagation();                                          // a click inside doesn't close it…
+    const t = ev.target.closest('[data-theme-sw] .mss-theme-opt');  // …so the Light / Dark switch is handled here (config.js's page listener never hears it)
+    if (t) setTheme(t.dataset.v);
+  });
+  menu.addEventListener('keydown', ev => {
+    if (ev.key === 'Escape') { ev.preventDefault(); _acctHide(); btn.focus(); return; }
+    const all = [...menu.querySelectorAll('a, button:not([aria-checked="false"])')], i = all.indexOf(document.activeElement);
+    if (i < 0 || !['ArrowDown', 'ArrowUp'].includes(ev.key) || ev.target.closest('[data-theme-sw]')) return;
+    ev.preventDefault(); all[(i + (ev.key === 'ArrowDown' ? 1 : all.length - 1)) % all.length].focus();
+  });
+  menu.addEventListener('focusout', ev => { if (ev.relatedTarget && !menu.contains(ev.relatedTarget) && ev.relatedTarget !== btn) _acctHide(); });
+  document.addEventListener('click', () => _acctHide());
+}
+function _acctShow(focus) {
+  const menu = document.getElementById('acctMenu');
+  _navCloseAll('user');
+  menu.innerHTML = shellAccountHTML();
+  menu.hidden = false;
+  document.getElementById('navUserBtn').setAttribute('aria-expanded', 'true');
+  if (focus) menu.querySelector('a')?.focus();
+}
+function _acctHide() {
+  const menu = document.getElementById('acctMenu');
+  if (!menu || menu.hidden) return;
+  menu.hidden = true;
+  document.getElementById('navUserBtn')?.setAttribute('aria-expanded', 'false');
+}
+// Phones: the same content as a full page (focus stays inside until Back)
+function shellAccountPage() {
+  const ov = _shellPage('shellAcctPage', 'Account');
+  ov.querySelector('.shell-page-body').innerHTML = shellAccountHTML();
+  MSSDialog.open(ov, { focus: '.shell-page-back' });
+}
+// A full-page screen on phones (account, search): back button + title, as a dialog
+function _shellPage(id, title, onClose) {
+  let ov = document.getElementById(id);
+  if (ov) return ov;
+  ov = document.createElement('div');
+  ov.id = id; ov.className = 'shell-page';
+  ov.innerHTML = `<div class="shell-page-card" role="dialog" aria-modal="true" aria-labelledby="${id}T">
+      <div class="shell-page-head"><button type="button" class="shell-page-back" aria-label="Back">${icon('back', 20)}</button>
+        <span class="shell-page-t" id="${id}T">${title}</span></div>
+      <div class="shell-page-body"></div></div>`;
+  const close = () => { MSSDialog.close(ov); onClose?.(); };
+  ov.querySelector('.shell-page-back').onclick = close;
+  MSSDialog.bind(ov, close);
+  document.body.appendChild(ov);
+  return ov;
+}
+
+/* ═════════ Create: + Add in the header (desktop), the round + bottom-right (phones / tablets) ═════════ */
+const SHELL_CREATE = [['title', 'film', 'Add a title', 'Search TMDB or type it in'], ['note', 'edit', 'Write a note', 'Pick a title from your library'],
+  ['list', 'layers', 'New list', 'Opens List Studio'], ['poll', 'poll', 'New poll', 'Ask your friends']];
+function _shellFabEl() {
+  const b = document.createElement('button');
+  b.type = 'button'; b.className = 'shell-fab nav-auth-only'; b.id = 'shellFab';
+  b.setAttribute('aria-label', 'Create'); b.setAttribute('aria-haspopup', 'dialog');
+  b.innerHTML = icon('plus', 26);
+  b.onclick = e => { if (!mssGuestGate('add titles')) shellSheet('create', e.currentTarget); };
+  return b;
+}
+// desktop: a menu under + Add (MSSPopover) · the round + (phones / tablets): Create in the section sheet (shellSheet)
+async function shellCreate(e) {
+  e?.stopPropagation?.();
   if (mssGuestGate('add titles')) return;
-  const open = document.getElementById('bnavSheet').hidden;
-  if (open) _navCloseAll('add');
-  _bnavSheet(open, !open);
+  const btn = e?.currentTarget || document.getElementById('navCreate');
+  _navCloseAll('add');
+  await mssLoadScript('js/panel.js');
+  MSSPopover.open(btn, { title: 'Create', subtitle: 'What do you want to add?', label: 'Create',
+    items: SHELL_CREATE.map(([k, ic, label, sub]) => ({ label, sub, icon: ic, onSelect: () => _bnavDo(k) })) });
 }
-document.addEventListener('click', e => { if (!e.target.closest?.('#bnavSheet')) _bnavSheet(false); });
 function _bnavDo(k) {
-  _bnavSheet(false);
   const page = location.pathname.split('/').pop() || 'index.html';
   if (k === 'title') return openAddModal();
-  if (k === 'note') return page === 'notes.html' && typeof openNotesSearchPopup === 'function' ? openNotesSearchPopup('add') : (location.href = 'notes.html?add=1');
-  if (k === 'list') return page === 'lists.html' && typeof MSSListStudio !== 'undefined' ? MSSListStudio.open() : (location.href = 'lists.html?new=1');
+  if (k === 'note') return page === 'notes.html' && typeof openNotesSearchPopup === 'function' ? openNotesSearchPopup() : (location.href = 'notes.html?add=1');
+  if (k === 'list') return (location.href = 'list-view.html?new=1');   // the list editor (Lists redesign)
   if (k === 'poll') {
     if (page === 'polls.html' && typeof MSSPolls !== 'undefined') return MSSPolls.create();
     location.href = 'polls.html?new=1';
   }
 }
-/* Red dot on Social while follow requests or messages are waiting */
+
+/* ═════════ Phones / tablets (<1200px): the bottom bar ═════════
+   Home · Discover · Library · Social · You. The tab you're on sits in the olive circle that rises out
+   of the bar's cut-out — drawn there from the first paint (no slide from another tab). */
+function _bnavEl(where) {
+  const el = document.createElement('nav');
+  el.className = 'bnav' + (where.tab ? '' : ' is-none'); el.id = 'bnav';   // is-none: a page with no tab of its own and no known way in — nothing lit
+  el.setAttribute('aria-label', 'Main');
+  const i = Math.max(0, SHELL_TABS.findIndex(t => t.k === where.tab));
+  el.style.setProperty('--x', (i * 20 + 10) + '%');
+  el.innerHTML = `<div class="bnav-bg" aria-hidden="true"></div><div class="bnav-ring" aria-hidden="true"></div><span class="bnav-orb" aria-hidden="true"></span>
+    ${SHELL_TABS.map(t => `<a class="bnav-item${t.k === where.tab ? ' on' : ''}" href="${t.href}" data-tab="${t.k}"${t.k === where.tab ? ' aria-current="page"' : ''}${t.groups ? ` onclick="return _bnavTap(event, '${t.k}')" aria-haspopup="dialog" aria-expanded="false"` : ''}>
+      <span class="bnav-ic">${icon(t.icon, 23)}</span><span class="bnav-lb">${t.label}${t.groups ? '<span class="sr-only guest-only">, needs an account</span>' : ''}</span>${t.groups ? `<span class="bnav-lock guest-only" aria-hidden="true">${icon('lock', 11)}</span>` : ''}</a>`).join('')}`;
+  return el;
+}
+/* Red dot on Social (bar + desktop tab) and a count on Friends while follow requests or messages wait */
 let _bnavReq = 0, _bnavMsg = 0;
 function _bnavDot(n) { _bnavReq = n; _bnavDotPaint(); }
 function _bnavDotPaint() {
-  const a = document.querySelector('#bnav [data-tab="social"]'); if (!a) return;
-  a.querySelector('.bnav-dot')?.remove();
   const why = [_bnavReq > 0 && `${_bnavReq} follow request${_bnavReq === 1 ? '' : 's'}`, _bnavMsg > 0 && `${_bnavMsg} new message${_bnavMsg === 1 ? '' : 's'}`].filter(Boolean).join(', ');
-  if (why) a.insertAdjacentHTML('beforeend', `<span class="bnav-dot"><span class="sr-only">, ${why}</span></span>`);
+  document.querySelectorAll('#bnav [data-tab="social"], #dnav [data-tab="social"]').forEach(a => {
+    a.querySelector('.bnav-dot')?.remove();
+    if (why) a.insertAdjacentHTML('beforeend', `<span class="bnav-dot"><span class="sr-only">, ${why}</span></span>`);
+  });
+  document.querySelectorAll('[data-req-badge]').forEach(b => { b.textContent = _bnavReq > 9 ? '9+' : _bnavReq > 0 ? _bnavReq : ''; b.hidden = !(_bnavReq > 0); });
+  _nshPaintCounts();
 }
 
-/* ── Top toggles ── */
-function _mtogRender() {
-  const box = document.getElementById('mtog'), inner = document.getElementById('mtogIn');
-  if (!box) return;
-  const w = _mtabWhere(), t = MSS_TABS.find(x => x.k === w.tab);
-  if (w.item < 0 || !t?.items) { box.hidden = true; inner.innerHTML = ''; _mtogSize(); return; }
-  const cur = (i, on) => on ? ` class="mtog-btn on" aria-current="page"` : ` class="mtog-btn"`;
-  const btn = (it, i) => `<a href="${it.href}"${cur(i, i === w.item).replace(/class="/, `class="${it.msg ? 'nav-msg-btn ' : ''}`)} onclick="return _mtogGo(event, this)">${icon(it.icon, 18)}<span>${it.label}</span>${it.msg ? '<span class="notif-badge mtog-badge" data-msg-badge></span>' : ''}</a>`;
-  const rows = t.rows ? [t.items.slice(0, t.rows), t.items.slice(t.rows)] : [t.items];
-  const it = t.items[w.item];
-  inner.innerHTML = `<div class="mtog-main${t.rows ? ' grid' : ''}${t.items.length === 2 ? ' two' : ''}"${t.rows ? ` style="--cols:${t.rows}"` : ''} role="navigation" aria-label="${t.label}">
-      ${rows.map((r, ri) => `<div class="mtog-row">${r.map((x, i) => btn(x, i + (ri ? t.rows : 0))).join('')}</div>`).join('')}
-    </div>
-    ${it.sub ? `<div class="mtog-sub${it.scroll ? ' scroll' : ''}" role="navigation" aria-label="${it.label}">${it.sub.map(([l, h], i) =>
-      `<a href="${h}"${cur(i, i === w.sub)} onclick="return _mtogGo(event, this)">${l}</a>`).join('')}</div>` : ''}`;
-  box.hidden = false;
-  _mtogSize();
-  if (t.items.some(x => x.msg)) _navMsgBadge(_navMsgCount);
-  // a row that scrolls sideways: bring the page you're on into view
-  const row = inner.querySelector('.mtog-sub.scroll'), on = row?.querySelector('.on');
-  if (on) row.scrollLeft = on.offsetLeft - (row.clientWidth - on.offsetWidth) / 2;
+/* ═════════ Phones / tablets (<1200px): the top bar (Mobile nav v2) ═════════
+   Left: Home — the logo · Discover — its name · a page of Library / Social / You — the area in small green
+   capitals over the page's name + ▾ (drops that area's menu down under the bar: the desktop menu's rows) · everything else (a title, a person, a list,
+   a friend's profile, Settings, Notifications…) — ‹ Back, the page's name, Share and ⋯ where the page has them.
+   Right: Search · Notifications · your avatar (its menu: Settings, Admin, Theme, Switch account, Sign out).
+   Scrolled: a 1px line under it. The page's own big title is hidden on phones (it stays for screen readers). */
+const _NTOP_SHARE = ['title.html', 'person.html', 'list-view.html', 'profile-view.html', 'season.html', 'episode.html', 'discover-list.html'];
+const _ntopName = () => (document.title || '').replace(/\s*[—–|-]\s*MyScreenFolio\s*$/, '').trim() || 'MyScreenFolio';
+function _ntopLeftHTML(w) {
+  const page = _navFile(location), t = SHELL_TABS.find(x => x.k === w.tab);
+  if (page === 'index.html') return `<a class="nav-logo" href="index.html" aria-label="MyScreenFolio home">${mssLogoSVG('nav-logo-img')}</a>`;
+  if (page === 'discover.html') return '<span class="ntop-name">Discover</span>';
+  const it = t?.sheet && w.href ? _shellItems(t).find(x => x.href === w.href) : null;
+  if (it) return `<button type="button" class="ntop-area" id="ntopArea" onclick="_ntopDrop('${t.k}', event)" aria-haspopup="true" aria-expanded="false">
+      <span class="ntop-kicker">${t.label}<span class="sr-only">:</span></span><span class="ntop-name">${it.label}${icon('chevdown', 15)}</span></button>`;
+  return `<a class="ntop-btn ntop-back" href="${t?.href || 'index.html'}" onclick="return mssGoBack()" aria-label="Back">${icon('back', 20)}</a>
+    <span class="ntop-name ntop-dname" id="ntopName" translate="no">${escHTML(_ntopName())}</span>
+    ${_NTOP_SHARE.includes(page) ? `<button type="button" class="ntop-btn" onclick="_ntopShare()" aria-label="Share">${icon('share', 17)}</button>` : ''}
+    <button type="button" class="ntop-btn" id="ntopMore" onclick="_ntopMore()" aria-label="More actions" aria-haspopup="menu" hidden>${icon('moreV', 18)}</button>`;
 }
-window.mssTabsRefresh = _mtogRender;
-function _mtogGo(e, a) {
-  if (e.ctrlKey || e.metaKey || e.shiftKey || e.button) return true;
-  const url = new URL(a.href, location.href);
-  if (url.pathname !== location.pathname || typeof window.mssTabGo !== 'function') return true;
-  if (!window.mssTabGo(url)) return true;
-  _mtogRender();
+async function _ntopShare() {
+  const url = location.href;
+  if (navigator.share) { try { await navigator.share({ title: _ntopName(), url }); } catch {} return; }
+  try { await navigator.clipboard.writeText(url); showToast('Link copied.'); } catch { showToast('Couldn’t copy the link.', 'err'); }
+}
+// ⋯ opens the page's own ⋯ menu (the button the page marks with data-top-more)
+const _ntopMoreEl = () => { const all = [...document.querySelectorAll('[data-top-more]')]; return all.find(el => el.getClientRects().length) || all[0]; };
+function _ntopMore() { _ntopMoreEl()?.click(); }
+
+/* The page name's ▾: the area's menu drops down from under the bar (the desktop menu's rows, in one column),
+   over a dimmed page. Tap a row → go there; tap ▾ again, the dim page or Esc → closed. Guests get the area's
+   promo sheet, as from the bottom bar. */
+function _ntopDrop(k, ev) {
+  if (_isGuest()) return shellSheet(k, ev.currentTarget, ev.detail === 0);
+  const btn = document.getElementById('ntopArea');
+  let el = document.getElementById('ntopDrop');
+  if (el && !el.hidden) { _ntopDropHide(true); return; }
+  const t = SHELL_TABS.find(x => x.k === k);
+  if (!t?.groups || !btn) return;
+  _navCloseAll('ntop');
+  if (typeof shellSheetClose === 'function') shellSheetClose();
+  if (!el) {
+    el = document.createElement('div');
+    el.className = 'ntop-drop'; el.id = 'ntopDrop'; el.hidden = true;
+    el.addEventListener('click', e => { if (e.target === el) _ntopDropHide(); });
+    el.addEventListener('keydown', e => {
+      const links = [...el.querySelectorAll('.dm-link')], i = links.indexOf(document.activeElement);
+      if (e.key === 'Escape') { e.preventDefault(); _ntopDropHide(true); return; }
+      if (!['ArrowDown', 'ArrowUp'].includes(e.key)) return;
+      e.preventDefault();
+      links[(i + (e.key === 'ArrowDown' ? 1 : -1) + links.length) % links.length]?.focus();
+    });
+    document.getElementById('navTop').appendChild(el);
+  }
+  el.innerHTML = `<div class="ntop-drop-in" role="region" aria-labelledby="ntopArea"><div class="dm-cols">${_dmColsHTML(t, 'nd')}</div></div>`;
+  el.style.top = Math.round(document.getElementById('mainNav').getBoundingClientRect().bottom) + 'px';
+  el.hidden = false;
+  btn.setAttribute('aria-expanded', 'true');
+  requestAnimationFrame(() => el.classList.add('open'));
+  if (ev.detail === 0) el.querySelector('.dm-link')?.focus();       // opened from the keyboard → into the menu
+  _shellSummary();
+}
+function _ntopDropHide(refocus) {
+  const el = document.getElementById('ntopDrop');
+  if (!el || el.hidden) return;
+  el.classList.remove('open'); el.hidden = true;
+  const btn = document.getElementById('ntopArea');
+  btn?.setAttribute('aria-expanded', 'false');
+  if (refocus) btn?.focus({ preventScroll: true });
+}
+function _ntopInit() {
+  const root = document.documentElement;
+  const line = () => { if (!root.classList.contains('mss-scroll-locked')) root.classList.toggle('ntop-line', window.scrollY > 2); };
+  window.addEventListener('scroll', line, { passive: true }); line();
+  const name = document.getElementById('ntopName'), more = document.getElementById('ntopMore');
+  if (!name && !more) return;
+  // a detail page fills its name and ⋯ in as it loads
+  let raf = 0;
+  const sync = () => { raf = 0; if (name) name.textContent = _ntopName(); if (more) more.hidden = !_ntopMoreEl(); };
+  new MutationObserver(() => { if (!raf) raf = requestAnimationFrame(sync); }).observe(document.documentElement, { childList: true, subtree: true, characterData: true });
+  sync();
+}
+
+/* ═════════ Phones / tablets: the section sheets (Mobile nav v2) ═════════
+   Library, Social and You in the bottom bar open their area's sheet instead
+   of going anywhere; the round + opens Create in the same sheet. One component, built from SHELL_TABS[].sheet.
+   It sits flush on the bar (same surface, rounded top only); while it's open the bar's circle sinks away and
+   the area's tab shows flat (green icon + label + a short line on the bar's top edge). Pick a row → go there
+   (the page you're on just closes it). Swipe down, tap the dim page, Esc, or tap the tab again → closed,
+   and the circle rises back on the page's own tab. Long-press Library / Social / You → straight to
+   Library / Friends / Profile. */
+let _nsh = null;          // { k, opener } while open
+let _nshC = null;         // nav_counts() (133): lists, notes, eps, night_invites
+function _nshEl() {
+  let ov = document.getElementById('nsh');
+  if (ov) return ov;
+  ov = document.createElement('div');
+  ov.id = 'nsh'; ov.className = 'nsh';
+  ov.innerHTML = '<div class="nsh-card" role="dialog" aria-modal="true" aria-labelledby="nshT"><span class="nsh-grab" aria-hidden="true"></span><div class="nsh-body" id="nshBody"></div></div>';
+  MSSDialog.bind(ov, () => shellSheetClose());
+  ov.addEventListener('keydown', _nshKeys);
+  ov.addEventListener('click', ev => {
+    const a = ev.target.closest('a.nsh-row');
+    if (a && a.getAttribute('aria-current') === 'page') { ev.preventDefault(); shellSheetClose(); }
+  });
+  _nshSwipe(ov.firstElementChild);
+  document.body.appendChild(ov);
+  return ov;
+}
+// kb: opened from the keyboard — focus goes to the current row (else the first); a tap focuses the sheet itself (no ring on a row)
+function shellSheet(k, opener, kb) {
+  if (k !== 'create' && _isGuest()) return shellPromoSheet(k);
+  if (_nsh?.k === k) return shellSheetClose();
+  const ov = _nshEl(), bar = document.getElementById('bnav'), wasOpen = !!_nsh;
+  _nsh = { k, opener: _nsh?.opener || opener || null };
+  ov.dataset.k = k;
+  document.getElementById('nshBody').innerHTML = k === 'create' ? _nshCreateHTML() : _nshHTML(k);
+  ov.querySelector('.nsh-card').scrollTop = 0;
+  bar?.classList.add('has-sheet', 'sheet-anim');
+  document.querySelectorAll('#bnav .bnav-item').forEach(a => {
+    const on = a.dataset.tab === k;
+    a.classList.toggle('is-sheet', on);
+    if (a.hasAttribute('aria-expanded')) a.setAttribute('aria-expanded', String(on));
+  });
+  const target = k === 'create' ? ov.querySelector('#nshQ') : kb ? ov.querySelector('.nsh-row[aria-current]') || ov.querySelector('.nsh-row') : ov.querySelector('.nsh-card');
+  if (!wasOpen) MSSDialog.open(ov, { focus: target });
+  else target?.focus({ preventScroll: true });
+  if (k === 'create') _nshCreateInit();
+  else _nshCountsLoad();
+}
+function shellSheetClose() {
+  if (!_nsh) return;
+  const ov = document.getElementById('nsh'), opener = _nsh.opener;
+  _nsh = null;
+  MSSDialog.close(ov);
+  document.getElementById('bnav')?.classList.remove('has-sheet');
+  document.querySelectorAll('#bnav .bnav-item').forEach(a => { a.classList.remove('is-sheet'); if (a.hasAttribute('aria-expanded')) a.setAttribute('aria-expanded', 'false'); });
+  if (opener?.isConnected && !ov.contains(document.activeElement) && document.activeElement === document.body) { try { opener.focus({ preventScroll: true }); } catch {} }
+}
+
+// One row: icon tile, name (+ one line on main rows), count, ✓ on the page you're on
+function _nshRow(it, kind, w) {
+  const here = it.href === w.href;
+  return `<li><a class="nsh-row" href="${it.href}"${here ? ' aria-current="page"' : ''}>
+      <span class="nsh-ic" aria-hidden="true">${icon(it.icon, 18)}</span>
+      <span class="nsh-tx"><b>${it.label}</b>${kind !== 'grid' && it.desc ? `<small>${it.desc}</small>` : ''}</span>
+      <span class="nsh-cnt" data-nsh-n="${it.href}" data-kind="${kind}">${_nshNum(it, kind)}</span>
+      ${here ? `<span class="nsh-tick" aria-hidden="true">${icon('check', 16)}</span>` : ''}</a></li>`;
+}
+function _nshHTML(k) {
+  const t = SHELL_TABS.find(x => x.k === k), S = t.sheet, w = shellWhere(), items = _shellItems(t);
+  const p = window._navUserProfile || {}, name = p.username || '', av = safeURL(p.avatar_url);
+  const head = S.account
+    ? `<a class="nsh-acct" href="profile.html"${w.href === 'profile.html' ? ' aria-current="page"' : ''}><span class="nsh-av" aria-hidden="true">${av ? `<img src="${av}" alt="">` : escHTML((name || '?')[0].toUpperCase())}</span>
+        <span class="nsh-who"><b class="nsh-t" id="nshT" translate="no">${escHTML(p.display_name || name || 'You')}</b><small translate="no">@${escHTML(name)}</small></span></a>`
+    : `<h2 class="nsh-t" id="nshT">${t.label}</h2><p class="nsh-sub">${S.sub}</p>`;
+  const groups = S.groups.map(([label, kind, hrefs]) => {
+    const list = hrefs.map(h => items.find(it => it.href === h)).filter(Boolean);
+    return `<div class="nsh-grp">${label ? `<p class="nsh-gl" id="nshG-${k}-${label.replace(/\W/g, '')}">${label}</p>` : ''}
+      <ul class="nsh-list is-${kind}"${label ? ` aria-labelledby="nshG-${k}-${label.replace(/\W/g, '')}"` : ''}>${list.map(it => _nshRow(it, kind, w)).join('')}</ul></div>`;
+  }).join('');
+  const foot = S.account ? `<div class="nsh-foot"><a class="nsh-fbtn nsh-row" href="settings.html"${_navFile(location) === 'settings.html' ? ' aria-current="page"' : ''}>${icon('settings', 16)}<span>Settings</span></a>
+      <button type="button" class="nsh-fbtn nsh-row is-out" onclick="shellSheetClose();handleLogout()">${icon('logout', 16)}<span>Sign out</span></button></div>` : '';
+  return `<div class="nsh-head">${head}</div><div class="nsh-nav" role="navigation" aria-label="${t.label}">${groups}</div>${foot}`;
+}
+
+/* Counts: grey for totals, a red pill only when something's waiting (requests, unread, invites).
+   Two-column rows show only the red ones. */
+function _nshNum(it, kind) {
+  const S = _shellSum || {}, C = _nshC || {}, msg = typeof _navMsgCount !== 'undefined' ? _navMsgCount : 0;
+  const red = (n, what) => `<span class="nsh-red">${n > 99 ? '99+' : n}<span class="sr-only"> ${what}</span></span>`;
+  if (it.req && _bnavReq > 0) return red(_bnavReq, _bnavReq === 1 ? 'request waiting' : 'requests waiting');
+  if (it.msg && msg > 0) return red(msg, 'unread');
+  if (it.waiting && C[it.waiting] > 0) return red(C[it.waiting], C[it.waiting] === 1 ? 'invite waiting' : 'invites waiting');
+  if (kind === 'grid') return '';
+  let n = null;
+  if (it.count === 'all') n = S.counts?.all;
+  else if (it.count === 'friends') n = S.friends;
+  else if (it.n === 'medals') { try { n = localStorage.getItem('mss_medals_' + window._navUser?.id); } catch {} }
+  else if (it.n) n = C[it.n];
+  return n == null || n === '' || Number(n) === 0 && it.n === 'medals' ? '' : `<span class="sr-only">, </span>${Number(n).toLocaleString(MSSI18n.locale)}`;
+}
+function _nshPaintCounts() {
+  if (!_nsh || _nsh.k === 'create') return;
+  const items = _shellItems(SHELL_TABS.find(x => x.k === _nsh.k));
+  document.querySelectorAll('#nsh [data-nsh-n]').forEach(el => { const it = items.find(x => x.href === el.dataset.nshN); if (it) el.innerHTML = _nshNum(it, el.dataset.kind); });
+}
+async function _nshCountsLoad() {
+  const uid = window._navUser?.id;
+  if (!uid) return;
+  _shellSummary().then(_nshPaintCounts);
+  if (!_nshC) try { const c = JSON.parse(sessionStorage.getItem('mss_nav_counts') || 'null'); if (c?.uid === uid && Date.now() - c.at < 120000) _nshC = c.v; } catch {}
+  if (_nshC) return _nshPaintCounts();
+  try {
+    const { data, error } = await sb.rpc('nav_counts');
+    if (error) throw error;
+    _nshC = data || {};
+    try { sessionStorage.setItem('mss_nav_counts', JSON.stringify({ uid, at: Date.now(), v: _nshC })); } catch {}
+  } catch { _nshC = {}; }   // not run yet (sql/133): no numbers on those rows
+  _nshPaintCounts();
+}
+
+// ↑ ↓ (and ← →) move between rows, Home / End to the ends; Enter opens (a link)
+function _nshKeys(ev) {
+  if (!['ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(ev.key) || ev.target.matches('input')) return;
+  const rows = [...document.querySelectorAll('#nsh .nsh-row')], i = rows.indexOf(document.activeElement);
+  if (!rows.length) return;
+  ev.preventDefault();
+  const j = ev.key === 'Home' ? 0 : ev.key === 'End' ? rows.length - 1
+    : i < 0 ? 0 : (i + (ev.key === 'ArrowDown' || ev.key === 'ArrowRight' ? 1 : rows.length - 1)) % rows.length;
+  rows[j].focus();
+}
+// Swipe the sheet down to close it (from the handle / header, or anywhere once its list is at the top)
+function _nshSwipe(card) {
+  let y0 = null, dy = 0, t0 = 0;
+  card.addEventListener('touchstart', ev => {
+    if (ev.touches.length !== 1 || (card.scrollTop > 0 && !ev.target.closest('.nsh-grab, .nsh-head'))) { y0 = null; return; }
+    y0 = ev.touches[0].clientY; dy = 0; t0 = Date.now();
+  }, { passive: true });
+  card.addEventListener('touchmove', ev => {
+    if (y0 == null) return;
+    dy = Math.max(0, ev.touches[0].clientY - y0);
+    if (dy > 0) { card.style.transition = 'none'; card.style.transform = `translateY(${dy}px)`; }
+  }, { passive: true });
+  const end = () => {
+    if (y0 == null) return;
+    const fast = dy > 30 && dy / Math.max(1, Date.now() - t0) > 0.5;
+    card.style.transition = ''; card.style.transform = '';
+    if (dy > 90 || fast) shellSheetClose();
+    y0 = null;
+  };
+  card.addEventListener('touchend', end); card.addEventListener('touchcancel', end);
+}
+
+/* The bottom bar's Library / Social / You: tap → the sheet, long-press → the area's main page */
+let _bnavLong = 0;
+function _bnavGo(e, k) {                       // a link to a locked area (the footer): a guest gets the promo instead
+  if (!_isGuest()) return true;
+  e.preventDefault();
+  shellPromoSheet(k);
   return false;
 }
-/* --mtog-h: the toggles' full height (pages leave room for it);
-   --mtog-vis: what's showing right now (sticky headers sit under it). */
-function _mtogSize() {
-  const box = document.getElementById('mtog'), root = document.documentElement;
-  const h = box && !box.hidden && getComputedStyle(box).display !== 'none' ? document.getElementById('mtogIn').scrollHeight : 0;
-  root.style.setProperty('--mtog-h', h + 'px');
-  root.style.setProperty('--mtog-vis', (root.classList.contains('mtog-up') ? 0 : h) + 'px');
+function _bnavTap(e, k) {
+  e.preventDefault();
+  if (Date.now() - _bnavLong < 800) return false;        // the long-press already went there
+  if (_isGuest()) { shellPromoSheet(k); return false; }   // a guest on a locked tab: the promo instead
+  shellSheet(k, e.currentTarget, e.detail === 0);
+  return false;
 }
-function _mtogInit() {
-  _mtogRender();
-  window.addEventListener('resize', _mtogSize);
-  if (window.ResizeObserver) new ResizeObserver(_mtogSize).observe(document.getElementById('mtogIn'));
-  let lastY = window.scrollY;
-  window.addEventListener('scroll', () => {
-    const y = window.scrollY, dy = y - lastY, root = document.documentElement;
-    if (Math.abs(dy) < 6 && y > 0) return;
-    lastY = y;
-    const up = y > 120 && dy > 0;
-    if (up === root.classList.contains('mtog-up')) return;
-    root.classList.toggle('mtog-up', up);
-    _mtogSize();
-  }, { passive: true });
+function _bnavLongInit(bar) {
+  let timer = 0, x0 = 0, y0 = 0;
+  const stop = () => clearTimeout(timer);
+  bar.addEventListener('pointerdown', ev => {
+    const a = ev.target.closest('.bnav-item[aria-haspopup]');
+    if (!a || _isGuest() || ev.button) return;
+    x0 = ev.clientX; y0 = ev.clientY;
+    timer = setTimeout(() => { _bnavLong = Date.now(); shellSheetClose(); location.href = a.getAttribute('href'); }, 500);
+  });
+  bar.addEventListener('pointermove', ev => { if (Math.abs(ev.clientX - x0) + Math.abs(ev.clientY - y0) > 10) stop(); });
+  ['pointerup', 'pointercancel', 'pointerleave'].forEach(n => bar.addEventListener(n, stop));
+  bar.addEventListener('contextmenu', ev => { if (ev.target.closest('.bnav-item[aria-haspopup]')) ev.preventDefault(); });
 }
 
-function _updateAddModalValidation() {
-  const cat = document.getElementById('mCat')?.dataset.value;
-  const status = document.getElementById('mStatus')?.dataset.value;
-  const complete = !!cat && !!status;
-  const msg = document.getElementById('mValidationMsg');
-  const btn = document.getElementById('mSaveBtn');
-  if (msg) msg.style.display = complete ? 'none' : '';
-  if (btn) btn.disabled = !complete;
+/* ═════════ Create, from the round + (phones / tablets) ═════════
+   In the same sheet: a search (TMDB — Add opens the Add panel with the title picked), Write a note ·
+   New list · New poll (the Create menu's actions), and Recent — the last 5 titles you added from here,
+   kept on this device. */
+const _NSH_RECENT = 'mss_create_recent';
+const _nshRecent = () => { try { return JSON.parse(localStorage.getItem(_NSH_RECENT) || '[]').slice(0, 5); } catch { return []; } };
+let _nshFound = [];
+const _nshMeta = r => `${r.media_type === 'movie' ? 'Movie' : 'TV Show'}${(r.release_date || r.first_air_date || '').slice(0, 4) ? ' · ' + (r.release_date || r.first_air_date).slice(0, 4) : ''}`;
+function _nshResRow(r, i, from) {
+  const t = r.media_type === 'movie' ? r.title : r.name, p = r.poster_path ? TMDB_IMG + r.poster_path : null;
+  return `<li class="nsh-res"><span class="nsh-res-p" aria-hidden="true">${p ? `<img src="${p}" alt="" loading="lazy">` : ''}</span>
+    <span class="nsh-tx"><b translate="no">${escHTML(t || '—')}</b><small>${_nshMeta(r)}</small></span>
+    <button type="button" class="nsh-add" onclick="_nshAdd('${from}', ${i})" aria-label="Add ${escHTML(t || '')}">${icon('plus', 14)}<span>Add</span></button></li>`;
 }
-
-function _updateModalStatus() {
-  const catEl = document.getElementById('mCat');
-  const cat = catEl?.dataset.value;
-  const isMovie = cat === 'movies';
-  const wrap = document.getElementById('mStatusWrap');
-  if (!wrap) return;
-  const current = document.getElementById('mStatus')?.dataset.value || '';
-  const keep = isMovie && (current === 'paused' || current === 'ongoing') ? 'watching' : current;
-  const options = [
-    { value:'queue', label:'Watchlist' },
-    { value:'up_next', label:'Up Next' },
-    { value:'watching', label:'Currently Watching' },
-    ...(!isMovie ? [{ value:'paused', label:'Taking a Break' }] : []),
-    { value:'completed', label:'Watched' },
-    ...(!isMovie ? [{ value:'ongoing', label:'To Be Continued' }] : []),
-    { value:'dropped', label:'Dropped' },
-  ];
-  wrap.innerHTML = _selDDHTML('mStatus', options, keep, '_updateAddModalValidation', 'Select status…');
-  _updateAddModalValidation();
+function _nshCreateHTML() {
+  const rec = _nshRecent();
+  return `<div class="nsh-head nsh-chead"><h2 class="nsh-t" id="nshT">Create</h2>
+      <button type="button" class="nsh-x" onclick="shellSheetClose()" aria-label="Close">${icon('x', 18)}</button></div>
+    <div class="nsh-search" role="search"><span aria-hidden="true">${icon('search', 16)}</span>
+      <input id="nshQ" type="search" placeholder="Add a title — type to search" aria-label="Add a title — type to search" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="search" data-1p-ignore data-lpignore="true"></div>
+    <p class="nsh-status sr-only" id="nshStatus" role="status"></p>
+    <ul class="nsh-results" id="nshResults" aria-label="Search results" hidden></ul>
+    <div class="nsh-tiles" id="nshTiles">${SHELL_CREATE.filter(([k]) => k !== 'title').map(([k, ic, label]) =>
+      `<button type="button" class="nsh-tile nsh-row" onclick="shellSheetClose();_bnavDo('${k}')"><span class="nsh-tile-ic" aria-hidden="true">${icon(ic, 17)}</span><span>${label}</span></button>`).join('')}</div>
+    ${rec.length ? `<div class="nsh-grp" id="nshRecent"><p class="nsh-gl" id="nshRecentH">Recent</p><ul class="nsh-results" aria-labelledby="nshRecentH">${rec.map((r, i) => _nshResRow(r, i, 'recent')).join('')}</ul></div>` : ''}`;
 }
-
-function _resetAddModalDropdowns() {
-  const catEl = document.getElementById('mCat');
-  if (catEl) {
-    catEl.dataset.value = '';
-    catEl.classList.add('sel-dd-placeholder');
-    const label = catEl.querySelector('.sel-dd-label');
-    if (label) label.textContent = 'Select category…';
-    catEl.querySelectorAll('.sel-dd-opt').forEach(o => o.classList.remove('active'));
-  }
-  const wrap = document.getElementById('mStatusWrap');
-  if (wrap) {
-    wrap.innerHTML = _selDDHTML('mStatus', [
-      { value:'queue', label:'Watchlist' },
-      { value:'up_next', label:'Up Next' },
-      { value:'watching', label:'Currently Watching' },
-      { value:'paused', label:'Taking a Break' },
-      { value:'completed', label:'Watched' },
-      { value:'ongoing', label:'To Be Continued' },
-      { value:'dropped', label:'Dropped' },
-    ], null, '_updateAddModalValidation', 'Select status…');
-  }
-  _updateAddModalValidation();
-}
-
-function openAddModal(cat) {
-  getCurrentUser().then(user => {
-    if (!user) { mssJoin('add titles'); return; }
-    const modal = document.getElementById('addModal');
-    if (!modal) return;
-    _resetAddModalDropdowns();
-    const m = document.getElementById('mCat');
-    if (cat && m) _selSelectDD('mCat', cat);
-    MSSDialog.open(modal, { focus: '#mTitle' });
+function _nshCreateInit() {
+  const q = document.getElementById('nshQ'), out = document.getElementById('nshResults'), status = document.getElementById('nshStatus');
+  let timer = 0, last = '';
+  q.addEventListener('input', () => {
+    clearTimeout(timer);
+    const v = q.value.trim();
+    const quiet = !v;
+    document.getElementById('nshTiles').hidden = !quiet;
+    const rec = document.getElementById('nshRecent'); if (rec) rec.hidden = !quiet;
+    if (quiet) { out.hidden = true; out.innerHTML = ''; last = ''; return; }
+    timer = setTimeout(async () => {
+      if (v === last) return;
+      last = v;
+      out.hidden = false;
+      out.innerHTML = '<li class="nsh-res is-msg">Searching…</li>';
+      const res = (await _tmdbSearch(v, 8)).filter(r => r.media_type === 'movie' || r.media_type === 'tv');
+      if (q.value.trim() !== v) return;
+      _nshFound = res;
+      out.innerHTML = res.length ? res.map((r, i) => _nshResRow(r, i, 'found')).join('') : '<li class="nsh-res is-msg">No titles found. Try another name.</li>';
+      status.textContent = res.length ? `${res.length} result${res.length === 1 ? '' : 's'}` : 'No titles found';
+    }, 300);
   });
 }
-
-/* Init TMDB search once modal exists in DOM */
-function _initTMDBOnModal() {
-  if (typeof initTMDBSearch !== 'function') return;
-  if (document.getElementById('mTitle-tmdb-drop')) return;
-  initTMDBSearch('mTitle', () => document.getElementById('mCat')?.dataset.value || 'tv', entry => {
-    if (entry.title) document.getElementById('mTitle').value = entry.title;
-    if (entry.cat)  { _selSelectDD('mCat', entry.cat); }
-    if (entry.year) { const y = document.getElementById('mYear'); if(y) y.value = entry.year; }
-    _updateModalStatus();
-    // Store the FULL entry object so detail.html can apply all fields
-    window._tmdbPrefill = entry;
-    console.log('[TMDB] prefill stored:', entry);
-  }, { connected: true });
+function _nshAdd(from, i) {
+  const r = (from === 'recent' ? _nshRecent() : _nshFound)[i];
+  if (!r) return;
+  const keep = { id: r.id, media_type: r.media_type, title: r.title, name: r.name, release_date: r.release_date, first_air_date: r.first_air_date, poster_path: r.poster_path, genre_ids: r.genre_ids };
+  try { localStorage.setItem(_NSH_RECENT, JSON.stringify([keep, ..._nshRecent().filter(x => !(x.id === r.id && x.media_type === r.media_type))].slice(0, 5))); } catch {}
+  shellSheetClose();
+  openAddModal('', keep);
 }
 
-function closeModal() { MSSDialog.close(document.getElementById('addModal')); }
+/* ═════════ Footer ═════════ */
+const SHELL_FOOTER = [
+  ['Explore', [['Home', 'index.html'], ['Discover', 'discover.html'], ['What’s Popular', 'discover-list.html?list=popular'],
+    ['Top 250 Movies', 'discover-list.html?list=top250_movies'], ['Top 250 Shows', 'discover-list.html?list=top250_shows'],
+    ['Top 250 Anime', 'discover-list.html?list=top250_anime'], ['Top Rated on MSF', 'discover-list.html?list=top_rated_mss'],
+    ['Upcoming Movies', 'discover-list.html?list=upcoming_movies']]],
+  ['Your folio', [['Library', 'library.html', 'lib'], ['TV Shows', 'tv-shows.html', 'lib'], ['Movies', 'movies.html', 'lib'], ['Anime', 'anime.html', 'lib'],
+    ['Cartoons', 'cartoons.html', 'lib'], ['Diary', 'diary.html', 'lib'], ['Profile', 'profile.html', 'you']]],
+  ['Social', [['Friends', 'friends.html', 'social'], ['Activity', 'activity.html', 'social'], ['Messages', 'messages.html', 'social'], ['Compare', 'compare.html', 'social'],
+    ['Blend', 'blend.html', 'social'], ['Movie Night', 'movie-night.html', 'social'], ['Challenges', 'challenges.html', 'social'], ['Polls', 'polls.html', 'social'],
+    ['Episode Chat', 'episode-chat.html', 'social']]],
+];
+// Phones: the footer stays short — these, the Light / Dark switch and "More links" for the rest
+const SHELL_FOOTER_QUICK = [['Discover', 'discover.html'], ['Library', 'library.html', 'lib'], ['Friends', 'friends.html', 'social'], ['Profile', 'profile.html', 'you'], ['Settings', 'settings.html', 'you']];
+// Help & Guides (guide.js), Set up your folio and the welcome again (onboarding.js) — the footer's Help column and Settings › Help
+function mssHelp(what) {
+  if (what === 'guide') mssLoadScript('js/guide.js').then(() => typeof MSSGuide !== 'undefined' && MSSGuide.open());
+  else if (!window._navUser) mssJoin('set up your folio');
+  else mssLoadScript('js/onboarding.js').then(() => typeof MSSOnboarding !== 'undefined' && (what === 'welcome' ? MSSOnboarding.welcome() : MSSOnboarding.setup()));
+  return false;
+}
+function _shellFooterMore(btn) {
+  const open = btn.getAttribute('aria-expanded') !== 'true';
+  btn.setAttribute('aria-expanded', open);
+  btn.innerHTML = `${open ? 'Fewer links' : 'More links'} ${icon(open ? 'chevup' : 'chevdown', 14)}`;
+  btn.closest('.site-footer').classList.toggle('is-open', open);
+}
+/* The MSF monogram, drawn inline (no file to wait for, so it's there the moment the header is — an external
+   <use> could miss a page change, Safari especially). Colours: the theme's --logo-m / --logo-s / --logo-f
+   (css/theme.css), so it follows Light / Dark with the page; the footer sets the dark ones (it's Forest in both).
+   Same drawing as icons/logo-light.svg / logo-dark.svg (frame 20 61 467 198). */
+const MSF_LOGO_PATHS = '<path style="fill:var(--logo-m)" fill-rule="evenodd" d="M88.01 251.36L88.01 144.40C88.01 143.66 88.93 143.32 89.41 143.88L144.25 208.00C145.11 209.01 146.65 209.04 147.54 208.07L205.06 146.16C205.37 145.83 205.60 147.20 206.04 147.09C210.48 146.02 216.18 154.26 219.50 156.62C228.03 162.68 240.45 167.62 250.72 168.80L267.35 170.72C302.46 174.76 301.02 209.01 273.88 209.01L203.32 209.01C200.54 209.01 197.89 210.16 196.00 212.20L156.63 254.57C155.78 255.49 156.43 256.99 157.69 256.99L272.26 256.99C293.68 256.99 325.00 240.33 325.00 216.21L325.00 158.71C325.00 145.47 289.65 137.58 279.71 136.43L260.01 134.16C241.78 132.06 239.24 109.29 256.41 102.33C257.92 101.72 261.46 100.01 262.75 100.01L315.64 100.01C318.42 100.01 321.08 98.86 322.97 96.82L351.27 66.36C351.75 65.84 351.38 65.01 350.69 65.01L258.83 65.01C256.47 65.01 253.22 63.03 251.64 63.03L230.14 63.03C218.61 63.03 204.22 70.99 196.45 79.36L146.30 133.33C145.78 133.89 144.90 133.90 144.36 133.35L79.95 67.05C78.06 65.11 75.47 64.01 72.77 64.01L29.37 64.01C24.23 64.01 20.06 68.18 20.06 73.32L20.06 251.34C20.06 255.49 23.43 258.85 27.58 258.85L80.52 258.85C84.65 258.85 88.01 255.50 88.01 251.36Z M41.88 190.89H55.23A4 4 0 0 1 59.23 194.89V209.22A4 4 0 0 1 55.23 213.22H41.88A4 4 0 0 1 37.88 209.22V194.89A4 4 0 0 1 41.88 190.89Z M41.88 163.17H55.23A4 4 0 0 1 59.23 167.17V181.50A4 4 0 0 1 55.23 185.50H41.88A4 4 0 0 1 37.88 181.50V167.17A4 4 0 0 1 41.88 163.17Z M41.88 135.45H55.23A4 4 0 0 1 59.23 139.45V153.78A4 4 0 0 1 55.23 157.78H41.88A4 4 0 0 1 37.88 153.78V139.45A4 4 0 0 1 41.88 135.45Z M41.88 107.72H55.23A4 4 0 0 1 59.23 111.72V126.05A4 4 0 0 1 55.23 130.05H41.88A4 4 0 0 1 37.88 126.05V111.72A4 4 0 0 1 41.88 107.72Z M41.88 80.00H55.23A4 4 0 0 1 59.23 84.00V98.33A4 4 0 0 1 55.23 102.33H41.88A4 4 0 0 1 37.88 98.33V84.00A4 4 0 0 1 41.88 80.00Z"/><path style="fill:var(--logo-s)" d="M327.00 216.38L327.00 158.89C327.00 144.10 290.62 135.73 279.63 134.47L259.69 132.17C240.21 129.93 244.17 102.01 263.05 102.01L316.06 102.01C318.84 102.01 321.49 100.86 323.38 98.82L354.61 65.21C355.38 64.38 354.79 63.04 353.66 63.04L258.50 63.04C256.83 63.04 254.73 63.14 252.97 63.14L230.97 63.14C230.37 63.14 232.17 63.37 232.74 63.57C233.15 63.71 231.03 63.87 231.47 63.87L249.46 63.87C250.06 63.87 248.26 64.26 247.91 64.74C247.21 65.67 245.10 66.05 244.08 66.44C240.04 67.99 236.05 69.73 232.28 71.85C221.20 78.07 212.36 87.49 206.63 98.80C193.08 125.50 205.41 159.57 236.12 167.00L252.00 170.84C263.67 173.67 278.42 171.33 287.70 180.59C295.93 188.81 290.92 207.27 277.89 207.27L202.77 207.27C199.99 207.27 197.34 208.42 195.44 210.46L153.78 255.30C152.56 256.62 153.49 258.75 155.28 258.75L272.49 258.75C294.45 258.75 327.00 241.05 327.00 216.38Z"/>'
+  + '<path style="fill:var(--logo-f)" d="M407.28 220.21L407.28 176.33C407.28 175.25 408.14 174.39 409.22 174.39L459.41 174.39C462.46 174.39 464.94 171.91 464.94 168.86L464.94 138.63C464.94 135.25 462.19 132.51 458.81 132.51L390.75 132.51C372.76 132.51 371.26 103.30 392.21 103.30L458.60 103.30C462.02 103.30 465.20 101.56 467.03 98.68L486.35 68.36C487.85 66.01 486.16 62.93 483.38 62.93L384.72 62.93C352.63 62.93 303.51 127.35 340.35 151.31L386.71 181.45C392.82 185.42 392.76 194.40 386.59 198.29L339.05 228.30C338.45 228.68 337.88 229.12 337.38 229.63L309.82 256.73C309.07 257.46 309.59 258.73 310.64 258.73L366.62 258.73C384.91 258.73 407.28 239.07 407.28 220.21Z"/><path style="fill:var(--logo-m)" d="M340.55 218.25L380.13 193.26C382.52 191.75 382.55 188.27 380.17 186.72L340.90 161.19C338.37 159.54 335.01 161.36 335.01 164.38L335.01 215.19C335.01 218.03 338.15 219.76 340.55 218.25Z"/>';
+function mssLogoSVG(cls, label) {
+  const a11y = label ? `role="img" aria-label="${label}"` : 'aria-hidden="true"';
+  return `<svg class="${cls}" viewBox="20 61 467 198" ${a11y} focusable="false">${MSF_LOGO_PATHS}</svg>`;
+}
+function _shellFooterEl() {
+  const f = document.createElement('footer');
+  f.className = 'site-footer';
+  f.innerHTML = `<div class="ft-in">
+      <div class="ft-brand">${mssLogoSVG('ft-logo', 'MyScreenFolio')}<p>Everything you watch, in one folio. Track it, rate it, rank it, share it.</p></div>
+      <div class="ft-quick" role="navigation" aria-label="Main links"><ul>${SHELL_FOOTER_QUICK.map(([l, href, lock]) =>
+          `<li><a href="${href}"${lock ? ` onclick="return _bnavGo(event, '${lock}')"` : ''}>${l}</a></li>`).join('')}<li><a href="#" onclick="return mssHelp('guide')">Help</a></li></ul>
+        <div class="ft-quick-row">${mssThemeSwitch()}<button type="button" class="ft-more" aria-expanded="false" aria-controls="ftCols" onclick="_shellFooterMore(this)">More links ${icon('chevdown', 14)}</button></div></div>
+      <div class="ft-cols" id="ftCols" role="navigation" aria-label="Footer">${SHELL_FOOTER.map(([h, links], i) => `<div class="ft-col"><div class="ft-h" id="ftH${i}">${h}</div>
+        <ul aria-labelledby="ftH${i}">${links.map(([l, href, lock]) => `<li><a href="${href}"${lock ? ` data-lock="${lock}" onclick="return _bnavGo(event, '${lock}')"` : ''}>${l}${lock ? `<span class="ft-lock guest-only" aria-hidden="true">${icon('lock', 11)}</span>` : ''}</a></li>`).join('')}</ul></div>`).join('')}
+        <div class="ft-col"><div class="ft-h" id="ftH4">Help</div>
+          <ul aria-labelledby="ftH4"><li><a href="#" onclick="return mssHelp('guide')">Help &amp; Guides</a></li><li class="nav-auth-only"><a href="#" onclick="return mssHelp('setup')">Set up your folio</a></li>
+            <li class="nav-auth-only"><a href="#" onclick="return mssHelp('welcome')">Watch the welcome again</a></li></ul></div>
+        <div class="ft-col"><div class="ft-h" id="ftH3">Appearance</div>
+          <div class="ft-theme">${mssThemeSwitch('ftH3')}</div>
+          <ul aria-labelledby="ftH3"><li><a href="settings.html" data-lock="you" onclick="return _bnavGo(event, 'you')">Settings</a></li><li><a href="export.html" data-lock="you" onclick="return _bnavGo(event, 'you')">Export</a></li></ul></div>
+      </div>
+    </div>
+    <div class="ft-bottom"><span>Created by <b translate="no">Mohammad &amp; Narimaan</b> · © 2026 MyScreenFolio</span>
+      <a href="https://www.themoviedb.org" target="_blank" rel="noopener" class="ft-tmdb">Movie &amp; TV data from <b>TMDB</b>. This product uses the TMDB API but is not endorsed or certified by TMDB.</a></div>`;
+  return f;
+}
 
-/* ── Quick create from modal ── */
-async function modalQuickCreate() {
-  const title = document.getElementById('mTitle')?.value?.trim();
-  if (!title) { showToast('Please enter a title.', 'err'); return; }
+/* ── Add new entry (+ Add, the + menu, empty states, N): a side panel S, or a full page that slides up.
+   Search TMDB first, then Category and Status as one-tap choices; the Year fills in from the title.
+   Add → stays here (toast with Open) · Add & edit → → the full edit page. Same checks as always:
+   category + status required, the duplicate check (quickCreate). ── */
+const ADD_CATS = [['tv', 'TV Show'], ['movies', 'Movie'], ['anime', 'Anime'], ['cartoons', 'Cartoon']];
+// [value, label, icon, what it means]
+const ADD_STATUSES = [['queue', 'Watchlist', 'bookmark', 'You want to watch it'], ['up_next', 'Up Next', 'skipForward', 'You’re watching it next'],
+  ['watching', 'Currently Watching', 'play', 'You’re watching it now'], ['paused', 'Taking a Break', 'pause', 'Started, paused for now'],
+  ['completed', 'Watched', 'check', 'You’ve finished it'], ['ongoing', 'To Be Continued', 'clock', 'Caught up, waiting for more'],
+  ['dropped', 'Dropped', 'drop', 'You stopped watching']];
+let _add = null;          // { h, cat, status, picked } while the panel is open
+let _addBody = null;      // built once (the TMDB search is tied to its title field), filled fresh each time
+function _addStatusHTML() {
+  const movie = _add.cat === 'movies';
+  // movies have no Taking a Break / To Be Continued
+  if (movie && (_add.status === 'paused' || _add.status === 'ongoing')) _add.status = 'watching';
+  const list = ADD_STATUSES.filter(([v]) => !movie || (v !== 'paused' && v !== 'ongoing'));
+  return `<div class="lyr-choices is-tiles is-compact" role="radiogroup" aria-labelledby="mStatusH">${list.map(([v, l, ic, hint], i) => {
+    const on = v === _add.status;
+    return `<div class="lyr-choice${on ? ' is-on' : ''}"><button type="button" class="lyr-choice-main" role="radio" data-status="${v}" aria-checked="${on}" tabindex="${on || (!_add.status && !i) ? 0 : -1}">
+      <span class="lyr-tile-ic" aria-hidden="true">${icon(ic, 17)}</span><span class="lyr-tile-txt"><b>${escHTML(l)}</b><small>${escHTML(hint)}</small></span></button></div>`;
+  }).join('')}</div>`;
+}
+function _addBuild() {
+  _addBody = document.createElement('div');
+  _addBody.className = 'add-form';
+  _addBody.innerHTML = `
+    <div class="lyr-sec"><label class="lyr-sec-h" for="mTitle">Title</label>
+      <div class="lyr-search"><span class="lyr-search-ic" aria-hidden="true">${icon('search', 16)}</span>
+        <input class="lyr-field" id="mTitle" placeholder="Search or type a title…" autocomplete="off" enterkeyhint="search"></div></div>
+    <div class="lyr-sec"><h3 class="lyr-sec-h" id="mCatH">Category</h3><div id="mCatWrap"></div></div>
+    <div class="lyr-sec"><h3 class="lyr-sec-h" id="mStatusH">Status</h3><div id="mStatusWrap"></div></div>
+    <div class="lyr-sec"><label class="lyr-sec-h" for="mYear">Year</label>
+      <input class="lyr-field" id="mYear" type="number" inputmode="numeric" min="1900" max="2030" placeholder="e.g. 2024" aria-describedby="mYearHint">
+      <p class="lyr-hint" id="mYearHint" hidden>Filled in from the title you picked</p></div>`;
+  _addBody.addEventListener('click', ev => {
+    const st = ev.target.closest('[data-status]');
+    if (st) {
+      _add.status = st.dataset.status;
+      _addBody.querySelectorAll('[data-status]').forEach(x => { const on = x === st; x.setAttribute('aria-checked', on); x.tabIndex = on ? 0 : -1; x.parentElement.classList.toggle('is-on', on); });
+    }
+    const b = ev.target.closest('#mCatWrap .lyr-seg-opt');
+    if (b) { _add.cat = mssSegPick(b); _addPaintStatus(); }
+    if (st || b) _addValidate();
+  });
+  _addBody.querySelector('#mTitle').addEventListener('input', () => { _add.picked = false; window._tmdbPrefill = null; _addBody.querySelector('#mYearHint').hidden = true; _addValidate(); });
+}
+function _addPaintStatus() {
+  const focused = document.activeElement?.closest('#mStatusWrap');
+  _addBody.querySelector('#mStatusWrap').innerHTML = _addStatusHTML();
+  if (focused) _addBody.querySelector('#mStatusWrap [tabindex="0"]')?.focus();
+}
+// Add and Add & edit stay disabled until a title, a category and a status are set
+function _addValidate() {
+  if (!_add) return;
+  const ok = !!(_addBody.querySelector('#mTitle').value.trim() && (_add.cat || window._tmdbPrefill?.cat) && _add.status);
+  _add.h.setPrimary({ disabled: !ok });
+  const add = _add.h.body.closest('.lyr-card').querySelector('.lyr-foot .add-only');
+  if (add) add.disabled = !ok;
+}
+// tmdb: a TMDB search result to start from (Create's search / Recent) — picked as if chosen in the panel's own search
+async function openAddModal(cat, tmdb) {
+  const user = await getCurrentUser();
+  if (!user) { mssJoin('add titles'); return; }
+  await mssLoadScript('js/panel.js');
+  const first = !_addBody;
+  if (first) _addBuild();
+  window._tmdbPrefill = null;
+  _add = { cat: cat || '', status: '', picked: false };
+  _addBody.querySelector('#mTitle').value = '';
+  _addBody.querySelector('#mYear').value = '';
+  _addBody.querySelector('#mYearHint').hidden = true;
+  _addBody.querySelector('#mCatWrap').innerHTML = mssSegHTML({ labelledby: 'mCatH', options: ADD_CATS, value: _add.cat });
+  _addBody.querySelector('#mStatusWrap').innerHTML = _addStatusHTML();
+  const h = MSSPanel.open({ size: 'S', kind: 'generic', create: true, title: 'Add new entry', subtitle: 'Search, then choose where it goes', body: _addBody,
+    footer: { secondary: [{ label: 'Cancel', only: 'page', onClick: x => x.close() }, { label: 'Add', end: true, onClick: () => modalQuickCreate(false) }],
+              primary: { label: 'Add & edit →', disabled: true, onClick: () => modalQuickCreate(true) } },
+    dirty: () => !!_add?.picked,
+    onClose: () => { if (_add?.h === h) _add = null; } });
+  _add.h = h;
+  h.body.closest('.lyr-card').querySelector('.lyr-foot [data-i="1"]').classList.add('add-only');
+  _addValidate();
+  if (first) _initTMDBOnModal();
+  if (!tmdb) { setTimeout(() => _addBody.querySelector('#mTitle').focus({ preventScroll: true }), 60); return; }
+  _addBody.querySelector('#mTitle').value = (tmdb.media_type === 'movie' ? tmdb.title : tmdb.name) || '';
+  try {
+    const detail = tmdb.media_type === 'movie' ? await _tmdbMovie(tmdb.id) : await _tmdbTV(tmdb.id);
+    if (_add?.h === h) _addPicked(_tmdbToEntry(tmdb, detail));
+  } catch { showToast('Couldn’t load that title’s details — search for it here.', 'err'); }
+}
 
-  const prefillCatCheck = window._tmdbPrefill?.cat;
-  const catVal = prefillCatCheck || document.getElementById('mCat')?.dataset.value;
-  if (!catVal) { showToast('Please select a category.', 'err'); return; }
-  const statusVal = document.getElementById('mStatus')?.dataset.value;
-  if (!statusVal) { showToast('Please select a status.', 'err'); return; }
+/* TMDB search on the title field: any type until a category is chosen */
+function _initTMDBOnModal() {
+  if (typeof initTMDBSearch !== 'function') return;
+  initTMDBSearch('mTitle', () => _add?.cat || '', _addPicked, { connected: true });
+}
+function _addPicked(entry) {
+    if (!_add) return;
+    if (entry.title) document.getElementById('mTitle').value = entry.title;
+    if (entry.cat) { _add.cat = entry.cat; const b = _addBody.querySelector(`#mCatWrap [data-v="${entry.cat}"]`); if (b) mssSegPick(b); }
+    if (entry.year) { document.getElementById('mYear').value = entry.year; document.getElementById('mYearHint').hidden = false; }
+    _addPaintStatus();
+    // the FULL entry, so the edit page can fill in every field
+    window._tmdbPrefill = entry;
+    _add.picked = true;
+    _addValidate();
+}
 
+/* ── Create it: edit → the full edit page; otherwise stay here with a toast that opens it ── */
+async function modalQuickCreate(edit) {
+  if (!_add) return;
+  const h = _add.h, title = document.getElementById('mTitle')?.value?.trim();
+  if (!title) { h.fieldError(document.getElementById('mTitle'), 'Type or pick a title.'); return; }
+  const catVal = window._tmdbPrefill?.cat || _add.cat, statusVal = _add.status;
+  if (!catVal || !statusVal) return;
   const user = await getCurrentUser();
   if (!user) return;
-
-  const btn = document.querySelector('.btn-modal-save');
-
+  const addBtn = h.body.closest('.lyr-card').querySelector('.lyr-foot .add-only');
+  const busy = on => { h.busy(on); if (addBtn) { addBtn.disabled = on; addBtn.textContent = on && !edit ? 'Adding…' : 'Add'; } if (!on) _addValidate(); };
+  busy(true);
   // If a TMDB result was just clicked, its runtime/season detail fetch may still
   // be in flight — wait for it so we never save without that data.
-  if (window._tmdbSelectionInFlight) {
-    if (btn) { btn.disabled = true; btn.textContent = 'Fetching details…'; }
-    try { await window._tmdbSelectionInFlight; } catch(e) { /* ignore, fall back to manual fields */ }
-  }
-
-  if (btn) { btn.disabled = true; btn.textContent = 'Adding…'; }
-
+  if (window._tmdbSelectionInFlight) { try { await window._tmdbSelectionInFlight; } catch (e) { /* ignore, fall back to manual fields */ } }
   try {
     // If a TMDB result was selected, merge its data into the quick create
     const prefill = window._tmdbPrefill || {};
@@ -1399,8 +2144,8 @@ async function modalQuickCreate() {
 
     const entry = await quickCreate({
       title:         prefill.title         || title,
-      cat:           prefill.cat           || document.getElementById('mCat').dataset.value,
-      status:        document.getElementById('mStatus').dataset.value,
+      cat:           catVal,
+      status:        statusVal,
       year:          prefill.year          || document.getElementById('mYear')?.value || null,
       description:   prefill.description   || null,
       genres:        mssGenreList(prefill.genres),
@@ -1414,15 +2159,21 @@ async function modalQuickCreate() {
       ratings:       Object.keys(ratings).length ? ratings : null,
     }, user.id);
 
-    closeModal();
+    h.closeNow();
+    const page = CAT_META[entry.cat]?.page || 'index.html';
+    if (!edit) {
+      window._tmdbPrefill = null;
+      showActionToast(`Added ${entry.title || title}`, 'Open', () => goToDetail(entry.id, page), 6000);
+      return;
+    }
     // Pass remaining TMDB prefill data to detail page
     if (window._tmdbPrefill) {
       sessionStorage.setItem('tmdbPrefill', JSON.stringify(window._tmdbPrefill));
       window._tmdbPrefill = null;
     }
-    goToDetail(entry.id, CAT_META[entry.cat]?.page || 'index.html');
+    goToDetail(entry.id, page);
   } catch(e) {
-    if (btn) { btn.disabled = false; btn.textContent = 'Add & Edit →'; }
+    busy(false);
     if (e.message && e.message.startsWith('DUPLICATE:')) {
       const dupe = JSON.parse(e.message.slice(10));
       const catLabel = (CAT_META[dupe.cat] && CAT_META[dupe.cat].label) || dupe.cat;
@@ -1450,9 +2201,9 @@ document.addEventListener('keydown', e => {
   const typing = e.target.closest?.('input,textarea,select,[contenteditable]') || e.target.isContentEditable;
   const plainKey = !typing && !e.ctrlKey && !e.metaKey && !e.altKey;
   if (e.key === 'n' && plainKey && !MSSDialog.top()) openAddModal();
-  if (e.key === '/' && plainKey) {
+  if (e.key === '/' && plainKey && !MSSDialog.top()) {
     e.preventDefault();
-    document.getElementById('globalSearch')?.focus();
+    mssOpenSearch();
   }
 });
 
@@ -1693,6 +2444,22 @@ async function _tmdbSearch(query, limit = 6, includePersons = false) {
   } catch(e) { console.error('[TMDB] fetch error:', e); return []; }
 }
 
+/* ── People on TMDB for the favourite-people lists (profile editor, Set up your folio): dept puts people known for it
+   first ('Acting' · 'Directing'); gender keeps only Actors (2) or Actresses (1); skip = ids already picked ── */
+async function mssPersonSearch(q, { dept, gender, skip } = {}) {
+  let hits = [];
+  try {
+    const r = await tmdbFetch(`${TMDB_BASE}/search/person?query=${encodeURIComponent(q.trim())}&language=en-US&include_adult=false&page=1`);
+    hits = r.ok ? ((await r.json()).results || []) : [];
+  } catch {}
+  const taken = new Set((skip || []).map(Number));
+  return hits.filter(x => !taken.has(Number(x.id)) && (!gender || Number(x.gender) === gender))
+    .sort((a, b) => (b.known_for_department === dept) - (a.known_for_department === dept) || (b.popularity || 0) - (a.popularity || 0)).slice(0, 20);
+}
+// a TMDB person → how the favourite-people lists save them
+const mssPersonItem = x => ({ id: Number(x.id), name: x.name, path: x.profile_path || null,
+  known: (x.known_for || []).map(k => k.title || k.name).filter(Boolean)[0] || null, gender: Number(x.gender) || 0 });
+
 /* ── Fetch TV detail (seasons/episodes) ── */
 async function _tmdbTV(id) {
   try {
@@ -1771,15 +2538,6 @@ function _anilistToEntry(media) {
 }
 
 /* ══════════════════════════════════════════
-   initDiscoverSearch — type-ahead TMDB dropdown
-   used by the nav search bar + home hero search.
-   Unlike initTMDBSearch (which fills the Add Entry
-   form), selecting a result here navigates to
-   title.html — the TMDB detail/discovery page.
-   inputId: id of the <input> element
-   opts.max: how many results to show (nav = 3, home hero = more)
-══════════════════════════════════════════ */
-/* ══════════════════════════════════════════
    Dropdown mutual exclusivity — opening any
    dropdown (search results, sel-dd, etc.) closes
    whatever other dropdown was already open.
@@ -1788,61 +2546,47 @@ function _closeAllDropdownsExcept(exceptId) {
   document.querySelectorAll('.tmdb-dropdown.open').forEach(el => {
     if (el.id !== exceptId) { el.classList.remove('open'); el.innerHTML = ''; }
   });
-  document.querySelectorAll('.sel-dd.open').forEach(el => {
-    if (el.id !== exceptId) el.classList.remove('open');
-  });
   document.querySelectorAll('.td-dd.open').forEach(el => {
     if (el.id !== exceptId) el.classList.remove('open');
   });
 }
 
 /* ══════════════════════════════════════════
-   sel-dd — reusable theme-aware dropdown
-   (drop-in replacement for a native <select>)
-   options: [{value,label}], selected: current value
+   sel-dd — a select-like button whose options open in the shared
+   popover (MSSPopover: a menu under it; on phones a page of rows)
+   options: [{value,label}], selected: current value; onchangeFn: a
+   global function's name, called with the value picked
    Reads back via document.getElementById(id).dataset.value
 ══════════════════════════════════════════ */
+const _selDDOptions = {};
 function _selDDHTML(id, options, selected, onchangeFn, placeholder) {
   const selOpt = options.find(o => o.value === selected);
   const usePlaceholder = !selOpt && placeholder;
   const label = selOpt ? selOpt.label : (usePlaceholder ? placeholder : options[0].label);
   const value = selOpt ? selOpt.value : (usePlaceholder ? '' : options[0].value);
-  return `<div class="sel-dd${usePlaceholder ? ' sel-dd-placeholder' : ''}" id="${id}" data-value="${value}" ${onchangeFn ? `data-onchange="${onchangeFn}"` : ''}>
-    <button type="button" class="sel-dd-trigger" onclick="event.stopPropagation();_selToggleDD('${id}')">
-      <span class="sel-dd-label">${label}</span>
-      <svg class="sel-dd-chevron" width="10" height="6" viewBox="0 0 10 6" fill="none"><path d="M1 1L5 5L9 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  _selDDOptions[id] = options;
+  return `<div class="sel-dd${usePlaceholder ? ' sel-dd-placeholder' : ''}" id="${id}" data-value="${escHTML(value)}" ${onchangeFn ? `data-onchange="${onchangeFn}"` : ''}>
+    <button type="button" class="sel-dd-trigger" aria-haspopup="menu" onclick="event.stopPropagation();_selToggleDD('${id}')">
+      <span class="sel-dd-label">${escHTML(label)}</span>
+      <svg class="sel-dd-chevron" width="10" height="6" viewBox="0 0 10 6" fill="none" aria-hidden="true"><path d="M1 1L5 5L9 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </button>
-    <div class="sel-dd-menu">
-      ${options.map(o => `<div class="sel-dd-opt${o.value===value?' active':''}" data-value="${escHTML(o.value)}" onclick="event.stopPropagation();_selSelectDD('${id}','${o.value}')">${escHTML(o.label)}</div>`).join('')}
-    </div>
   </div>`;
 }
-
-function _selToggleDD(id) {
-  const target = document.getElementById(id);
-  const wasOpen = target.classList.contains('open');
-  if (wasOpen) { target.classList.remove('open'); return; }
-  _closeAllDropdownsExcept(id);
-  target.classList.add('open');
+async function _selToggleDD(id) {
+  const dd = document.getElementById(id), btn = dd?.querySelector('.sel-dd-trigger'); if (!btn) return;
+  await mssLoadScript('js/panel.js');
+  const cur = dd.dataset.value;
+  MSSPopover.open(btn, { title: btn.textContent.trim(), label: btn.textContent.trim(),
+    items: (_selDDOptions[id] || []).map(o => ({ label: o.label, icon: o.value === cur ? 'check' : null, onSelect: () => _selPickDD(id, o) })) });
 }
-
-function _selSelectDD(id, value) {
-  const el = document.getElementById(id);
-  el.dataset.value = value;
-  el.classList.remove('sel-dd-placeholder');
-  const opt = el.querySelector(`.sel-dd-opt[data-value="${value}"]`);
-  if (opt) el.querySelector('.sel-dd-label').textContent = opt.textContent;
-  el.querySelectorAll('.sel-dd-opt').forEach(o => o.classList.toggle('active', o.dataset.value === value));
-  el.classList.remove('open');
-  const onchange = el.getAttribute('data-onchange');
-  if (onchange) window[onchange]?.(value);
+function _selPickDD(id, o) {
+  const dd = document.getElementById(id); if (!dd) return;
+  dd.dataset.value = o.value;
+  dd.classList.remove('sel-dd-placeholder');
+  dd.querySelector('.sel-dd-label').textContent = o.label;
+  const fn = window[dd.dataset.onchange];
+  if (typeof fn === 'function') fn(o.value);
 }
-
-document.addEventListener('click', e => {
-  if (!e.target.closest('.sel-dd')) {
-    document.querySelectorAll('.sel-dd.open').forEach(el => el.classList.remove('open'));
-  }
-});
 
 /* ══════════════════════════════════════════
    Viewport-aware positioning for fixed-position
@@ -1978,6 +2722,8 @@ async function _refreshTmdbSeasonData(entry, userId, rerender) {
     // sort option, which needs to reflect how recently a show has actually
     // aired new content, not just when it was originally released.
     const newLastEpDate = data.last_episode_to_air?.air_date || null;
+    // the show's usual episode length (Episode time / Total time on profiles): TMDB's, 0 when it doesn't say
+    const newEpLen = Number(data.episode_run_time?.[0] || data.last_episode_to_air?.runtime || 0) || 0;
 
     const oldTotalSeasons = Number(entry.total_seasons) || 0;
     const oldTotalEps = Number(entry.total_eps) || 0;
@@ -1986,10 +2732,11 @@ async function _refreshTmdbSeasonData(entry, userId, rerender) {
     const hasNewData = (newTotalSeasons && newTotalSeasons !== oldTotalSeasons) ||
                         (newTotalEps && newTotalEps !== oldTotalEps) ||
                         oldBreakdown !== JSON.stringify(newBreakdown) ||
-                        (newLastEpDate && newLastEpDate !== oldLastEpDate);
+                        (newLastEpDate && newLastEpDate !== oldLastEpDate) ||
+                        (newEpLen && newEpLen !== Number(entry.ratings?._ep_runtime));
     if (!hasNewData) return;
 
-    const newRatings = { ...(entry.ratings || {}), _season_breakdown: newBreakdown, _last_episode_date: newLastEpDate || oldLastEpDate };
+    const newRatings = { ...(entry.ratings || {}), _season_breakdown: newBreakdown, _last_episode_date: newLastEpDate || oldLastEpDate, ...(newEpLen ? { _ep_runtime: newEpLen } : {}) };
     await updateProgress(entry.id, userId, {
       total_seasons: newTotalSeasons,
       total_eps: newTotalEps,
@@ -2221,205 +2968,36 @@ function tmdbTitleHTML(d, name, cls, tag = 'div') {
   return `<${tag} class="${cls} mss-logo-title${shape}" translate="no"><img class="mss-logo" src="${logo.src}" alt="" onerror="this.parentNode.classList.add('mss-logo-failed')"><span class="mss-logo-name">${escHTML(name)}</span></${tag}>`;
 }
 
-function initDiscoverSearch(inputId, opts = {}) {
-  const input = document.getElementById(inputId);
-  if (!input) return;
-  const max = opts.max || 3;
-  const connected = !!opts.connected;
-  const includePersons = !!opts.includePersons;
-  const anchor = connected ? (input.closest('.hero-search-wrap, .fused-search-wrap') || input) : input;
-
-  // Anchors inside the fixed <nav> bar never move with page scroll, so a
-  // viewport-relative position:fixed dropdown tracks them correctly. Anchors
-  // in normal scrollable page content (hero search, friends "Find People",
-  // etc.) need position:absolute in document coordinates instead — that way
-  // the dropdown scrolls with the page automatically, with no JS needed to
-  // chase it. Using position:fixed for those was the root cause of both the
-  // keyboard misplacement and the "moves while scrolling" jank: the browser
-  // auto-scrolls the page to reveal a focused input above the keyboard, and
-  // every scroll tick after that requires more fixed-position math to catch up.
-  const inFixedNav = !!anchor.closest('nav');
-
-  const drop = document.createElement('div');
-  drop.className = connected ? 'tmdb-dropdown dd-connected' : 'tmdb-dropdown';
-  drop.style.position = inFixedNav ? 'fixed' : 'absolute';
-  // .dd-connected's z-index (390) is tuned for dropdowns living in normal
-  // page content, well clear of the nav bar (z-index:400). A connected
-  // dropdown anchored *inside* the nav sits right at its edge, so it needs
-  // to clear the nav explicitly or its top portion renders behind it.
-  if (connected && inFixedNav) drop.style.zIndex = 500;
-  drop.id = inputId + '-discover-drop';
-  document.body.appendChild(drop);
-
-  let _timer = null;
-  let _lastQ  = '';
-
-  function _positionDrop() {
-    // Pinch-zoom makes fixed/absolute positioning notoriously unreliable
-    // to track precisely across browsers mid-gesture — rather than risk
-    // the dropdown rendering detached or invisible, just close it cleanly
-    // as soon as zoom is detected.
-    if (window.visualViewport && Math.abs(window.visualViewport.scale - 1) > 0.01) {
-      _closeDrop();
-      return;
-    }
-
-    const raw = anchor.getBoundingClientRect();
-    const { vw, vh, offX, offY } = _viewportInfo();
-    const isMobile = vw <= 640;
-    const gap = connected ? 0 : 4;
-
-    if (inFixedNav) {
-      // Translate the layout-viewport-relative rect into visual-viewport
-      // space so it lines up with where the fixed-position dropdown renders.
-      const r = { left: raw.left - offX, right: raw.right - offX, top: raw.top - offY, bottom: raw.bottom - offY, width: raw.width };
-      if (r.bottom <= 0 || r.top >= vh) { _closeDrop(); return; }
-
-      // Same structure as the in-page (index) dropdown, applied uniformly
-      // across all screen sizes: width/left come straight from the
-      // anchor's own box rather than being clamped against
-      // visualViewport's width (pinch-zoom shrinks that value without
-      // proportionally shrinking getBoundingClientRect(), and clamping
-      // against the mismatched number is what made it look narrower or
-      // misaligned than the input). It also always stays glued directly
-      // below the input instead of flipping above when space is tight —
-      // flipping only ever ran on wider screens here, and is what caused
-      // the same "teleports to the top of the screen" bug we already
-      // fixed for mobile, just left unfixed on desktop-width nav bars.
-      const dropW = r.width;
-      const left  = r.left;
-      const spaceBelow = vh - r.bottom - gap;
-      const dropMaxH = Math.max(44, Math.min(isMobile ? 220 : 340, spaceBelow - 8, vh - 16));
-      const top = r.bottom + gap;
-
-      drop.style.top       = top + 'px';
-      drop.style.left      = left + 'px';
-      drop.style.width     = dropW + 'px';
-      drop.style.maxHeight = dropMaxH + 'px';
-    } else {
-      // In-flow anchors: position in document coordinates. No scroll
-      // listener needed — position:absolute keeps it glued below the
-      // input as the page (and any keyboard-driven scroll-into-view) moves.
-      // Width/left come straight from the anchor's own box rather than
-      // being clamped against visualViewport's width — pinch-zoom shrinks
-      // that value without proportionally shrinking getBoundingClientRect(),
-      // and clamping against the mismatched number is what made the
-      // dropdown look narrower/misaligned than the input whenever zoom
-      // was active. This matches the friends-page dropdown, which never
-      // had that clamp and doesn't show the issue.
-      const scrollX = window.scrollX || window.pageXOffset || 0;
-      const scrollY = window.scrollY || window.pageYOffset || 0;
-      const dropW = raw.width;
-      const left  = raw.left + scrollX;
-      const top   = raw.bottom + scrollY + gap;
-      // Still cap height to whatever's visible right now below the input
-      // (accounts for the keyboard eating the visual viewport) so it
-      // doesn't render mostly hidden — the rest is a page-scroll away.
-      const spaceBelowVisible = vh - (raw.bottom - offY) - gap;
-      const dropMaxH = Math.max(44, Math.min(isMobile ? 220 : 340, spaceBelowVisible - 8, vh - 16));
-      drop.style.top       = top + 'px';
-      drop.style.left      = left + 'px';
-      drop.style.width     = dropW + 'px';
-      drop.style.maxHeight = dropMaxH + 'px';
-    }
-  }
-
-  function _closeDrop() {
-    drop.classList.remove('open');
-    drop.innerHTML = '';
-    if (connected) anchor.classList.remove('dd-connected-active');
-  }
-
-  async function _search() {
-    const q = input.value.trim();
-    if (q.length < 2 || q === _lastQ) return;
-    _lastQ = q;
-    _positionDrop();
-    drop.innerHTML = '<div class="tmdb-loading">Searching…</div>';
-    _closeAllDropdownsExcept(drop.id);
-    drop.classList.add('open');
-    if (connected) anchor.classList.add('dd-connected-active');
-
-    const tmdb = await _tmdbSearch(q, max, includePersons);
-    if (input.value.trim() !== q) return;          // you've typed on since — that newer search will answer
-    const results = tmdb.map(r => {
-      if (r.media_type === 'person') {
-        return {
-          id:     r.id,
-          type:   'person',
-          title:  r.name,
-          year:   '',
-          thumb:  r.profile_path ? TMDB_IMG + r.profile_path : null,
-          label:  r.known_for_department || 'Person',
-          genres: [],
-        };
-      }
-      const isMovie = r.media_type === 'movie';
-      return {
-        id:    r.id,
-        type:  isMovie ? 'movie' : 'tv',
-        title: isMovie ? r.title : r.name,
-        year:  (isMovie ? r.release_date : r.first_air_date || '').split('-')[0],
-        thumb: r.poster_path ? TMDB_IMG + r.poster_path : null,
-        label: isMovie ? 'Movie' : 'TV Show',
-        genres: mssGenreNames(r.genre_ids).slice(0, 2),
-      };
-    });
-
-    if (!results.length) {
-      drop.innerHTML = '<div class="tmdb-empty">No results found</div>';
-      return;
-    }
-
-    drop.innerHTML = results.map((r, i) => `
-      <div class="tmdb-item" data-i="${i}"${r.type === 'person' ? '' : MSSAge.attr(r.type, r.id)}>
-        <div class="tmdb-thumb${r.type === 'person' ? ' tmdb-thumb-round' : ''}">
-          ${r.thumb ? `<img src="${r.thumb}" loading="lazy">` : '<div class="tmdb-thumb-ph"></div>'}
-        </div>
-        <div class="tmdb-info">
-          <div class="tmdb-title" translate="no">${escHTML(r.title || '—')}</div>
-          <div class="tmdb-meta">
-            <span class="tmdb-tag">${r.label}</span>
-            ${r.year ? `<span class="tmdb-year">${escHTML(r.year)}</span>` : ''}
-            ${r.genres.length ? `<span class="tmdb-genres">${r.genres.join(' · ')}</span>` : ''}
-          </div>
-        </div>
-      </div>`).join('');
-
-    drop.querySelectorAll('.tmdb-item').forEach((el, i) => {
-      el.addEventListener('click', () => {
-        const r = results[i];
-        _closeDrop();
-        input.value = '';
-        window.location.href = r.type === 'person'
-          ? `person.html?id=${r.id}`
-          : `title.html?type=${r.type}&id=${r.id}`;
-      });
-    });
-  }
-
-  input.addEventListener('input', () => {
-    clearTimeout(_timer);
-    if (input.value.trim().length < 2) { _closeDrop(); return; }
-    _timer = setTimeout(_search, MSS_SEARCH_MS);
-  });
-
-  input.addEventListener('keydown', e => {
-    if (e.key === 'Escape') _closeDrop();
-    if (e.key === 'Enter' && input.value.trim().length >= 2) { clearTimeout(_timer); _search(); }
-  });
-
-  window.addEventListener('resize', _positionDrop, { passive: true });
-  if (inFixedNav) window.addEventListener('scroll', _positionDrop, { passive: true });
-  if (window.visualViewport) {
-    window.visualViewport.addEventListener('resize', _positionDrop);
-    if (inFixedNav) window.visualViewport.addEventListener('scroll', _positionDrop);
-  }
-
-  document.addEventListener('click', e => {
-    if (!e.target.closest('#' + inputId) && !e.target.closest('#' + drop.id)) {
-      _closeDrop();
-    }
+/* A library entry's name artwork, fetched on its own (TMDB /images, kept for the visit) → Promise<{ src, ratio } | null>.
+   mssPaintLogo(el, entry): swaps a written title (el) for that artwork once it has loaded — the big backdrop cards
+   (profile Top Favorites, Home's Top Favorites, the Watched podium). The name stays for screen readers; no artwork → the text stays. */
+const _mssLogoAsk = {};
+function mssTitleLogo(e) {
+  const id = Number(e?.tmdb_id);
+  if (!id || typeof tmdbFetch !== 'function' || typeof TMDB_BASE === 'undefined') return Promise.resolve(null);
+  const type = e.tmdb_type || e.media_type || (e.cat === 'movies' || e.ratings?._media_type === 'movie' ? 'movie' : 'tv');
+  const k = `msf_logo_${type}:${id}`;
+  if (_mssLogoAsk[k]) return _mssLogoAsk[k];
+  try { const c = sessionStorage.getItem(k); if (c != null) return (_mssLogoAsk[k] = Promise.resolve(JSON.parse(c))); } catch {}
+  const base = (typeof MSSLang !== 'undefined' && MSSLang.code || 'en-US').split('-')[0];
+  return (_mssLogoAsk[k] = tmdbFetch(`${TMDB_BASE}/${type}/${id}/images?include_image_language=${base},en,null`)
+    .then(r => r.ok ? r.json() : null)
+    .then(d => { const l = d ? tmdbLogo({ images: d }) : null; try { sessionStorage.setItem(k, JSON.stringify(l)); } catch {} return l; })
+    .catch(() => null));
+}
+function mssPaintLogo(el, e) {
+  if (!el || !e || el.classList.contains('mss-logo-title')) return;
+  mssTitleLogo(e).then(l => {
+    if (!l || !el.isConnected || el.classList.contains('mss-logo-title')) return;
+    const im = new Image(); im.className = 'mss-logo'; im.alt = ''; im.decoding = 'async';
+    im.onload = () => {
+      if (!el.isConnected || el.classList.contains('mss-logo-title')) return;
+      const name = el.textContent;
+      el.classList.add('mss-logo-title', ...(l.ratio < 1.8 ? ['mss-logo-tall'] : l.ratio > 5 ? ['mss-logo-wide'] : []));
+      const sp = document.createElement('span'); sp.className = 'mss-logo-name'; sp.textContent = name;
+      el.replaceChildren(im, sp);
+    };
+    im.src = l.src;
   });
 }
 
@@ -2438,7 +3016,23 @@ function initTMDBSearch(inputId, getCat, onSelect, opts = {}) {
   const drop = document.createElement('div');
   drop.className = connected ? 'tmdb-dropdown dd-connected dd-connected-modal' : 'tmdb-dropdown';
   drop.id = inputId + '-tmdb-drop';
+  drop.setAttribute('role', 'listbox');
+  drop.setAttribute('aria-label', 'Search results');
   document.body.appendChild(drop);
+  // a combobox: ↑ ↓ move through the results, Enter picks one
+  input.setAttribute('role', 'combobox');
+  input.setAttribute('aria-autocomplete', 'list');
+  input.setAttribute('aria-controls', drop.id);
+  input.setAttribute('aria-expanded', 'false');
+  let _active = -1;
+  function _setActive(i) {
+    const items = [...drop.querySelectorAll('.tmdb-item')];
+    if (!items.length) return;
+    _active = (i + items.length) % items.length;
+    items.forEach((el, k) => { el.classList.toggle('is-active', k === _active); el.setAttribute('aria-selected', k === _active); });
+    input.setAttribute('aria-activedescendant', items[_active].id);
+    items[_active].scrollIntoView({ block: 'nearest' });
+  }
 
   let _timer = null;
   let _lastQ  = '';
@@ -2487,6 +3081,9 @@ function initTMDBSearch(inputId, getCat, onSelect, opts = {}) {
   function _closeDrop() {
     drop.classList.remove('open');
     drop.innerHTML = '';
+    _active = -1;
+    input.setAttribute('aria-expanded', 'false');
+    input.removeAttribute('aria-activedescendant');
     if (connected) input.classList.remove('dd-connected-active');
   }
 
@@ -2499,6 +3096,8 @@ function initTMDBSearch(inputId, getCat, onSelect, opts = {}) {
     drop.innerHTML = '<div class="tmdb-loading">Searching…</div>';
     _closeAllDropdownsExcept(drop.id);
     drop.classList.add('open');
+    input.setAttribute('aria-expanded', 'true');
+    _active = -1;
     if (connected) input.classList.add('dd-connected-active');
 
     let results = [];
@@ -2546,7 +3145,7 @@ function initTMDBSearch(inputId, getCat, onSelect, opts = {}) {
     }
 
     drop.innerHTML = results.map((r, i) => `
-      <div class="tmdb-item" data-i="${i}"${r._type === 'tmdb' ? MSSAge.attr(r._raw.media_type, r._raw.id) : ''}>
+      <div class="tmdb-item" role="option" aria-selected="false" id="${inputId}-opt-${i}" data-i="${i}"${r._type === 'tmdb' ? MSSAge.attr(r._raw.media_type, r._raw.id) : ''}>
         <div class="tmdb-thumb">
           ${r.thumb ? `<img src="${r.thumb}" loading="lazy">` : '<div class="tmdb-thumb-ph"></div>'}
         </div>
@@ -2600,11 +3199,16 @@ function initTMDBSearch(inputId, getCat, onSelect, opts = {}) {
   });
 
   input.addEventListener('keydown', e => {
-    if (e.key === 'Escape') _closeDrop();
+    const open = drop.classList.contains('open') && drop.querySelector('.tmdb-item');
+    if (e.key === 'Escape' && drop.classList.contains('open')) { e.stopPropagation(); _closeDrop(); return; }
+    if (open && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) { e.preventDefault(); _setActive(_active + (e.key === 'ArrowDown' ? 1 : -1)); return; }
+    if (e.key === 'Enter' && open && _active >= 0) { e.preventDefault(); drop.querySelectorAll('.tmdb-item')[_active].click(); return; }
     if (e.key === 'Enter' && input.value.trim().length >= 2) { e.preventDefault(); clearTimeout(_timer); _search(); }
   });
 
-  window.addEventListener('scroll', _positionDrop, { passive: true });
+  input.addEventListener('mss:close-list', _closeDrop);   // Esc inside a popup (MSSDialog) closes the list first
+  // capture: also follows the field when a panel it sits in scrolls
+  window.addEventListener('scroll', _positionDrop, { passive: true, capture: true });
   window.addEventListener('resize', _positionDrop, { passive: true });
   if (window.visualViewport) {
     window.visualViewport.addEventListener('resize', _positionDrop);
@@ -2617,63 +3221,24 @@ function initTMDBSearch(inputId, getCat, onSelect, opts = {}) {
     }
   });
 }
-/*
- * fitTitleYear — measures every ".title-year-row" on the page (or
- * within a given root) and decides whether the year fits inline next
- * to the title or needs to drop to its own line below. Call this
- * after any HTML that includes ".title-year-row" is inserted into
- * the DOM — a fresh render, a re-sort, a view-toggle, etc. — since
- * the measurement only makes sense once the elements have real
- * rendered widths.
- */
-function fitTitleYear(root) {
-  const scope = root || document;
-  scope.querySelectorAll('.title-year-row').forEach(row => {
-    const title = row.querySelector('.wg-title, .w-title');
-    if (!title) return;
-    // Reset to inline first so the measurement reflects the
-    // "year competing for space" case, not the already-collapsed one.
-    row.classList.remove('year-overflow');
-    if (title.scrollWidth > title.clientWidth + 1) {
-      row.classList.add('year-overflow');
-    }
-  });
-}
 
 /* ══════════════════════════════════════════
    Notifications — bell panel + notifications.html
-   Sections:
-     episodes  — new_episode, new_release (tv-schedule.js → add_new_episode_notifications /
-                 add_release_notifications, 033 / 042)
-     activity  — friend_started, friend_episode, friend_finished, friend_note, friend_list,
-                 friend_rated, friend_watchlist, friend_dropped (072 — each follows the actor's
-                 "What my friends hear about" switches, enforced in the database),
-                 episode_chat (049), movie_night (050),
-                 challenge (051)
-                 ("notify me about @friend", 022 / 047), friend_queued, friend_poll,
-                 poll_comment (Social, 045)
-     social    — comment (on your title / your comment / your note), like (your note, list or
-                 reply on a note) — 066
-     lists     — list_invite, list_invite_accepted
-     requests  — new_follower, follow_request, follow_accepted (083) · friend_request (before 083)
+   Two halves (the filters All · For you · Friends' activity, _nfMatch):
+     For you           — anything about you or your shows: new_episode, new_release, on_this_day,
+                         achievement, follows / requests, message, recommendation (126), list invites,
+                         movie_night (050), challenge (051), comment / like (066), poll_comment,
+                         episode_chat (049), report_actioned / moderation_notice (087)
+     Friends' activity — friend_started, friend_episode, friend_finished, friend_dropped (Watched),
+                         friend_watchlist, friend_queued (Watchlist), friend_note (Notes),
+                         friend_rated (Ratings), friend_list (Lists), friend_poll
+                         ("notify me about @friend", 022 / 047 / 072 — each follows the actor's
+                         "What my friends hear about" switches, enforced in the database)
    Rows are created by the database (021/022 SQL); here we list them,
    act on them, mark them read and delete them.
 ══════════════════════════════════════════ */
 let _notifUser = null;
 let _notifItems = [];
-let _notifTab = 'all';
-const NOTIF_SECTIONS = [
-  ['all', 'All'], ['episodes', 'New Releases'], ['social', 'Comments & Likes'], ['activity', 'Friend Activity'], ['lists', 'Lists'], ['requests', 'Followers'],
-];
-function _notifSection(n) {
-  if (n.type === 'friend_request' || n.type === 'new_follower' || n.type === 'follow_request' || n.type === 'follow_accepted') return 'requests';
-  if (n.type === 'new_episode' || n.type === 'new_release') return 'episodes';
-  if (n.type === 'comment' || n.type === 'like') return 'social';
-  if (n.type === 'list_invite' || n.type === 'list_invite_accepted' || n.type === 'list_invite_declined') return 'lists';
-  if (n.type === 'on_this_day') return 'yours';   // yours alone: under All only, never "Friend Activity"
-  return 'activity';
-}
-
 /* Messages: how many are waiting. Desktop shows it on the icon next to the bell; phones on
    Social's Messages toggle and the dot on the Social tab. Follows new notifications, and
    Messages tells it when you've read some. */
@@ -2698,7 +3263,7 @@ async function _navMsgRefresh() {
 function _notifInit(user) {
   if (!user || _notifUser) return;
   _notifUser = user;
-  _notifLoad();
+  _nfDisplayLoad().catch(() => {}).then(() => _notifLoad());
   _navMsgRefresh();
   _notifLive(user);
   // Movie Night (050): a reminder on the day of a dated night — checked when the app opens (every 20 min at most)
@@ -2741,7 +3306,7 @@ async function _notifLoad(limit) {
       .select('id, type, actor_id, list_id, friendship_id, entry_id, meta, read_at, created_at')
       .eq('user_id', _notifUser.id).order('created_at', { ascending: false }).limit(_notifLimit);
     if (error) throw error;
-    const list = rows || [];
+    const list = (rows || []).filter(n => !_nfHidden.has(n.id));     // deleted, Undo still on screen
     const actorIds  = [...new Set(list.map(n => n.actor_id).filter(Boolean))];
     const listIds   = [...new Set(list.map(n => n.list_id).filter(Boolean))];
     const friendIds = [...new Set(list.map(n => n.friendship_id).filter(Boolean))];
@@ -2794,192 +3359,299 @@ function _notifTimeAgo(d) {
   return new Date(d).toLocaleDateString(MSSI18n.locale, { month: 'short', day: 'numeric' });
 }
 
-// "a new show" / "a new movie" / … for friend activity
-function _notifTypeLabel(meta) {
-  const m = meta || {};
-  const isMovie = m.cat === 'movies' || m.media_type === 'movie' || m.tmdb_type === 'movie';
-  const label = (m.cat && CAT_META[m.cat]?.label) || (isMovie ? 'Movie' : 'TV Show');
-  return `<span class="${isMovie ? 'type-label' : 'type-label type-label-tv'}">${escHTML(label)}</span>`;
-}
-// Title card shown under friend-activity notifications
-function _notifTitleCard(meta) {
-  const m = meta || {};
-  const poster = safeURL(m.poster_url);
-  return `<div class="notif-card"${MSSAge.attr(m.tmdb_type || m.media_type, m.tmdb_id, 'soft')}>
-    <div class="notif-card-poster">${poster ? `<img src="${poster}" alt="" loading="lazy" onerror="mssImgError(this)" data-letter="${escHTML((m.title || '?')[0])}">` : escHTML((m.title || '?')[0].toUpperCase())}</div>
-    <div class="notif-card-info">
-      <div class="notif-card-title" translate="no">${escHTML(m.title || 'Untitled')}</div>
-      <div class="notif-card-meta">${_notifTypeLabel(m)}${m.year ? `<span class="notif-card-year">${escHTML(String(m.year).slice(0, 4))}</span>` : ''}</div>
-    </div>
-  </div>`;
+/* ── Rows (notifications redesign) ──
+   One compact row per notification: photo + type badge (green = a person, blue = MSF), the sentence, the time,
+   any Accept / Decline / Follow back, and the title's poster on the right. The sentence is the row's link
+   (stretched over the row); clicking marks it read. A friend's watchlist adds in one day group become one row. */
+const _NF_KIND = { friend_started: 'watched', friend_episode: 'watched', friend_finished: 'watched', friend_dropped: 'watched',
+  friend_watchlist: 'watchlist', friend_queued: 'watchlist', friend_note: 'notes', friend_rated: 'ratings', friend_list: 'lists', friend_poll: '' };
+const _NF_KINDS = [['watched', 'Watched'], ['watchlist', 'Watchlist'], ['notes', 'Notes'], ['ratings', 'Ratings'], ['lists', 'Lists']];
+const _NF_SYSTEM = new Set(['new_episode', 'new_release', 'on_this_day', 'achievement', 'report_actioned', 'moderation_notice']);
+const _nfFriends = n => n.type in _NF_KIND;
+function _nfMatch(n, f) {
+  return f === 'all' || (f === 'you' ? !_nfFriends(n) : f === 'friends' ? _nfFriends(n) : _NF_KIND[n.type] === f);
 }
 
-function _notifItemHTML(n, opts = {}) {
+// The filter is shared by the page and the bell panel: kept while you're on a page, back to All on the next one
+// (only Back / Forward brings it back: _mssBackForward)
+const _NF_FILTER_KEY = 'mss_notif_filter';
+const _NF_FILTERS = ['all', 'you', 'friends', ..._NF_KINDS.map(k => k[0])];
+try { localStorage.removeItem(_NF_FILTER_KEY); } catch {}   // was kept on the device (before 17 Nov 2026)
+let _nfFilter = (() => { if (!_mssBackForward) return 'all'; try { const f = sessionStorage.getItem(_NF_FILTER_KEY); return _NF_FILTERS.includes(f) ? f : 'all'; } catch { return 'all'; } })();
+function _nfSetFilter(f) {
+  if (!_NF_FILTERS.includes(f)) return;
+  const from = document.activeElement?.closest('.ntf-filters, .np-side, #notifPanel, #npList') || null;
+  _nfFilter = f;
+  try { sessionStorage.setItem(_NF_FILTER_KEY, f); } catch {}
+  _nfPanelShown = 20;
+  document.getElementById('notifList')?.scrollTo(0, 0);
+  _notifRenderPanel();
+  if (typeof renderNotificationsPage === 'function') renderNotificationsPage({ reset: true });
+  // the buttons were redrawn: keep focus on the one just pressed
+  if (from) (document.getElementById('notifPanel')?.classList.contains('open') ? document.getElementById('notifPanel') : document)
+    .querySelector(`.ntf-filters [data-f="${f}"], .np-side [data-f="${f}"]`)?.focus();
+}
+function _nfFiltersHTML(short) {
+  const cnt = f => _notifItems.filter(n => _nfMatch(n, f)).length;
+  const sub = _NF_KINDS.some(k => k[0] === _nfFilter);
+  const pill = (f, label) => `<button type="button" class="ntf-pill${_nfFilter === f ? ' on' : f === 'friends' && sub ? ' is-parent' : ''}" data-f="${f}" aria-pressed="${_nfFilter === f}" onclick="_nfSetFilter('${f}')">${label}<span class="ntf-n">${cnt(f)}</span></button>`;
+  return `<div class="ntf-filters">
+      <div class="ntf-pills" role="group" aria-label="Show">${pill('all', 'All')}${pill('you', 'For you')}${pill('friends', short ? 'Friends' : 'Friends’ activity')}</div>
+      <div class="ntf-chips" role="group" aria-label="Friends’ activity by kind">${_NF_KINDS.map(([f, l]) =>
+        `<button type="button" class="ntf-chip${_nfFilter === f ? ' on' : ''}" data-f="${f}" aria-pressed="${_nfFilter === f}" onclick="_nfSetFilter('${f}')">${l}<span class="ntf-n">${cnt(f)}</span></button>`).join('')}</div>
+    </div>`;
+}
+
+// Group watchlist adds (Quiet the noise): profiles.notif_display (126), this device until it runs
+let _nfDisplay = null;               // the account's choices, once loaded (null: not loaded / no column yet)
+const _nfDisplayKey = () => 'mss_notif_display_' + (_notifUser?.id || '');
+function _nfDisplayGet() {
+  if (_nfDisplay) return _nfDisplay;
+  try { return JSON.parse(localStorage.getItem(_nfDisplayKey()) || '{}') || {}; } catch { return {}; }
+}
+const _nfGroupOn = () => _nfDisplayGet().group_watchlist !== false;
+async function _nfDisplayLoad() {
+  const { data, error } = await sb.from('profiles').select('notif_display').eq('id', _notifUser.id).maybeSingle();
+  if (error) return;                                   // 126 not run yet: the device's choice
+  _nfDisplay = Object.assign(_nfDisplayGet(), data?.notif_display || {});
+}
+async function _nfDisplaySet(key, val) {
+  const d = Object.assign({}, _nfDisplayGet(), { [key]: val });
+  try { localStorage.setItem(_nfDisplayKey(), JSON.stringify(d)); } catch {}
+  if (_nfDisplay) {
+    _nfDisplay = d;
+    const { error } = await sb.from('profiles').update({ notif_display: d }).eq('id', _notifUser.id);
+    if (error) showToast('Couldn’t save that — it’s kept on this device.', 'err');
+  }
+  _nfRerender();
+}
+
+// Today (under 24 hours) · Yesterday · This week (2–6 days) · Earlier
+function _nfDay(d) {
+  const h = (Date.now() - new Date(d)) / 36e5;
+  return h < 24 ? 'Today' : h < 48 ? 'Yesterday' : h < 168 ? 'This week' : 'Earlier';
+}
+// What the list shows: each notification, or one row for a friend's watchlist adds in the same day group
+function _nfRows(items) {
+  const group = _nfGroupOn(), out = [], by = {};
+  for (const n of items) {
+    const day = _nfDay(n.created_at);
+    if (group && n.type === 'friend_watchlist' && n.actor_id) {
+      const k = n.actor_id + '|' + (day === 'Earlier' ? new Date(n.created_at).toDateString() : day);
+      if (by[k]) { by[k].items.push(n); continue; }
+      out.push(by[k] = { day, items: [n] });
+      continue;
+    }
+    out.push({ day, items: [n] });
+  }
+  return out;
+}
+function _nfListHTML(rows, opts) {
+  let day = '', h = '';
+  for (const r of rows) {
+    if (r.day !== day) { day = r.day; h += `<div class="ntf-day" role="heading" aria-level="2">${day}</div>`; }
+    h += _nfRowHTML(r, opts);
+  }
+  return h;
+}
+
+const _nfPoster = (url, title) => `<span class="ntf-poster">${safeURL(url) ? `<img src="${safeURL(url)}" alt="" loading="lazy" onerror="mssImgError(this)" data-letter="${escHTML((title || '?')[0])}">` : escHTML((title || '?')[0].toUpperCase())}</span>`;
+
+// The pieces of one notification's row: photo, badge icon, sentence, quote, buttons, link, posters
+function _nfParts(n) {
   const name = n.actor ? escHTML(n.actor.display_name || n.actor.username) : 'Someone';
-  const who = `<b>${name}</b>`;
-  const title = n.list ? `<b>&ldquo;${escHTML(n.list.title)}&rdquo;</b>` : 'a list';
-  const av = n.type === 'on_this_day' ? `<span class="notif-av-otd">${(n.meta?.posters || []).slice(0, 3).map(u => safeURL(u) ? `<img src="${safeURL(u)}" alt="">` : '').join('') || icon('calendar', 18)}</span>`
+  const who = `<b translate="no">${name}</b>`;
+  const title = n.list ? `<b translate="no">&ldquo;${escHTML(n.list.title)}&rdquo;</b>` : 'a list';
+  const m = n.meta || {};
+  const av = n.type === 'on_this_day' ? `<span class="notif-av-otd">${(m.posters || []).slice(0, 3).map(u => safeURL(u) ? `<img src="${safeURL(u)}" alt="">` : '').join('') || icon('calendar', 18)}</span>`
     : n.type === 'achievement' ? `<span class="notif-av-ach">${icon('trophy', 18)}</span>`
     : n.type === 'report_actioned' || n.type === 'moderation_notice' ? `<span class="notif-av-ach notif-av-mod">${icon('flag', 17)}</span>`
-    : (n.type === 'new_episode' || n.type === 'new_release') && safeURL(n.meta?.poster_url)
-    ? `<img src="${safeURL(n.meta.poster_url)}" alt="">`
-    : n.actor && safeURL(n.actor.avatar_url)
-    ? `<img src="${safeURL(n.actor.avatar_url)}" alt="">`
+    : (n.type === 'new_episode' || n.type === 'new_release') && safeURL(m.poster_url) ? `<img src="${safeURL(m.poster_url)}" alt="" loading="lazy">`
+    : n.actor && safeURL(n.actor.avatar_url) ? `<img src="${safeURL(n.actor.avatar_url)}" alt="" loading="lazy">`
     : escHTML(((n.actor && n.actor.username) || '?')[0].toUpperCase());
-  let text = '', actions = '', extra = '', href = '', icon2 = '';
-  const idA = attrJSON(n.id);
+  let text = '', actions = '', quote = '', href = '', ic = '', posters = [];
+  const q = s => `<div class="notif-quote ntf-quote" translate="no">${escHTML(s)}</div>`;
+  const poster = () => { if (m.poster_url || m.title) posters = [_nfPoster(m.poster_url, m.title)]; };
   if (n.type === 'friend_request') {
-    text = `${who} sent you a friend request`; icon2 = 'users';
+    text = `${who} sent you a friend request`; ic = 'users';
     if (n.friendStatus === 'accepted') actions = `<span class="notif-state">You're now friends</span>`;
     href = 'friends.html';
   } else if (n.type === 'new_follower' || n.type === 'follow_request' || n.type === 'follow_accepted') {
     // Following (083): "started following you" · "wants to follow you" (private account) · "accepted your request"
     const aid = attrJSON(n.actor_id), friends = n.iFollow === 'accepted' && n.followsMe === 'accepted';
     text = n.type === 'follow_request' ? `${who} wants to follow you` : n.type === 'follow_accepted' ? `${who} accepted your follow request`
-      : `${who} ${n.meta?.back ? 'followed you back' : 'started following you'}`;
-    icon2 = 'users';
-    const backBtn = `<button class="notif-act notif-act-yes" onclick="_notifFollow(event, ${aid}, 'follow')">Follow back</button>`;
+      : `${who} ${m.back ? 'followed you back' : 'started following you'}`;
+    ic = 'users';
+    const backBtn = `<button type="button" class="notif-act notif-act-yes" onclick="_notifFollow(event, ${aid}, 'follow')">Follow back</button>`;
     if (n.type === 'follow_request' && n.followsMe === 'pending')
-      actions = `<button class="notif-act notif-act-yes" onclick="_notifFollow(event, ${aid}, 'accept')">Accept</button>
-                 <button class="notif-act" onclick="_notifFollow(event, ${aid}, 'decline')">Decline</button>`;
+      actions = `<button type="button" class="notif-act notif-act-yes" onclick="_notifFollow(event, ${aid}, 'accept')">Accept</button>
+                 <button type="button" class="notif-act" onclick="_notifFollow(event, ${aid}, 'decline')">Decline</button>`;
     else if (friends) actions = `<span class="notif-state">You're friends</span>`;
     else if (n.iFollow === 'pending') actions = `<span class="notif-state">Requested</span>`;
     else if (n.followsMe === 'accepted' && n.iFollow === 'none') actions = (n.type === 'follow_request' ? `<span class="notif-state">Follows you</span>` : '') + backBtn;
     else if (n.type === 'follow_request' && n.followsMe === 'none') actions = `<span class="notif-state">Declined</span>`;
     href = n.type === 'follow_request' ? 'friends.html?view=requests' : n.actor ? `profile-view.html?id=${encodeURIComponent(n.actor_id)}&u=${encodeURIComponent(n.actor.username || '')}` : 'friends.html';
   } else if (n.type === 'list_invite') {
-    text = `${who} invited you to collaborate on ${title}`; icon2 = 'layers';
+    text = `${who} invited you to collaborate on ${title}`; ic = 'layers';
     if (n.inviteStatus === 'pending') {
-      actions = `<button class="notif-act notif-act-yes" onclick="_notifInvite(event, ${attrJSON(n.list_id)}, true)">Accept</button>
-                 <button class="notif-act" onclick="_notifInvite(event, ${attrJSON(n.list_id)}, false)">Decline</button>`;
+      actions = `<button type="button" class="notif-act notif-act-yes" onclick="_notifInvite(event, ${attrJSON(n.list_id)}, true)">Accept</button>
+                 <button type="button" class="notif-act" onclick="_notifInvite(event, ${attrJSON(n.list_id)}, false)">Decline</button>`;
     } else if (n.inviteStatus === 'accepted') actions = `<span class="notif-state">Joined</span>`;
     else if (n.inviteStatus === 'declined') actions = `<span class="notif-state">Declined</span>`;
     href = n.list ? `list-view.html?list=${encodeURIComponent(n.list_id)}` : '';
   } else if (n.type === 'list_invite_accepted') {
-    text = `${who} joined your list ${title}`; icon2 = 'layers';
+    text = `${who} joined your list ${title}`; ic = 'layers';
     href = n.list ? `list-view.html?list=${encodeURIComponent(n.list_id)}` : '';
   } else if (n.type === 'list_invite_declined') {
-    text = `${who} declined your invite to ${title}`; icon2 = 'layers';
+    text = `${who} declined your invite to ${title}`; ic = 'layers';
     href = n.list ? `list-view.html?list=${encodeURIComponent(n.list_id)}` : '';
   } else if (['friend_started', 'friend_finished', 'friend_episode', 'friend_note', 'friend_rated', 'friend_watchlist', 'friend_dropped'].includes(n.type)) {
     // "Notify me about @friend" (047): what they're watching, the moment they do it
-    const m = n.meta || {}, t = `<b translate="no">${escHTML(m.title || 'something')}</b>`;
-    const titleHref = m.tmdb_id && m.tmdb_type ? `title.html?type=${m.tmdb_type}&id=${m.tmdb_id}` : (n.actor_id ? `profile-view.html?id=${encodeURIComponent(n.actor_id)}` : '');
-    href = titleHref;
-    if (n.type === 'friend_started') { text = `${who} started watching ${t}`; icon2 = 'play'; }
+    const t = `<b translate="no">${escHTML(m.title || 'something')}</b>`;
+    href = m.tmdb_id && m.tmdb_type ? `title.html?type=${m.tmdb_type}&id=${m.tmdb_id}` : (n.actor_id ? `profile-view.html?id=${encodeURIComponent(n.actor_id)}` : '');
+    if (n.type === 'friend_started') { text = `${who} started watching ${t}`; ic = 'play'; }
     if (n.type === 'friend_finished') {
       const movie = m.cat === 'movies' || m.media_type === 'movie' || m.tmdb_type === 'movie';
       text = (m.kind === 'ongoing' ? `${who} is caught up on ${t}` : movie ? `${who} watched ${t}` : `${who} finished ${t}`)
-        + (m.score != null ? ` · ★ ${Number(m.score).toFixed(2)}` : ''); icon2 = 'check';   // finished + rated at once (072)
+        + (m.score != null ? ` · ★ ${Number(m.score).toFixed(2)}` : ''); ic = 'check';   // finished + rated at once (072)
     }
     // 072: rated · added to watchlist · dropped
-    if (n.type === 'friend_rated') { text = `${who} rated ${t} ★ ${Number(m.score).toFixed(2)}${m.dropped ? ' (dropped)' : ''}`; icon2 = 'ratingStar'; }
-    if (n.type === 'friend_watchlist') { text = `${who} added ${t} to their watchlist`; icon2 = 'bookmark'; }
-    if (n.type === 'friend_dropped') { text = `${who} dropped ${t}${_notifDroppedAt(m)}`; icon2 = 'drop'; }
+    if (n.type === 'friend_rated') { text = `${who} rated ${t} ★ ${Number(m.score).toFixed(2)}${m.dropped ? ' (dropped)' : ''}`; ic = 'ratingStar'; }
+    if (n.type === 'friend_watchlist') { text = `${who} added ${t} to their watchlist`; ic = 'bookmark'; }
+    if (n.type === 'friend_dropped') { text = `${who} dropped ${t}${_notifDroppedAt(m)}`; ic = 'drop'; }
     if (n.type === 'friend_episode') {
-      text = `${who} ${_notifFriendEpText(m, t)}`; icon2 = 'tv';
+      text = `${who} ${_notifFriendEpText(m, t)}`; ic = 'tv';
       if (m.tmdb_id) href = `episodes.html?show=${encodeURIComponent(m.tmdb_id)}${n.actor_id ? `&user=${encodeURIComponent(n.actor_id)}` : ''}`;
+      if (_notifEpCount(m) === 1 && m.tmdb_id) quote = mssEpNameHTML(m.tmdb_id, m.season, m.episode, 'notif-quote ntf-quote');
     }
-    if (n.type === 'friend_note') { text = `${who} wrote a note on ${t}`; icon2 = 'notebook'; href = 'notes.html?view=friends'; }
-    extra = (n.type === 'friend_episode' && _notifEpCount(m) === 1 && m.tmdb_id ? mssEpNameHTML(m.tmdb_id, m.season, m.episode, 'notif-quote') : '') + _notifTitleCard(m);
+    if (n.type === 'friend_note') { text = `${who} wrote a note on ${t}`; ic = 'notebook'; href = 'notes.html?view=friends'; }
+    poster();
   } else if (n.type === 'friend_list') {
-    const m = n.meta || {};
-    text = `${who} made a new list <b translate="no">&ldquo;${escHTML(m.title || 'Untitled')}&rdquo;</b>`; icon2 = 'layers';
+    text = `${who} made a new list <b translate="no">&ldquo;${escHTML(m.title || 'Untitled')}&rdquo;</b>`; ic = 'layers';
     href = m.list_id ? `list-view.html?list=${encodeURIComponent(m.list_id)}` : '';
   } else if (n.type === 'new_episode') {
-    const m = n.meta || {};
-    text = _notifEpText(m, `<b translate="no">${escHTML(m.title || 'a show')}</b>`) + (m.episode_name && !(m.count > 1) ? ` “${escHTML(m.episode_name)}”` : ''); icon2 = 'tv';
+    text = _notifEpText(m, `<b translate="no">${escHTML(m.title || 'a show')}</b>`) + (m.episode_name && !(m.count > 1) ? ` “${escHTML(m.episode_name)}”` : ''); ic = 'tv';
     href = m.tmdb_id ? `episodes.html?show=${encodeURIComponent(m.tmdb_id)}` : '';
   } else if (n.type === 'new_release') {
-    const m = n.meta || {};
-    text = `<b translate="no">${escHTML(m.title || 'A movie')}</b> ${m.kind === 'digital' ? 'is out to stream or buy' : 'is out in cinemas'}`; icon2 = 'film';
+    text = `<b translate="no">${escHTML(m.title || 'A movie')}</b> ${m.kind === 'digital' ? 'is out to stream or buy' : 'is out in cinemas'}`; ic = 'film';
     href = m.tmdb_id ? `title.html?type=movie&id=${encodeURIComponent(m.tmdb_id)}` : '';
   } else if (n.type === 'friend_poll' || n.type === 'poll_comment') {
-    const m = n.meta || {}, q = `“${escHTML(m.question || 'a poll')}”`;
-    text = n.type === 'friend_poll' ? `${who} started a poll: ${q}` : `${who} commented on your poll ${q}`;
-    icon2 = n.type === 'friend_poll' ? 'poll' : 'comment';
-    if (n.type === 'poll_comment' && m.excerpt) extra = `<div class="notif-quote" translate="no">${escHTML(m.excerpt)}</div>`;
+    const qq = `“${escHTML(m.question || 'a poll')}”`;
+    text = n.type === 'friend_poll' ? `${who} started a poll: ${qq}` : `${who} commented on your poll ${qq}`;
+    ic = n.type === 'friend_poll' ? 'poll' : 'comment';
+    if (n.type === 'poll_comment' && m.excerpt) quote = q(m.excerpt);
     href = m.poll_id ? `polls.html?poll=${encodeURIComponent(m.poll_id)}` : 'polls.html';
   } else if (n.type === 'challenge') {
     // Challenges (051): an invite, or someone reaching the goal
-    const m = n.meta || {}, t = `<b translate="no">${escHTML(m.title || 'a challenge')}</b>`;
+    const t = `<b translate="no">${escHTML(m.title || 'a challenge')}</b>`;
     text = m.kind === 'finished' ? `${who} finished ${t} — ${escHTML(m.goal)} watched!` : `${who} challenged you: ${t}${m.goal ? ` · watch ${escHTML(m.goal)}` : ''}`;
-    icon2 = 'trophy';
+    ic = 'trophy';
     href = m.challenge_id ? `challenges.html?ch=${encodeURIComponent(m.challenge_id)}` : 'challenges.html';
   } else if (n.type === 'on_this_day') {
     // On This Day (115): what you finished on this date in earlier years — yours alone
-    const m = n.meta || {}, t = m.titles || [], more = (Number(m.count) || t.length) - Math.min(t.length, 2);
+    const t = m.titles || [], more = (Number(m.count) || t.length) - Math.min(t.length, 2);
     text = `<b>On This Day</b> · ${escHTML(Number(m.count) === 1 ? '1 title' : `${m.count} titles`)} — <span translate="no">${t.slice(0, 2).map(escHTML).join(', ')}</span>${more > 0 ? ` and ${more} more` : ''}`;
-    icon2 = 'calendar';
+    ic = 'calendar';
     href = `diary.html?otd=${encodeURIComponent(m.date || '')}`;
   } else if (n.type === 'achievement') {
     // Achievements (060): the first time, one "check your cabinet" for everything already earned
-    const m = n.meta || {}, more = (Number(m.count) || 1) - 1;
+    const more = (Number(m.count) || 1) - 1;
     text = m.kind === 'welcome' ? `<b>Your Achievement Cabinet is open</b> — you’ve already earned ${escHTML(m.count)} ${Number(m.count) === 1 ? 'medal' : 'medals'}. Take a look!`
       : `New medal: <b>${escHTML(m.name || 'Achievement')}</b>${m.at ? ` · ${escHTML(Number(m.at).toLocaleString(MSSI18n.locale))}` : ''}${more > 0 ? ` and ${more} more` : ''}`;
-    icon2 = 'sparkles';
+    ic = 'sparkles';
     href = m.key ? `cabinet.html?tab=ach` : 'cabinet.html';
   } else if (n.type === 'movie_night') {
     // Movie Night (050): invites, the pick, changes and the reminder on the day
-    const m = n.meta || {};
-    text = _notifNightText(m, who); icon2 = m.kind === 'review' ? 'ratingStar' : m.kind === 'decided' ? 'sparkles' : m.kind === 'cancelled' ? 'x' : m.kind === 'reminder' ? 'clock' : 'film';
-    if (m.kind === 'decided' && m.pick) extra = _notifTitleCard({ title: m.pick, poster_url: m.poster_url, tmdb_type: m.tmdb_type, media_type: m.tmdb_type });
+    text = _notifNightText(m, who); ic = m.kind === 'review' ? 'ratingStar' : m.kind === 'decided' ? 'sparkles' : m.kind === 'cancelled' ? 'x' : m.kind === 'reminder' ? 'clock' : 'film';
+    if (m.kind === 'decided' && m.pick) posters = [_nfPoster(m.poster_url, m.pick)];
     href = m.night_id ? `movie-night.html?night=${encodeURIComponent(m.night_id)}` : 'movie-night.html';
   } else if (n.type === 'episode_chat') {
     // Episode chat (049): only sent to friends who've watched the episode too
-    const m = n.meta || {};
-    text = `${who} commented on S${escHTML(m.season)} · E${escHTML(m.episode)} of <b translate="no">${escHTML(m.title || 'a show')}</b>`; icon2 = 'comment';
-    if (m.body) extra = `<div class="notif-quote" translate="no">${escHTML(m.body)}</div>`;
+    text = `${who} commented on S${escHTML(m.season)} · E${escHTML(m.episode)} of <b translate="no">${escHTML(m.title || 'a show')}</b>`; ic = 'comment';
+    if (m.body) quote = q(m.body);
     href = `episode-chat.html?ep=${encodeURIComponent(`${m.tmdb_id}:${m.season}:${m.episode}`)}`;
   } else if (n.type === 'message') {
-    text = `${who} sent you a message`; icon2 = 'inbox';         // never the message itself: it's encrypted
+    text = `${who} sent you a message`; ic = 'inbox';         // never the message itself: it's encrypted
     href = `messages.html?with=${encodeURIComponent(n.actor_id)}`;
+  } else if (n.type === 'recommendation') {
+    // A title or list shared in Messages (126): only what was shared is known here, never the message
+    text = m.kind === 'list' ? `${who} recommended the list <b translate="no">&ldquo;${escHTML(m.title || 'Untitled')}&rdquo;</b> to you`
+      : `${who} recommended <b translate="no">${escHTML(m.title || 'something')}</b> to you`;
+    ic = 'send';
+    href = `messages.html?with=${encodeURIComponent(n.actor_id)}`;
+    if (m.kind !== 'list') poster();
   } else if (n.type === 'comment' || n.type === 'like') {
     // Comments, replies and likes on your things (066)
-    const m = n.meta || {};
-    text = _notifSocialText(n, who); icon2 = n.type === 'like' ? 'thumbsUp' : m.kind === 'entry' ? 'comment' : 'reply';
-    if (m.excerpt) extra = `<div class="notif-quote" translate="no">${escHTML(m.excerpt)}</div>`;
-    if (m.kind !== 'list') extra += _notifTitleCard(m);
+    text = _notifSocialText(n, who); ic = n.type === 'like' ? 'thumbsUp' : m.kind === 'entry' ? 'comment' : 'reply';
+    if (m.excerpt) quote = q(m.excerpt);
+    if (m.kind !== 'list') poster();
     href = _notifSocialHref(m);
   } else if (n.type === 'report_actioned' || n.type === 'moderation_notice') {
     // Reports (087): the admins acted on something — never says who reported it
-    text = _notifModText(n); icon2 = n.type === 'report_actioned' ? 'check' : 'info';
-    if (n.meta?.excerpt && n.meta.kind !== 'user') extra = `<div class="notif-quote" translate="no">${escHTML(n.meta.excerpt)}</div>`;
+    text = _notifModText(n); ic = n.type === 'report_actioned' ? 'check' : 'info';
+    if (m.excerpt && m.kind !== 'user') quote = q(m.excerpt);
   } else if (n.type === 'friend_queued') {
-    text = `${who} added something from your library to their watchlist`; icon2 = 'plus';
-    extra = _notifTitleCard(n.meta);
+    text = `${who} added something from your library to their watchlist`; ic = 'plus';
+    poster();
     href = n.actor_id ? `profile-view.html?id=${encodeURIComponent(n.actor_id)}` : '';
   }
-  return `<div class="notif-item${n.read_at ? '' : ' unread'}" ${href ? `onclick="location.href='${href}'"` : ''}>
-    <div class="notif-av">${av}${icon2 && ICONS[icon2] ? `<span class="notif-av-type">${icon(icon2, 10)}</span>` : ''}</div>
-    <div class="notif-body">
-      <div class="notif-text">${text}</div>
-      <div class="notif-time">${_notifTimeAgo(n.created_at)}</div>
-      ${extra}
-      ${actions ? `<div class="notif-actions">${actions}</div>` : ''}
+  return { av, ic, text, quote, actions, href, posters };
+}
+// One friend's watchlist adds, as one row: "Nasrawi added 6 titles to their watchlist — A, B and 4 more"
+function _nfGroupParts(items) {
+  const n = items[0], p = _nfParts(n), t = items.map(x => x.meta?.title).filter(Boolean), more = items.length - Math.min(t.length, 2);
+  const name = n.actor ? escHTML(n.actor.display_name || n.actor.username) : 'Someone';
+  return { ...p, posters: items.slice(0, 3).map(x => _nfPoster(x.meta?.poster_url, x.meta?.title)),
+    text: `<b translate="no">${name}</b> added <b>${items.length} titles</b> to their watchlist — <span translate="no">${t.slice(0, 2).map(escHTML).join(', ')}</span>${more > 0 ? ` and ${more} more` : ''}`,
+    href: n.actor_id ? `profile-view.html?id=${encodeURIComponent(n.actor_id)}${n.actor?.username ? `&u=${encodeURIComponent(n.actor.username)}` : ''}&tab=1&sec=watchlist` : p.href };
+}
+// opts.page: the delete × (and the phone's swipe) · opts.fresh: ids still shown as new (the panel)
+function _nfRowHTML(r, opts = {}) {
+  const n = r.items[0], ids = r.items.map(x => x.id);
+  const unread = r.items.some(x => !x.read_at || opts.fresh?.has(x.id));
+  const p = r.items.length > 1 ? _nfGroupParts(r.items) : _nfParts(n);
+  const idsA = attrJSON(ids);
+  const sentence = p.href ? `<a class="ntf-link" href="${escHTML(p.href)}" onclick="_nfOpen(event, ${idsA})">${p.text}</a>` : `<span>${p.text}</span>`;
+  const del = opts.page ? `<button type="button" class="ntf-del" onclick="_nfDelete(event, ${idsA})" aria-label="Delete notification">${icon('x', 14)}</button>` : '';
+  return `<div class="ntf-row${unread ? ' unread' : ''}${p.href ? ' has-link' : ''}" data-ids="${escHTML(ids.join(','))}">
+    ${opts.page ? `<button type="button" class="ntf-swipe-del" tabindex="-1" aria-hidden="true" onclick="_nfDelete(event, ${idsA})">${icon('trash', 16)}<span>Delete</span></button>` : ''}
+    <div class="ntf-in">
+      <div class="ntf-av notif-av">${p.av}${p.ic && ICONS[p.ic] ? `<span class="ntf-badge${_NF_SYSTEM.has(n.type) ? ' is-msf' : ''}">${icon(p.ic, 9)}</span>` : ''}</div>
+      <div class="ntf-body">
+        <div class="ntf-text">${unread ? '<span class="sr-only">New: </span>' : ''}${sentence}</div>
+        ${p.quote}
+        <div class="ntf-time">${_notifTimeAgo(n.created_at)}</div>
+        ${p.actions ? `<div class="notif-actions">${p.actions}</div>` : ''}
+      </div>
+      ${p.posters.length ? `<div class="ntf-posters${p.posters.length > 1 ? ' is-stack' : ''}" aria-hidden="true">${p.posters.join('')}</div>` : ''}
+      ${del}
     </div>
-    ${opts.page ? `<button class="notif-del" onclick="_notifDelete(event, ${idA})" aria-label="Delete notification">${icon('x', 14)}</button>` : ''}
   </div>`;
 }
-
-function _notifTabsHTML(active, onclick) {
-  return `<div class="notif-tabs">${NOTIF_SECTIONS.map(([k, l]) => {
-    const unread = _notifItems.filter(n => !n.read_at && (k === 'all' || _notifSection(n) === k)).length;
-    return `<button class="notif-tab${active === k ? ' active' : ''}" onclick="${onclick}('${k}')">${l}${unread ? `<span class="notif-tab-dot">${unread}</span>` : ''}</button>`;
-  }).join('')}</div>`;
+// Open a row: mark it read first (briefly), then go — a new tab / window just marks it
+async function _nfOpen(ev, ids) {
+  const un = ids.filter(id => _notifItems.some(n => n.id === id && !n.read_at));
+  if (ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.button) { _notifMarkRead(un); return; }
+  ev.preventDefault();
+  const href = ev.currentTarget.href;
+  if (un.length) await Promise.race([_notifMarkRead(un), new Promise(r => setTimeout(r, 600))]);
+  location.href = href;
 }
-function _notifFiltered(tab) { return _notifItems.filter(n => tab === 'all' || _notifSection(n) === tab); }
-function _notifEmptyHTML(tab) {
-  const [title, text] = { all: ['All quiet', 'You’re all caught up. Go watch something.'],
-    activity: ['No friend activity yet', 'Turn on notifications from a friend’s profile to hear what they watch.'],
-    social: ['No comments or likes yet', 'Write a note or a list — the applause comes later.'],
-    lists: ['No list invites yet', 'When a friend asks you to build a list together, it shows up here.'],
-    requests: ['No new followers', 'Nobody new right now.'] }[tab];
+function _nfRerender() {
+  _notifRenderPanel();
+  if (typeof renderNotificationsPage === 'function') renderNotificationsPage();
+}
+
+function _notifEmptyHTML(f) {
+  const kind = _NF_KINDS.find(k => k[0] === f);
+  const [title, text] = kind ? [`No ${kind[1].toLowerCase()} from friends`, 'Turn on notifications from a friend’s profile to hear what they do.']
+    : ({ all: ['All quiet', 'You’re all caught up. Go watch something.'],
+      you: ['Nothing for you yet', 'New episodes, follows, messages, invites and replies to you land here.'],
+      friends: ['No friend activity yet', 'Turn on notifications from a friend’s profile to hear what they watch.'] })[f] || ['All quiet', ''];
   return mssEmpty({ compact: true, art: 'bell', title, text });
 }
 
-// The bell opens a sheet that slides in from the right edge (full height,
-// full width on phones) — part of the page chrome, not a floating pop-up.
+// The bell opens a side panel from the right edge (desktop / tablet). Phones go to the Notifications page.
 function _notifEnsurePanel() {
   let el = document.getElementById('notifPanel');
   if (el) return el;
@@ -2988,47 +3660,50 @@ function _notifEnsurePanel() {
   scrim.addEventListener('click', () => closeNotifPanel());
   el = document.createElement('aside');
   el.id = 'notifPanel';
-  el.setAttribute('aria-label', 'Notifications');
+  el.setAttribute('aria-labelledby', 'notifTitle');
+  el.tabIndex = -1;
   el.innerHTML = `<div class="notif-head">
       <div>
-        <div class="notif-title">Notifications</div>
+        <h2 class="notif-title" id="notifTitle">Notifications</h2>
         <div class="notif-sub" id="notifSub"></div>
       </div>
-      <button class="notif-close" onclick="closeNotifPanel()" aria-label="Close">${icon('x', 18)}</button>
+      <button type="button" class="notif-close" onclick="closeNotifPanel()" aria-label="Close">${icon('x', 18)}</button>
     </div>
-    <div id="notifTabsWrap"></div>
+    <div id="notifTabsWrap" class="ntf-panel-filters"></div>
     <div class="notif-list" id="notifList"></div>
     <div class="notif-sheet-foot">
-      <button class="notif-foot-btn" id="notifReadAll" onclick="_notifSheetReadAll()">${icon('check', 14)} Mark all read</button>
-      <a class="notif-foot-btn primary" href="notifications.html">See all notifications ${icon('arrowRight', 14)}</a>
+      <button type="button" class="notif-foot-btn" id="notifReadAll" onclick="_notifSheetReadAll()">${icon('check', 14)} Mark all read</button>
+      <a class="notif-foot-btn primary" href="notifications.html">See all</a>
     </div>`;
   document.body.appendChild(scrim);
   document.body.appendChild(el);
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeNotifPanel(); });
+  // 20 at a time; more as you scroll
+  el.querySelector('#notifList').addEventListener('scroll', e => {
+    const l = e.currentTarget;
+    if (l.scrollTop + l.clientHeight > l.scrollHeight - 240 && l.querySelector('.ntf-more')) { _nfPanelShown += 20; _notifRenderPanel(); }
+  }, { passive: true });
   return el;
 }
-function _notifSetTab(t) { _notifTab = t; _notifRenderPanel(); }
 let _notifSheetNew = new Set();   // ids that were unread when the sheet opened
+let _nfPanelShown = 20;
 function _notifRenderPanel() {
   const listEl = document.getElementById('notifList');
-  if (!listEl) return;
-  document.getElementById('notifTabsWrap').innerHTML = _notifTabsHTML(_notifTab, '_notifSetTab');
-  const items = _notifFiltered(_notifTab).slice(0, 30);
-  const fresh = items.filter(n => _notifSheetNew.has(n.id) || !n.read_at);
-  const older = items.filter(n => !fresh.includes(n));
+  if (!listEl || !document.getElementById('notifPanel')?.classList.contains('open')) return;
+  document.getElementById('notifTabsWrap').innerHTML = _nfFiltersHTML(true);
+  const rows = _nfRows(_notifItems.filter(n => _nfMatch(n, _nfFilter)));
+  const fresh = _notifItems.filter(n => _notifSheetNew.has(n.id) || !n.read_at).length;
   const sub = document.getElementById('notifSub');
-  if (sub) sub.textContent = fresh.length ? `${fresh.length} new` : "You're all caught up";
+  if (sub) sub.textContent = fresh ? `${fresh} new` : 'You’re all caught up';
   const rb = document.getElementById('notifReadAll');
   if (rb) rb.disabled = !_notifItems.some(n => !n.read_at || _notifSheetNew.has(n.id));
-  listEl.innerHTML = !items.length ? _notifEmptyHTML(_notifTab)
-    : (fresh.length ? `<div class="notif-group">New</div>${fresh.map(n => _notifItemHTML(n)).join('')}` : '')
-    + (older.length ? `<div class="notif-group">Earlier</div>${older.map(n => _notifItemHTML(n)).join('')}` : '');
+  listEl.innerHTML = !rows.length ? _notifEmptyHTML(_nfFilter)
+    : `<div class="ntf-list">${_nfListHTML(rows.slice(0, _nfPanelShown), { fresh: _notifSheetNew })}</div>${rows.length > _nfPanelShown ? '<div class="ntf-more" aria-hidden="true"></div>' : ''}`;
   mssFillEpNames(listEl);
 }
 function _notifSheetReadAll() {
   _notifMarkRead(_notifItems.filter(n => !n.read_at).map(n => n.id));
   _notifSheetNew.clear();
-  document.querySelectorAll('#notifList .notif-item.unread').forEach(i => i.classList.remove('unread'));
   _notifRenderPanel();
 }
 // The sheet sits below the top bar — even when the bar is scrolled away
@@ -3050,21 +3725,25 @@ async function _notifMarkRead(ids) {
   try { await sb.from('notifications').update({ read_at: now }).in('id', ids); } catch {}
 }
 
+const _nfPhone = () => matchMedia('(max-width: 767px)').matches;
 async function toggleNotifPanel(ev) {
   ev?.stopPropagation();
   if (location.pathname.endsWith('notifications.html')) return;   // already on the full page
-  _notifPeekHide();
+  if (_nfPhone()) { location.href = 'notifications.html'; return; } // phones: the full page, no panel
   const el = _notifEnsurePanel();
   if (el.classList.contains('open')) { closeNotifPanel(); return; }
   _navCloseAll('notif');
   _notifSheetNew = new Set(_notifItems.filter(n => !n.read_at).map(n => n.id));
+  _nfPanelShown = 20;
   const top = _notifSheetTop() + 'px';
   el.style.setProperty('--notif-top', top);
   document.getElementById('notifScrim').style.setProperty('--notif-top', top);
-  _notifRenderPanel();
   el.classList.add('open');
   document.getElementById('notifScrim').classList.add('open');
   document.body.classList.add('notif-sheet-open');
+  _notifRenderPanel();
+  document.getElementById('notifList').scrollTop = 0;
+  el.focus({ preventScroll: true });          // into the panel, without a ring on ×
   // Opening the sheet = seen (the highlight stays until it's closed)
   _notifMarkRead(_notifItems.filter(n => !n.read_at).map(n => n.id));
 }
@@ -3074,16 +3753,35 @@ function closeNotifPanel() {
   el.classList.remove('open');
   document.getElementById('notifScrim')?.classList.remove('open');
   document.body.classList.remove('notif-sheet-open');
-  el.querySelectorAll('.notif-item.unread').forEach(i => i.classList.remove('unread'));
   _notifSheetNew.clear();
 }
 
-async function _notifDelete(ev, id) {
-  ev.stopPropagation();
-  _notifItems = _notifItems.filter(n => n.id !== id);
-  _notifRenderBadge();
-  if (typeof renderNotificationsPage === 'function') renderNotificationsPage();
-  try { await sb.from('notifications').delete().eq('id', id); } catch {}
+/* Delete one (or a grouped row): gone at once, with 5 seconds to Undo before it's deleted for good.
+   Leaving the page in the meantime deletes it then. */
+const _nfHidden = new Set();      // waiting to be deleted: kept out of reloads meanwhile
+function _nfDelete(ev, ids) {
+  ev?.stopPropagation();
+  const gone = _notifItems.filter(n => ids.includes(n.id));
+  if (!gone.length) return;
+  ids.forEach(id => _nfHidden.add(id));
+  _notifItems = _notifItems.filter(n => !ids.includes(n.id));
+  _notifRenderBadge(); _nfRerender();
+  let done = false;
+  const commit = () => {
+    if (done) return; done = true;
+    clearTimeout(timer); removeEventListener('pagehide', commit);
+    sb.from('notifications').delete().in('id', ids).then(() => ids.forEach(id => _nfHidden.delete(id)), () => {});
+  };
+  const timer = setTimeout(commit, 5000);
+  addEventListener('pagehide', commit);
+  showActionToast(ids.length > 1 ? `${ids.length} notifications deleted.` : 'Notification deleted.', 'Undo', () => {
+    if (done) return; done = true;
+    clearTimeout(timer); removeEventListener('pagehide', commit);
+    ids.forEach(id => _nfHidden.delete(id));
+    _notifItems = _notifItems.concat(gone).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    _notifRenderBadge(); _nfRerender();
+    showToast('Undone.');
+  }, 5000);
 }
 
 // Follow notifications (083): accept / decline a request, or follow back
@@ -3212,6 +3910,7 @@ function _notifShortText(n) {
     case 'friend_poll':          return `${who} started a poll: “${escHTML(n.meta?.question || '')}”`;
     case 'poll_comment':         return `${who} commented on your poll`;
     case 'message':              return `${who} sent you a message`;
+    case 'recommendation':       return `${who} recommended ${n.meta?.kind === 'list' ? `the list “${escHTML(n.meta?.title || '')}”` : t} to you`;
     case 'movie_night':          return _notifNightText(n.meta || {}, who);
     case 'on_this_day':          return `On This Day · ${escHTML(Number(n.meta?.count) === 1 ? '1 title' : `${n.meta?.count || ''} titles`)}`;
     case 'achievement':          return n.meta?.kind === 'welcome' ? 'Your Achievement Cabinet is open — take a look!' : `New medal: ${escHTML(n.meta?.name || 'Achievement')}`;
@@ -3242,13 +3941,11 @@ function _notifSocialHref(m) {
     const page = +m.episode ? `episode.html?show=${encodeURIComponent(m.tmdb_id)}&s=${encodeURIComponent(m.season)}&e=${encodeURIComponent(m.episode)}` : `season.html?show=${encodeURIComponent(m.tmdb_id)}&s=${encodeURIComponent(m.season)}`;
     return `${page}&${m.kind === 'ep_note' ? 'note' : 'replies'}=${encodeURIComponent(m.rating_id)}`;
   }
-  if (m.kind === 'entry' || m.kind === 'reply') {   // comments on a library entry → the comments popup on its owner's page
-    if (!m.entry_id) return '';
-    return m.owner_id && m.owner_id !== _notifUser?.id ? `profile-view.html?id=${encodeURIComponent(m.owner_id)}&comments=${encodeURIComponent(m.entry_id)}`
-      : `library.html?comments=${encodeURIComponent(m.entry_id)}`;
+  if (m.kind === 'entry' || m.kind === 'reply' || m.kind === 'note_reply') {   // a comment / reply on a title → its Comments tab
+    return m.entry_id ? `item.html?id=${encodeURIComponent(m.entry_id)}&tab=comments` : '';
   }
   if (!m.tmdb_id || !m.tmdb_type) return 'notes.html';   // notes live on the title page
-  return `title.html?type=${encodeURIComponent(m.tmdb_type)}&id=${encodeURIComponent(m.tmdb_id)}&${m.kind === 'note' ? 'note' : 'replies'}=${encodeURIComponent(m.entry_id)}`;
+  return `title.html?type=${encodeURIComponent(m.tmdb_type)}&id=${encodeURIComponent(m.tmdb_id)}&note=${encodeURIComponent(m.entry_id)}`;
 }
 
 // Episodes that came out together share one notification (044):
@@ -3319,49 +4016,14 @@ function mssFillEpNames(root) {
   });
 }
 
-let _notifPeekTimer = null;
+// New notifications: the toast, with who it's from (avatar, or the count) on the left and "View" (opens the bell)
 function _notifPeek(fresh) {
-  const bell = [...document.querySelectorAll('.notif-btn')].find(b => b.offsetParent !== null);
-  if (!bell) return;
-  let el = document.getElementById('notifPeek');
-  if (!el) {
-    el = document.createElement('button');
-    el.id = 'notifPeek';
-    el.type = 'button';
-    el.setAttribute('aria-live', 'polite');
-    el.addEventListener('click', e => { e.stopPropagation(); toggleNotifPanel(); });
-    el.addEventListener('mouseenter', () => clearTimeout(_notifPeekTimer));
-    el.addEventListener('mouseleave', () => _notifPeekLater(3000));
-    let y0 = null;                                       // swipe the banner up to put it away
-    el.addEventListener('touchstart', e => { y0 = e.touches[0].clientY; }, { passive: true });
-    el.addEventListener('touchmove', e => { if (y0 != null && y0 - e.touches[0].clientY > 24) { y0 = null; _notifPeekHide(); } }, { passive: true });
-    document.body.appendChild(el);
-  }
   const n = fresh[0], a = n.actor;
   const lead = fresh.length === 1
-    ? (a && safeURL(a.avatar_url) ? `<img src="${safeURL(a.avatar_url)}" alt="">` : escHTML(((a && a.username) || '?')[0].toUpperCase()))
-    : `<b>${fresh.length > 99 ? '99+' : fresh.length}</b>`;
-  const text = fresh.length === 1 ? _notifShortText(n) : `<b>${fresh.length} new notifications</b>`;
-  el.innerHTML = `<span class="np-lead">${lead}</span><span class="np-text">${text}</span><span class="np-go">${icon('arrowRight', 13)}</span>`;
-  // Phones / tablets: a banner that drops down over the top bar (swipe it up to
-  // dismiss). Computers: just below the top bar, pointing at the bell.
-  const banner = matchMedia('(max-width:1199px)').matches;
-  el.classList.toggle('banner', banner);
-  if (banner) { el.style.top = el.style.right = ''; }
-  else {
-    const r = bell.getBoundingClientRect();
-    el.style.top = (_notifSheetTop() + 10) + 'px';
-    el.style.right = Math.max(10, window.innerWidth - r.right) + 'px';
-    el.style.setProperty('--peek-max', Math.min(380, window.innerWidth - 20) + 'px');
-    el.style.setProperty('--peek-caret', Math.max(14, r.width / 2 - 6) + 'px');
-  }
-  el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
-  _notifPeekLater(5500);
-}
-function _notifPeekLater(ms) { clearTimeout(_notifPeekTimer); _notifPeekTimer = setTimeout(_notifPeekHide, ms); }
-function _notifPeekHide() {
-  clearTimeout(_notifPeekTimer);
-  document.getElementById('notifPeek')?.classList.remove('show');
+    ? `<span class="toast-av" aria-hidden="true">${a && safeURL(a.avatar_url) ? `<img src="${safeURL(a.avatar_url)}" alt="">` : escHTML(((a && a.username) || '?')[0].toUpperCase())}</span>`
+    : `<span class="toast-av" aria-hidden="true"><b>${fresh.length > 99 ? '99+' : fresh.length}</b></span>`;
+  const tmp = document.createElement('div'); tmp.innerHTML = fresh.length === 1 ? _notifShortText(n) : `${fresh.length} new notifications`;
+  _mssToastShow(tmp.textContent, { lead, label: 'View', ms: 6000, onClick: () => { _mssToastEl().classList.remove('visible'); toggleNotifPanel(); } });
 }
 
 /* ── Always show the newest version after a deploy ──
@@ -3394,7 +4056,7 @@ if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
    titles AniList doesn't list keep the voice actor's photo.
    Results are kept on the device for 7 days.
 ══════════════════════════════════════════ */
-const _MSS_CAST_STORE = 'mss_cast_v2';   // v2: entries carry the TMDB person id
+const _MSS_CAST_STORE = 'mss_cast_v3';   // v2: entries carry the TMDB person id · v3: anime voice actors fixed (Japanese, not the dub)
 const _MSS_CAST_TTL = 7 * 24 * 60 * 60 * 1000;
 function _mssCastCache() { try { return JSON.parse(localStorage.getItem(_MSS_CAST_STORE) || '{}'); } catch { return {}; } }
 function _mssCastSave(key, cast) {
@@ -3440,10 +4102,16 @@ const _mssAniListCharacters = (title, year) => _mssAniListFind(title, year, `
                 edges {
                   role
                   node { name { full } image { large } }
-                  ja: voiceActors(language: JAPANESE) { name { full } }
-                  en: voiceActors(language: ENGLISH) { name { full } }
+                  voiceActors { name { full } languageV2 }
                 }
-              }`);
+              }`).then(m => {
+  // AniList answers two aliased voiceActors(language: …) with the same list, so ask once and split by language
+  (m?.characters?.edges || []).forEach(ed => {
+    const va = ed.voiceActors || [];
+    ed.ja = va.filter(v => v.languageV2 === 'Japanese'); ed.en = va.filter(v => v.languageV2 === 'English');
+  });
+  return m;
+});
 
 /* ── Anime genres from AniList (TMDB has no anime genres) ──
    mssIsAnime(it, d)          → an anime: in Anime, or a Japanese animation on TMDB (d = its details)

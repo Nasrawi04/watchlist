@@ -3,8 +3,8 @@
    Cache strategy: stale-while-revalidate
 ══════════════════════════════════════════ */
 
-const CACHE_VERSION = 'msf-v303';   // MyScreenFolio — restarted at v1 (was mss-v787)
-const STATIC_CACHE  = `${CACHE_VERSION}-static`;
+const CACHE_VERSION = 'msf-v8';     // MyScreenFolio — restarted at v1 for the redesign launch on 18 Nov 2026 (was msf-v520; before that mss-v787)
+const STATIC_CACHE  = `${CACHE_VERSION}-site`;   // a new suffix: an old "msf-v1-static" left on a device from the first v1 is never reused
 
 /* Long-lived caches — deliberately NOT tied to CACHE_VERSION. Every deploy
    bumps the version, which used to wipe ALL cached posters, fonts and the
@@ -13,7 +13,8 @@ const STATIC_CACHE  = `${CACHE_VERSION}-static`;
    survive deploys. */
 const IMAGE_CACHE   = 'mss-images';
 const FONT_CACHE    = 'mss-fonts';
-const KEEP_CACHES   = [STATIC_CACHE, IMAGE_CACHE, FONT_CACHE];   // (the old CDN cache, mss-vendor, is cleared — libraries live in js/vendor now)
+const CONFIG_CACHE  = 'mss-config';   // the guest showcase + poster wall (public reads, the same for everyone)
+const KEEP_CACHES   = [STATIC_CACHE, IMAGE_CACHE, FONT_CACHE, CONFIG_CACHE];   // (the old CDN cache, mss-vendor, is cleared — libraries live in js/vendor now)
 const IMAGE_CACHE_MAX = 500;   // oldest posters dropped past this
 
 /* Static assets to pre-cache on install */
@@ -22,12 +23,13 @@ const STATIC_ASSETS = [
   'index.html',
   'discover.html',
   'discover-list.html',
+  'browse.html',
   'tv-shows.html',
   'library.html',
   'movies.html',
   'anime.html',
   'cartoons.html',
-  'completed.html',
+  'item.html',
   'diary.html',
   'friends.html',
   'activity.html',
@@ -58,9 +60,13 @@ const STATIC_ASSETS = [
   'login.html',
   'user.html',
   'offline.html',
+  'css/theme.css',
   'css/style.css',
+  'css/profile.css',
+  'css/title.css',
   'css/social.css',
   'css/messages.css',
+  'css/settings.css',
   'js/i18n.js',
   'js/config.js',
   'js/emoji-data.js',
@@ -68,11 +74,17 @@ const STATIC_ASSETS = [
   'js/nav.js',
   'js/notif-settings.js',
   'js/settings-nav.js',
+  'js/qr.js',
+  'js/profile-stats.js',
   'js/settings-uploads.js',
   'js/settings-import.js',
   'js/discover-categories.js',
+  'js/discover-results.js',
+  'js/discover-home.js',
+  'js/home.js',
+  'css/discover.css',
+  'css/showcase.css',
   'js/sort-filter.js',
-  'js/category.js',
   'js/pick.js',
   'js/follows.js', 'js/report.js',
   'css/fonts.css',
@@ -92,17 +104,25 @@ const STATIC_ASSETS = [
   'fonts/Manrope-600.ttf',
   'fonts/BebasNeue-400.ttf',
   'js/info-popup.js',
-  'js/rating-popup.js',
-  'js/comments.js',
+  'js/title-view.js',
+  'js/title-page.js',
+  'js/person-page.js',
   'js/easter-egg.js',
   'js/screensaver.js',
   'js/note-popup.js',
+  'js/panel.js',
   'js/list-popup.js',
   'js/list-studio.js',
+  'js/list-actions.js',
   'js/profile-tabs.js',
-  'js/dashboard.js',
+  'js/profile-v2.js',
+  'js/backdrop-tools.js',
+  'js/backdrop-picker.js',
+  'js/medal-card.js',
+  'js/showcase-studio.js',
   'js/library-view.js',
   'js/episode-ratings.js',
+  'js/episodes-home.js',
   'js/rate-form.js',
   'js/ep-chart.js',
   'js/tv-schedule.js',
@@ -122,17 +142,36 @@ const STATIC_ASSETS = [
   'js/diary-views.js',
   'js/on-this-day.js',
   'js/splash.js',
+  'js/shell-search.js',
+  'js/folio-cards.js',
   'js/medals.js',
   'js/showcase.js',
   'js/spotlights.js',
   'js/challenges.js',
-  'js/friend-popups.js',
+  'js/onboarding.js',
+  'js/poster-wall.js',
+  'js/avatar-upload.js',
+  'js/guide.js',
+  'js/guide-content.js',
+  'css/onboarding.css',
+  'css/guide.css',
   'manifest.json',
+  'manifest-dark.json',
+  'icons/logo-light.svg',
+  'icons/logo-dark.svg',
   'icons/logo-nav.png',
+  'icons/favicon.svg',
+  'icons/favicon-32.png',
+  'icons/icon-180.png',
+  'icons/icon-dark-180.png',
   'icons/icon-192.png',
+  'icons/icon-dark-192.png',
   'icons/icon-512.png',
+  'icons/icon-dark-512.png',
   'icons/icon-maskable-192.png',
   'icons/icon-maskable-512.png',
+  'icons/icon-maskable-dark-192.png',
+  'icons/icon-maskable-dark-512.png',
 ];
 
 /* ── Install: pre-cache static assets ── */
@@ -208,7 +247,15 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // Never intercept Supabase API calls — always fresh
+  // The guest showcase and the poster wall (117 / 078): public rows every visitor reads the same way —
+  // answered from the device at once and refreshed in the background (stale-while-revalidate), so the
+  // splash and the locked menus never wait on the network. Only these two tables' GETs.
+  if (url.hostname.includes('supabase.co') && request.method === 'GET' && /^\/rest\/v1\/(site_config|sign_in_wall)$/.test(url.pathname)) {
+    event.respondWith(staleWhileRevalidate(request, CONFIG_CACHE));
+    return;
+  }
+
+  // Never intercept other Supabase API calls — always fresh
   if (url.hostname.includes('supabase.co')) return;
 
   // Never intercept TMDB (images or API) — the SW's own fetch() runs in
@@ -293,6 +340,14 @@ async function networkFirstFresh(request, cacheName, timeoutMs) {
     const cached = await cache.match(request);
     return cached || (request.mode === 'navigate' ? caches.match('offline.html') : Response.error());
   }
+}
+
+async function staleWhileRevalidate(request, cacheName) {
+  const cache = await caches.open(cacheName);
+  const cached = await cache.match(request);
+  const net = fetch(request).then(response => { if (response.ok) cache.put(request, response.clone()); return response; });
+  if (cached) { net.catch(() => {}); return cached; }
+  try { return await net; } catch { return new Response('[]', { status: 503, headers: { 'Content-Type': 'application/json' } }); }
 }
 
 async function networkFirst(request) {

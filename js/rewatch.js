@@ -5,7 +5,7 @@
 
 /* ── Helpers ── */
 function getRewatchCount(e) {
-  return Number(e?.ratings?._rewatch_count) || 1;
+  return mssRewatchCount(e);   // config.js
 }
 function isRewatching(e) {
   return !!(e?.ratings?._is_rewatching);
@@ -13,22 +13,7 @@ function isRewatching(e) {
 
 /* ── Rewatch badge HTML ── */
 function rewatchBadgeHTML(e) {
-  const count = getRewatchCount(e);
-  if (count <= 1) return '';
-  return `<span class="rewatch-badge" title="Watched ${count} times">
-    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>
-    ${count}
-  </span>`;
-}
-
-/* ── Rewatch icon for grid/list cards ── */
-function rewatchIconHTML(e) {
-  if (!isRewatching(e)) return '';
-  const count = getRewatchCount(e);
-  return `<div class="rewatch-card-icon" title="Rewatching · Watch #${count}">
-    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6"/><path d="M21.34 15.57a10 10 0 1 1-.57-8.38"/></svg>
-    ${count}
-  </div>`;
+  return mssRewatchBadgeHTML(getRewatchCount(e));   // the shared pill (config.js)
 }
 
 /* ── Core rewatch action ── */
@@ -74,8 +59,8 @@ async function rewatchEntry(id) {
     if (!isMovie) { e.season = update.season; e.episode = 0; e.watched = 0; }
 
     showToast('Moved to Currently Watching!');
-    // Close any open popup
-    if (typeof MSSRate !== 'undefined') MSSRate.close();
+    // An open title panel / page shows the rewatch
+    if (typeof MSSViews !== 'undefined') MSSViews.refresh(e);
     // Re-render
     if (typeof renderPage       === 'function') renderPage();
     if (typeof renderLibrary    === 'function') renderLibrary();
@@ -106,5 +91,6 @@ function _resolveEntryForRewatch(id) {
   if (typeof _catAll          !== 'undefined') { const e = _catAll.find(x => x.id === id); if (e) return e; }
   if (typeof _allCompleted    !== 'undefined') { const e = _allCompleted.find(x => x.id === id); if (e) return e; }
   if (typeof _pEntries        !== 'undefined') { const e = _pEntries.find(x => x.id === id); if (e) return e; }
+  if (typeof MSSViews         !== 'undefined') return MSSViews.entry(id);   // the title panel / item.html
   return null;
 }

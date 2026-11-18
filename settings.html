@@ -5,672 +5,383 @@
 <!-- unsafe-eval: only for the photo safety check, whose library (tfjs) needs it. Messages and Login don't allow it. -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; img-src 'self' data: blob: https://image.tmdb.org https://res.cloudinary.com https://yqbfjtkcsgyvnablmuzp.supabase.co; connect-src 'self' https://yqbfjtkcsgyvnablmuzp.supabase.co wss://yqbfjtkcsgyvnablmuzp.supabase.co https://api.cloudinary.com https://graphql.anilist.co">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#F3EEDC">
+<meta name="color-scheme" content="light dark">
 <script src="js/splash.js"></script>
 <script src="js/i18n.js"></script>
 <title>Settings — MyScreenFolio</title>
 <link rel="stylesheet" href="css/fonts.css">
+<link rel="stylesheet" href="css/theme.css">
 <link rel="stylesheet" href="css/style.css">
-<style>
-/* ── Settings layout: the section list, and the open section beside it (on phones, one at a time) ── */
-.set-shell { display:grid; grid-template-columns:230px minmax(0, 1fr); gap:1.75rem; align-items:start; }
-.set-rail { position:sticky; top:136px; min-width:0; max-height:calc(100dvh - 152px); overflow-y:auto; }
-.set-main { min-width:0; }
-.set-pane { display:flex; flex-direction:column; gap:1.25rem; }
-.set-pane[hidden] { display:none; }
-.set-pane-head { display:flex; align-items:center; gap:8px; }
-.set-pane-text { min-width:0; }
-.set-pane-title { margin:0; font-family:var(--serif); font-weight:500; font-size:26px; line-height:1.2; color:var(--text); outline:none; }
-.set-trail { display:flex; flex-wrap:wrap; gap:6px; font-size:12.5px; line-height:1.4; color:var(--text-2); }
-.set-trail:empty { display:none; }
-.set-trail a { color:var(--olive-light); font-weight:600; text-decoration:none; }
-.set-trail a:hover { text-decoration:underline; }
-.set-back { display:none; flex-shrink:0; width:44px; height:44px; margin-inline-start:-10px; align-items:center; justify-content:center; background:none; border:none; border-radius:12px; color:var(--text); cursor:pointer; }
-.set-pane.is-item .set-back { display:flex; }
-.set-back svg { width:22px; height:22px; }
-.set-back:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
-.set-search { margin-bottom:14px; }
-.set-search .field-input { width:100%; box-sizing:border-box; }
-
-/* One setting at a time: its card shows only when it's open, and the list above already names it */
-.set-pane > .settings-section, .set-pane > #setNotif { display:none; }
-.set-pane > .settings-section.set-on:not([hidden]), .set-pane > #setNotif.set-on { display:block; }
-.set-pane > .settings-section > .settings-title { display:none; }
-#setNotif .ns-wrap { max-width:none; }
-#setNotif .ns-sec-head, #setNotif .ns-title, #setNotif .ns-card { display:none; }
-#setNotif[data-part="nsAlertsT"] .ns-card[aria-labelledby="nsAlertsT"], #setNotif[data-part="nsGetT"] .ns-card[aria-labelledby="nsGetT"],
-#setNotif[data-part="nsWhoT"] .ns-card[aria-labelledby="nsWhoT"], #setNotif[data-part="nsShareT"] .ns-card[aria-labelledby="nsShareT"] { display:block; }
-
-/* Sections */
-.set-list { display:flex; flex-direction:column; gap:14px; }
-.set-list[hidden] { display:none; }
-.set-group-head, .set-rows-head { margin:0 0 6px; padding:0 4px; font-size:11px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; color:var(--text-2); }
-.set-row { display:flex; align-items:center; gap:12px; min-height:44px; padding:10px 14px; color:var(--text); text-decoration:none; transition:background .15s; }
-.set-row:focus-visible, .set-item:focus-visible { outline:2px solid var(--olive-light); outline-offset:-2px; }
-.set-row-ic { flex-shrink:0; display:flex; align-items:center; justify-content:center; width:34px; height:34px; border-radius:10px; background:var(--olive-faint); color:var(--olive-light); }
-.set-row-ic svg { width:17px; height:17px; }
-.set-row-text { flex:1; min-width:0; }
-.set-row-name { display:block; font-size:14px; font-weight:600; line-height:1.3; }
-.set-row-sub { display:block; margin-top:2px; font-size:12px; line-height:1.35; color:var(--text-2); overflow-wrap:anywhere; }
-.set-row-go { flex-shrink:0; width:16px; height:16px; color:var(--text-3); }
-.set-hits, .set-rows-list { display:flex; flex-direction:column; background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius-lg); overflow:hidden; }
-.set-hits .set-row { min-height:60px; }
-.set-hits .set-row + .set-row, .set-group-list .set-row + .set-row { border-top:0.5px solid var(--border); }
-.set-hits .set-row:hover, .set-item:hover { background:var(--bg-2); }
-
-/* A section's settings */
-.set-rows { display:flex; flex-direction:column; }
-.set-rows-list + .set-rows-head { margin-top:1.25rem; }
-.set-rows[hidden] { display:none; }
-.set-item { display:flex; align-items:center; gap:12px; min-height:56px; padding:10px 16px; color:var(--text); text-decoration:none; transition:background .15s; }
-.set-item + .set-item { border-top:0.5px solid var(--border); }
-.set-item-name { flex:1; min-width:0; font-size:14.5px; font-weight:600; line-height:1.3; }
-.set-item-value { min-width:0; max-width:55%; font-size:13.5px; color:var(--text-2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.set-item.is-danger .set-item-name { color:#b91c1c; }
-[data-theme="dark"] .set-item.is-danger .set-item-name { color:#f87171; }
-
-/* Computers: a plain list beside the page */
-@media (min-width:901px) {
-  .set-group-list { display:flex; flex-direction:column; gap:2px; }
-  .set-group-list .set-row { min-height:38px; padding:6px 10px; border-radius:10px; }
-  .set-group-list .set-row + .set-row { border-top:none; }
-  .set-list { gap:10px; }
-  .set-group-list .set-row:hover { background:var(--bg-2); }
-  .set-group-list .set-row-ic { width:20px; height:20px; background:none; color:var(--text-2); }
-  .set-group-list .set-row-sub, .set-group-list .set-row-go { display:none; }
-  .set-group-list .set-row[aria-current="page"] { background:var(--olive-faint); }
-  .set-group-list .set-row[aria-current="page"] .set-row-ic { color:var(--olive-light); }
-}
-/* Phones: a card per group, and one level at a time */
-@media (max-width:900px) {
-  .set-group-list { display:flex; flex-direction:column; background:var(--card); border:0.5px solid var(--border); border-radius:var(--radius-lg); overflow:hidden; }
-  .set-group-list .set-row { min-height:60px; }
-  .set-shell { grid-template-columns:minmax(0, 1fr); }
-  .set-rail { position:static; max-height:none; overflow:visible; }
-  .set-main { display:none; }
-  .set-shell.is-open .set-main { display:block; }
-  .set-shell.is-open .set-rail { display:none; }
-  body.set-open .set-top { display:none; }
-  .set-back { display:flex; }
-}
-.upl-thumb { flex-shrink:0; width:42px; height:63px; object-fit:cover; border-radius:6px; border:0.5px solid var(--border); background:var(--bg-3); }
-.upl-thumb.is-round { width:48px; height:48px; border-radius:50%; }
-.upl-link { color:var(--text); text-decoration:none; }
-.upl-link:hover { text-decoration:underline; }
-.imp-error { margin:0 0 12px; padding:10px 12px; border:1px solid #b91c1c; border-radius:10px; font-size:13.5px; color:#b91c1c; }
-[data-theme="dark"] .imp-error { border-color:#f87171; color:#f87171; }
-.imp-drop { display:flex; flex-direction:column; align-items:center; gap:4px; padding:24px 16px; border:1.5px dashed var(--border-2); border-radius:14px; text-align:center; color:var(--text-2); cursor:pointer; transition:border-color .15s; }
-.imp-drop:hover, .imp-drop:focus-within { border-color:var(--olive-light); }
-.imp-drop b { font-size:14.5px; color:var(--text); }
-.imp-drop span { font-size:12.5px; }
-.imp-drop svg { color:var(--olive-light); }
-.imp-how { margin:14px 0; font-size:13px; color:var(--text-2); line-height:1.5; }
-.imp-how summary { min-height:32px; font-weight:600; color:var(--olive-light); cursor:pointer; }
-.imp-how p { margin:8px 0 0; }
-.imp-label { display:block; margin:14px 0 6px; font-size:11px; letter-spacing:1px; text-transform:uppercase; color:var(--text-2); }
-.imp-paste { width:100%; box-sizing:border-box; resize:vertical; }
-.imp-go { margin-top:10px; }
-.imp-hint { margin:6px 0 0; font-size:12px; line-height:1.4; color:var(--text-2); }
-.imp-sub { margin:1.4rem 0 8px; font-size:11px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; color:var(--text-2); }
-.imp-prog-t { margin:0 0 10px; font-size:14px; font-weight:600; color:var(--text); }
-.imp-track { height:8px; margin-bottom:12px; border-radius:8px; overflow:hidden; background:var(--bg-3); }
-.imp-track i { display:block; height:100%; background:var(--olive-light); transition:width .25s ease; }
-.imp-rule { display:flex; gap:8px; margin:0 0 12px; padding:10px 12px; border:0.5px solid var(--border); border-radius:10px; font-size:13px; line-height:1.45; color:var(--text-2); }
-.imp-rule svg { flex-shrink:0; margin-top:2px; color:var(--olive-light); }
-.imp-opt { display:flex; align-items:center; gap:8px; min-height:36px; font-size:13.5px; color:var(--text); cursor:pointer; }
-.imp-opt input, .imp-check { width:18px; height:18px; flex-shrink:0; accent-color:var(--olive-light); }
-.imp-filters { display:flex; flex-wrap:wrap; gap:6px; margin:12px 0 8px; }
-.imp-filter { min-height:38px; padding:0 12px; border:0.5px solid var(--border-2); border-radius:999px; background:none; font:600 12.5px var(--sans); color:var(--text-2); cursor:pointer; }
-.imp-filter b { margin-inline-start:3px; }
-.imp-filter.on { background:var(--olive); border-color:var(--olive); color:#fff; }
-.imp-bulk { display:flex; gap:14px; margin-bottom:8px; }
-.imp-link { min-height:32px; padding:0; background:none; border:none; font:600 12.5px var(--sans); color:var(--olive-light); cursor:pointer; }
-.imp-list { margin:0; padding:0; list-style:none; border:0.5px solid var(--border); border-radius:12px; overflow:hidden; }
-.imp-row { display:flex; align-items:center; gap:10px; padding:10px 12px; min-width:0; }
-.imp-row + .imp-row { border-top:0.5px solid var(--border); }
-.imp-noimg { display:flex; align-items:center; justify-content:center; font:600 16px var(--serif); color:var(--text-2); }
-.imp-main { flex:1; min-width:0; }
-.imp-name { font-size:14px; font-weight:600; line-height:1.3; color:var(--text); overflow-wrap:anywhere; }
-.imp-name span { font-weight:400; color:var(--text-2); }
-.imp-was, .imp-meta { margin-top:2px; font-size:12px; line-height:1.4; color:var(--text-2); overflow-wrap:anywhere; }
-.imp-why { margin-top:3px; font-size:12px; line-height:1.4; font-weight:600; color:#854d0e; }
-[data-theme="dark"] .imp-why { color:#fbbf24; }
-.imp-row.is-none .imp-why { color:#b91c1c; }
-[data-theme="dark"] .imp-row.is-none .imp-why { color:#f87171; }
-.imp-row.is-dup .imp-why { color:var(--text-2); font-weight:400; }
-.imp-rate { display:flex; align-items:center; gap:8px; flex-shrink:0; }
-.imp-orig { font-size:12.5px; color:var(--text-2); white-space:nowrap; }
-.imp-rate-in { display:flex; align-items:center; gap:8px; }
-.imp-slide { width:120px; height:24px; }
-.imp-slide.is-empty { opacity:.35; }
-.imp-rate-in .imp-score:disabled { opacity:1; }
-.imp-more { margin-top:10px; }
-.imp-foot { position:sticky; bottom:72px; z-index:5; display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-top:14px; padding:12px; background:var(--bg-2); border:0.5px solid var(--border-2); border-radius:12px; font-size:13px; color:var(--text-2); }
-.imp-foot > span { flex:1 1 180px; }
-.imp-foot b { color:var(--text); }
-.imp-foot .set-btn, .imp-foot .btn-save { width:auto; min-height:44px; }
-.imp-foot .btn-save:disabled { opacity:.5; cursor:default; }
-.imp-done { display:flex; align-items:center; gap:8px; margin:0 0 10px; font-size:15px; color:var(--text); }
-.imp-done svg { color:var(--olive-light); }
-.imp-actions { display:flex; flex-direction:column; gap:8px; margin-top:12px; }
-.imp-open { text-align:center; text-decoration:none; }
-.imp-edit { max-width:480px; text-align:start; align-items:stretch; max-height:90dvh; overflow-y:auto; }
-.imp-edit .confirm-title { text-align:start; max-width:none; }
-.imp-edit .field-label { display:block; margin:10px 0 5px; font-size:11px; letter-spacing:1px; text-transform:uppercase; color:var(--text-2); }
-.imp-edit .field-input { width:100%; box-sizing:border-box; }
-.imp-q { display:flex; gap:8px; }
-.imp-q .set-btn { width:auto; flex-shrink:0; }
-.imp-hits { margin:8px 0 0; padding:0; list-style:none; }
-.imp-hits:empty { display:none; }
-.imp-hits button { display:block; width:100%; min-height:44px; padding:6px 10px; background:none; border:none; border-bottom:0.5px solid var(--border); text-align:start; font:13.5px var(--sans); color:var(--text); cursor:pointer; }
-.imp-hits button:hover { background:var(--bg-3); }
-.imp-hits span { color:var(--text-2); font-size:12.5px; }
-.imp-cur { margin-top:10px; font-size:13.5px; color:var(--text-2); }
-.imp-cur b { color:var(--text); }
-.imp-two { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-.imp-edit .anim-toggle-btn { width:100%; margin-top:8px; }
-.imp-edit .rf-groups, .imp-edit .rf-groups .rf-group .rf-grid { grid-template-columns:1fr; }   /* the dialog is narrow: one column */
-.imp-edit .ratings-section-label { margin:1.1rem 0 .7rem; }
-@media (max-width:640px) {
-  .imp-row { flex-wrap:wrap; }
-  .imp-rate { width:100%; justify-content:flex-end; }
-  .imp-foot { position:static; }
-  .imp-foot .set-btn, .imp-foot .btn-save { flex:1; }
-}
-.set-save { width:100%; margin-top:1rem; }
-.set-note { margin-bottom:0; }
-.settings-section[hidden] { display:none; }
-
-.settings-section {
-  background:var(--card);
-  border:0.5px solid var(--border);
-  border-radius:var(--radius-lg);
-  padding:clamp(1rem, 4vw, 1.75rem);
-}
-.settings-back-link {
-  display:inline-flex; align-items:center; gap:6px; margin-bottom:1.5rem;
-  font-size:12px; color:var(--text-3);
-  text-decoration:none; transition:color .15s;
-}
-.settings-back-link:hover { color:var(--olive-light); }
-.settings-title {
-  font-size:11px; letter-spacing:2px; text-transform:uppercase;
-  color:var(--olive-light);
-  margin-bottom:1.25rem; padding-bottom:.75rem;
-  border-bottom:0.5px solid var(--border);
-}
-
-.field-row { margin-bottom:1.1rem; }
-.field-row:last-child { margin-bottom:0; }
-.field-row .field-label {
-  display:flex; align-items:center; justify-content:space-between;
-  font-size:11px; letter-spacing:1px; text-transform:uppercase;
-  color:var(--text-3); margin-bottom:6px;
-}
-.field-row input, .field-row textarea { width:100%; box-sizing:border-box; }
-.field-hint { font-size:10.5px; color:var(--text-3); font-weight:400; letter-spacing:0; text-transform:none; }
-.field-hint.ok   { color:var(--olive-light); }
-.field-hint.bad  { color:#ff6b6b; }
-.field-row input:disabled { opacity:.65; cursor:not-allowed; }
-.btn-save[hidden] { display:none; }
-.field-static {
-  width:100%; box-sizing:border-box; background:var(--bg-2); border:0.5px solid var(--border-2);
-  border-radius:var(--radius-sm); color:var(--text-2); font-size:14px; padding:10px 14px;
-}
-
-/* ── Avatar section ── */
-.avatar-row { display:flex; align-items:center; gap:1.25rem; }
-.settings-avatar {
-  width:clamp(84px, 20vw, 120px); height:clamp(84px, 20vw, 120px); border-radius:50%;
-  background:var(--olive-faint); border:3px solid var(--border-olive);
-  font-family:var(--serif); font-size:clamp(28px, 7vw, 44px); color:var(--olive-light);
-  display:flex; align-items:center; justify-content:center;
-  overflow:hidden; flex-shrink:0; cursor:pointer; transition:opacity .2s;
-}
-.settings-avatar:hover { opacity:.85; }
-.settings-avatar img { width:100%; height:100%; object-fit:cover; border-radius:50%; }
-.avatar-info { flex:1; min-width:0; }
-.avatar-hint { font-size:11px; color:var(--text-3); margin-top:5px; line-height:1.4; }
-
-/* ── Theme preference ── */
-.theme-pref-row { display:flex; gap:10px; }
-.theme-pref-btn {
-  flex:1; display:flex; flex-direction:column; align-items:center; gap:8px;
-  padding:16px 10px; border-radius:var(--radius-sm); cursor:pointer;
-  background:var(--bg-2); border:1.5px solid var(--border-2); color:var(--text-2);
-  font-size:12.5px; font-family:var(--sans); transition:border-color .15s, color .15s;
-}
-.theme-pref-btn:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
-.theme-pref-btn svg { width:20px; height:20px; }
-.theme-pref-btn.active { border-color:var(--olive-light); color:var(--olive-light); background:var(--olive-faint); }
-
-/* ── Share profile ── */
-.share-link-row { display:flex; gap:8px; }
-.share-link-row .field-input { flex:1; min-width:0; cursor:pointer; color:var(--text-2); }
-.share-copy-btn {
-  flex-shrink:0; width:42px; height:42px; display:flex; align-items:center; justify-content:center;
-  background:var(--bg-2); border:0.5px solid var(--border-2); border-radius:var(--radius-sm);
-  color:var(--text-2); cursor:pointer; transition:border-color .15s, color .15s;
-}
-.share-copy-btn svg { width:16px; height:16px; }
-.share-copy-btn:hover { border-color:var(--border-olive); color:var(--olive-light); }
-.share-copy-btn.copied { border-color:var(--olive-light); color:var(--olive-light); }
-
-/* ── Sessions + Delete Account — same card as every other section ── */
-/* the open language list sits above the cards that follow */
-.settings-section:has(.mss-pick.open) { position:relative; z-index:50; }
-.lang-req { margin-top:14px; padding:12px 14px; border-radius:var(--radius-sm); background:var(--bg-3); border:0.5px solid var(--border-2); }
-.lang-req-text { margin:0 0 10px; font-size:13px; color:var(--text-2); line-height:1.5; }
-.lang-req-btn { width:100%; }
-.lang-req-btn:disabled { opacity:.7; cursor:default; }
-.settings-desc { font-size:13.5px; color:var(--text-2); line-height:1.6; margin:0 0 1.1rem; }
-.settings-desc b { color:var(--text); font-weight:600; }
-.settings-desc a { color:var(--olive-light); font-weight:600; text-decoration:none; }
-.settings-desc a:hover { text-decoration:underline; }
-.sess-list { list-style:none; margin:0 0 1.1rem; padding:0; border:0.5px solid var(--border); border-radius:var(--radius-sm); }
-.sess-list:empty { display:none; }
-.sess-row { display:flex; align-items:center; gap:12px; padding:12px; min-width:0; }
-.sess-row + .sess-row { border-top:0.5px solid var(--border); }
-.sess-ic { flex-shrink:0; width:20px; height:20px; color:var(--text-3); }
-.sess-ic svg { display:block; width:100%; height:100%; }
-.sess-info { flex:1; min-width:0; }
-.sess-name { display:block; font-size:13.5px; font-weight:600; color:var(--text); overflow-wrap:anywhere; }
-.sess-when { display:block; margin-top:2px; font-size:12px; line-height:1.4; color:var(--text-3); }
-.sess-here { flex-shrink:0; font-size:12px; font-weight:600; color:var(--olive-light); }
-.sess-out { flex-shrink:0; min-height:40px; padding:0 12px; border-radius:var(--radius-sm); background:none; border:0.5px solid var(--border-2); color:var(--text-2); font:inherit; font-size:12.5px; font-weight:600; cursor:pointer; transition:border-color .15s, color .15s; }
-.sess-out:hover { border-color:#dc2626; color:#dc2626; }
-.sess-out:disabled { opacity:.6; cursor:progress; }
-.sess-out:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
-[data-theme="dark"] .sess-out:hover { border-color:#f87171; color:#f87171; }
-.sess-note { padding:12px; font-size:13px; color:var(--text-3); }
-.sess-list-btns { display:flex; flex-direction:column; gap:8px; }
-.msg-rec-desc { margin-top:1.1rem; }
-.msg-rec-code { display:block; padding:12px; border:1px solid var(--border); border-radius:10px; font-size:15px; font-weight:600; line-height:1.6; letter-spacing:.5px; text-align:center; overflow-wrap:anywhere; user-select:all; color:var(--text); }
-.lock-form { text-align:start; align-items:stretch; }
-.lock-field { display:flex; flex-direction:column; gap:6px; font-size:12.5px; font-weight:600; color:var(--text-2); }
-.lock-forgot { align-self:flex-start; background:none; border:none; padding:6px 0; cursor:pointer; font:inherit; font-size:12.5px; font-weight:600; color:var(--olive-light); }
-@media(max-width:640px) { .sess-out { min-height:44px; } }
-.set-btn {
-  display:inline-flex; align-items:center; justify-content:center; gap:8px; width:100%;
-  padding:11px 16px; border-radius:var(--radius-sm); cursor:pointer;
-  font-family:var(--sans); font-size:13.5px; font-weight:600;
-  background:transparent; border:1px solid var(--border-2); color:var(--text-2);
-  transition:border-color .15s, color .15s, background .15s;
-}
-.set-btn svg { width:15px; height:15px; flex-shrink:0; }
-.set-btn:hover { border-color:var(--border-olive); color:var(--text); background:var(--olive-faint); }
-.set-btn-delete { color:#b91c1c; }
-.set-btn-delete:hover { border-color:#b91c1c; color:#b91c1c; background:rgba(220,38,38,0.06); }
-[data-theme="dark"] .set-btn-delete, [data-theme="dark"] .set-btn-delete:hover { color:#f87171; }
-.set-btn:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
-.del-list { margin:0 0 1.1rem; padding:0; list-style:none; display:flex; flex-direction:column; gap:6px; }
-.del-list li { display:flex; align-items:center; gap:10px; font-size:13px; color:var(--text-2); }
-.del-list li::before { content:''; width:5px; height:5px; border-radius:50%; background:var(--text-3); flex-shrink:0; }
-
-/* Delete-account dialog (built on the shared confirm dialog styles) */
-#delAccOverlay .confirm-card { max-width:420px; text-align:start; align-items:stretch; }
-#delAccOverlay .confirm-title, #delAccOverlay .confirm-msg { text-align:start; max-width:none; }
-#delAccOverlay .field-row { margin:4px 0 0; }
-#delAccOverlay .field-label { font-size:11px; letter-spacing:1px; text-transform:uppercase; color:var(--text-3); margin-bottom:6px; display:block; }
-#delAccOverlay .field-label b { color:var(--text); text-transform:none; letter-spacing:0; }
-.del-acc-error { font-size:12.5px; color:#dc2626; min-height:0; }
-[data-theme="dark"] .del-acc-error { color:#f87171; }
-.del-acc-error:empty { display:none; }
-#delAccConfirm:disabled { opacity:.45; cursor:default; }
-
-/* ── Mobile ── */
-@media(max-width:640px) {
-  .cat-page-title { font-size:28px; }
-}
-/* Episode Ratings toggle: on phones the three choices share the width (never wider than the screen) */
-@media(max-width:640px) {
-  .ep-mode-toggle { width:100%; }
-  .ep-mode-toggle .pn-toggle-btn { flex:1; min-width:0; padding:10px 6px; white-space:nowrap; }
-}
-</style>
+<link rel="stylesheet" href="css/settings.css">
 </head>
 <body>
-<div class="page-wrap">
-
-  <div class="set-top">
-    <div class="cat-page-header">
-      <div>
-        <h1 class="cat-page-title">Settings</h1>
-      </div>
-    </div>
-    <a href="profile.html" class="settings-back-link">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-      Back to Profile
-    </a>
-  </div>
-
+<div class="page-wrap set-wrap">
   <div class="set-shell" id="setShell">
-    <div class="set-rail" role="navigation" aria-label="Settings sections">
-      <div class="set-search">
-        <input class="field-input" id="setSearch" type="search" placeholder="Search settings…" aria-label="Search settings" autocomplete="off" spellcheck="false" enterkeyhint="search">
+
+    <!-- The sections: who you're signed in as, search, the 3 groups, Sign out. On phones it's the first screen. -->
+    <nav class="set-rail" aria-label="Settings">
+      <div class="set-root-head">
+        <a class="set-back" href="profile.html" aria-label="Back to your profile"><span data-ic="chevleft"></span></a>
+        <h1 class="set-root-title">Settings</h1>
+      </div>
+      <a class="set-acct" id="setAcct" href="profile.html" aria-label="Your profile">
+        <span class="set-acct-av" id="setAcctAv" aria-hidden="true"></span>
+        <span class="set-acct-txt"><b id="setAcctName" translate="no"></b><small><span id="setAcctHandle" translate="no"></span><span class="set-acct-view"> · View profile</span></small></span>
+        <span class="set-acct-go" data-ic="chevright" aria-hidden="true"></span>
+      </a>
+      <div class="set-search" role="search">
+        <span class="set-search-ic" data-ic="search" aria-hidden="true"></span>
+        <input id="setSearch" type="search" placeholder="Search settings" aria-label="Search settings" aria-keyshortcuts="/" aria-controls="setHits" autocomplete="off" spellcheck="false" enterkeyhint="search">
+        <kbd class="set-kbd" aria-hidden="true">/</kbd>
       </div>
       <div id="setSearchLive" class="sr-only" aria-live="polite"></div>
       <div id="setHits" hidden></div>
       <div class="set-list" id="setList"></div>
-    </div>
+      <button type="button" class="set-signout" onclick="handleLogout()"><span data-ic="arrowRight" aria-hidden="true"></span>Sign out</button>
+    </nav>
 
-    <main class="set-main">
-      <section class="set-pane" id="pane-profile" aria-labelledby="paneT-profile" hidden>
-        <div class="set-pane-head">
-          <button type="button" class="set-back" onclick="MSSSettingsNav.back()" aria-label="Back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg></button>
-          <div class="set-pane-text"><div class="set-trail"></div><h2 class="set-pane-title" id="paneT-profile" tabindex="-1">My Profile</h2></div>
-        </div>
-        <div class="settings-section" id="setPhoto">
-          <div class="settings-title">Profile Photo</div>
-          <div class="avatar-row">
-            <div class="settings-avatar" id="settingsAvatar"
-                 onclick="document.getElementById('avatarFile').click()"
-                 title="Change photo">?</div>
-            <div class="avatar-info">
-              <button class="btn-save" onclick="document.getElementById('avatarFile').click()">Change Photo</button>
-              <div class="avatar-hint">JPG or PNG · max 5MB<br>Tap photo or button to upload</div>
-              <input type="file" id="avatarFile" accept="image/*" style="display:none" onchange="_avatarCropStart(event)">
+    <main class="set-main" id="setMain">
+
+      <!-- ══ My Profile ══ -->
+      <div class="set-page" id="page-profile" data-sections="profile" hidden>
+        <header class="set-head">
+          <a class="set-back" href="#" data-back aria-label="Back to Settings"><span data-ic="chevleft"></span></a>
+          <div><h1 class="set-title" id="pgT-profile" tabindex="-1">My Profile</h1><p class="set-lede">How you look to everyone on MSF.</p></div>
+        </header>
+        <section class="set-pane" id="pane-profile" aria-labelledby="pgT-profile">
+          <div class="set-card set-pf" id="setPhoto">
+            <div class="set-pf-banner" id="pfBanner">
+              <button type="button" class="set-btn set-btn-glass" id="setBackdrop" onclick="_bannerPick()"><span data-ic="image"></span><span class="set-pf-bd-l">Change backdrop</span><span class="set-pf-bd-s">Backdrop</span></button>
             </div>
-          </div>
-          <div id="avatarRule"></div>
-        </div>
-
-        <div class="settings-section" id="setDetails">
-          <div class="settings-title">Profile Details</div>
-          <div class="field-row">
-            <label class="field-label" for="setDisplayName">Display Name</label>
-            <input class="field-input" id="setDisplayName" placeholder="Your Name">
-          </div>
-          <div class="field-row">
-            <label class="field-label" for="setBio">
-              <span>Bio</span>
-              <span class="field-hint" id="bioCount">0/150</span>
-            </label>
-            <textarea class="field-input" id="setBio" rows="3"
-                      placeholder="A cinephile who…" maxlength="150" oninput="updateCharCount('setBio','bioCount',150)"></textarea>
-          </div>
-          <div class="field-row">
-            <label class="field-label" for="setQuote">
-              <span>Quote</span>
-              <span class="field-hint" id="quoteCount">0/200</span>
-            </label>
-            <textarea class="field-input" id="setQuote" rows="2"
-                      placeholder="I watch too much TV and I have no regrets." maxlength="200" oninput="updateCharCount('setQuote','quoteCount',200)"></textarea>
-          </div>
-          <button class="btn-save set-save" onclick="saveProfileDetails()">Save Changes</button>
-        </div>
-
-        <div class="settings-section" id="setShare">
-          <div class="settings-title">Share Profile</div>
-          <div class="field-row">
-            <div class="field-label">Your Profile Link</div>
-            <div class="share-link-row">
-              <input class="field-input" id="shareProfileUrl" readonly onclick="this.select()" aria-label="Your profile link">
-              <button class="share-copy-btn" id="shareCopyBtn" onclick="copyProfileLink()" title="Copy link">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-              </button>
-            </div>
-          </div>
-          <button class="btn-save" style="width:100%;margin-top:1rem" onclick="shareProfileNative()" id="shareNativeBtn">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-            Share Profile
-          </button>
-        </div>
-      </section>
-
-      <section class="set-pane" id="pane-account" aria-labelledby="paneT-account" hidden>
-        <div class="set-pane-head">
-          <button type="button" class="set-back" onclick="MSSSettingsNav.back()" aria-label="Back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg></button>
-          <div class="set-pane-text"><div class="set-trail"></div><h2 class="set-pane-title" id="paneT-account" tabindex="-1">Account</h2></div>
-        </div>
-        <div class="settings-section" id="setUsernameCard">
-          <div class="settings-title">Username</div>
-          <div class="field-row">
-            <label class="field-label" for="setUsername">
-              <span>Your username</span>
-              <span class="field-hint" id="usernameHint"></span>
-            </label>
-            <input class="field-input" id="setUsername" placeholder="your_username" maxlength="20"
-                   autocomplete="off" spellcheck="false" autocapitalize="none" data-mask="username"
-                   oninput="checkUsernameLive()">
-          </div>
-          <p class="settings-desc set-note" id="usernameRule" aria-live="polite">You can change your username once every 14 days.</p>
-          <button class="btn-save set-save" id="usernameSave" onclick="saveUsername()">Save Username</button>
-        </div>
-
-        <div class="settings-section" id="setEmailCard">
-          <div class="settings-title">Email</div>
-          <div class="field-row">
-            <div class="field-label">Your email</div>
-            <div class="field-static" id="setEmail">—</div>
-          </div>
-          <p class="settings-desc set-note">Changing your email is coming later.</p>
-        </div>
-
-        <div class="settings-section" id="setDelete">
-          <div class="settings-title">Delete Account</div>
-          <p class="settings-desc">Permanently delete your MyScreenFolio account. This removes:</p>
-          <ul class="del-list">
-            <li>Your library, ratings and notes</li>
-            <li>Your lists, comments, replies and reactions</li>
-            <li>Your friends, notifications and profile</li>
-          </ul>
-          <p class="settings-desc">This can't be undone. Want a copy first? <a href="#data/setExport">Export your library</a>.</p>
-          <button type="button" class="set-btn set-btn-delete" onclick="openDeleteAccount()">Delete Account…</button>
-        </div>
-      </section>
-
-      <section class="set-pane" id="pane-data" aria-labelledby="paneT-data" hidden>
-        <div class="set-pane-head">
-          <button type="button" class="set-back" onclick="MSSSettingsNav.back()" aria-label="Back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg></button>
-          <div class="set-pane-text"><div class="set-trail"></div><h2 class="set-pane-title" id="paneT-data" tabindex="-1">Data</h2></div>
-        </div>
-        <div class="settings-section" id="setImport">
-          <div class="settings-title">Import</div>
-          <div id="importBox"></div>
-        </div>
-        
-        <div class="settings-section" id="setExport">
-          <div class="settings-title">Export and Backup</div>
-          <p class="settings-desc">Save your library as a PDF, an image, a spreadsheet or a Letterboxd file, or download a full backup.</p>
-          <a class="set-btn" href="export.html">Open Export</a>
-        </div>
-
-        <div class="settings-section" id="setUploads">
-          <div class="settings-title">My Uploads</div>
-          <p class="settings-desc">Every picture you’ve uploaded yourself. <b>Only upload pictures that are yours, or that you have the right to use.</b> If one isn’t, remove it here. Using someone else’s picture without permission can break copyright law.</p>
-          <ul class="sess-list" id="uploadsList" aria-live="polite"></ul>
-          <p class="settings-desc set-note" id="uploadsEmpty" hidden>You haven’t uploaded any pictures. Titles use their normal posters until you do.</p>
-        </div>
-      </section>
-
-      <section class="set-pane" id="pane-privacy" aria-labelledby="paneT-privacy" hidden>
-        <div class="set-pane-head">
-          <button type="button" class="set-back" onclick="MSSSettingsNav.back()" aria-label="Back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg></button>
-          <div class="set-pane-text"><div class="set-trail"></div><h2 class="set-pane-title" id="paneT-privacy" tabindex="-1">Privacy</h2></div>
-        </div>
-        <div class="settings-section" id="setPrivate">
-          <div class="settings-title">Account Privacy</div>
-          <div class="field-row" style="margin-bottom:0">
-            <div class="push-row">
-              <div class="push-text">
-                <div class="push-name" id="privLabel">Private account</div>
-                <div class="push-sub" id="privDesc">Only people you let in can see your titles, ratings, lists, notes and medals — following you becomes a request you accept or decline. Everyone else just sees your name, photo, bio and follower counts. When it's off, anyone can follow you and see your public things.</div>
+            <div class="set-pf-id">
+              <span class="set-pf-photo" id="pfPhoto" aria-hidden="true"></span>
+              <div class="set-pf-names"><b id="pfName" translate="no"></b><small id="pfHandle" translate="no"></small></div>
+              <div class="set-pf-acts">
+                <button type="button" class="set-btn" id="pfNew" aria-haspopup="true" aria-expanded="false" onclick="_photoMenu(this)"><span data-ic="download" class="set-ic-up"></span><span class="set-pf-new-l">New photo</span><span class="set-pf-new-s">Photo</span></button>
+                <button type="button" class="set-btn" id="phRemove" onclick="MSSUploads.photo(this)" hidden>Remove</button>
               </div>
-              <button type="button" class="push-switch" id="privSwitch" role="switch" aria-checked="false" aria-labelledby="privLabel" aria-describedby="privDesc" title="Private account" onclick="togglePrivateAccount()"><span aria-hidden="true"></span></button>
             </div>
-          </div>
-        </div>
-
-        <div class="settings-section" id="setOnline" hidden>
-          <div class="settings-title">Online Status</div>
-          <div class="push-row">
-            <div class="push-text"><div class="push-name" id="msgOnlineL">Show when I’m online</div><div class="push-sub" id="msgOnlineS">Friends see “online” while you have their chat open.</div></div>
-            <button type="button" class="push-switch" id="msgOnlineSw" role="switch" aria-checked="true" aria-labelledby="msgOnlineL" aria-describedby="msgOnlineS" onclick="_msgOnlineTap(this)"><span></span></button>
-          </div>
-        </div>
-
-        <div class="settings-section" id="setBlocked">
-          <div class="settings-title">Blocked People</div>
-          <p class="settings-desc">You don’t follow each other, and neither of you can follow or message the other. They aren’t told.</p>
-          <ul class="sess-list" id="blockList" aria-live="polite"></ul>
-          <p class="settings-desc" id="blockEmpty" hidden>You haven’t blocked anyone. To block someone, open their profile.</p>
-        </div>
-      </section>
-
-      <section class="set-pane" id="pane-security" aria-labelledby="paneT-security" hidden>
-        <div class="set-pane-head">
-          <button type="button" class="set-back" onclick="MSSSettingsNav.back()" aria-label="Back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg></button>
-          <div class="set-pane-text"><div class="set-trail"></div><h2 class="set-pane-title" id="paneT-security" tabindex="-1">Security</h2></div>
-        </div>
-        <div class="settings-section" id="setPassword">
-          <div class="settings-title">Change Password</div>
-          <div class="field-row">
-            <label class="field-label" for="setCurrentPassword">Current Password</label>
-            <input class="field-input" id="setCurrentPassword" type="password" maxlength="64" autocomplete="current-password">
-          </div>
-          <div class="field-row">
-            <label class="field-label" for="setNewPassword">New Password</label>
-            <input class="field-input" id="setNewPassword" type="password" maxlength="64" placeholder="8–64 characters" autocomplete="new-password">
-            <div id="setPassGuide" style="margin-top:8px"></div>
-          </div>
-          <button class="btn-save" style="width:100%;margin-top:.25rem" onclick="changePassword()">Update Password</button>
-        </div>
-
-        <div class="settings-section" id="setSessions">
-          <div class="settings-title">Active Sessions</div>
-          <p class="settings-desc">Everywhere this account is signed in. Don’t recognise one, or lost a device? Sign it out.</p>
-          <ul class="sess-list" id="sessList" aria-live="polite"></ul>
-          <button type="button" class="set-btn" onclick="doSignOutEverywhere()">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-            Sign Out of All Devices
-          </button>
-        </div>
-
-        <div class="settings-section" id="setMessages" hidden>
-          <div class="settings-title">Messages</div>
-          <p class="settings-desc"><b>Passcode:</b> optional. Asks for 4 to 6 digits before Messages opens, on every device you use. Your messages stay encrypted either way.</p>
-          <div id="msgLockArea"></div>
-          <div id="msgRecArea" hidden>
-            <p class="settings-desc msg-rec-desc"><b>Recovery code:</b> optional. If you forget your password and aren’t signed in anywhere else, this brings your chats back. Only you have it, so keep it somewhere safe.</p>
-            <div class="sess-list-btns" id="msgRecBtns"></div>
-          </div>
-          
-        </div>
-      </section>
-
-      <section class="set-pane" id="pane-notifications" aria-labelledby="paneT-notifications" hidden>
-        <div class="set-pane-head">
-          <button type="button" class="set-back" onclick="MSSSettingsNav.back()" aria-label="Back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg></button>
-          <div class="set-pane-text"><div class="set-trail"></div><h2 class="set-pane-title" id="paneT-notifications" tabindex="-1">Notifications</h2></div>
-        </div>
-        <div id="setNotif"></div>
-      </section>
-
-      <section class="set-pane" id="pane-preferences" aria-labelledby="paneT-preferences" hidden>
-        <div class="set-pane-head">
-          <button type="button" class="set-back" onclick="MSSSettingsNav.back()" aria-label="Back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg></button>
-          <div class="set-pane-text"><div class="set-trail"></div><h2 class="set-pane-title" id="paneT-preferences" tabindex="-1">Preferences</h2></div>
-        </div>
-        <div class="settings-section" id="setLang">
-          <div class="settings-title">Language</div>
-          <p class="settings-desc" id="langHint">MyScreenFolio and everything from TMDB — titles, posters, descriptions, seasons and episodes — show in this language. Anything not translated yet stays in English.</p>
-          <div class="field-label" id="setLanguageLabel">Language</div>
-          <div id="setLanguagePick"></div>
-          <div class="lang-req" id="langReq" hidden>
-            <p class="lang-req-text" id="langReqText"></p>
-            <button type="button" class="set-btn lang-req-btn" id="langReqBtn" onclick="requestLanguage()"></button>
-          </div>
-        </div>
-
-        <div class="settings-section" id="setEpisodes">
-          <div class="settings-title">Episode Ratings</div>
-          <p class="settings-desc">When you mark an episode watched with “+”, MyScreenFolio can ask you to rate it.</p>
-          <div class="pn-toggle ep-mode-toggle" role="radiogroup" aria-label="Episode ratings">
-            <button type="button" class="pn-toggle-btn" role="radio" aria-checked="true" data-mode="ask" onclick="setEpisodeMode('ask')">Ask per show</button>
-            <button type="button" class="pn-toggle-btn" role="radio" aria-checked="false" data-mode="always" onclick="setEpisodeMode('always')">Always</button>
-            <button type="button" class="pn-toggle-btn" role="radio" aria-checked="false" data-mode="off" onclick="setEpisodeMode('off')">Never</button>
-          </div>
-          <p class="settings-desc" id="epModeHint" style="margin-top:.6rem;margin-bottom:0"></p>
-        </div>
-
-        <div class="settings-section" id="setWeekStart">
-          <div class="settings-title">Week Starts On</div>
-          <p class="settings-desc">For your Diary's week and month views.</p>
-          <div class="pn-toggle wk-start-toggle" role="radiogroup" aria-label="Week starts on">
-            <button type="button" class="pn-toggle-btn" role="radio" aria-checked="true" data-ws="" onclick="setWeekStart('')">Region</button>
-            <button type="button" class="pn-toggle-btn" role="radio" aria-checked="false" data-ws="1" onclick="setWeekStart(1)">Monday</button>
-            <button type="button" class="pn-toggle-btn" role="radio" aria-checked="false" data-ws="7" onclick="setWeekStart(7)">Sunday</button>
-            <button type="button" class="pn-toggle-btn" role="radio" aria-checked="false" data-ws="6" onclick="setWeekStart(6)">Saturday</button>
-          </div>
-          <p class="settings-desc" id="wkStartHint" style="margin-top:.6rem;margin-bottom:0"></p>
-        </div>
-
-        <div class="settings-section" id="setScreensaver">
-          <div class="settings-title">Screensaver</div>
-          <div class="field-row" style="margin-bottom:0">
-            <div class="push-row">
-              <div class="push-text">
-                <div class="push-name" id="ssLabel">Bouncing logo</div>
-                <div class="push-sub" id="ssDesc">Leave MyScreenFolio alone for a while (3 minutes on a computer, 1 on a phone) and the logo bounces around the screen. Any move or tap brings you straight back. Just for this device.</div>
+            <div class="set-pf-body">
+              <div class="set-pf-shape" id="setPhotoShape">
+                <h3 class="set-label" id="phShapeH">Show my photo as</h3>
+                <div class="mss-choices" role="radiogroup" aria-labelledby="phShapeH">
+                  <button type="button" role="radio" class="mss-choice" data-shape="poster" onclick="_photoShape('poster')">
+                    <span class="mss-choice-pic" aria-hidden="true"></span><span class="mss-choice-t"><b>Poster</b><small>Tall, like a title’s poster</small></span></button>
+                  <button type="button" role="radio" class="mss-choice" data-shape="circle" onclick="_photoShape('circle')">
+                    <span class="mss-choice-pic is-circle" aria-hidden="true"></span><span class="mss-choice-t"><b>Circle</b><small>Round, like everywhere else</small></span></button>
+                </div>
               </div>
-              <button type="button" class="push-switch" id="ssSwitch" role="switch" aria-checked="true" aria-labelledby="ssLabel" aria-describedby="ssDesc" title="Screensaver" onclick="toggleScreensaverSetting()"><span aria-hidden="true"></span></button>
+              <div class="set-fields" id="setDetails" data-edit="details">
+                <div class="set-field">
+                  <label class="set-label" for="setDisplayName"><span>Display name</span><span class="set-count" id="nameCount">0 / 60</span></label>
+                  <input class="field-input" id="setDisplayName" placeholder="Your name" maxlength="60" oninput="_editInput('details')">
+                </div>
+                <div class="set-field">
+                  <label class="set-label" for="setQuote"><span>Quote</span><span class="set-count" id="quoteCount">0 / 200</span></label>
+                  <input class="field-input" id="setQuote" placeholder="I watch too much TV and I have no regrets." maxlength="200" oninput="_editInput('details')">
+                </div>
+                <div class="set-field set-field-wide">
+                  <label class="set-label" for="setBio"><span>Bio</span><span class="set-count" id="bioCount">0 / 150</span></label>
+                  <textarea class="field-input" id="setBio" rows="2" placeholder="A cinephile who…" maxlength="150" oninput="_editInput('details')"></textarea>
+                </div>
+                <div class="set-edit" id="edit-details" hidden>
+                  <button type="button" class="set-btn" onclick="_editCancel('details')">Cancel</button>
+                  <button type="button" class="set-btn is-primary" onclick="saveProfileDetails()">Save</button>
+                </div>
+              </div>
+              <div id="avatarRule"></div>
             </div>
           </div>
-        </div>
-      </section>
 
-      <section class="set-pane" id="pane-appearance" aria-labelledby="paneT-appearance" hidden>
-        <div class="set-pane-head">
-          <button type="button" class="set-back" onclick="MSSSettingsNav.back()" aria-label="Back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg></button>
-          <div class="set-pane-text"><div class="set-trail"></div><h2 class="set-pane-title" id="paneT-appearance" tabindex="-1">Appearance</h2></div>
-        </div>
-        <div class="settings-section" id="setTheme">
-          <div class="settings-title">Theme</div>
-          <div class="field-row" style="margin-bottom:0">
-            <div class="field-label">Theme</div>
-            <div class="theme-pref-row" role="group" aria-label="Theme">
-              <button type="button" class="theme-pref-btn" id="themeBtnLight" onclick="setTheme('light')">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
-                Light
-              </button>
-              <button type="button" class="theme-pref-btn" id="themeBtnDark" onclick="setTheme('dark')">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-                Dark
-              </button>
-              <button type="button" class="theme-pref-btn" id="themeBtnSystem" onclick="setTheme('system')">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor" stroke="none"/></svg>
-                System
-              </button>
+          <h2 class="set-sub" id="shareH">Share your profile</h2>
+          <div class="set-card set-share" id="setShare" role="group" aria-labelledby="shareH">
+            <div class="set-qr" id="shareQr" role="img" aria-label="QR code for your profile link"></div>
+            <div class="set-share-main">
+              <input class="field-input set-share-url" id="shareProfileUrl" readonly onclick="this.select()" aria-label="Your profile link" translate="no">
+              <div class="set-share-btns">
+                <button type="button" class="set-btn is-primary" onclick="copyProfileLink()"><span data-ic="copy"></span><span>Copy<span class="set-hide-s"> link</span></span></button>
+                <button type="button" class="set-btn" id="shareNativeBtn" onclick="shareProfileNative()"><span data-ic="share"></span>Share</button>
+                <button type="button" class="set-btn" onclick="saveProfileQR()"><span data-ic="download"></span><span><span class="set-hide-s">Save </span>QR</span></button>
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      </div>
+
+      <!-- ══ Account ══ -->
+      <div class="set-page" id="page-account" data-sections="account" hidden>
+        <header class="set-head">
+          <a class="set-back" href="#" data-back aria-label="Back to Settings"><span data-ic="chevleft"></span></a>
+          <div><h1 class="set-title" id="pgT-account" tabindex="-1">Account</h1><p class="set-lede">How you sign in, and what you’re called.</p></div>
+        </header>
+        <section class="set-pane" id="pane-account" aria-labelledby="pgT-account">
+          <div class="set-card">
+            <div class="set-row set-row-field" id="setUsernameCard" data-edit="username">
+              <span class="set-ic" data-ic="user"></span>
+              <div class="set-txt">
+                <label class="set-name" for="setUsername">Username</label>
+                <div class="set-desc" id="usernameRule" aria-live="polite">You can change your username once every 14 days.</div>
+                <div class="set-inline-field">
+                  <span class="set-at" aria-hidden="true">@</span>
+                  <input class="field-input" id="setUsername" placeholder="your_username" maxlength="20" aria-describedby="usernameRule usernameHint"
+                         autocomplete="off" spellcheck="false" autocapitalize="none" data-mask="username" oninput="checkUsernameLive(); _editInput('username')" translate="no">
+                  <span class="set-hint" id="usernameHint" aria-live="polite"></span>
+                </div>
+                <div class="set-edit" id="edit-username" hidden>
+                  <button type="button" class="set-btn" onclick="_editCancel('username')">Cancel</button>
+                  <button type="button" class="set-btn is-primary" id="usernameSave" onclick="saveUsername()">Save</button>
+                </div>
+              </div>
+            </div>
+            <div class="set-row" id="setEmailCard">
+              <span class="set-ic" data-ic="inbox"></span>
+              <div class="set-txt"><div class="set-name">Email</div><div class="set-desc">Changing your email is coming later.</div></div>
+              <div class="set-ctl"><span class="set-val" id="setEmail" translate="no">—</span></div>
+            </div>
+          </div>
+
+          <h2 class="set-sub set-sub-danger" id="dangerH">Danger zone</h2>
+          <div class="set-card set-danger" id="setDelete" role="group" aria-labelledby="dangerH">
+            <div class="set-row">
+              <span class="set-ic is-danger" data-ic="trash"></span>
+              <div class="set-txt"><div class="set-name">Delete account</div>
+                <div class="set-desc">Deletes your library, ratings, notes, lists, comments, friends and profile for good. Want a copy first? <a href="export.html">Export your library</a>.</div></div>
+              <div class="set-ctl"><button type="button" class="set-btn is-danger" onclick="openDeleteAccount()">Delete account…</button></div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- ══ Data ══ -->
+      <div class="set-page" id="page-data" data-sections="data" hidden>
+        <header class="set-head">
+          <a class="set-back" href="#" data-back aria-label="Back to Settings"><span data-ic="chevleft"></span></a>
+          <div><h1 class="set-title" id="pgT-data" tabindex="-1">Data</h1><p class="set-lede">Bring your history in, take it with you, and the pictures you’ve uploaded.</p></div>
+        </header>
+        <section class="set-pane" id="pane-data" aria-labelledby="pgT-data">
+          <div class="set-card">
+            <a class="set-row is-door" id="setExport" href="export.html">
+              <span class="set-ic" data-ic="share"></span>
+              <div class="set-txt"><div class="set-name">Export and backup</div><div class="set-desc">A PDF, an image, a spreadsheet, a Letterboxd file or a full backup.</div></div>
+              <div class="set-ctl"><span class="set-val">Open</span><span class="set-go" data-ic="chevright"></span></div>
+            </a>
+            <a class="set-row is-door" id="setUploads" href="#data/uploads">
+              <span class="set-ic" data-ic="image"></span>
+              <div class="set-txt"><div class="set-name">My uploads</div><div class="set-desc">Every picture you’ve uploaded yourself, to keep or remove.</div></div>
+              <div class="set-ctl"><span class="set-val" id="uploadsVal"></span><span class="set-go" data-ic="chevright"></span></div>
+            </a>
+          </div>
+          <h2 class="set-sub" id="importH">Import</h2>
+          <div class="set-card set-card-pad" id="setImport" role="group" aria-labelledby="importH"><div id="importBox"></div></div>
+        </section>
+      </div>
+
+      <!-- ══ Privacy & Security (one page; the nav keeps both links) ══ -->
+      <div class="set-page" id="page-safety" data-sections="privacy security" hidden>
+        <header class="set-head">
+          <a class="set-back" href="#" data-back aria-label="Back to Settings"><span data-ic="chevleft"></span></a>
+          <div><h1 class="set-title" id="pgT-safety" tabindex="-1" data-title="Privacy &amp; Security">Privacy &amp; Security</h1><p class="set-lede">Who sees what, and how your account stays yours.</p></div>
+        </header>
+        <section class="set-pane" id="pane-privacy" aria-labelledby="paneT-privacy">
+          <h2 class="set-sub" id="paneT-privacy">Privacy</h2>
+          <div class="set-card">
+            <div class="set-row" id="setPrivate">
+              <span class="set-ic" data-ic="lock"></span>
+              <div class="set-txt"><div class="set-name" id="privLabel">Private account</div>
+                <div class="set-desc" id="privDesc">Only people you approve can follow you and see your library, lists and notes. Friends stay friends.</div></div>
+              <div class="set-ctl"><button type="button" class="push-switch" id="privSwitch" role="switch" aria-checked="false" aria-labelledby="privLabel" aria-describedby="privDesc" onclick="togglePrivateAccount()"><span aria-hidden="true"></span></button></div>
+            </div>
+            <div class="set-row set-row-wrap" id="setConnections">
+              <span class="set-ic" data-ic="users"></span>
+              <div class="set-txt"><div class="set-name" id="connL">Followers &amp; following</div><div class="set-desc" id="connDesc">Who can open your followers, following and friends lists. Your counts still show.</div></div>
+              <div class="set-ctl">
+                <div class="pn-toggle set-seg conn-toggle" role="radiogroup" aria-labelledby="connL" aria-describedby="connDesc">
+                  <button type="button" class="pn-toggle-btn" role="radio" aria-checked="true" data-cv="everyone" onclick="setConnections('everyone')">Everyone</button>
+                  <button type="button" class="pn-toggle-btn" role="radio" aria-checked="false" data-cv="friends" onclick="setConnections('friends')">Friends</button>
+                  <button type="button" class="pn-toggle-btn" role="radio" aria-checked="false" data-cv="nobody" onclick="setConnections('nobody')">Only me</button>
+                </div>
+              </div>
+            </div>
+            <div class="set-row" id="setOnline" hidden>
+              <span class="set-ic" data-ic="eye"></span>
+              <div class="set-txt"><div class="set-name" id="msgOnlineL">Online status</div><div class="set-desc" id="msgOnlineS">Friends see that you’re online while you have their chat open.</div></div>
+              <div class="set-ctl"><button type="button" class="push-switch" id="msgOnlineSw" role="switch" aria-checked="true" aria-labelledby="msgOnlineL" aria-describedby="msgOnlineS" onclick="_msgOnlineTap(this)"><span aria-hidden="true"></span></button></div>
+            </div>
+            <a class="set-row is-door" id="setBlocked" href="#privacy/blocked">
+              <span class="set-ic" data-ic="x"></span>
+              <div class="set-txt"><div class="set-name">Blocked people</div><div class="set-desc">They can’t find you, follow you or message you.</div></div>
+              <div class="set-ctl"><span class="set-val" id="blockVal"></span><span class="set-go" data-ic="chevright"></span></div>
+            </a>
+          </div>
+        </section>
+        <section class="set-pane" id="pane-security" aria-labelledby="paneT-security">
+          <h2 class="set-sub" id="paneT-security">Security</h2>
+          <div class="set-card">
+            <div class="set-row" id="setPassword">
+              <span class="set-ic" data-ic="key"></span>
+              <div class="set-txt"><div class="set-name" id="passL">Password</div><div class="set-desc">8–64 characters. You’ll need your current one to change it.</div></div>
+              <div class="set-ctl"><button type="button" class="set-btn" aria-describedby="passL" onclick="openPasswordChange()">Change</button></div>
+            </div>
+            <div class="set-devices" id="setSessions">
+              <a class="set-row is-door set-dev-door" href="#security/devices">
+                <span class="set-ic" data-ic="phone"></span>
+                <div class="set-txt"><div class="set-name">Signed-in devices</div><div class="set-desc sess-count"></div></div>
+                <div class="set-ctl"><span class="set-go" data-ic="chevright"></span></div>
+              </a>
+              <div class="set-row set-dev-head">
+                <span class="set-ic" data-ic="phone"></span>
+                <div class="set-txt"><div class="set-name" id="sessH">Signed-in devices</div><div class="set-desc sess-count"></div></div>
+                <div class="set-ctl"><button type="button" class="set-link is-danger" id="sessOthers" onclick="doSignOutOthers()" hidden>Sign out all others</button></div>
+              </div>
+              <ul class="set-dev-list" id="sessList" aria-labelledby="sessH" aria-live="polite"></ul>
+            </div>
+            <a class="set-row is-door" id="setMessages" href="#security/lock" hidden>
+              <span class="set-ic" data-ic="shield"></span>
+              <div class="set-txt"><div class="set-name">Message lock &amp; recovery</div><div class="set-desc">A passcode for Messages, and a recovery code for your chats.</div></div>
+              <div class="set-ctl"><span class="set-val" id="lockVal"></span><span class="set-go" data-ic="chevright"></span></div>
+            </a>
+          </div>
+        </section>
+      </div>
+
+      <!-- ══ Notifications ══ -->
+      <div class="set-page" id="page-notifications" data-sections="notifications" hidden>
+        <header class="set-head">
+          <a class="set-back" href="#" data-back aria-label="Back to Settings"><span data-ic="chevleft"></span></a>
+          <div><h1 class="set-title" id="pgT-notifications" tabindex="-1">Notifications</h1><p class="set-lede">What reaches you, and what your friends hear about.</p></div>
+        </header>
+        <section class="set-pane" id="pane-notifications" aria-labelledby="pgT-notifications"><div id="setNotif"></div></section>
+      </div>
+
+      <!-- ══ Appearance & Preferences (one page; the nav keeps both links) ══ -->
+      <div class="set-page" id="page-look" data-sections="appearance preferences" hidden>
+        <header class="set-head">
+          <a class="set-back" href="#" data-back aria-label="Back to Settings"><span data-ic="chevleft"></span></a>
+          <div><h1 class="set-title" id="pgT-look" tabindex="-1" data-title="Appearance &amp; Preferences">Appearance &amp; Preferences</h1><p class="set-lede">How MSF looks and behaves on your devices.</p></div>
+        </header>
+        <section class="set-pane" id="pane-appearance" aria-labelledby="paneT-appearance">
+          <h2 class="set-sub" id="paneT-appearance">Theme</h2>
+          <div class="set-themes" id="setTheme" role="radiogroup" aria-labelledby="paneT-appearance">
+            <button type="button" role="radio" class="set-theme" data-theme-v="light" onclick="setTheme('light')">
+              <span class="set-theme-pic is-light" aria-hidden="true"><i></i><span><b></b><b></b><b></b></span><i></i></span><span class="set-theme-name">Light</span><span class="set-theme-tick" data-ic="check" aria-hidden="true"></span></button>
+            <button type="button" role="radio" class="set-theme" data-theme-v="dark" onclick="setTheme('dark')">
+              <span class="set-theme-pic is-dark" aria-hidden="true"><i></i><span><b></b><b></b><b></b></span><i></i></span><span class="set-theme-name">Dark</span><span class="set-theme-tick" data-ic="check" aria-hidden="true"></span></button>
+            <button type="button" role="radio" class="set-theme" data-theme-v="system" onclick="setTheme('system')">
+              <span class="set-theme-pic is-system" aria-hidden="true"><span class="is-light"><i></i><span><b></b><b></b></span><i></i></span><span class="is-dark"><i></i><span><b></b><b></b></span><i></i></span></span><span class="set-theme-name">System</span><span class="set-theme-tick" data-ic="check" aria-hidden="true"></span></button>
+          </div>
+        </section>
+        <section class="set-pane" id="pane-preferences" aria-labelledby="paneT-preferences">
+          <h2 class="set-sub" id="paneT-preferences">Preferences</h2>
+          <div class="set-card">
+            <div class="set-row set-row-wrap" id="setLang">
+              <span class="set-ic" data-ic="globe"></span>
+              <div class="set-txt"><div class="set-name" id="setLanguageLabel">Language</div><div class="set-desc" id="langHint">MSF and everything from TMDB shows in this language; anything not translated stays in English.</div></div>
+              <div class="set-ctl set-ctl-dd"><div id="setLanguagePick"></div></div>
+              <div class="lang-req" id="langReq" hidden>
+                <p class="lang-req-text" id="langReqText"></p>
+                <button type="button" class="set-btn" id="langReqBtn" onclick="requestLanguage()"></button>
+              </div>
+            </div>
+            <div class="set-row set-row-wrap" id="setEpisodes">
+              <span class="set-ic" data-ic="tv"></span>
+              <div class="set-txt"><div class="set-name" id="epModeL">Episode ratings</div><div class="set-desc" id="epModeHint">When you mark an episode watched with “+”.</div></div>
+              <div class="set-ctl">
+                <div class="pn-toggle set-seg ep-mode-toggle" role="radiogroup" aria-labelledby="epModeL" aria-describedby="epModeHint">
+                  <button type="button" class="pn-toggle-btn" role="radio" aria-checked="false" data-mode="always" onclick="setEpisodeMode('always')">Always</button>
+                  <button type="button" class="pn-toggle-btn" role="radio" aria-checked="true" data-mode="ask" onclick="setEpisodeMode('ask')">Ask<span class="set-hide-s">&nbsp;per show</span></button>
+                  <button type="button" class="pn-toggle-btn" role="radio" aria-checked="false" data-mode="off" onclick="setEpisodeMode('off')">Never</button>
+                </div>
+              </div>
+            </div>
+            <div class="set-row set-row-wrap" id="setWeekStart">
+              <span class="set-ic" data-ic="calendar"></span>
+              <div class="set-txt"><div class="set-name" id="wkStartL">Week starts on</div><div class="set-desc" id="wkStartHint">Diary and stats.</div></div>
+              <div class="set-ctl">
+                <div class="pn-toggle set-seg wk-start-toggle" role="radiogroup" aria-labelledby="wkStartL" aria-describedby="wkStartHint">
+                  <button type="button" class="pn-toggle-btn" role="radio" aria-checked="true" data-ws="" onclick="setWeekStart('')">Auto</button>
+                  <button type="button" class="pn-toggle-btn" role="radio" aria-checked="false" data-ws="7" onclick="setWeekStart(7)" aria-label="Sunday">Sun</button>
+                  <button type="button" class="pn-toggle-btn" role="radio" aria-checked="false" data-ws="1" onclick="setWeekStart(1)" aria-label="Monday">Mon</button>
+                  <button type="button" class="pn-toggle-btn" role="radio" aria-checked="false" data-ws="6" onclick="setWeekStart(6)" aria-label="Saturday">Sat</button>
+                </div>
+              </div>
+            </div>
+            <div class="set-row set-row-wrap" id="setRegion">
+              <span class="set-ic" data-ic="compass"></span>
+              <div class="set-txt"><div class="set-name" id="regionL">Region</div><div class="set-desc" id="regionHint">Where to watch and release dates. Just for this device.</div></div>
+              <div class="set-ctl set-ctl-dd"><div id="setRegionPick"></div></div>
+            </div>
+            <div class="set-row" id="setScreensaver">
+              <span class="set-ic" data-ic="image"></span>
+              <div class="set-txt"><div class="set-name" id="ssLabel">Screensaver</div><div class="set-desc" id="ssDesc">The logo bounces around after a few idle minutes (1 on a phone). Just for this device.</div></div>
+              <div class="set-ctl">
+                <button type="button" class="set-link" onclick="previewScreensaver()" aria-describedby="ssLabel">Preview</button>
+                <button type="button" class="push-switch" id="ssSwitch" role="switch" aria-checked="true" aria-labelledby="ssLabel" aria-describedby="ssDesc" onclick="toggleScreensaverSetting()"><span aria-hidden="true"></span></button>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- ══ Doors: the long lists, each on a page of its own ══ -->
+      <div class="set-page set-door-page" id="page-blocked" data-door="privacy/blocked" hidden>
+        <header class="set-head">
+          <a class="set-back" href="#privacy" aria-label="Back to Privacy"><span data-ic="chevleft"></span></a>
+          <div><p class="set-trail"><a href="#privacy">Privacy</a></p><h1 class="set-title" id="pgT-blocked" tabindex="-1">Blocked people</h1><p class="set-lede">You don’t follow each other, and neither of you can follow or message the other. They aren’t told.</p></div>
+        </header>
+        <section class="set-pane" aria-labelledby="pgT-blocked">
+          <ul class="set-card set-list-card" id="blockList" aria-live="polite"></ul>
+          <div id="blockEmpty" hidden></div>
+        </section>
+      </div>
+
+      <div class="set-page set-door-page" id="page-uploads" data-door="data/uploads" hidden>
+        <header class="set-head">
+          <a class="set-back" href="#data" aria-label="Back to Data"><span data-ic="chevleft"></span></a>
+          <div><p class="set-trail"><a href="#data">Data</a></p><h1 class="set-title" id="pgT-uploads" tabindex="-1">My uploads</h1>
+            <p class="set-lede">Every picture you’ve uploaded yourself. <b>Only upload pictures that are yours, or that you have the right to use.</b> If one isn’t, remove it here.</p></div>
+        </header>
+        <section class="set-pane" aria-labelledby="pgT-uploads">
+          <ul class="set-card set-list-card" id="uploadsList" aria-live="polite"></ul>
+          <div id="uploadsEmpty" hidden></div>
+        </section>
+      </div>
+
+      <div class="set-page set-door-page" id="page-lock" data-door="security/lock" hidden>
+        <header class="set-head">
+          <a class="set-back" href="#security" aria-label="Back to Security"><span data-ic="chevleft"></span></a>
+          <div><p class="set-trail"><a href="#security">Security</a></p><h1 class="set-title" id="pgT-lock" tabindex="-1">Message lock &amp; recovery</h1><p class="set-lede">Your messages stay encrypted either way.</p></div>
+        </header>
+        <section class="set-pane" aria-labelledby="pgT-lock">
+          <div class="set-card">
+            <div class="set-row set-row-wrap" id="setLock">
+              <span class="set-ic" data-ic="lock"></span>
+              <div class="set-txt"><div class="set-name">Passcode</div><div class="set-desc">Optional. Asks for 4 to 6 digits before Messages opens, on every device you use.</div></div>
+              <div class="set-ctl" id="msgLockArea"></div>
+            </div>
+            <div class="set-row set-row-wrap" id="msgRecArea" hidden>
+              <span class="set-ic" data-ic="key"></span>
+              <div class="set-txt"><div class="set-name">Recovery code</div><div class="set-desc">Optional. If you forget your password and aren’t signed in anywhere else, this brings your chats back. Only you have it.</div></div>
+              <div class="set-ctl" id="msgRecBtns"></div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <div class="set-page set-door-page" id="page-devices" data-door="security/devices" hidden>
+        <header class="set-head">
+          <a class="set-back" href="#security" aria-label="Back to Security"><span data-ic="chevleft"></span></a>
+          <div><p class="set-trail"><a href="#security">Security</a></p><h1 class="set-title" id="pgT-devices" tabindex="-1">Signed-in devices</h1><p class="set-lede">Don’t recognise one, or lost a device? Sign it out.</p></div>
+        </header>
+        <section class="set-pane" aria-labelledby="pgT-devices" id="devicesHome"></section>
+      </div>
 
     </main>
   </div>
 </div>
 
-<div id="avatarCropOverlay" style="position:fixed;inset:0;z-index:1400;background:rgba(0,0,0,0.75);-webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);display:none;align-items:center;justify-content:center;padding:20px;">
-          <div style="width:100%;max-width:380px;background:var(--bg-2);border:1.5px solid var(--olive-light);border-radius:var(--radius-lg);padding:1.75rem;">
-            <div style="font-family:var(--serif);font-size:20px;font-weight:400;margin-bottom:1.25rem;text-align:center;">Adjust Photo</div>
-            <div id="avatarCropViewport" style="width:240px;height:240px;border-radius:50%;overflow:hidden;margin:0 auto 1.25rem;position:relative;background:var(--bg-3);border:0.5px solid var(--border);cursor:grab;touch-action:none;">
-              <img id="avatarCropImg" style="position:absolute;top:50%;left:50%;max-width:none;-webkit-user-select:none; user-select:none;-webkit-user-drag:none;pointer-events:none;">
-            </div>
-            <div style="display:flex;align-items:center;gap:10px;margin-bottom:1.5rem;">
-              <span style="font-size:12px;color:var(--text-3);">−</span>
-              <input type="range" id="avatarCropZoom" min="1" max="3" step="0.01" value="1" style="flex:1;accent-color:var(--olive-light);" oninput="_avatarCropUpdateZoom(this.value)">
-              <span style="font-size:12px;color:var(--text-3);">+</span>
-            </div>
-            <div id="avatarCropRule"></div>
-            <div style="display:flex;gap:10px;">
-              <button class="fav-edit-btn" style="flex:1;justify-content:center;" onclick="_avatarCropCancel()">Cancel</button>
-              <button class="btn-save" style="flex:1;" onclick="_avatarCropConfirm()">Use Photo</button>
-            </div>
-          </div>
-        </div>
-
-<div class="confirm-overlay" id="delAccOverlay" onclick="if(event.target===this)closeDeleteAccount()">
-  <div class="confirm-card" role="dialog" aria-modal="true" aria-labelledby="delAccTitle" aria-describedby="delAccMsg">
+<div class="confirm-overlay" id="delAccOverlay">
+  <div class="confirm-card is-typed" role="alertdialog" aria-modal="true" aria-labelledby="delAccTitle" aria-describedby="delAccMsg">
     <div class="confirm-title" id="delAccTitle">Delete your account?</div>
     <div class="confirm-msg" id="delAccMsg">Your account and everything in it will be permanently deleted. This can't be undone.</div>
     <div class="field-row">
@@ -698,9 +409,11 @@
 <script src="js/episode-ratings.js"></script>
 <script src="js/notif-settings.js"></script>
 <script src="js/settings-uploads.js"></script>
+<script src="js/avatar-upload.js"></script>
 <script src="js/rate-form.js"></script>
 <script src="js/settings-import.js"></script>
 <script src="js/settings-nav.js"></script>
+<script src="js/qr.js"></script>
 <script>
 let _sUser = null, _sProfile = null;
 let _usernameCheckTimer = null;
@@ -713,99 +426,152 @@ document.addEventListener('DOMContentLoaded', () => {
     populateSettings();
     _paintWeekStart(profile?.week_start || '');
     syncThemeButtons();
-    ['avatarRule', 'avatarCropRule'].forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = mssUploadRuleHTML(); });
+    document.getElementById('avatarRule').innerHTML = mssUploadRuleHTML();
     document.getElementById('privSwitch')?.setAttribute('aria-checked', String(!!profile?.is_private));
+    _paintConnections(profile?.connections_visible || 'everyone');
+    document.getElementById('blockEmpty').innerHTML = mssEmpty({ compact: true, art: 'friends', title: 'Nobody’s blocked', text: 'To block someone, open their profile and choose Block from ⋯.' });
+    document.getElementById('uploadsEmpty').innerHTML = mssEmpty({ compact: true, art: 'search', title: 'No uploads', text: 'Titles use their normal posters until you upload your own.' });
     _sessLoad();
     _blocksLoad();
     _lockPaint();
     _usernamePaint();
+    _bannerPaint();
+    _paintRegion();
     MSSUploads.load(user.id);
     MSSImport.init(user.id);
-    MSSSettingsNav.refresh();
-    MSSNotifSettings.render(document.getElementById('setNotif'));
+    MSSNotifSettings.render(document.getElementById('setNotif'), { tabs: true });
   });
 });
+
+/* ── Who you are: the nav's account card, the preview card, the share link ── */
+function _avatarHTML(p) {
+  const url = safeURL(p?.avatar_url), name = p?.display_name || p?.username || 'You';
+  return url ? `<img src="${url}" alt="">` : escHTML((name[0] || '?').toUpperCase());
+}
+function _whoPaint() {
+  const p = _sProfile || {}, name = p.display_name || p.username || 'You', handle = p.username ? '@' + p.username : '';
+  document.getElementById('setAcctAv').innerHTML = _avatarHTML(p);
+  document.getElementById('setAcctName').textContent = name;
+  document.getElementById('setAcctHandle').textContent = handle;
+  document.getElementById('setAcct').setAttribute('aria-label', `${name}${handle ? ' ' + handle : ''} · View your profile`);
+  document.getElementById('pfName').textContent = name;
+  document.getElementById('pfHandle').textContent = handle;
+}
 
 function _fillDetails() {
   const p = _sProfile;
   document.getElementById('setDisplayName').value = p?.display_name || '';
   document.getElementById('setBio').value         = p?.bio          || '';
   document.getElementById('setQuote').value       = p?.quote        || '';
-  updateCharCount('setBio', 'bioCount', 150);
-  updateCharCount('setQuote', 'quoteCount', 200);
+  _counts();
+}
+const _COUNTS = [['setDisplayName', 'nameCount'], ['setQuote', 'quoteCount'], ['setBio', 'bioCount']];
+function _counts() {
+  _COUNTS.forEach(([f, c]) => {
+    const el = document.getElementById(f), n = el.value.length, max = el.maxLength, out = document.getElementById(c);
+    out.textContent = `${n} / ${max}`;
+    out.classList.toggle('is-near', n >= max * 0.9);
+  });
 }
 
-function populateSettings() {
-  const p = _sProfile, u = _sUser;
-  const un = p?.username || u.email?.split('@')[0] || '';
-
-  document.getElementById('setUsername').value    = p?.username     || '';
-  document.getElementById('setEmail').textContent = u.email || '—';
-  _fillDetails();
-
-  const av = document.getElementById('settingsAvatar');
-  if (safeURL(p?.avatar_url)) {
-    av.innerHTML = `<img src="${safeURL(p.avatar_url)}" alt="">`;
-  } else {
-    av.textContent = (un[0] || '?').toUpperCase();
-  }
-
+function _profileURL() {
+  const un = _sProfile?.username || _sUser.email?.split('@')[0] || '';
   const base = window.location.href.substring(0, window.location.href.lastIndexOf('/') + 1);
-  document.getElementById('shareProfileUrl').value = base + 'profile-view.html?u=' + encodeURIComponent(un);
-  document.getElementById('shareNativeBtn').style.display = navigator.share ? '' : 'none';
+  return base + 'profile-view.html?u=' + encodeURIComponent(un);
+}
+function populateSettings() {
+  document.getElementById('setUsername').value    = _sProfile?.username || '';
+  document.getElementById('setEmail').textContent = _sUser.email || '—';
+  _fillDetails();
+  _whoPaint();
+  _photoPaint();
+  const url = _profileURL();
+  document.getElementById('shareProfileUrl').value = url;
+  try { document.getElementById('shareQr').innerHTML = MSSQR.svg(url); } catch (err) { console.error(err); }
+  document.getElementById('shareNativeBtn').hidden = !navigator.share;
 }
 
 function copyProfileLink() {
   const input = document.getElementById('shareProfileUrl');
-  input.select();
-  navigator.clipboard?.writeText(input.value).then(() => {
-    const btn = document.getElementById('shareCopyBtn');
-    btn.classList.add('copied');
-    showToast('Link copied!');
-    setTimeout(() => btn.classList.remove('copied'), 1500);
-  }).catch(() => {
-    document.execCommand('copy');
-    showToast('Link copied!');
-  });
+  navigator.clipboard?.writeText(input.value).then(() => showToast('Link copied'), () => { input.select(); showToast('Select the link and copy it.', 'err'); });
 }
-
 function shareProfileNative() {
-  const un = _sProfile?.username || _sUser?.email?.split('@')[0] || '';
-  const url = document.getElementById('shareProfileUrl').value;
-  if (navigator.share) {
-    navigator.share({ title: 'MyScreenFolio — @' + un, url }).catch(() => {});
-  } else {
-    copyProfileLink();
-  }
+  const un = _sProfile?.username || '';
+  if (navigator.share) navigator.share({ title: 'MyScreenFolio — @' + un, url: _profileURL() }).catch(() => {});
+  else copyProfileLink();
+}
+// Save QR: a PNG of the code (share sheet on phones, a download on computers)
+function saveProfileQR() {
+  mssSaveImage(MSSQR.canvas(_profileURL()), `myscreenfolio-${_sProfile?.username || 'profile'}-qr.png`);
 }
 
-function updateCharCount(fieldId, countId, max) {
-  const len = document.getElementById(fieldId).value.length;
-  document.getElementById(countId).textContent = `${len}/${max}`;
+/* ── Text fields: Save / Cancel show only once you've typed (details: My Profile · username: Account) ── */
+function _editDirty(g) {
+  const v = id => document.getElementById(id).value, p = _sProfile || {};
+  if (g === 'details') return v('setDisplayName').trim() !== (p.display_name || '') || v('setBio').trim() !== (p.bio || '') || v('setQuote').trim() !== (p.quote || '');
+  if (g === 'username') return !!_sProfile && v('setUsername').trim() !== (p.username || '');
+  return false;
+}
+function _editInput(g) {
+  if (g === 'details') _counts();
+  document.getElementById('edit-' + g).hidden = !_editDirty(g);
+}
+function _editCancel(g) {
+  if (g === 'details') _fillDetails();
+  if (g === 'username') { document.getElementById('setUsername').value = _sProfile?.username || ''; checkUsernameLive(); }
+  _editInput(g);
+}
+// a page with unsaved text (settings-nav.js asks before you leave it)
+function settingsDirty(page) {
+  if (page === 'profile') return _editDirty('details');
+  if (page === 'account') return _editDirty('username');
+  if (page === 'data') return MSSImport.dirty();
+  return false;
+}
+function settingsReset(page) {
+  if (page === 'profile') _editCancel('details');
+  if (page === 'account') _editCancel('username');
+  if (page === 'data') MSSImport.reset();
+}
+// what a door or a list says it holds now
+function settingsValues() {
+  const n = document.querySelectorAll('#blockList .sess-row').length;
+  document.getElementById('blockVal').textContent = n === 1 ? '1 person' : n ? `${n} people` : 'None';
+  document.getElementById('uploadsVal').textContent = MSSUploads.value();
+  const d = document.querySelectorAll('#sessList .set-dev').length;
+  document.querySelectorAll('.sess-count').forEach(e => { e.textContent = d === 1 ? '1 device' : d ? `${d} devices` : ''; });
 }
 
 function checkUsernameLive() {
   const hint = document.getElementById('usernameHint');
   const val = document.getElementById('setUsername').value.trim();
   clearTimeout(_usernameCheckTimer);
-  if (!val || val === _sProfile?.username) { hint.textContent = ''; hint.className = 'field-hint'; return; }
-  if (val.length < 3) { hint.textContent = 'Too short'; hint.className = 'field-hint bad'; return; }
-  hint.textContent = 'Checking…'; hint.className = 'field-hint';
+  if (!val || val === _sProfile?.username) { hint.textContent = ''; hint.className = 'set-hint'; return; }
+  if (val.length < 3) { hint.textContent = 'Too short'; hint.className = 'set-hint bad'; return; }
+  hint.textContent = 'Checking…'; hint.className = 'set-hint';
   _usernameCheckTimer = setTimeout(async () => {
     const [available, allowed] = await Promise.all([checkUsernameAvailable(val, _sUser.id), isUsernameAllowed(val)]);
     hint.textContent = !allowed ? 'Not allowed' : available ? 'Available' : 'Taken';
-    hint.className = 'field-hint ' + (available && allowed ? 'ok' : 'bad');
+    hint.className = 'set-hint ' + (available && allowed ? 'ok' : 'bad');
   }, 400);
 }
 
+// The theme pictures follow the choice (setTheme calls this; the footer / account menu switches too)
 function syncThemeButtons() {
   const choice = mssThemeChoice();
-  [['themeBtnLight', 'light'], ['themeBtnDark', 'dark'], ['themeBtnSystem', 'system']].forEach(([id, v]) => {
-    const b = document.getElementById(id); if (!b) return;
-    b.classList.toggle('active', choice === v);
-    b.setAttribute('aria-pressed', choice === v);
+  document.querySelectorAll('.set-theme').forEach(b => {
+    const on = b.dataset.themeV === choice;
+    b.setAttribute('aria-checked', on); b.tabIndex = on ? 0 : -1;
   });
 }
+document.addEventListener('keydown', ev => {
+  const b = ev.target.closest?.('.set-theme');
+  if (!b || !['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(ev.key)) return;
+  ev.preventDefault();
+  const all = [...document.querySelectorAll('.set-theme')], step = ['ArrowRight', 'ArrowDown'].includes(ev.key) !== (document.dir === 'rtl') ? 1 : -1;
+  const next = all[(all.indexOf(b) + step + all.length) % all.length];
+  setTheme(next.dataset.themeV); next.focus();
+});
 
 async function saveProfileDetails() {
   try {
@@ -814,18 +580,20 @@ async function saveProfileDetails() {
       bio:          document.getElementById('setBio').value.trim(),
       quote:        document.getElementById('setQuote').value.trim(),
     });
+    window._navUserProfile = _sProfile;
     // The word filter may have starred something out — show what was saved
-    if (_sProfile) _fillDetails();
-    showToast('Profile saved!');
+    if (_sProfile) { _fillDetails(); _whoPaint(); _photoPaint(); }
+    _editInput('details');
+    showToast('Saved');
   } catch(e) {
-    showToast('Error saving your profile.', 'err');
+    showToast('Couldn’t save your profile — try again.', 'err');
     console.error(e);
   }
 }
 
 async function saveUsername() {
   const username = document.getElementById('setUsername').value.trim();
-  if (username === _sProfile?.username) { showToast('That’s already your username.'); return; }
+  if (username === _sProfile?.username) { _editInput('username'); return; }
   if (!username || username.length < 3) {
     showToast('Username must be at least 3 characters.', 'err'); return;
   }
@@ -843,10 +611,10 @@ async function saveUsername() {
   try {
     _sProfile = await updateProfile(_sUser.id, { username });
     window._navUserProfile = _sProfile;
-    document.querySelectorAll('#navUserName').forEach(n => { n.textContent = _sProfile.username; });
-    document.querySelectorAll('.nav-dd-head small').forEach(n => { n.textContent = '@' + _sProfile.username + ' · View profile'; });
+    if (typeof _shellUserPaint === 'function') _shellUserPaint(_sProfile);   // the header's avatar (nav.js)
     populateSettings();
     checkUsernameLive();
+    _editInput('username');
     await _usernamePaint();
     showToast(`You’re now @${_sProfile.username}.`);
   } catch(e) {
@@ -863,57 +631,25 @@ async function _usernamePaint() {
   const { data } = await sb.rpc('my_username_status').then(r => r, () => ({}));
   const locked = data?.can_change === false, input = document.getElementById('setUsername');
   input.disabled = locked;
-  document.getElementById('usernameSave').hidden = locked;
   document.getElementById('usernameRule').textContent = locked
-    ? `You can change your username again on ${new Date(data.next_change_at).toLocaleDateString(MSSI18n.locale, { day: 'numeric', month: 'long', year: 'numeric' })}.`
+    ? `You can change it again on ${new Date(data.next_change_at).toLocaleDateString(MSSI18n.locale, { day: 'numeric', month: 'long', year: 'numeric' })}.`
     : 'You can change your username once every 14 days.';
 }
 
-// Unsaved edits, screen by screen (settings-nav.js asks before leaving)
-function settingsDirty(item) {
-  const v = id => document.getElementById(id).value, p = _sProfile || {};
-  if (item === 'setDetails') return v('setDisplayName').trim() !== (p.display_name || '') || v('setBio').trim() !== (p.bio || '') || v('setQuote').trim() !== (p.quote || '');
-  if (item === 'setUsernameCard') return !!_sProfile && v('setUsername').trim() !== (p.username || '');
-  if (item === 'setPassword') return !!v('setNewPassword') || !!v('setCurrentPassword');
-  if (item === 'setImport') return MSSImport.dirty();
-  return false;
+/* ── Password: Change opens a small panel (current + new, the sign-up page's strength guide) ── */
+async function openPasswordChange() {
+  await mssLoadScript('js/panel.js');
+  const h = MSSPanel.open({ size: 'S', kind: 'generic', title: 'Change password',
+    body: `<form class="set-pass-form" novalidate>
+        <div><label class="set-label" for="setCurrentPassword">Current password</label><input class="field-input" id="setCurrentPassword" type="password" maxlength="64" autocomplete="current-password"></div>
+        <div><label class="set-label" for="setNewPassword">New password</label><input class="field-input" id="setNewPassword" type="password" maxlength="64" placeholder="8–64 characters" autocomplete="new-password"><div id="setPassGuide" style="margin-top:8px"></div></div>
+        <input type="text" autocomplete="username" value="${escHTML(_sUser?.email || '')}" hidden></form>`,
+    footer: { secondary: [{ label: 'Cancel', only: 'side', onClick: x => x.close() }], primary: { label: 'Update password', onClick: x => changePassword(x) } } });
+  MSSPass.mount('setPassGuide', 'setNewPassword', () => [_sUser?.email?.split('@')[0], _sProfile?.username]);
+  h.body.querySelector('form').addEventListener('submit', ev => { ev.preventDefault(); changePassword(h); });
+  if (!h.isPage) h.body.querySelector('#setCurrentPassword').focus();
 }
-function settingsReset(item) {
-  if (item === 'setDetails') _fillDetails();
-  if (item === 'setUsernameCard') { document.getElementById('setUsername').value = _sProfile?.username || ''; checkUsernameLive(); }
-  if (item === 'setPassword') _passClear();
-  if (item === 'setImport') MSSImport.reset();
-}
-// What a setting is set to now, for the list of settings. '' shows nothing.
-function settingsValue(item) {
-  const onOff = id => document.getElementById(id)?.getAttribute('aria-checked') === 'true' ? 'On' : 'Off';
-  const count = (id, one, many) => { const n = document.querySelectorAll(`#${id} .sess-row`).length; return n === 1 ? one : n ? `${n} ${many}` : ''; };
-  switch (item) {
-    case 'setDetails': return _sProfile?.display_name || '';
-    case 'setUsernameCard': return _sProfile?.username ? '@' + _sProfile.username : '';
-    case 'setEmailCard': return _sUser?.email || '';
-    case 'setUploads': return MSSUploads.value();
-    case 'setPrivate': return onOff('privSwitch');
-    case 'setOnline': return onOff('msgOnlineSw');
-    case 'setBlocked': return document.getElementById('blockEmpty').hidden ? count('blockList', '1 person', 'people') : 'None';
-    case 'setSessions': return count('sessList', '1 device', 'devices');
-    case 'setLang': return MSSLang.list().find(l => l.code === MSSLang.code)?.name || '';
-    case 'setEpisodes': return document.querySelector('.ep-mode-toggle .active')?.textContent.trim() || '';
-    case 'setWeekStart': return document.querySelector('.wk-start-toggle .active')?.textContent.trim() || '';
-    case 'setScreensaver': return onOff('ssSwitch');
-    case 'nsAlertsT': return mssNotifPopupsOn() ? 'On' : 'Off';
-    default: return '';
-  }
-}
-
-// The same 8–64 guide as the sign-up page (MSSPass); your username / email shouldn't be in it
-const _setPassGuide = MSSPass.mount('setPassGuide', 'setNewPassword', () => [window._navUser?.email?.split('@')[0], document.getElementById('setUsername')?.value]);
-function _passClear() {
-  document.getElementById('setCurrentPassword').value = '';
-  document.getElementById('setNewPassword').value = '';
-  _setPassGuide();
-}
-async function changePassword() {
+async function changePassword(h) {
   const current = document.getElementById('setCurrentPassword').value;
   const pw = document.getElementById('setNewPassword').value;
   if (!current) { showToast('Enter your current password.', 'err'); return; }
@@ -924,8 +660,8 @@ async function changePassword() {
     const { error } = await sb.auth.updateUser({ password: pw });
     if (error) throw error;
     await MSSKeys.onPasswordChange(pw).catch(() => {});
-    _passClear();
-    showToast('Password updated!');
+    h.closeNow();
+    showToast('Password updated');
   } catch(e) {
     showToast('Error updating password.', 'err');
     console.error(e);
@@ -936,174 +672,99 @@ async function changePassword() {
     message: 'Anywhere else this account is signed in will need the new password. This device stays signed in.',
     confirmText: 'Sign Them Out', cancelText: 'Not Now', iconName: 'lock', danger: false,
   });
-  if (!out) return;
-  try {
-    const { error } = await sb.auth.signOut({ scope: 'others' });
-    if (error) throw error;
-    _sessLoad();
-    showToast('Your other devices are signed out.');
-  } catch(e) {
-    showToast('Couldn’t sign out your other devices. Try again from Active Sessions.', 'err');
-    console.error(e);
-  }
+  if (out) _signOutOthers();
 }
 
-/* ── Avatar crop/zoom/pan ── */
-let _avatarCropFile = null;
-let _avatarCropNaturalW = 0, _avatarCropNaturalH = 0;
-let _avatarCropMinZoom = 1;
-let _avatarCropZoom = 1;
-let _avatarCropX = 0, _avatarCropY = 0; // pan offset in screen px, relative to viewport center
-let _avatarCropDragging = false;
-let _avatarCropDragStart = { x: 0, y: 0, panX: 0, panY: 0 };
-const _AVATAR_VIEWPORT = 240; // matches #avatarCropViewport width/height
+/* ── Profile photo: the previews, Poster / Circle (profiles.profile_layout.photo — 127), a poster as your photo ── */
+const _photoShapeOf = p => p?.profile_layout?.photo === 'circle' ? 'circle' : 'poster';
+// both previews from your profile (or a picture that's still uploading: preview)
+function _photoPaint(preview) {
+  const p = _sProfile || {}, url = preview || safeURL(p.avatar_url), name = p.display_name || p.username || 'You';
+  const ph = document.getElementById('pfPhoto');
+  ph.innerHTML = url ? `<img src="${url}" alt="">` : escHTML((name[0] || '?').toUpperCase());
+  ph.classList.toggle('is-poster', _photoShapeOf(p) === 'poster');       // exactly as your profile shows it
+  document.querySelectorAll('.mss-choice[data-shape]').forEach(b => b.setAttribute('aria-checked', String(b.dataset.shape === _photoShapeOf(p))));
+  document.getElementById('phRemove').hidden = !safeURL(p.avatar_url);
+  document.getElementById('setAcctAv').innerHTML = _avatarHTML({ ...p, avatar_url: url });
+}
+// New photo: Upload a photo · Choose a poster (the site's ⋯ menu; a page on phones)
+async function _photoMenu(btn) {
+  await mssLoadScript('js/panel.js');
+  MSSPopover.open(btn, { title: 'New photo', label: 'New photo', items: [
+    { label: 'Upload a photo', sub: 'JPG or PNG, up to 5 MB — you frame it first', icon: 'image', onSelect: _avatarUpload },
+    { label: 'Choose a poster', sub: 'Any movie or show’s poster, from TMDB', icon: 'film', onSelect: _avatarPoster },
+  ] });
+}
 
-function _avatarCropStart(event) {
-  MSSImageCheck.preload();          // start loading the picture check while they crop
-  const file = event.target.files[0];
-  if (!file) return;
-  if (file.size > 5 * 1024 * 1024) { showToast('Image must be under 5MB.', 'err'); return; }
-  _avatarCropFile = file;
-
-  const reader = new FileReader();
-  reader.onload = ev => {
-    const img = document.getElementById('avatarCropImg');
-    img.onload = () => {
-      _avatarCropNaturalW = img.naturalWidth;
-      _avatarCropNaturalH = img.naturalHeight;
-      // Minimum zoom is whatever scale makes the image's shorter side
-      // exactly fill the circular viewport, so there's never empty space.
-      _avatarCropMinZoom = _AVATAR_VIEWPORT / Math.min(_avatarCropNaturalW, _avatarCropNaturalH);
-      _avatarCropZoom = _avatarCropMinZoom;
-      _avatarCropX = 0; _avatarCropY = 0;
-      document.getElementById('avatarCropZoom').min = _avatarCropMinZoom;
-      document.getElementById('avatarCropZoom').max = _avatarCropMinZoom * 3;
-      document.getElementById('avatarCropZoom').value = _avatarCropMinZoom;
-      _avatarCropApplyTransform();
-      document.getElementById('avatarCropOverlay').style.display = 'flex';
-      mssLockScroll('avatarCrop');
-    };
-    img.src = ev.target.result;
+/* ── The banner: your profile's backdrop (the one you chose, else your #1 Top Favorite's), picked with the
+   site's backdrop picker — the same as Edit profile ── */
+const _layoutOf = p => (p && p.profile_layout && typeof p.profile_layout === 'object') ? p.profile_layout : {};
+async function _bannerOf(p) {
+  const b = _layoutOf(p).banner;
+  if (b && typeof b.path === 'string' && /^\/[\w.-]{1,120}$/.test(b.path)) return { url: `https://image.tmdb.org/t/p/w1280${b.path}`, pos: b.pos?.desk || null };
+  const first = (Array.isArray(p?.top_picks) ? p.top_picks : [])[0];
+  if (!first) return null;
+  const { data } = await sb.from('entries').select('*').eq('id', first).maybeSingle().then(r => r, () => ({}));
+  const url = data ? await MSSBackdrop.url(data, 'w1280').catch(() => null) : null;
+  return url ? { url, pos: MSSBackdrop.pos(data, 'banner') } : null;
+}
+function _bannerShow(el, b) {
+  el.style.setProperty('--pf-bd', b ? cssURL(b.url) : 'none');
+  el.style.setProperty('--pf-bd-pos', b?.pos ? `${b.pos.x}% ${b.pos.y}%` : 'center');
+}
+async function _bannerPaint() { _bannerShow(document.getElementById('pfBanner'), await _bannerOf(_sProfile)); }
+async function _bannerPick() {
+  const p = _sProfile; if (!p) return;
+  await mssLoadScript('js/backdrop-picker.js');
+  const banner = document.getElementById('pfBanner'), cur = _layoutOf(p).banner || null;
+  const save = async lay => {
+    const before = p.profile_layout;
+    p.profile_layout = lay;
+    try { await updateProfile(_sUser.id, { profile_layout: lay }); if (window._navUserProfile) window._navUserProfile.profile_layout = lay; }
+    catch (err) { p.profile_layout = before; showToast('Couldn’t save — try again.', 'err'); throw err; }
+    _bannerPaint();
   };
-  reader.readAsDataURL(file);
-  event.target.value = ''; // allow re-selecting the same file later
+  MSSBackdropPicker.open({ title: 'Profile backdrop', subtitle: 'Settings · any movie or show’s backdrop',
+    current: cur, saveLabel: 'Save backdrop', resetLabel: 'Use default',
+    emptyText: 'Showing your #1 Top Favorite’s backdrop. Search for any title to use one of its backdrops instead.',
+    preview: (box, sel) => {
+      if (!box.firstChild) box.innerHTML = '<div class="set-pf-banner" aria-hidden="true" style="height:clamp(110px, 22vw, 170px);border-radius:var(--radius-sm)"></div>';
+      if (sel) { const b = { url: `https://image.tmdb.org/t/p/w1280${sel.path}`, pos: sel.pos?.desk || null }; _bannerShow(box.firstChild, b); _bannerShow(banner, b); }
+      else _bannerOf({ ...p, profile_layout: { ..._layoutOf(p), banner: undefined } }).then(b => { _bannerShow(box.firstChild, b); _bannerShow(banner, b); });
+    },
+    framing: null,
+    onSave: async sel => {
+      const lay = { ..._layoutOf(p) };
+      lay.banner = { type: sel.type, id: Number(sel.id), path: sel.path, title: sel.title || '', ...(cur?.path === sel.path && cur.pos ? { pos: cur.pos } : {}) };
+      await save(lay);
+      showToast('Backdrop saved');
+    },
+    onReset: async () => { const lay = { ..._layoutOf(p) }; delete lay.banner; await save(lay); showToast('Back to your #1 favourite’s backdrop'); },
+    onClose: () => _bannerPaint(),
+  });
 }
-
-function _avatarCropApplyTransform() {
-  const img = document.getElementById('avatarCropImg');
-  const w = _avatarCropNaturalW * _avatarCropZoom;
-  const h = _avatarCropNaturalH * _avatarCropZoom;
-  img.style.width = w + 'px';
-  img.style.height = h + 'px';
-
-  // Clamp panning so the image always fully covers the circular viewport
-  const maxX = Math.max(0, (w - _AVATAR_VIEWPORT) / 2);
-  const maxY = Math.max(0, (h - _AVATAR_VIEWPORT) / 2);
-  _avatarCropX = Math.min(maxX, Math.max(-maxX, _avatarCropX));
-  _avatarCropY = Math.min(maxY, Math.max(-maxY, _avatarCropY));
-
-  img.style.transform = `translate(-50%, -50%) translate(${_avatarCropX}px, ${_avatarCropY}px)`;
+// Poster or Circle: saved at once (merged into your profile layout, like the Edit profile switch)
+async function _photoShape(shape) {
+  const p = _sProfile; if (!p || _photoShapeOf(p) === shape) return;
+  const lay = { ...(p.profile_layout || {}) };
+  if (shape === 'circle') lay.photo = 'circle'; else delete lay.photo;
+  const before = p.profile_layout;
+  p.profile_layout = lay; _photoPaint();
+  try { await updateProfile(_sUser.id, { profile_layout: lay }); if (window._navUserProfile) window._navUserProfile.profile_layout = lay; showToast(shape === 'circle' ? 'Your photo shows as a circle' : 'Your photo shows as a poster'); }
+  catch (err) { console.error(err); p.profile_layout = before; _photoPaint(); showToast('Couldn’t save that — try again.', 'err'); }
 }
-
-function _avatarCropUpdateZoom(val) {
-  _avatarCropZoom = Number(val);
-  _avatarCropApplyTransform();
+// Upload a photo (avatar-upload.js: frame it, check it, save it)
+function _avatarUpload() {
+  MSSAvatarUpload.pick({ onPreview: url => _photoPaint(url), onSaved: url => { if (_sProfile) _sProfile.avatar_url = url; _photoPaint(); MSSUploads.draw(); } });
 }
-
-document.addEventListener('DOMContentLoaded', () => {
-  const vp = document.getElementById('avatarCropViewport');
-  if (!vp) return;
-  const start = (x, y) => {
-    _avatarCropDragging = true;
-    vp.style.cursor = 'grabbing';
-    _avatarCropDragStart = { x, y, panX: _avatarCropX, panY: _avatarCropY };
-  };
-  const move = (x, y) => {
-    if (!_avatarCropDragging) return;
-    _avatarCropX = _avatarCropDragStart.panX + (x - _avatarCropDragStart.x);
-    _avatarCropY = _avatarCropDragStart.panY + (y - _avatarCropDragStart.y);
-    _avatarCropApplyTransform();
-  };
-  const end = () => { _avatarCropDragging = false; vp.style.cursor = 'grab'; };
-
-  vp.addEventListener('pointerdown', e => { vp.setPointerCapture(e.pointerId); start(e.clientX, e.clientY); });
-  vp.addEventListener('pointermove', e => move(e.clientX, e.clientY));
-  vp.addEventListener('pointerup', end);
-  vp.addEventListener('pointercancel', end);
-
-  // Pinch-to-zoom and scroll-wheel zoom
-  let pinchStartDist = null, pinchStartZoom = 1;
-  vp.addEventListener('wheel', e => {
-    e.preventDefault();
-    const slider = document.getElementById('avatarCropZoom');
-    const delta = -e.deltaY * 0.0015;
-    const newZoom = Math.min(Number(slider.max), Math.max(Number(slider.min), _avatarCropZoom + delta));
-    slider.value = newZoom;
-    _avatarCropUpdateZoom(newZoom);
-  }, { passive: false });
-});
-
-function _avatarCropCancel() {
-  document.getElementById('avatarCropOverlay').style.display = 'none';
-  mssUnlockScroll('avatarCrop');
-  _avatarCropFile = null;
-}
-
-async function _avatarCropConfirm() {
-  const img = document.getElementById('avatarCropImg');
-  // Map the visible circular viewport back to source-image pixel
-  // coordinates, then draw that exact region into a fixed-size output
-  // canvas — this is what actually "bakes in" the pan + zoom.
-  const srcCenterX = (_avatarCropNaturalW / 2) - (_avatarCropX / _avatarCropZoom);
-  const srcCenterY = (_avatarCropNaturalH / 2) - (_avatarCropY / _avatarCropZoom);
-  const srcSize = _AVATAR_VIEWPORT / _avatarCropZoom;
-
-  const canvas = document.createElement('canvas');
-  canvas.width = MSS_AVATAR.px;
-  canvas.height = MSS_AVATAR.px;
-  const ctx = canvas.getContext('2d');
-  ctx.drawImage(
-    img,
-    srcCenterX - srcSize / 2, srcCenterY - srcSize / 2, srcSize, srcSize,
-    0, 0, MSS_AVATAR.px, MSS_AVATAR.px
-  );
-
-  canvas.toBlob(async (blob) => {
-    if (!blob) { showToast('Failed to process image.', 'err'); return; }
-    document.getElementById('avatarCropOverlay').style.display = 'none';
-    mssUnlockScroll('avatarCrop');
-
-    showToast('Checking photo…');
-    const verdict = await MSSImageCheck.allowed(blob, 'profile photo');
-    if (!verdict) return;
-    const previewUrl = URL.createObjectURL(blob);
-    document.getElementById('settingsAvatar').innerHTML = `<img src="${previewUrl}" alt="">`;
-    showToast('Uploading photo…');
-
-    try {
-      const path = `${_sUser.id}/avatar.jpg`;
-      const { error: upErr } = await sb.storage.from('avatars').upload(path, blob, { upsert: true, contentType: 'image/jpeg' });
-      if (upErr) throw upErr;
-      const { data: { publicUrl } } = sb.storage.from('avatars').getPublicUrl(path);
-      const bustedUrl = publicUrl + '?t=' + Date.now();
-      await updateProfile(_sUser.id, { avatar_url: bustedUrl });
-      mssAvatarTidy(_sUser.id, bustedUrl).catch(() => {});   // old avatar.png / .jpeg files go
-      MSSImageCheck.review(verdict, 'avatar', bustedUrl);
-      if (_sProfile) _sProfile.avatar_url = bustedUrl;
-      MSSUploads.draw();
-      ['navUserInitial','navUserInitialMobile'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) {
-          el.innerHTML = `<img src="${bustedUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
-          el.style.padding = '0';
-        }
-      });
-      showToast('Photo updated!');
-    } catch(e) {
-      showToast('Upload failed — check Supabase Storage is set up.', 'err');
-      console.error(e);
-    }
-  }, 'image/jpeg', MSS_AVATAR.q);
+// A title's poster as your photo (backdrop-picker.js, poster mode)
+async function _avatarPoster() {
+  await mssLoadScript('js/backdrop-picker.js');
+  MSSBackdropPicker.photo({ onSaved: url => {
+    if (_sProfile) _sProfile.avatar_url = url;
+    _photoPaint();
+    MSSUploads.draw();
+  } });
 }
 
 /* ── Messages passcode (100): a lock screen, optional ── */
@@ -1115,32 +776,29 @@ async function _lockPaint() {
   let st;
   try { st = await MSSLock.status(); }
   catch { card.hidden = true; MSSSettingsNav.refresh(true); return; }
+  document.getElementById('lockVal').textContent = st.on ? 'On' : 'Off';
   sb.rpc('msg_my_key').then(({ data }) => { _recPaint(data); document.getElementById('setOnline').hidden = !data; MSSSettingsNav.refresh(true); if (data) document.getElementById('msgOnlineSw').setAttribute('aria-checked', data.show_online !== false); }, () => {});
   document.getElementById('msgLockArea').innerHTML = st.on
-    ? `<div class="sess-list-btns"><button type="button" class="set-btn" onclick="_lockDialog('change')">Change Passcode</button><button type="button" class="set-btn" onclick="_lockDialog('remove')">Remove Passcode</button></div>`
-    : `<button type="button" class="set-btn" onclick="_lockDialog('set')">Set a Passcode</button>`;
+    ? `<button type="button" class="set-btn" onclick="_lockDialog('change')">Change</button><button type="button" class="set-btn is-danger" onclick="_lockDialog('remove')">Remove</button>`
+    : `<button type="button" class="set-btn" onclick="_lockDialog('set')">Set a passcode</button>`;
 }
 async function _msgOnlineTap(btn) {
   const on = btn.getAttribute('aria-checked') !== 'true';
   btn.setAttribute('aria-checked', on);
   const { error } = await sb.rpc('msg_set_show_online', { p_on: on });
-  if (error) { btn.setAttribute('aria-checked', !on); showToast('Couldn’t save that — try again.', 'err'); }
+  if (error) { btn.setAttribute('aria-checked', !on); showToast('Couldn’t save that — try again.', 'err'); return; }
+  showToast('Saved');
 }
 // Set, change or remove, in the site's small popup: one keypad that asks one thing at a time
-function _lockDialog(mode) {
-  const el = document.createElement('div');
-  el.className = 'confirm-overlay';
+// Passcode: a side panel S (full page on phones) with the keypad, one question at a time
+async function _lockDialog(mode) {
   const title = { set: 'Set a passcode', change: 'Change your passcode', remove: 'Remove your passcode' }[mode];
-  el.innerHTML = `<div class="confirm-card mss-rename lock-form" role="dialog" aria-modal="true" aria-labelledby="lockT">
-      <div class="confirm-title" id="lockT">${title}</div>
-      <div id="lockPad"></div>
-      ${mode !== 'set' ? `<button type="button" class="adm-link lock-forgot" onclick="_lockForgot()">Forgot your passcode?</button>` : ''}
-      <div class="confirm-actions"><button type="button" class="confirm-cancel" data-close>Cancel</button></div>
-    </div>`;
-  const done = () => { MSSDialog.close(el); setTimeout(() => el.remove(), 250); };
-  MSSDialog.bind(el, done);
-  document.body.appendChild(el);
-  el.querySelector('[data-close]').onclick = done;
+  await mssLoadScript('js/panel.js');
+  const h = MSSPanel.open({ size: 'S', kind: 'generic', title,
+    body: `<div class="lock-form"><div id="lockPad"></div>
+      ${mode !== 'set' ? `<button type="button" class="adm-link lock-forgot" onclick="_lockForgot()">Forgot your passcode?</button>` : ''}</div>`,
+    footer: { secondary: [{ label: 'Cancel', only: 'side', onClick: x => x.close() }] } });
+  const done = () => h.closeNow(), el = h.body;
   const steps = { set: ['new', 'again'], change: ['cur', 'new', 'again'], remove: ['cur'] }[mode];
   const ASK = { cur: 'Enter your current passcode', new: 'Enter a new passcode (4–6 digits)', again: 'Type the new passcode again' };
   const KEY = { cur: mode === 'remove' ? 'Remove' : 'Next', new: 'Next', again: 'Save' };
@@ -1168,48 +826,40 @@ function _lockDialog(mode) {
         pad.wrong(err?.hint || 'Couldn’t save that — try again.');
       }
     } });
-  MSSDialog.open(el, { focus: pad.focusTarget() });
+  if (!h.isPage) pad.focusTarget()?.focus?.();
   window._lockClose = done;
 }
-// A small popup that asks for one secret. submit() → a message to show, or nothing when it's done.
-function _askSecret({ title, message, label, ok, autocomplete, safe, submit }) {
-  const el = document.createElement('div');
-  el.className = 'confirm-overlay';
-  el.innerHTML = `<form class="confirm-card mss-rename lock-form" role="dialog" aria-modal="true" aria-labelledby="secT" aria-describedby="secM" novalidate>
-      <div class="confirm-title" id="secT">${title}</div>
-      <div class="confirm-msg" id="secM">${message}</div>
-      <label class="lock-field"><span>${label}</span><input class="field-input" id="secIn" type="password" autocomplete="${autocomplete}" aria-label="${label}"></label>
-      <div class="mss-rename-hint bad" id="secH" aria-live="polite"></div>
-      <div class="confirm-actions"><button type="button" class="confirm-cancel" data-close>Cancel</button><button type="submit" class="confirm-ok ${safe ? 'is-safe' : ''}">${ok}</button></div>
-    </form>`;
-  const done = () => { MSSDialog.close(el); setTimeout(() => el.remove(), 250); };
-  MSSDialog.bind(el, done);
-  document.body.appendChild(el);
-  el.querySelector('[data-close]').onclick = done;
-  el.querySelector('form').addEventListener('submit', async ev => {
-    ev.preventDefault();
-    const btn = el.querySelector('.confirm-ok'), hint = el.querySelector('#secH');
-    btn.disabled = true; hint.textContent = '';
-    const bad = await submit(el.querySelector('#secIn').value);
-    btn.disabled = false;
-    if (bad) hint.textContent = bad; else done();
-  });
-  MSSDialog.open(el, { focus: el.querySelector('input') });
+// Asks for one secret (a side panel S, full page on phones). submit() → a message to show, or nothing when it's done.
+async function _askSecret({ title, message, label, ok, autocomplete, safe, submit }) {
+  await mssLoadScript('js/panel.js');
+  let h = null;
+  const go = async () => {
+    const hint = h.body.querySelector('#secH'); hint.textContent = '';
+    const bad = await submit(h.body.querySelector('#secIn').value);
+    if (bad) hint.textContent = bad; else h.closeNow();
+  };
+  h = MSSPanel.open({ size: 'S', kind: 'generic', title,
+    body: `<form class="lock-form" novalidate><p class="lyr-hint" id="secM">${message}</p>
+      <label class="lyr-sec-h" for="secIn">${label}</label><input class="lyr-field" id="secIn" type="password" autocomplete="${autocomplete}">
+      <div class="mss-rename-hint bad" id="secH" aria-live="polite"></div></form>`,
+    footer: { secondary: [{ label: 'Cancel', only: 'side', onClick: x => x.close() }], primary: { label: ok, danger: !safe, onClick: go } } });
+  h.body.querySelector('form').addEventListener('submit', ev => { ev.preventDefault(); h.body.closest('.lyr-card').querySelector('.lyr-foot [data-p]')?.click(); });
+  if (!h.isPage) h.body.querySelector('#secIn').focus();
 }
 function _lockForgot() {
   window._lockClose?.();
-  _askSecret({ title: 'Forgot your passcode?', message: 'Type your account password and we’ll remove the passcode. You can set a new one afterwards.', label: 'Account password', ok: 'Remove Passcode', autocomplete: 'current-password',
+  setTimeout(() => _askSecret({ title: 'Forgot your passcode?', message: 'Type your account password and we’ll remove the passcode. You can set a new one afterwards.', label: 'Account password', ok: 'Remove Passcode', autocomplete: 'current-password',
     submit: async pw => {
       if (!(await MSSLock.resetWithPassword(pw).catch(() => false))) return 'That password isn’t right.';
       showToast('Passcode removed'); _lockPaint();
-    } });
+    } }), 260);
 }
 
 /* ── Messages recovery code (102) ── */
 function _recPaint(key) {
   document.getElementById('msgRecArea').hidden = !key;
   if (!key) return;
-  document.getElementById('msgRecBtns').innerHTML = `<button type="button" class="set-btn" onclick="_recCreate(${!!key.recovery_wrapped})">${key.recovery_wrapped ? 'Replace Recovery Code' : 'Create a Recovery Code'}</button>`;
+  document.getElementById('msgRecBtns').innerHTML = `<button type="button" class="set-btn" onclick="_recCreate(${!!key.recovery_wrapped})">${key.recovery_wrapped ? 'Replace code' : 'Create a code'}</button>`;
 }
 function _recCreate(replacing) {
   _askSecret({ title: replacing ? 'Replace your recovery code' : 'Create a recovery code', message: `${replacing ? 'Your old code will stop working. ' : ''}Type your account password to continue.`, label: 'Account password', ok: 'Continue', autocomplete: 'current-password', safe: true,
@@ -1225,21 +875,13 @@ function _recCreate(replacing) {
       }
     } });
 }
-function _recShow(code) {
-  const el = document.createElement('div');
-  el.className = 'confirm-overlay';
-  el.innerHTML = `<div class="confirm-card mss-rename lock-form" role="dialog" aria-modal="true" aria-labelledby="recT" aria-describedby="recM">
-      <div class="confirm-title" id="recT">Save your recovery code</div>
-      <div class="confirm-msg" id="recM">Keep it somewhere safe, like a password manager. You won’t see it again, and nobody at MyScreenFolio can get it back for you.</div>
-      <code class="msg-rec-code" translate="no">${escHTML(code)}</code>
-      <div class="confirm-actions"><button type="button" class="confirm-cancel" data-copy>Copy</button><button type="button" class="confirm-ok is-safe" data-close>I’ve Saved It</button></div>
-    </div>`;
-  const done = () => { MSSDialog.close(el); setTimeout(() => el.remove(), 250); };
-  MSSDialog.bind(el, done);
-  document.body.appendChild(el);
-  el.querySelector('[data-close]').onclick = done;
-  el.querySelector('[data-copy]').onclick = () => navigator.clipboard.writeText(code).then(() => showToast('Copied'), () => showToast('Couldn’t copy — select the code instead.', 'err'));
-  MSSDialog.open(el, { focus: el.querySelector('[data-close]') });
+async function _recShow(code) {
+  await mssLoadScript('js/panel.js');
+  MSSPanel.open({ size: 'S', kind: 'generic', title: 'Save your recovery code',
+    body: `<p class="lyr-hint" id="recM">Keep it somewhere safe, like a password manager. You won’t see it again, and nobody at MyScreenFolio can get it back for you.</p>
+      <code class="msg-rec-code" translate="no">${escHTML(code)}</code>`,
+    footer: { secondary: [{ label: 'Copy', onClick: () => navigator.clipboard.writeText(code).then(() => showToast('Copied'), () => showToast('Couldn’t copy — select the code instead.', 'err')) }],
+      primary: { label: 'I’ve Saved It', onClick: x => x.closeNow() } } });
 }
 
 /* ── Blocked People (098) ── */
@@ -1247,7 +889,7 @@ async function _blocksLoad() {
   const box = document.getElementById('blockList'), empty = document.getElementById('blockEmpty');
   let rows = [];
   try { rows = await getMyBlocks() || []; }
-  catch { box.innerHTML = '<li class="sess-note">Couldn’t load this list — try again in a moment.</li>'; return; }
+  catch { box.innerHTML = '<li class="sess-note">Couldn’t load this list — try again in a moment.</li>'; document.getElementById('blockVal').textContent = ''; return; }
   empty.hidden = rows.length > 0;
   box.innerHTML = rows.map(p => `<li class="sess-row">
       <span class="sess-info"><span class="sess-name" translate="no">${escHTML(p.display_name || p.username || 'Someone')}</span><span class="sess-when" translate="no">@${escHTML(p.username || '')}</span></span>
@@ -1261,11 +903,7 @@ async function _blockUndo(btn, id) {
   catch (err) { btn.disabled = false; showToast(err?.hint || 'Couldn’t unblock them — try again.', 'err'); }
 }
 
-/* ── Active Sessions (091): every device this account is signed in on ── */
-const _SESS_ICONS = {
-  phone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg>',
-  computer: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>',
-};
+/* ── Signed-in devices (091): every device this account is signed in on ── */
 // The browser's own description → 'iPhone · Safari' (a best guess: browsers can say anything)
 function _sessDevice(ua) {
   ua = ua || '';
@@ -1273,54 +911,64 @@ function _sessDevice(ua) {
     : /Macintosh|Mac OS X/.test(ua) ? 'Mac' : /Windows/.test(ua) ? 'Windows PC' : /CrOS/.test(ua) ? 'Chromebook' : /Linux/.test(ua) ? 'Linux PC' : '';
   const browser = /Edg(e|A|iOS)?\//.test(ua) ? 'Edge' : /OPR\/|Opera/.test(ua) ? 'Opera' : /SamsungBrowser/.test(ua) ? 'Samsung Internet' : /Firefox\/|FxiOS/.test(ua) ? 'Firefox'
     : /Chrome\/|CriOS/.test(ua) ? 'Chrome' : /Safari\//.test(ua) ? 'Safari' : '';
-  return { name: [device, browser].filter(Boolean).join(' · ') || 'Unknown device', icon: /iPhone|Android/.test(ua) ? 'phone' : 'computer' };
+  return [device, browser].filter(Boolean).join(' · ') || 'Unknown device';
 }
 function _sessDate(d) { return new Date(d).toLocaleDateString(MSSI18n.locale, { day: 'numeric', month: 'short', year: 'numeric' }); }
 async function _sessLoad() {
   const box = document.getElementById('sessList');
-  if (!box) return;
   const { data, error } = await sb.rpc('my_sessions');
-  if (error || !Array.isArray(data)) { box.innerHTML = '<li class="sess-note">Couldn’t load your devices — try again in a moment.</li>'; return; }
+  if (error || !Array.isArray(data)) { box.innerHTML = '<li class="set-dev-note">Couldn’t load your devices — try again in a moment.</li>'; return; }
   window._sessRows = data;
-  box.innerHTML = data.map(s => {
-    const d = _sessDevice(s.user_agent);
-    return `<li class="sess-row">
-      <span class="sess-ic">${_SESS_ICONS[d.icon]}</span>
-      <span class="sess-info"><span class="sess-name" translate="no">${escHTML(d.name)}</span>
-        <span class="sess-when">${s.is_current ? `Signed in ${escHTML(_sessDate(s.created_at))}` : `Last active ${escHTML(_notifTimeAgo(s.last_active))} · Signed in ${escHTML(_sessDate(s.created_at))}`}</span></span>
-      ${s.is_current ? '<span class="sess-here">This device</span>' : `<button type="button" class="sess-out" aria-label="Sign out ${escHTML(d.name)}" onclick="_sessRevoke(this, '${escHTML(s.id)}')">Sign out</button>`}
+  // this device first, then the most recently used
+  const rows = [...data].sort((a, b) => (b.is_current - a.is_current) || (new Date(b.last_active || 0) - new Date(a.last_active || 0)));
+  box.innerHTML = rows.map(s => {
+    const name = _sessDevice(s.user_agent);
+    return `<li class="set-dev">
+      <div class="set-dev-t"><div class="set-dev-name"><span translate="no">${escHTML(name)}</span>${s.is_current ? '<span class="set-dev-tag">This one</span>' : ''}</div>
+        <div class="set-dev-when">${s.is_current ? `This device · signed in ${escHTML(_sessDate(s.created_at))}` : `Last active ${escHTML(_notifTimeAgo(s.last_active))} · signed in ${escHTML(_sessDate(s.created_at))}`}</div></div>
+      ${s.is_current ? '' : `<button type="button" class="set-btn" aria-label="Sign out ${escHTML(name)}" onclick="_sessRevoke(this, '${escHTML(s.id)}')">Sign out</button>`}
     </li>`;
   }).join('');
-  MSSSettingsNav.refresh();
+  document.getElementById('sessOthers').hidden = !data.some(s => !s.is_current);
+  settingsValues();
 }
 async function _sessRevoke(btn, id) {
   const row = (window._sessRows || []).find(s => s.id === id);
   const ok = await showConfirm({
     title: 'Sign out this device?',
-    message: `${_sessDevice(row?.user_agent).name} will be signed out of MyScreenFolio. It’ll need the password to get back in.`,
+    message: `${_sessDevice(row?.user_agent)} will be signed out of MyScreenFolio. It’ll need the password to get back in.`,
     confirmText: 'Sign Out',
     iconName: 'logout',
+    danger: false,
   });
   if (!ok) return;
   btn.disabled = true;
   const { error } = await sb.rpc('revoke_my_session', { p_id: id });
   if (error) { btn.disabled = false; showToast('Couldn’t sign it out — try again.', 'err'); return; }
-  showToast('Device signed out.');
+  showToast('Device signed out');
   _sessLoad();
 }
-
-async function doSignOutEverywhere() {
+// Sign out all others: every device but this one (this one has Sign out in the nav)
+async function doSignOutOthers() {
   const ok = await showConfirm({
-    title: 'Sign out everywhere?',
-    message: 'You will be signed out on all devices immediately.',
-    confirmText: 'Sign Out',
+    title: 'Sign out all other devices?',
+    message: 'Everywhere else this account is signed in will need the password again. This device stays signed in.',
+    confirmText: 'Sign Them Out',
     iconName: 'logout',
     danger: false
   });
-  if (!ok) return;
-  await mssForgetKeys(_sUser?.id);
-  await sb.auth.signOut({ scope: 'global' });
-  window.location.href = 'login.html';
+  if (ok) _signOutOthers();
+}
+async function _signOutOthers() {
+  try {
+    const { error } = await sb.auth.signOut({ scope: 'others' });
+    if (error) throw error;
+    _sessLoad();
+    showToast('Your other devices are signed out');
+  } catch(e) {
+    showToast('Couldn’t sign out your other devices — try again.', 'err');
+    console.error(e);
+  }
 }
 
 /* ── Delete account ──
@@ -1333,14 +981,11 @@ function openDeleteAccount() {
   ['delAccUsername', 'delAccPassword'].forEach(id => { document.getElementById(id).value = ''; });
   document.getElementById('delAccError').textContent = '';
   updateDeleteAccountBtn();
-  document.getElementById('delAccOverlay').classList.add('open');
-  mssLockScroll('delAcc');
-  setTimeout(() => document.getElementById('delAccUsername').focus(), 60);
+  const ov = document.getElementById('delAccOverlay');
+  if (!ov._bound) { ov._bound = true; MSSDialog.bind(ov, closeDeleteAccount); ov.addEventListener('click', e => { if (e.target === ov) closeDeleteAccount(); }); }
+  MSSDialog.open(ov, { focus: '#delAccUsername' });
 }
-function closeDeleteAccount() {
-  document.getElementById('delAccOverlay').classList.remove('open');
-  mssUnlockScroll('delAcc');
-}
+function closeDeleteAccount() { MSSDialog.close(document.getElementById('delAccOverlay')); }
 function updateDeleteAccountBtn() {
   const typed = document.getElementById('delAccUsername').value.trim().replace(/^@/, '').toLowerCase();
   const pw = document.getElementById('delAccPassword').value;
@@ -1368,11 +1013,7 @@ async function confirmDeleteAccount() {
     updateDeleteAccountBtn();
   }
 }
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape' && document.getElementById('delAccOverlay')?.classList.contains('open')) closeDeleteAccount();
-});
 
-/* ── In-app notification pop-ups (ON by default) ── */
 /* ── Private account (083) — going public lets everyone who asked in ── */
 async function togglePrivateAccount() {
   const sw = document.getElementById('privSwitch'); if (!sw || !_sUser) return;
@@ -1387,9 +1028,30 @@ async function togglePrivateAccount() {
     sw.setAttribute('aria-checked', String(on));
     if (_sProfile) _sProfile.is_private = on;
     try { localStorage.setItem('mss_data_at', String(Date.now())); } catch {}
-    showToast(on ? 'Your account is private — new followers need your OK.' : 'Your account is public.');
+    showToast(on ? 'Saved — new followers need your OK.' : 'Saved — your account is public.');
   } catch (e) { showToast('Couldn’t change that — try again.', 'err'); }
   sw.disabled = false;
+}
+
+/* ── Who can see your followers, following and friends (130): Everyone · Friends · Only me ── */
+function _paintConnections(v) {
+  document.querySelectorAll('.conn-toggle .pn-toggle-btn').forEach(b => {
+    const on = b.dataset.cv === v;
+    b.classList.toggle('active', on); b.setAttribute('aria-checked', on);
+  });
+}
+async function setConnections(v) {
+  const was = _sProfile?.connections_visible || 'everyone';
+  if (v === was) return;
+  _paintConnections(v);
+  const { error } = await sb.from('profiles').update({ connections_visible: v }).eq('id', _sUser.id);
+  if (error) {
+    _paintConnections(was);
+    showToast(/connections_visible/.test(error.message || '') ? 'This needs the 130 database update — run sql/130_connections_visibility.sql first.' : 'Couldn’t save that — try again.', 'err');
+    return;
+  }
+  if (_sProfile) _sProfile.connections_visible = v;
+  showToast('Saved');
 }
 
 /* ── Screensaver (mssIdle / js/screensaver.js) — on by default, per device ── */
@@ -1401,7 +1063,12 @@ function toggleScreensaverSetting() {
   const on = !mssScreensaverOn();
   mssSetScreensaver(on);
   refreshScreensaverSetting();
-  showToast(on ? 'Screensaver on.' : 'Screensaver off on this device.');
+  showToast(on ? 'Saved — screensaver on.' : 'Saved — screensaver off on this device.');
+}
+// Preview: starts it now (any move or key brings you back)
+async function previewScreensaver() {
+  await mssLoadScript('js/screensaver.js');
+  window.MSSScreensaver?.start();
 }
 document.addEventListener('DOMContentLoaded', refreshScreensaverSetting);
 
@@ -1478,9 +1145,9 @@ document.addEventListener('DOMContentLoaded', _paintLanguage);
 
 /* ── Episode ratings setting (episode-ratings.js) ── */
 const _EP_MODE_HINT = {
-  ask:    'Asks once for each show whether you want to rate its episodes (default).',
-  always: 'Rates every show — the rating popup opens after each “+” without asking first.',
-  off:    'Never asks. You can still rate any episode from a show’s info popup.',
+  ask:    'After “+”, asks once per show whether to rate its episodes.',
+  always: 'After every “+”, the rating opens without asking.',
+  off:    'Never asks after “+”; you can still rate from a show’s page.',
 };
 function _paintEpisodeMode(m) {
   document.querySelectorAll('.ep-mode-toggle .pn-toggle-btn').forEach(b => {
@@ -1491,7 +1158,7 @@ function _paintEpisodeMode(m) {
 }
 async function setEpisodeMode(m) {
   _paintEpisodeMode(m);
-  try { await MSSEp.setMode(m); showToast('Saved.'); }
+  try { await MSSEp.setMode(m); showToast('Saved'); }
   catch (err) { console.error(err); showToast('Couldn’t save that — try again.', 'err'); }
 }
 document.addEventListener('DOMContentLoaded', () => { MSSEp.mode().then(_paintEpisodeMode); });
@@ -1508,7 +1175,7 @@ function _paintWeekStart(v) {
     b.classList.toggle('active', on); b.setAttribute('aria-checked', on);
   });
   const region = new Date(2024, 0, 7 + (_regionWeekStart() % 7), 12).toLocaleDateString(document.documentElement.lang || undefined, { weekday: 'long' });
-  document.getElementById('wkStartHint').textContent = v ? `Weeks start on ${_WS_NAME[v]}.` : `From your region: ${region}.`;
+  document.getElementById('wkStartHint').textContent = `Diary and stats · ${v ? _WS_NAME[v] : `Auto: ${region}, from your region`}.`;
 }
 async function setWeekStart(v) {
   const was = _sProfile?.week_start || '';
@@ -1516,8 +1183,28 @@ async function setWeekStart(v) {
   const { error } = await sb.from('profiles').update({ week_start: v || null }).eq('id', _sUser.id);
   if (error) { _paintWeekStart(was); showToast('Couldn’t save that — try again.', 'err'); return; }
   if (_sProfile) _sProfile.week_start = v || null;
-  MSSSettingsNav.refresh(true);
-  showToast('Saved.');
+  showToast('Saved');
+}
+
+/* ── Region (MSSRegion, this device): Where to Watch and release dates. Auto = your device's guess. ── */
+async function _paintRegion() {
+  const name = c => { try { return new Intl.DisplayNames([MSSI18n.locale.split('-u-')[0], 'en'], { type: 'region' }).of(c) || c; } catch { return c; } };
+  const flag = c => String.fromCodePoint(...[...c].map(ch => 0x1F1A5 + ch.charCodeAt(0)));
+  let picked = '';
+  try { picked = localStorage.getItem(MSSRegion.KEY) || ''; } catch {}
+  let codes = [];
+  try { const r = await tmdbFetch(`${TMDB_BASE}/watch/providers/regions`); if (r.ok) codes = ((await r.json()).results || []).map(x => x.iso_3166_1); } catch {}
+  codes = [...new Set([...codes, ...MSSRegion.guess(), picked].filter(c => /^[A-Z]{2}$/.test(c)))];
+  const auto = (() => { const g = MSSRegion.guess(); return picked && g[0] === picked ? g[1] : g[0]; })();
+  const items = codes.map(c => ({ value: c, label: `${flag(c)}  ${name(c)}`, keys: [c, name(c)] })).sort((a, b) => name(a.value).localeCompare(name(b.value)));
+  MSSPicker.mount(document.getElementById('setRegionPick'), {
+    id: 'setRegionSel', label: 'Region', describedBy: 'regionHint', value: picked, search: 'Search countries…',
+    groups: [{ items: [{ value: '', label: `Auto · ${name(auto)}`, keys: ['auto', 'automatic'] }] }, { label: 'Countries', items }],
+    onChange: c => {
+      try { if (c) localStorage.setItem(MSSRegion.KEY, c); else localStorage.removeItem(MSSRegion.KEY); } catch {}
+      showToast('Saved');
+    },
+  });
 }
 
 </script>

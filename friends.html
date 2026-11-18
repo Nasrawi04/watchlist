@@ -18,41 +18,48 @@
 <script src="js/i18n.js"></script>
 <title>Friends — MyScreenFolio</title>
 <link rel="stylesheet" href="css/fonts.css">
+<link rel="stylesheet" href="css/theme.css">
 <link rel="stylesheet" href="css/style.css">
 <link rel="stylesheet" href="css/social.css">
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#1E5C26">
+  <meta name="theme-color" content="#F3EEDC">
+  <meta name="color-scheme" content="light dark">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="MyScreenFolio">
-  <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
-  <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <link rel="icon" type="image/svg+xml" sizes="any" href="icons/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
 </head>
 <body>
-<div class="page-wrap fr-page">
+<div class="page-wrap fr-page soc-page">
 
-  <div class="cat-page-header fade-up">
+  <div class="soc-bar" id="socStrip" role="navigation" aria-label="Social"></div>
+  <div class="cat-page-header soc-page-head fade-up">
     <div>
+      <div class="soc-kicker">People</div>
       <h1 class="cat-page-title">Friends</h1>
       <div class="cat-page-sub" id="friendsPageSub">&nbsp;</div>
     </div>
     <div class="cat-page-header-right"><a class="btn-add-entry fr-req-btn nav-auth-only" id="frReqBtn" href="friends.html?view=requests" onclick="return _frGoRequests(event)">Requests <span class="fr-tab-dot" id="frReqN" hidden></span></a></div>
   </div>
-  <div class="pn-toggle soc-strip" id="socStrip" role="navigation" aria-label="People"></div>
-  <div class="fr-find soc-find">
-      <div class="fused-search-wrap" id="addFriendWrap">
-        <input class="add-friend-input" id="addFriendInput" placeholder="Search by @username…" aria-label="Search by username"
+  <!-- Search (friends by name, anyone by @username) · Friends / Following / Followers / Requests · Sort -->
+  <div class="frs-bar" id="frBar">
+    <div class="fr-find">
+      <div class="sf-search fr-search" id="addFriendWrap" role="search">
+        <span class="sf-search-ic" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
+        <input class="sf-search-input" id="addFriendInput" placeholder="Search friends or find people by @username" aria-label="Search friends, or find people by username"
                type="search" name="mss-people-search" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" enterkeyhint="search" data-1p-ignore data-lpignore="true" data-form-type="other"
-               oninput="this.value=this.value.replace(/[^a-zA-Z0-9_]/g,'').toLowerCase();_udSearch(this.value);"
-               onkeydown="_udKeydown(event)">
+               oninput="_frFind(this.value)" onkeydown="_udKeydown(event)">
+        <button type="button" class="sf-search-clear" onclick="_frFind('', true)" aria-label="Clear search"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+        <button type="button" class="sf-search-go" onclick="_udEnter()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span>Search</span></button>
       </div>
     </div>
+    <div class="frs-tools"><div id="frPeopleTabs"></div><div class="fr-toolbar" id="frToolbar"></div></div>
+  </div>
 
   <section id="socFriends" aria-label="Friends">
-    <!-- Toolbar: label + count + Sort / Filter -->
-    <div class="fr-toolbar" id="frToolbar"></div>
     <div id="frContent" class="fade-up fade-up-2"><div class="page-loading" data-skel="fr-page"></div></div>
   </section>
 
@@ -63,7 +70,7 @@
 <script src="js/db.js"></script>
 <script src="js/nav.js"></script>
 <script src="js/info-popup.js"></script>
-<script src="js/rating-popup.js"></script>
+<script src="js/title-view.js"></script>
 <script src="js/easter-egg.js"></script>
 <script src="js/note-popup.js"></script>
 <script src="js/episode-ratings.js"></script>
@@ -71,6 +78,7 @@
 <script src="js/sort-filter.js"></script>
 <script src="js/social.js"></script>
 <script src="js/follows.js"></script>
+<script src="js/profile-stats.js"></script>
 <script src="js/social-core.js"></script>
 <script src="js/social-nav.js"></script>
 <script>
@@ -95,9 +103,7 @@ mssSkeleton.define('fr-cards', () => {
 mssSkeleton.define('fr-page', () => {
   if (_frRequests) return mssSkeleton('rows');
   const s = _frSkelCards();
-  return _frSkelKeep(s.yours
-    ? `<div class="fr-toolbar">${_frToolbarHTML('Your Friends', s.n, s.n > 1 ? 'frFriends' : null, 'friends')}</div>${_frPeopleHead()}${s.html}`
-    : _frPeopleHead() + _frSkelCount(s.n) + s.html).replace(/ (id|onclick)="[^"]*"/g, '');
+  return _frSkelKeep((s.yours ? _frSecHead('Friends', '') : _frSkelCount(s.n)) + s.html).replace(/ (id|onclick)="[^"]*"/g, '');
 });
 
 function _frRender() {
@@ -147,18 +153,14 @@ function _frMemberCard(f) {
       <div class="fm-av">${_frAvHTML(p, 64)}</div>
       <div class="fm-name">${escHTML(name || un)}</div>
       <div class="fm-user">@${escHTML(un)}</div>
-      <div class="fm-stats">
-        <div><b>${st.completed || 0}</b><span>Watched</span></div>
-        <div><b>${st.avgScore || '—'}</b><span>Avg Score</span></div>
-        <div><b>${st.queue || 0}</b><span>Watchlist</span></div>
-      </div>
-      ${now ? `<button type="button" class="fm-now" onclick="event.stopPropagation();_frOpenEvent(${attrJSON(now.id)}, 'started')">${_frPosterHTML(now, 'fm-now-poster')}<span><small>Watching now</small>${escHTML(now.title)}</span></button>`
-        : st.latest ? `<button type="button" class="fm-now" onclick="event.stopPropagation();_frOpenEvent(${attrJSON(st.latest.e.id)}, ${attrJSON(st.latest.type)})">${_frPosterHTML(st.latest.e, 'fm-now-poster')}<span><small>Latest · ${escHTML(_FR_ACT[st.latest.type].label)}</small>${escHTML(st.latest.e.title)}</span></button>`
+      ${_frStatsHTML(st)}
+      ${now ? `<button type="button" class="fm-now" onclick="event.stopPropagation();_frOpenEvent(${attrJSON(now.id)}, 'started')">${_frPosterHTML(now, 'fm-now-poster')}<span><small>Watching now</small>${escHTML(now.title)}</span>${icon('chevright', 14)}</button>`
+        : st.latest ? `<button type="button" class="fm-now" onclick="event.stopPropagation();_frOpenEvent(${attrJSON(st.latest.e.id)}, ${attrJSON(st.latest.type)})">${_frPosterHTML(st.latest.e, 'fm-now-poster')}<span><small>Latest · ${escHTML(_FR_ACT[st.latest.type].label)}</small>${escHTML(st.latest.e.title)}</span>${icon('chevright', 14)}</button>`
         : `<div class="fm-now fm-now-idle"><span><small>Latest</small>No activity yet</span></div>`}
       <div class="fm-actions" onclick="event.stopPropagation()">
-        <button class="fm-btn fm-btn-primary" onclick="_frCompareWith(${attrJSON(f.friendId)})">${icon('compare', 13)} Compare</button>
-        <button class="fm-btn" onclick="viewFriend(${attrJSON(f.friendId)}, ${attrJSON(un)})">Profile</button>
-        <button class="fm-icon-btn fm-danger" title="Unfollow" aria-label="Unfollow @${escHTML(un)}" onclick="doUnfriend(${attrJSON(f.friendId)}, ${attrJSON(un)})">${icon('x', 13)}</button>
+        <button type="button" class="fm-btn fm-btn-primary" onclick="_frCompareWith(${attrJSON(f.friendId)})">${icon('compare', 13)} Compare</button>
+        <a class="fm-btn" href="messages.html?with=${encodeURIComponent(f.friendId)}">${icon('inbox', 13)} Message</a>
+        <button type="button" class="fm-icon-btn" aria-label="More for @${escHTML(un)}" aria-haspopup="menu" onclick="_frMore(this, ${attrJSON(f.friendId)}, ${attrJSON(un)})">${icon('moreV', 15)}</button>
       </div>
     </div>
   </article>`;
@@ -188,6 +190,7 @@ function _frGoRequests(e) {
 }
 function _frRenderRequests() {
   document.getElementById('frToolbar').style.display = 'none';
+  _frPaintTabs();
   const row = (kind, p) => MSSFollow.rowHTML(p, kind === 'requests' ? { kind, own: true } : { kind });
   const sec = (cls, ic, title, list, kind, dot) => list.length ? `<section class="fr-req${cls}">
       <div class="fr-req-head"><span class="fr-req-title">${icon(ic, 14)} ${title}</span>${dot ? `<span class="fr-tab-dot">${list.length}</span>` : ''}</div>
@@ -196,8 +199,7 @@ function _frRenderRequests() {
   const html = sec('', 'bell', 'Follow requests', _frIncoming, 'requests', true)
     + sec(' fr-back', 'users', 'Follow back to be friends', _frBack, 'back')
     + sec('', 'send', 'Sent requests', _frOutgoing, 'sent');
-  document.getElementById('frContent').innerHTML = `<button type="button" class="ns-back fr-req-back" onclick="_frSetRequests(false)">${icon('back', 14)} Back to friends</button>`
-    + (html || _frEmptyHTML('users', 'No requests right now', 'When someone asks to follow you, it shows up here.'));
+  document.getElementById('frContent').innerHTML = html || _frEmptyHTML('users', 'No requests right now', 'When someone asks to follow you, it shows up here.');
 }
 
 /* ── Friends · Following · Followers (083) ──
@@ -213,13 +215,22 @@ function _frPeopleHead() {
     return `<div class="fr-people-head"><button type="button" class="ns-back" onclick="_frPeopleBack()">${icon('back', 14)} Back</button>
       <div class="fr-people-title">${whose} <b>${label}</b></div></div>`;
   }
+  return '';
+}
+// Friends · Following · Followers · Requests — four separate sections, one switch (the toolbar row)
+function _frPaintTabs() {
+  const el = document.getElementById('frPeopleTabs');
+  if (!el) return;
+  if (_frFixed) { el.innerHTML = ''; return; }
   const st = _frFollowState || {};
-  const n = k => st[k] != null ? `<span class="fr-people-n">${Number(st[k]).toLocaleString(MSSI18n.locale)}</span>` : '';
-  return `<div class="pn-toggle soc-toggle fr-people-toggle" role="tablist" aria-label="Friends, following and followers">${[['friends', 'Friends'], ['following', 'Following'], ['followers', 'Followers']].map(([k, l]) =>
-    `<button type="button" role="tab" class="pn-toggle-btn${_frPeople === k ? ' active' : ''}" aria-selected="${_frPeople === k}" onclick="_frSetPeople('${k}')">${l}${n(k)}</button>`).join('')}</div>`;
+  const n = v => v != null ? `<span class="fr-people-n">${Number(v).toLocaleString(MSSI18n.locale)}</span>` : '';
+  const tabs = [['friends', 'Friends', st.friends], ['following', 'Following', st.following], ['followers', 'Followers', st.followers], ['requests', 'Requests', _frIncoming.length]];
+  el.innerHTML = `<div class="fr-tabs" role="tablist" aria-label="Friends, following, followers and requests">${tabs.map(([k, l, v]) => {
+    const on = k === 'requests' ? _frRequests : !_frRequests && _frPeople === k;
+    return `<button type="button" role="tab" class="fr-tab${on ? ' active' : ''}${k === 'requests' && v ? ' has-req' : ''}" aria-selected="${on}" onclick="${k === 'requests' ? '_frSetRequests(true)' : `_frSetPeople('${k}')`}">${l}${n(v)}</button>`; }).join('')}</div>`;
 }
 function _frSetPeople(k) {
-  _frPeople = k;
+  _frPeople = k; _frRequests = false;
   const url = new URL(location.href);
   if (k === 'friends') url.searchParams.delete('view'); else url.searchParams.set('view', k);
   history.replaceState(history.state, '', url.pathname + url.search);
@@ -230,18 +241,36 @@ function _frPeopleBack() {
   else location.href = _frOf ? `profile-view.html?id=${encodeURIComponent(_frOf)}&u=${encodeURIComponent(_frOfName)}` : 'profile.html';
 }
 
+const _frSecHead = (label, sub) => `<div class="fr-sec-head"><h2 class="fr-sec-title">${label}</h2>${sub ? `<span class="fr-sec-sub">${sub}</span>` : ''}</div>`;
 function _frRenderFriends() {
+  _frPaintTabs();
   // Your friends — the full cards
   if (_frPeople === 'friends' && !_frOf) {
-    const list = SF.list('frFriends', 'all');
+    const q = _frQuery.trim().replace(/^@/, '').toLowerCase();
+    const list = SF.list('frFriends', 'all').filter(f => !q || [_frName(f.friendId), f.friendProfile?.username].some(t => (t || '').toLowerCase().includes(q)));
     mssSkeleton.shape('fr', { n: Math.min(_frAccepted.length, 8) });
-    _frToolbar(_frFixed ? 'Your Friends' : 'Your Friends', _frAccepted.length, _frAccepted.length > 1 ? 'frFriends' : null, _frAccepted.length === 1 ? 'friend' : 'friends');
-    document.getElementById('frContent').innerHTML = _frPeopleHead() + (_frAccepted.length
-      ? `<div class="fm-grid">${list.map(_frMemberCard).join('')}</div>`
+    const tb = document.getElementById('frToolbar');
+    tb.innerHTML = _frAccepted.length > 1 ? SF.bar('frFriends', 'all') : ''; tb.style.display = '';
+    const active = _frAccepted.filter(f => Date.now() - new Date(_frStats[f.friendId]?.recent || 0) < 30 * 864e5).length;
+    document.getElementById('frContent').innerHTML = (_frAccepted.length
+      ? _frSecHead('Friends', q ? `${list.length} of ${_frAccepted.length}` : active ? `${active} active` : '')
+        + (list.length ? `<div class="fm-grid">${list.map(_frMemberCard).join('')}</div>`
+          : _frEmptyHTML('users', 'No friends match', 'Anyone else with that @username shows up under the search box.'))
       : _frEmptyHTML('users', 'Watching solo for now', 'Everything’s better with someone to argue about the ending with. Find people above and follow them — when they follow you back, you’re friends.'));
     return;
   }
   _frRenderPeople();
+}
+// The search box: narrows your friends by name / @username, and looks up anyone else by @username
+let _frQuery = '';
+function _frFind(v, clear) {
+  _frQuery = v || '';
+  const box = document.getElementById('addFriendWrap'), inp = document.getElementById('addFriendInput');
+  box.classList.toggle('has-q', !!_frQuery);
+  if (inp.value !== _frQuery) inp.value = _frQuery;
+  if (clear) inp.focus();
+  _udSearch(_frQuery);
+  if (!_frRequests && _frPeople === 'friends' && !_frOf && _frLoaded) _frRender();
 }
 
 // Following / Followers (yours), or someone else's Friends / Following / Followers
@@ -255,16 +284,18 @@ async function _frLoadPeople(more) {
     const ids = got.map(p => p.id);
     const [ents, profs] = ids.length ? await Promise.all([
       sb.from('entries').select('*').in('user_id', ids).order('updated_at', { ascending: false }).limit(3000).then(r => r.data || [], () => []),
-      sb.from('profiles').select('id, top_picks').in('id', ids).then(r => r.data || [], () => []),
+      sb.from('profiles').select('id, top_picks, profile_layout').in('id', ids).then(r => r.data || [], () => []),
     ]) : [[], []];
     const tp = Object.fromEntries(profs.map(x => [x.id, x.top_picks]));
+    const extras = await _frStatExtras(profs), profOf = Object.fromEntries(profs.map(x => [x.id, x]));
     got.forEach(p => {
       const mine = ents.filter(e => e.user_id === p.id);
       mine.forEach(e => { window._frEntryMap[e.id] = e; });
-      d.stats[p.id] = { ...computeStats(mine), watchingNow: mine.find(e => e.status === 'watching') || null,
+      d.stats[p.id] = { show: _frStatsOf(profOf[p.id], mine, extras[p.id]), watchingNow: mine.find(e => e.status === 'watching') || null,
         latest: mine[0] || null, posters: _frCoverPosters({ top_picks: tp[p.id] }, mine), locked: p.is_private && p.i_follow !== 'accepted' && p.id !== _fUser.id };
     });
     d.items = more ? d.items.concat(got) : got;
+    d.hidden = got.hidden || null;
     d.more = got.length === 60;
   } catch (e) { console.warn(e); showToast('Couldn’t load these — try again.', 'err'); }
   d.busy = false; d.loaded = true;
@@ -274,6 +305,7 @@ function _frRenderPeople() {
   const d = _frPeopleData[_frPKey()];
   const label = { friends: 'Friends', following: 'Following', followers: 'Followers' }[_frPeople];
   const tb = document.getElementById('frToolbar'); tb.style.display = 'none';
+  _frPaintTabs();
   const c = document.getElementById('frContent');
   if (!d || !d.loaded) {
     c.innerHTML = _frPeopleHead() + `<div class="page-loading" data-skel="fr-cards"></div>`;
@@ -284,6 +316,12 @@ function _frRenderPeople() {
   const empty = { following: own ? ['Not following anyone yet', 'Find people above and follow them — their profiles show up here.'] : ['Not following anyone yet', 'Nobody here yet.'],
     followers: own ? ['No followers yet', 'Share your profile — when people follow you, they show up here.'] : ['No followers yet', 'Nobody here yet.'],
     friends: ['No friends yet', 'When two people follow each other, they’re friends.'] }[_frPeople];
+  if (d.hidden) {   // they keep this list to themselves (Settings › Privacy, 130)
+    const who = _frOfName ? '@' + _frOfName : 'This person';
+    c.innerHTML = _frPeopleHead() + _frEmptyHTML('users', `You can’t view ${who}’s ${label.toLowerCase()}`,
+      d.hidden === 'friends' ? `${who} only shows their followers, following and friends to their friends.` : `${who} keeps their followers, following and friends private.`);
+    return;
+  }
   c.innerHTML = _frPeopleHead()
     + `<div class="fr-people-count"><b>${d.items.length}${d.more ? '+' : ''}</b> ${label.toLowerCase()}</div>`
     + (d.items.length ? `<div class="fm-grid">${d.items.map(p => _frPersonCard(p, d.stats[p.id] || {}, own)).join('')}</div>`
@@ -306,11 +344,7 @@ function _frPersonCard(p, st, own) {
       <div class="fm-name">${escHTML(p.display_name || un)}</div>
       <div class="fm-user">@${escHTML(un)}${p.is_private ? ` ${icon('lock', 11)}` : ''}</div>
       ${st.locked ? `<div class="fm-now fm-now-idle fm-locked"><span>${icon('lock', 13)} Private account</span></div>` : `
-      <div class="fm-stats">
-        <div><b>${st.completed || 0}</b><span>Watched</span></div>
-        <div><b>${st.avgScore || '—'}</b><span>Avg Score</span></div>
-        <div><b>${st.queue || 0}</b><span>Watchlist</span></div>
-      </div>
+      ${_frStatsHTML(st)}
       ${now ? `<button type="button" class="fm-now" onclick="event.stopPropagation();_frOpenEvent(${attrJSON(now.id)}, 'started')">${_frPosterHTML(now, 'fm-now-poster')}<span><small>Watching now</small>${escHTML(now.title)}</span></button>`
         : last ? `<button type="button" class="fm-now" onclick="event.stopPropagation();_frOpenEvent(${attrJSON(last.id)}, 'logged')">${_frPosterHTML(last, 'fm-now-poster')}<span><small>Latest</small>${escHTML(last.title)}</span></button>`
         : `<div class="fm-now fm-now-idle"><span><small>Latest</small>No activity yet</span></div>`}`}
@@ -341,11 +375,26 @@ async function _frPeopleRemove(uid) {
 
 
 
+// Watched · Avg score · Watchlist — one quiet line of numbers (no boxes)
+function _frStatsHTML(st) {
+  const s = st.show; if (!s) return '';
+  return `<dl class="fm-stats">${s.keys.map(k => `<div><dt>${escHTML(MSSProfileStats.label(k))}</dt><dd${k === 'avg' ? ` class="is-score${mssTierCls(parseFloat(s.vals[k]))}"` : ''}>${escHTML(s.vals[k] ?? '—')}</dd></div>`).join('')}</dl>`;
+}
+// ⋯ on a friend's card: their profile, pin, unfollow
+async function _frMore(btn, uid, un) {
+  await mssLoadScript('js/panel.js');
+  const pinned = _fProfile?.pinned_friend_id === uid;
+  MSSPopover.open(btn, { title: '@' + un, label: `More for @${un}`, items: [
+    { label: 'View profile', icon: 'user', onSelect: () => viewFriend(uid, un) },
+    { label: pinned ? 'Unpin' : 'Pin to top', icon: 'pin', onSelect: () => togglePinFriend(uid) },
+    { divider: true },
+    { label: 'Unfollow…', icon: 'x', danger: true, onSelect: () => doUnfriend(uid, un) },
+  ] });
+}
 function _frCompareWith(uid) { location.href = `compare.html?with=${encodeURIComponent(uid)}`; }
 
 /* ── Start ── */
 document.addEventListener('DOMContentLoaded', () => {
-  attachClearButton('addFriendInput');
   const q = new URLSearchParams(location.search);
   // A profile's Followers / Following / Friends count → just that list (no switch)
   const ppl = q.get('people'), view = q.get('view');
@@ -416,7 +465,7 @@ let _udLocked = false;
 function _udLock() { if (!_udLocked) { _udLocked = true; mssLockScroll('udDropdown'); } }
 function _udUnlock() { if (_udLocked) { _udLocked = false; mssUnlockScroll('udDropdown'); } }
 async function _udSearch(val) {
-  const q = val.trim().toLowerCase();
+  const raw = val.trim().replace(/^@/, '').toLowerCase(), q = /^[a-z0-9_]+$/.test(raw) ? raw : '';
   const drop = document.getElementById('udDropdown');
   clearTimeout(_udTimer);
   _udActive = -1;
@@ -469,12 +518,12 @@ function _udClose(clear) {
   document.getElementById('addFriendWrap')?.classList.remove('dd-connected-active');
   _udUnlock();
   _udResults = []; _udActive = -1;
-  if (clear) document.getElementById('addFriendInput').value = '';
+  if (clear) { _frQuery = ''; document.getElementById('addFriendInput').value = ''; document.getElementById('addFriendWrap').classList.remove('has-q'); }
 }
 function _udOpen(p) { _udClose(true); viewFriend(p.id, p.username); }
 // Enter: the highlighted result, else an exact match, else the top result
 async function _udEnter() {
-  const q = document.getElementById('addFriendInput').value.trim().toLowerCase();
+  const q = document.getElementById('addFriendInput').value.trim().replace(/^@/, '').toLowerCase();
   const hit = _udResults[_udActive] || _udResults.find(p => p.username.toLowerCase() === q) || _udResults[0];
   if (hit) { _udOpen(hit); return; }
   if (q.length < 2) return;

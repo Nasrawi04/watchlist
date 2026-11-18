@@ -41,73 +41,71 @@ const MSSChallenges = (() => {
   let el = null, user = null, list = [], off = { me_official: false, can_official: false, list: [] }, focus = null;
   let picks = {};   // "Let me choose" challenges you're in → your picks (061)
   const showAll = {};
-  // "View ended challenges": older ones you were part of (081) — fetched when you open it
-  let ended = null, endedOpen = false;
-  const offAll = () => off.list.concat(ended?.off || []), listAll = () => list.concat(ended?.list || []);
+  // Featured (Official MSF Challenges) · Friends (made by you or your friends) · Ended (official: 14 days after
+  // they end, friends': 7 — then gone from the page, admins included; the Admin page keeps official ones, 129)
+  let tab = 'featured', v2 = true;
+  const offAll = () => off.list, listAll = () => list;
+  const missing = err => err?.code === 'PGRST202' || /Could not find the function/i.test(err?.message || '');
+  const ENDED_DAYS = { off: 14, friends: 7 };
+  const daysSince = d => Math.round((Date.now() - new Date(d + 'T23:59:59')) / 864e5);
 
   async function mount(target, u, o = {}) {
     el = target; user = u;
     if (o.ch) focus = o.ch;
-    const head = user ? `<div class="soc-head"><span id="chHeadBtn">${newBtn()}</span></div>` : '';
     if (!user) {
       el.innerHTML = mssGuestEmpty('challenges');
       return;
     }
-    el.innerHTML = head + `<div id="chList"><div class="page-loading" style="padding:2rem"><div class="spinner"></div></div></div>`;
+    el.innerHTML = `<div id="chTabs"></div><div id="chList"><div class="page-loading" style="padding:2rem"><div class="spinner"></div></div></div>`;
     await load();
   }
   // The official account makes official challenges; admins can make both; everyone else, friends' ones
   const newBtn = () => {
     const offBtn = `<button type="button" class="btn-add-entry" onclick="MSSChallenges.official()">${icon('crown', 15)} New Official Challenge</button>`;
-    const friendsBtn = `<button type="button" class="${off.can_official ? 'rec-btn ch-new-plain' : 'btn-add-entry'}" onclick="MSSChallenges.create()">${icon('plus', 15)} New Challenge</button>`;
+    const friendsBtn = `<button type="button" class="${off.can_official ? 'fm-btn ch-new-plain' : 'btn-add-entry'}" onclick="MSSChallenges.create()">${icon('plus', 15)} New challenge</button>`;
     return off.me_official ? offBtn : off.can_official ? `<span class="ch-head-btns">${friendsBtn}${offBtn}</span>` : friendsBtn;
   };
+  async function fetchBoth() {
+    if (v2) {
+      const r = await Promise.allSettled([rpc('get_challenges_v2', {}), rpc('official_challenges_v2', {})]);
+      if (!r.some(x => x.status === 'rejected' && missing(x.reason))) return r;
+      v2 = false;
+    }
+    return Promise.allSettled([rpc('get_challenges', {}), rpc('official_challenges', {})]);
+  }
   async function load() {
-    const [a, b, pk] = await Promise.allSettled([rpc('get_challenges', {}), rpc('official_challenges', {}), rpc('my_challenge_picks', {})]);
-    if (ended) { ended = null; if (endedOpen) toggleEnded.again = true; }
+    const [[a, b], pk] = await Promise.all([fetchBoth(), rpc('my_challenge_picks', {}).then(v => ({ value: v }), () => ({}))]);
     picks = pk.value && typeof pk.value === 'object' && !Array.isArray(pk.value) ? pk.value : {};
     if (a.status === 'rejected') showToast('Couldn’t load challenges — try again.', 'err');
-    list = (a.value || []).filter(c => !c.official);
-    off = { me_official: !!b.value?.me_official, can_official: !!b.value?.can_official, list: b.value?.list || [] };
-    const hb = document.getElementById('chHeadBtn'); if (hb) hb.innerHTML = newBtn();
-    const n = list.length + off.list.length;
-    if (n) window.MSSSocial?.count(`${n} ${n === 1 ? 'challenge' : 'challenges'}`);
+    // before sql/129: the same windows, applied here
+    list = (a.value || []).filter(c => !c.official && (v2 || c.state !== 'ended' || daysSince(c.ends_on) <= ENDED_DAYS.friends));
+    off = { me_official: !!b.value?.me_official, can_official: !!b.value?.can_official,
+      list: (b.value?.list || []).filter(c => v2 || c.state !== 'ended' || daysSince(c.ends_on) <= ENDED_DAYS.off) };
+    const hb = document.getElementById('socHeadAct'); if (hb) hb.innerHTML = newBtn();
+    const live = list.filter(c => c.state !== 'ended').length + off.list.filter(c => c.state !== 'ended').length;
+    window.MSSSocial?.count(live ? `${live} going on` : 'Race your friends to a watching goal.');
+    if (focus) { const f = off.list.find(c => c.id === focus) || list.find(c => c.id === focus); if (f) tab = f.state === 'ended' ? 'ended' : f.official || off.list.includes(f) ? 'featured' : 'friends'; }
     draw();
-    if (toggleEnded.again) { toggleEnded.again = false; endedOpen = false; toggleEnded(); }
     // opening this page can finish a challenge (get_challenges) → the "You finished!" popup (nav.js, 067)
     if ((a.value || []).some(c => c.my_finished_at) && typeof _navFinishCheck === 'function') _navFinishCheck(500, true);
     if (focus) { requestAnimationFrame(() => document.getElementById('ch-' + focus)?.scrollIntoView({ block: 'start', behavior: 'smooth' })); focus = null; }
   }
   function draw() {
-    const box = document.getElementById('chList'); if (!box) return;
-    const feat = off.list.length ? `<section class="chf-sec" aria-label="Official challenges"><div class="chf-sec-head">${icon('crown', 14)}<span>Featured</span></div>
-        <div class="chf-list">${off.list.map(featured).join('')}</div></section>` : '';
-    if (!list.length) {
-      if (feat) { box.innerHTML = feat + endedHTML(); return; }
-      box.innerHTML = `<div class="mss-es">${mssArt('watched')}<div class="mss-es-title">No challenges yet</div>
-        <div class="mss-es-text">Set a goal — “10 horror movies in October”, “50 movies this year” — invite friends, and race to the finish.</div>
-        <button type="button" class="mss-es-btn primary" style="margin-top:18px" onclick="MSSChallenges.create()">${icon('plus', 15)} New Challenge</button></div>` + endedHTML();
-      return;
-    }
-    box.innerHTML = feat + `<div class="ch-list">${list.map(card).join('')}</div>` + endedHTML();
-  }
-  function endedHTML() {
-    const n = ended ? ended.off.length + ended.list.length : 0;
-    const body = !endedOpen ? '' : !ended ? `<div class="page-loading" style="padding:1.5rem"><div class="spinner"></div></div>`
-      : !n ? `<div class="ch-ended-empty">No ended challenges yet — the ones you take part in land here once they’re over.</div>`
-      : (ended.off.length ? `<div class="chf-list">${ended.off.map(featured).join('')}</div>` : '')
-        + (ended.list.length ? `<div class="ch-list">${ended.list.map(card).join('')}</div>` : '');
-    return `<section class="ch-ended" aria-label="Ended challenges">
-      <button type="button" class="rec-btn ch-ended-btn" aria-expanded="${endedOpen}" onclick="MSSChallenges._ended()">${icon('clock', 14)} ${endedOpen ? 'Hide ended challenges' : 'View ended challenges'}</button>
-      ${body}</section>`;
-  }
-  async function toggleEnded() {
-    endedOpen = !endedOpen; draw();
-    if (!endedOpen || ended) return;
-    const [a, b] = await Promise.allSettled([rpc('get_challenges', { p_ended: true }), rpc('ended_official_challenges', {})]);
-    if (a.status === 'rejected' && b.status === 'rejected') { endedOpen = false; draw(); showToast('Couldn’t load ended challenges — try again.', 'err'); return; }
-    ended = { list: (a.value || []).filter(c => !c.official), off: b.value || [] };
-    draw();
+    const box = document.getElementById('chList'), tb = document.getElementById('chTabs'); if (!box) return;
+    const featured_ = off.list.filter(c => c.state !== 'ended'), friends_ = list.filter(c => c.state !== 'ended');
+    const ended_ = [...off.list.filter(c => c.state === 'ended'), ...list.filter(c => c.state === 'ended')];
+    const n = { featured: featured_.length, friends: friends_.length, ended: ended_.length };
+    if (tb) tb.innerHTML = `<div class="fr-tabs ch-tabs" role="tablist" aria-label="Which challenges">${[['featured', 'Featured'], ['friends', 'Friends'], ['ended', 'Ended']].map(([k, l]) =>
+      `<button type="button" role="tab" class="fr-tab${tab === k ? ' active' : ''}" aria-selected="${tab === k}" onclick="MSSChallenges._tab('${k}')">${l}${n[k] ? `<span class="fr-people-n">${n[k]}</span>` : ''}</button>`).join('')}</div>`;
+    const head = (t, sub) => `<div class="fr-sec-head ch-sec-head"><h2 class="fr-sec-title">${t}</h2>${sub ? `<span class="fr-sec-sub">${sub}</span>` : ''}</div>`;
+    const empty = (t, x, btn) => `<div class="mss-es">${mssArt('watched')}<div class="mss-es-title">${t}</div><div class="mss-es-text">${x}</div>${btn || ''}</div>`;
+    if (tab === 'featured') box.innerHTML = head('Official MSF Challenges', 'Open to everyone, each with its own medal')
+      + (featured_.length ? `<div class="chf-list">${featured_.map(featured).join('')}</div>` : empty('No official challenges right now', 'New ones show up here a week before they start.'));
+    else if (tab === 'friends') box.innerHTML = head('Friends', 'Made by you and your friends')
+      + (friends_.length ? `<div class="ch-list">${friends_.map(card).join('')}</div>` : empty('No challenges with friends yet', 'Set a goal — “10 horror movies in October”, “50 movies this year” — invite friends, and race to the finish.',
+        `<button type="button" class="mss-es-btn primary" style="margin-top:18px" onclick="MSSChallenges.create()">${icon('plus', 15)} New challenge</button>`));
+    else box.innerHTML = head('Ended', `Official ones stay ${ENDED_DAYS.off} days, friends’ ${ENDED_DAYS.friends}`)
+      + (ended_.length ? `<div class="chf-list">${ended_.map(c => off.list.includes(c) ? featured(c) : card(c)).join('')}</div>` : empty('Nothing ended lately', 'Finished challenges stay here for a little while after they end.'));
   }
 
   /* ── An official challenge: medal, story, tags, posters, join / your progress ── */
@@ -116,6 +114,9 @@ const MSSChallenges = (() => {
     const pct = Math.min(100, Math.round((c.my_progress || 0) / c.goal * 100));
     const state = c.state === 'hidden' ? [`Hidden until ${fmtDay(iso(new Date(day(c.starts_on).getTime() - 7 * 864e5)))}`, 'hidden']
       : c.state === 'soon' ? ['Coming soon', 'soon'] : c.state === 'ended' ? ['Ended', 'ended'] : ['Live', 'live'];
+    // a head start: titles of the set list you've already got (they count once you join)
+    const got = (c.titles || []).filter(t => t.done).length;
+    const head = !joined && !done && c.state !== 'ended' && got ? `<span class="chf-head-start">${icon('check', 12)} You’ve got ${got} of ${(c.titles || []).length} already</span>` : '';
     const foot = done ? `<div class="chf-done">${icon('check', 15)} You finished — the medal is yours</div>`
       : joined ? `<div class="ch-mine chf-mine">
             <div class="ch-mine-n"><b>${c.my_progress || 0}</b><span>/ ${c.goal}</span></div>
@@ -130,21 +131,18 @@ const MSSChallenges = (() => {
         <div class="chf-eyebrow"><span class="chf-state ${state[1]}">${state[0]}</span>${MSSSpotlight.entry(c.spotlight)?.eyebrow && c.state !== 'ended' ? `<span class="chf-tagline">${esc(MSSSpotlight.entry(c.spotlight).eyebrow)}</span>` : ''}${c.state !== 'hidden' && c.state !== 'ended' ? `<span>${MSSSpotlight.when(c, true)}</span>` : ''}<span>${fmtDay(c.starts_on)} – ${fmtDay(c.ends_on)}</span></div>
         <h3 class="chf-title" translate="no"><button type="button" class="ch-title-btn" onclick="MSSChallenges.details(${id})">${esc(c.title)}</button></h3>
         ${c.description ? `<p class="chf-desc">${esc(c.description)}</p>` : ''}
-        <div class="spot-tags">${MSSSpotlight.tags(c)}</div>
+        <div class="spot-tags">${MSSSpotlight.tags(c)}${head}</div>
         ${MSSSpotlight.posters(c, 10)}
         ${c.teams ? teamsBar(c, myT) : ''}
-        <div class="chf-foot">${foot}<button type="button" class="rec-btn chf-info" onclick="MSSChallenges.details(${id})">${icon('info', 14)} Details</button><span class="chf-count">${icon('users', 13)} <b>${c.joined}</b> joined${c.finished ? ` · <b>${c.finished}</b> finished` : ''}</span>
+        <div class="chf-foot">${foot}<button type="button" class="fm-btn chf-info" onclick="MSSChallenges.details(${id})">${icon('info', 14)} Details</button><span class="chf-count">${icon('users', 13)} <b>${c.joined}</b> joined${c.finished ? ` · <b>${c.finished}</b> finished` : ''}</span>
           ${joined && !done && c.state !== 'ended' ? `<button type="button" class="poll-link poll-danger" onclick="MSSChallenges.respond(${id}, 'leave')">Leave</button>` : ''}</div>
-        ${c.can_manage ? `<div class="chf-own">
-            <button type="button" class="rec-btn" onclick="MSSChallenges.official(${id})">${icon('edit', 14)} Edit</button>
-            <button type="button" class="rec-btn" onclick="MSSChallenges._preview(${id})">${icon('eye', 14)} Preview spotlight</button>
-            <button type="button" class="rec-icon rec-icon-x" onclick="MSSChallenges.remove(${id})" aria-label="Delete challenge" title="Delete">${icon('trash', 14)}</button></div>` : ''}
       </div>
+      ${c.can_manage ? `<button type="button" class="fm-icon-btn ch-more" aria-label="Admin actions for ${esc(c.title)}" aria-haspopup="menu" onclick="MSSChallenges._more(this, ${id})">${icon('moreV', 15)}</button>` : ''}
     </article>`;
   }
   /* ── Details popup: everything about one challenge, in plain words ── */
   let infoId = null;
-  function details(id) {
+  async function details(id) {
     const c = offAll().find(x => x.id === id) || listAll().find(x => x.id === id); if (!c) return;
     infoId = id;
     const isOff = !!offAll().find(x => x.id === id), lst = isOff && c.count_mode === 'list', pick = !isOff && !!picks[id];
@@ -174,9 +172,9 @@ const MSSChallenges = (() => {
     const status = x => x.done ? `<span class="chi-st done">${icon('check', 12)} You’ve got it</span>`
       : x.anytime ? `<span class="chi-st any">${icon('refresh', 12)} Already watched counts</span>` : `<span class="chi-st during">${icon('clock', 12)} Watch during</span>`;
     const titles = lst ? `<div class="sf-section-label">The titles <span class="sf-section-hint">${t.filter(x => x.done).length} of ${t.length} done</span></div>
-      <ul class="chi-titles">${t.map(x => `<li><button type="button" class="chi-row" onclick="goToTitle(${attrJSON(x.tmdb_type)}, ${Number(x.tmdb_id)})">
-          <span class="poll-thumb">${x.poster_path ? `<img src="https://image.tmdb.org/t/p/w92${esc(x.poster_path)}" alt="" loading="lazy">` : icon(x.tmdb_type === 'movie' ? 'film' : 'tv', 14)}</span>
-          <span class="poll-opt-text"><b translate="no">${esc(x.title)}</b><small>${[x.year, x.tmdb_type === 'movie' ? 'Movie' : 'TV Show'].filter(Boolean).join(' · ')}</small></span>
+      <ul class="chi-grid">${t.map(x => `<li><button type="button" class="chi-tile${x.done ? ' is-done' : ''}" onclick="goToTitle(${attrJSON(x.tmdb_type)}, ${Number(x.tmdb_id)})">
+          <span class="chi-tile-poster">${x.poster_path ? `<img src="https://image.tmdb.org/t/p/w185${esc(x.poster_path)}" alt="" loading="lazy">` : icon(x.tmdb_type === 'movie' ? 'film' : 'tv', 18)}${x.done ? `<i aria-hidden="true">${icon('check', 12)}</i>` : ''}</span>
+          <b translate="no">${esc(x.title)}</b><small>${[x.year, x.tmdb_type === 'movie' ? 'Movie' : 'TV Show'].filter(Boolean).join(' · ')}</small>
           ${status(x)}</button></li>`).join('')}</ul>` : '';
     const prog = c.my_progress || 0, pct = Math.min(100, Math.round(prog / c.goal * 100));
     const mine = joined || finished ? `<div class="chi-prog"><div class="ch-mine-n"><b>${prog}</b><span>/ ${c.goal}</span></div>
@@ -190,8 +188,7 @@ const MSSChallenges = (() => {
           `<span>${MSSMedal.challenge(pl, c.cat, { size: 58, locked: finished ? me?.finish_rank !== pl && !(pl === 3 && me?.finish_rank >= 3) : false, label: `${n} medal` })}<b>${n}</b><small>${d}</small></span>`).join('')}</div>`;
     const people = isOff ? `${c.joined || 0} joined${c.finished ? ` · ${c.finished} finished` : ''}`
       : `${(c.members || []).filter(m => m.status === 'joined').length} racing${(c.members || []).filter(m => m.finished_at).length ? ` · ${(c.members || []).filter(m => m.finished_at).length} finished` : ''}`;
-    const ov = _socDialog('chInfo', isOff ? 'Official challenge' : 'Challenge', closeInfo);
-    ov.querySelector('.soc-card').classList.add('chi-card');
+    const h = await _socDialog('chInfo', isOff ? 'Official challenge' : 'Challenge', closeInfo, 'L');
     document.getElementById('chInfoBody').innerHTML = `
       <div class="chi-hero">
         <div class="chi-medal">${isOff ? MSSMedal.official(c.medal, { size: 96 }) : `<span class="ch-ic chi-ic" aria-hidden="true">${icon('trophy', 26)}</span>`}</div>
@@ -205,14 +202,16 @@ const MSSChallenges = (() => {
       <div class="sf-section-label">How it works</div>
       <ol class="chi-steps">${steps.map(x => `<li>${x}</li>`).join('')}</ol>
       ${titles}
+      <div id="chiBoard">${isOff ? '' : boardHTML(c, (c.members || []).filter(m => m.status === 'joined' || m.finished_at).map((m, i) => ({ ...m, rank: i + 1 })))}</div>
       <div class="sf-section-label">${isOff ? 'The medal' : 'The medals'}</div>
       ${medals}`;
+    if (isOff) loadBoard(id).then(rows => { const b = document.getElementById('chiBoard'); if (b && infoId === id) b.innerHTML = boardHTML(c, rows); });
     const canJoin = !joined && !finished && !ended && (isOff ? started || c.state === 'soon' : invited);
     document.getElementById('chInfoFoot').innerHTML = `<button type="button" class="sf-clear-btn" onclick="MSSChallenges._closeInfo()">Close</button>
       ${canJoin ? `<button type="button" class="sf-apply-btn" onclick="MSSChallenges._infoJoin()">${icon('check', 14)} Join</button>` : ''}`;
-    MSSDialog.open(ov, { focus: canJoin ? '#chInfoFoot .sf-apply-btn' : '#chInfoFoot .sf-clear-btn' });
+    if (!h.isPage) document.querySelector(canJoin ? '#chInfoFoot .sf-apply-btn' : '#chInfoFoot .sf-clear-btn')?.focus();
   }
-  function closeInfo() { infoId = null; MSSDialog.close(document.getElementById('chInfo')); }
+  function closeInfo() { infoId = null; _socDialogClose('chInfo'); }
   async function infoJoin() {
     const id = infoId; if (!id) return;
     const isOff = !!offAll().find(x => x.id === id);
@@ -273,7 +272,7 @@ const MSSChallenges = (() => {
           <div class="ch-meta">Watch <b>${c.goal}</b> ${what(c)}${picks[c.id] ? ' · <span class="ch-pick-tag">you choose what counts</span>' : ''} · ${fmtDay(c.starts_on)} – ${fmtDay(c.ends_on)}</div>
         </div>
         <span class="ch-state ${state[1]}">${state[0]}</span>
-        ${c.is_creator ? `<div class="poll-own"><button type="button" class="rec-icon rec-icon-x" onclick="MSSChallenges.remove(${id})" aria-label="Delete challenge" title="Delete">${icon('trash', 14)}</button></div>` : ''}
+        ${c.is_creator || (!invited && c.state !== 'ended') ? `<button type="button" class="fm-icon-btn ch-more" aria-label="More for ${esc(c.title)}" aria-haspopup="menu" onclick="MSSChallenges._more(this, ${id})">${icon('moreV', 15)}</button>` : ''}
       </header>
       ${invited ? `<div class="ch-invite">
           <span>${icon('trophy', 14)} You’re invited — your titles from ${fmtDay(c.starts_on)} count as soon as you join.</span>
@@ -292,9 +291,8 @@ const MSSChallenges = (() => {
       <ol class="ch-board">${shown.map(row).join('')}</ol>
       ${joined.length > shown.length ? `<button type="button" class="poll-link" onclick="MSSChallenges._all(${id})">Show all ${joined.length}</button>` : ''}
       ${pending.length ? `<div class="ch-pending">${pending.slice(0, 12).map(m => `<span title="${esc(nameOf(m))} — invited">${av(m, 22)}</span>`).join('')}<span>Invited</span></div>` : ''}
-      <div class="ch-acts"><button type="button" class="rec-btn" onclick="MSSChallenges.details(${id})">${icon('info', 14)} Details</button>
-      ${!invited && c.state !== 'ended' && c.members.length < 100 ? `<button type="button" class="rec-btn" onclick="MSSChallenges.invite(${id})">${icon('plus', 14)} Invite friends</button>
-          ${!c.is_creator ? `<button type="button" class="poll-link poll-danger" onclick="MSSChallenges.respond(${id}, 'leave')">Leave</button>` : ''}` : ''}</div>
+      <div class="ch-acts"><button type="button" class="fm-btn" onclick="MSSChallenges.details(${id})">${icon('info', 14)} Details</button>
+      ${!invited && c.state !== 'ended' && c.members.length < 100 ? `<button type="button" class="fm-btn" onclick="MSSChallenges.invite(${id})">${icon('plus', 14)} Invite friends</button>` : ''}</div>
     </article>`;
   }
 
@@ -302,15 +300,48 @@ const MSSChallenges = (() => {
   function picksHTML(c, me) {
     const mine = picks[c.id] || [], locked = !!me?.finished_at || c.state === 'ended';
     return `<div class="ch-picks"><div class="ch-picks-head">${icon('check', 13)} Your picks <span>${mine.length ? `${mine.filter(x => x.counts).length} counting` : 'none yet'}</span></div>
-      ${mine.length ? `<div class="ch-pick-list">${mine.map(x => `<span class="ch-pick${x.counts ? '' : ' off'}" title="${x.counts ? '' : 'No longer counts — it isn’t marked Watched in the dates'}">
-          <span class="ch-pick-poster">${safeURL(x.poster_url) ? `<img src="${safeURL(x.poster_url)}" alt="" loading="lazy">` : esc((x.title || '?')[0])}</span>
-          <span class="ch-pick-t" translate="no">${esc(x.title)}</span>
-          ${locked ? '' : `<button type="button" class="ch-pick-x" onclick="MSSChallenges._unpick(${attrJSON(c.id)}, ${attrJSON(x.entry_id)})" aria-label="Take ${esc(x.title)} off this challenge">${icon('x', 11)}</button>`}</span>`).join('')}</div>`
+      ${mine.length ? `<div class="msf-rail ch-pick-list">${mine.map(x => `<div class="ch-pick">
+          ${MSSCard.poster({ decor: true, title: x.title, poster: x.poster_url, dropped: !x.counts, meta: x.counts ? 'Counts' : 'Doesn’t count' })}
+          <span class="sr-only" translate="no">${esc(x.title)}${x.counts ? '' : ' — no longer counts, it isn’t marked Watched in the dates'}</span>
+          ${locked ? '' : `<button type="button" class="ch-pick-x" onclick="MSSChallenges._unpick(${attrJSON(c.id)}, ${attrJSON(x.entry_id)})" aria-label="Take ${esc(x.title)} off this challenge">${icon('x', 12)}</button>`}</div>`).join('')}</div>`
         : `<p class="ch-picks-empty">Mark a title Watched and we’ll ask if it counts for this challenge.</p>`}</div>`;
   }
   async function unpick(chId, entryId) {
     try { await rpc('set_challenge_pick', { p_ch: chId, p_entry: entryId, p_on: false }); await load(); showToast('Taken off the challenge'); }
     catch (err) { showToast(errText(err, 'Couldn’t change that — try again.'), 'err'); }
+  }
+
+  // ⋯ — official (admins / the official account only): Edit · Preview spotlight · Delete;
+  // a friends' challenge: Invite friends · Leave (or Delete, yours)
+  async function more(btn, id) {
+    const c = off.list.find(x => x.id === id) || list.find(x => x.id === id); if (!c) return;
+    await mssLoadScript('js/panel.js');
+    const isOff = off.list.includes(c);
+    const items = isOff ? (c.can_manage ? [
+        { label: 'Edit', icon: 'edit', onSelect: () => official(id) },
+        { label: 'Preview spotlight', icon: 'eye', onSelect: () => MSSSpotlight.preview(c) },
+        { divider: true },
+        { label: 'Delete…', icon: 'trash', danger: true, onSelect: () => remove(id) }] : [])
+      : [
+        ...(c.state !== 'ended' && c.members.length < 100 && c.my_status !== 'invited' ? [{ label: 'Invite friends', icon: 'plus', onSelect: () => invite(id) }] : []),
+        ...(c.is_creator ? [{ label: 'Delete…', icon: 'trash', danger: true, onSelect: () => remove(id) }]
+          : c.my_status === 'joined' && c.state !== 'ended' ? [{ label: 'Leave', icon: 'logout', danger: true, onSelect: () => respond(id, 'leave') }] : [])];
+    if (items.length) MSSPopover.open(btn, { title: c.title, label: isOff ? 'Admin actions' : 'Challenge actions', items });
+  }
+  // The Details panel's leaderboard: friends' challenges have it already; official ones load theirs (129)
+  const boards = {};
+  async function loadBoard(id) {
+    if (boards[id]) return boards[id];
+    try { boards[id] = await rpc('official_challenge_board', { p_ch: id }) || []; } catch { boards[id] = null; }
+    return boards[id];
+  }
+  function boardHTML(c, rows) {
+    if (!rows?.length) return '';
+    return `<div class="sf-section-label">Leaderboard</div>
+      <ol class="chi-board">${rows.map((m, i) => { const p = Math.min(100, Math.round((m.progress || 0) / c.goal * 100));
+        return `<li class="${m.me ? 'me' : ''}"><span class="chi-board-rank">${m.finished_at ? icon('trophy', 13) : m.rank || i + 1}</span>${av(m, 30)}
+          <span class="chi-board-main"><b translate="no">${m.me ? 'You' : esc(nameOf(m))}</b><span class="ch-bar" aria-hidden="true"><i style="width:${p}%"></i></span></span>
+          <span class="chi-board-n"><b>${m.progress || 0}</b>/${c.goal}</span></li>`; }).join('')}</ol>`;
   }
 
   /* ── Actions ── */
@@ -319,7 +350,7 @@ const MSSChallenges = (() => {
   }
   async function respond(id, a) {
     if (a === 'leave') {
-      const ok = await showConfirm({ title: 'Leave this challenge?', message: 'You’re taken off the leaderboard.', confirmText: 'Leave', iconName: 'x' });
+      const ok = await showConfirm({ title: 'Leave this challenge?', message: 'You’re taken off the leaderboard.', confirmText: 'Leave', iconName: 'x', danger: false });
       if (!ok) return;
     }
     if (await act('respond_challenge', { p_ch: id, p_action: a }) && a === 'join') showToast('You’re in — go watch something!');
@@ -331,13 +362,13 @@ const MSSChallenges = (() => {
 
   /* ── New challenge / invite popups (same shell as New Poll) ── */
   let form = null;
-  function popup(title, body, foot) {
-    const ov = _socDialog('chForm', title, closeForm);
+  async function popup(title, body, foot) {
+    const h = await _socDialog('chForm', title, closeForm, 'L');
     document.getElementById('chFormBody').innerHTML = body;
     document.getElementById('chFormFoot').innerHTML = foot;
-    MSSDialog.open(ov, { focus: '#chT' });
+    if (!h.isPage) document.getElementById('chT')?.focus();
   }
-  function closeForm() { MSSDialog.close(document.getElementById('chForm')); form = null; }
+  function closeForm() { form = null; _socDialogClose('chForm'); }
   // Who you can invite: your friends, then your followers (083) — loaded once per popup
   let followers = [];
   const loadFollowers = () => (typeof getFollowList === 'function' && user ? getFollowList(user.id, 'followers').catch(() => []) : Promise.resolve([])).then(l => { followers = l; });
@@ -595,6 +626,6 @@ const MSSChallenges = (() => {
 
   return { mount, create, official, invite, respond, remove, details, reload: load, _unpick: unpick, _team: team, _any: toggleAny, _closeInfo: closeInfo, _infoJoin: infoJoin,
     _all: id => { showAll[id] = true; draw(); }, _f: f, _inv: inv, _save: save, _close: closeForm,
-    _joinOfficial: joinOfficial, _ended: toggleEnded, _preview: id => { const c = offAll().find(x => x.id === id); if (c) MSSSpotlight.preview(c); },
+    _joinOfficial: joinOfficial, _tab: k => { tab = k; draw(); }, _more: more, _board: loadBoard,
     _q: search, _pick: pick, _rm: i => { form?.titles.splice(i, 1); drawChosen(); } };
 })();

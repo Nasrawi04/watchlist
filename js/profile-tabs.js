@@ -5,86 +5,30 @@
    no page header or stat boxes — just the toolbar (label + count + Sort /
    Filter) and the same cards and popups the pages use.
 
-     MSSTabs.notes(el, { entries, owner, name, onDelete })
-       Cards from note-popup.js. Tap → Note · Ratings · Info (MSSViews, info-popup.js);
-       your own profile: Edit Note saves in place. Someone else's: read-only,
-       spoilers blurred.
+     MSSTabs.notes(el, { userId, entries, owner, name, onDelete })
+       The featured note (pinned, else latest) and the note cards from note-popup.js, 20 at a time.
+       Tap → the title's panel on its Review (MSSViews, title-view.js); your own profile: edit
+       in place. Someone else's: read-only, spoilers blurred.
      MSSTabs.lists(el, { userId, entries, owner, name })
        Cards from list-popup.js — lists they made plus lists shared with them.
-       Tap → the list popup → View List (list-view.html); on your own
-       profile also "Manage in Lists" (editing stays on the Lists page).
+       Tap → the list page (list-view.html); ⋯ → MSSListActions (Edit, Share, Invite,
+       Export, Delete on yours; Share, Add to my lists, Report on theirs).
 
-     MSSTabs.statsHTML(entries) → the six Overview stat boxes (Avg Score,
-       TV Shows, Movies, Watchlist, Episodes, Runtime)
-     MSSTabs.toggleStats(id)    → open / close the Overview stats box
-
-   Requires sort-filter.js, note-popup.js, list-popup.js, info-popup.js (MSSViews).
+   Requires sort-filter.js, note-popup.js, list-popup.js, list-actions.js, info-popup.js (MSSViews).
 ═══════════════════════════════════════════════════════════════ */
 
 const MSSTabs = (() => {
-  const N = { el: null, entries: [], owner: false, name: '', counts: {}, onDelete: null };
+  const N = { el: null, entries: [], owner: false, name: '', counts: {}, onDelete: null, userId: null, pin: null, show: 0 };
   const L = { el: null, lists: null, entries: [], userId: null, owner: false, name: '', collab: {}, map: {}, loading: null };
   const empty = (art, title, subHTML, actions) => mssEmpty({ art, title, textHTML: subHTML || '', actions });
   const possessive = name => name ? `${escHTML(name)}’s` : 'Their';
-
-  /* ══ Overview stats ══ */
-  function computeStats(entries) {
-  var done = entries.filter(function(e){ return e.status === 'completed' || e.status === 'ongoing'; });
-  // Avg score
-  var rated = done.filter(function(e){ return liveScore(e) != null; });
-  var avgScore = rated.length
-    ? (rated.reduce(function(s,e){ return s + Number(liveScore(e)); }, 0) / rated.length).toFixed(1)
-    : null;
-  // TV shows: cat=tv, OR (anime/cartoons where _type !== 'movie')
-  var tvCount = done.filter(function(e){
-    if (e.cat === 'tv') return true;
-    if (e.cat === 'anime' || e.cat === 'cartoons') return (e.ratings && e.ratings._media_type) ? e.ratings._media_type !== 'movie' : true;
-    return false;
-  }).length;
-  // Movies: cat=movies, OR (anime/cartoons where _type === 'movie')
-  var movieCount = done.filter(function(e){
-    if (e.cat === 'movies') return true;
-    if (e.cat === 'anime' || e.cat === 'cartoons') return e.ratings && e.ratings._media_type === 'movie';
-    return false;
-  }).length;
-  // Episodes: all non-movie entries not in queue
-  var totalEps = entries
-    .filter(function(e){ return e.status !== 'queue' && e.cat !== 'movies' && !(e.ratings && e.ratings._media_type === 'movie'); })
-    .reduce(function(sum,e){
-      if (e.status === 'completed' || e.status === 'ongoing') return sum + (Number(e.total_eps) || Number(e.watched) || 0);
-      return sum + (Number(e.watched) || 0);
-    }, 0);
-  // Runtime: all completed/ongoing movies
-  var movieMins = done
-    .filter(function(e){ return e.cat === 'movies' || (e.ratings && e.ratings._media_type === 'movie'); })
-    .reduce(function(sum,e){ return sum + (Number(e.runtime_h)||0)*60 + (Number(e.runtime_m)||0); }, 0);
-  var rtH = Math.floor(movieMins/60), rtM = movieMins%60;
-  var runtime = movieMins ? (rtH ? rtH+'h '+rtM+'m' : rtM+'m') : null;
-  return { avgScore: avgScore, tvCount: tvCount, movieCount: movieCount, totalEps: totalEps, runtime: runtime };
-}
-  function statsHTML(entries) {
-    const st = computeStats(entries);
-    const box = (num, label) => `<div class="prof-stat-box"><div class="prof-stat-box-num">${num || '—'}</div><div class="prof-stat-box-label">${label}</div></div>`;
-    return box(st.avgScore, 'Avg Score') + box(st.tvCount, 'TV Shows') + box(st.movieCount, 'Movies')
-      + box(entries.filter(e => e.status === 'queue' || e.status === 'up_next').length || '0', 'Watchlist')
-      + box(st.totalEps || '0', 'Episodes') + box(st.runtime, 'Runtime');
-  }
-  const toggleStats = id => document.getElementById(id)?.classList.toggle('open');
-  // While a profile loads (profile.html, profile-view.html): the real header with sample text,
-  // masked into placeholders by mssSkeleton — the stat labels stay, the numbers shimmer
-  function headSkel(btns) {
-    return `<div class="prof-header"><div class="prof-header-top"><div class="prof-avatar">A</div>
-        <div class="prof-header-info"><div class="prof-username">@username</div></div></div>
-      <div class="prof-stat-boxes">${statsHTML([]).replace(/class="prof-stat-box-label"/g, 'class="prof-stat-box-label" data-skel-keep')}</div>
-      <div class="prof-header-actions">${btns}</div></div>`;
-  }
 
   /* ══ Notes ══ */
   const withNotes = () => N.entries.filter(e => e.notes && e.notes.trim());
   SF.register('tabNotes', {
     watched: () => true,          // Year Watched filter
     base: withNotes,
-    render: () => renderNotes(),
+    render: () => { N.show = MSSNote.PAGE; renderNotes(); },   // a sort / filter starts again at 20
     defaultSort: 'newest',
     addedDate: e => MSSNote.watchedDate(e),
     presets: {
@@ -113,24 +57,34 @@ const MSSTabs = (() => {
       return;
     }
     const list = SF.list('tabNotes', 'all');
+    // the Notes page's featured note: pinned, else the latest — not while filtering, never repeated below
+    const top = SF.filterCount('tabNotes', 'all') ? null : MSSNote.featured(all, N.pin);
+    const rest = top ? list.filter(e => e !== top) : list;
+    const card = e => MSSNote.cardHTML(e, { counts: N.counts[e.id], open: `MSSTabs._openNote(${attrJSON(e.id)})`, blur: !N.owner });
     N.el.innerHTML = `<div class="mss-toolbar">${mssToolbarHTML(N.owner ? 'Your Notes' : `${possessive(N.name)} Notes`, list.length, SF.bar('tabNotes', 'all'), 'note')}</div>`
       + (list.length
-        ? `<div class="nc-grid">${list.map(e => MSSNote.cardHTML(e, { counts: N.counts[e.id], onclick: `MSSTabs._openNote(${attrJSON(e.id)})`, blurSpoiler: !N.owner })).join('')}</div>`
+        ? (top ? MSSNote.featuredHTML(top, { open: `MSSTabs._openNote(${attrJSON(top.id)})`, pinned: top.id === N.pin, blur: !N.owner }) : '')
+          + `<div class="nc-grid">${rest.slice(0, N.show).map(card).join('')}</div>${MSSNote.more(rest.length - N.show, 'MSSTabs._moreNotes()')}`
         : mssEmpty({ compact: true, art: 'filter', title: 'Nothing matches these filters', text: 'Your filters are a little too picky. Loosen one and try again.',
           actions: [{ label: 'Clear filters', icon: 'x', onclick: "SF.clearFilters('tabNotes', 'all'); MSSTabs._redrawNotes()", primary: true }] }));
   }
   function notes(el, o) {
-    Object.assign(N, { el, entries: o.entries || [], owner: !!o.owner, name: o.name || '', onDelete: o.onDelete || null });
+    Object.assign(N, { el, entries: o.entries || [], owner: !!o.owner, name: o.name || '', onDelete: o.onDelete || null,
+      userId: o.userId || (o.owner ? window._navUser?.id : null), show: MSSNote.PAGE });
     renderNotes();
     const ids = withNotes().map(e => e.id);
     MSSNote.reactionCounts(ids).then(c => { N.counts = c; renderNotes(); }).catch(() => {});
+    MSSNote.pinnedId(N.userId).then(id => { if (id !== N.pin) { N.pin = id; renderNotes(); } });
   }
-  // Info · Ratings · Note popup, opening on the note — same as the Notes page (MSSViews, info-popup.js)
+  const moreNotes = () => { N.show += MSSNote.PAGE; renderNotes(); };
+  // your own profile: pinned / unpinned in the title panel → the featured note follows
+  document.addEventListener('mss:notepin', ev => { if (N.owner && N.el) { N.pin = ev.detail.id; renderNotes(); } });
+  // The title panel / page, opening on the Review — same as the Notes page (MSSViews, title-view.js)
   function openNote(id) {
     const e = N.entries.find(x => x.id === id);
     if (!e) return;
     MSSViews.open(e, {
-      start: 'note', own: N.owner, counts: N.counts[id], profile: N.owner ? null : { display_name: N.name },
+      start: 'note', note: true, own: N.owner, counts: N.counts[id], profile: N.owner ? null : { display_name: N.name },
       onNoteSaved: renderNotes, onChange: renderNotes,
       onDelete: x => { N.entries = N.entries.filter(y => y.id !== x.id); renderNotes(); N.onDelete?.(x); },
     });
@@ -150,7 +104,7 @@ const MSSTabs = (() => {
     render: () => renderLists(),
     defaultSort: 'rank',
     presets: {
-      rank:  { header: 'Order',   opts: [['rank', 'Default'], ['rankRev', 'Reversed']] },
+      rank:  { header: 'Order',   opts: [['rank', 'Their order'], ['rankRev', 'Reversed']] },
       added: { header: 'Created', opts: [['newest', 'Newest'], ['oldest', 'Oldest']] },
     },
     sorts: () => ['rank', 'alpha', 'added'],
@@ -158,7 +112,7 @@ const MSSTabs = (() => {
     addedDate: l => l.created_at,
     choiceFilters: () => [
       { key: 'ranked', label: 'Ranking',
-        options: [['', 'All Lists'], ['yes', 'Ranked'], ['no', 'Unranked'], ['unset', 'Not Set']],
+        options: [['', 'All Lists'], ['yes', 'Ranked'], ['no', 'Collection'], ['unset', 'Not Set']],
         test: (l, v) => v === 'yes' ? l.ranked === true : v === 'no' ? l.ranked === false : l.ranked == null },
       { key: 'origin', label: 'Source',
         options: [['', 'All Lists'], ['mine', 'Created'], ['imported', 'Imported'], ['shared', 'Shared With Them']],
@@ -166,8 +120,9 @@ const MSSTabs = (() => {
     ],
   });
 
-  const metaExtra = l => (l.forked_from ? ' · Imported' : '')
-    + (l._collab ? ' · <span class="cl-tag">Shared</span>' : (L.collab[l.id] || []).some(c => c.status === 'accepted') ? ' · <span class="cl-tag">Collab</span>' : '');
+  // Imported / Shared / Collab beside the Ranked / Collection chip
+  const tags = l => (l.forked_from ? '<span class="lc-chip">Imported</span>' : '')
+    + (l._collab ? '<span class="cl-tag">Shared</span>' : (L.collab[l.id] || []).some(c => c.status === 'accepted') ? '<span class="cl-tag">Collab</span>' : '');
 
   function renderLists() {
     if (!L.el) return;
@@ -182,7 +137,8 @@ const MSSTabs = (() => {
     L.el.innerHTML = `<div class="mss-toolbar">${mssToolbarHTML(L.owner ? 'Your Lists' : `${possessive(L.name)} Lists`, list.length, SF.bar('tabLists', 'all'), 'list')}</div>`
       + (list.length
         ? `<div class="lc-grid">${list.map(l => MSSList.cardHTML(l, {
-            resolve, onclick: `MSSTabs._openList(${attrJSON(l.id)})`, metaExtra: metaExtra(l), collabLine: MSSList.collabLineHTML(l, L.collab[l.id]),
+            resolve, open: `location.href=${attrJSON(MSSList.url(l))}`, menu: `MSSTabs._listMenu(this, ${attrJSON(l.id)})`, own: L.owner && !l._collab,
+            extra: tags(l), collabLine: MSSList.collabLineHTML(l, L.collab[l.id]),
           })).join('')}</div>`
         : mssEmpty({ compact: true, art: 'filter', title: 'Nothing matches these filters', text: 'Your filters are a little too picky. Loosen one and try again.',
           actions: [{ label: 'Clear filters', icon: 'x', onclick: "SF.clearFilters('tabLists', 'all'); MSSTabs._redrawLists()", primary: true }] }));
@@ -230,43 +186,20 @@ const MSSTabs = (() => {
     renderLists();
     if (!L.loading) L.loading = loadLists().catch(err => { console.error('Lists tab:', err); L.lists = L.lists || []; renderLists(); });
   }
-  function openList(id) {
+  // A card's ⋯ (MSSListActions): yours / shared with you on your own profile, else someone else's
+  function listMenu(btn, id) {
     const l = (L.lists || []).find(x => x.id === id);
     if (!l) return;
-    MSSList.open(l, {
-      resolve,
-      eyebrow: L.owner ? (l._collab ? 'Shared List' : 'Your List') : `${L.name ? L.name + '’s' : 'Their'} List`,
-      collabLine: MSSList.collabLineHTML(l, L.collab[l.id]),
-      manage: L.owner, social: !L.owner,
-    });
+    const me = window._navUser?.id, drop = x => { L.lists = L.lists.filter(y => y.id !== x.id); renderLists(); };
+    MSSListActions.menu(btn, l, { own: !!me && l.user_id === me, shared: L.owner && !!l._collab, resolve, onDeleted: drop, onLeft: drop });
   }
 
-  /* ══ Episodes tab: shows with episode ratings (mini heatmaps), display only ══ */
+  /* ══ Episodes tab: the Episodes page's own design (episodes-home.js) — yours, or someone else's read-only ══ */
   async function episodes(el, o) {
-    el.innerHTML = '<div class="page-loading"><div class="spinner"></div></div>';
-    try {
-      const { data: rs } = await sb.from('episode_ratings').select('entry_id,season_number,episode_number,score,updated_at').eq('user_id', o.userId);
-      const ids = [...new Set((rs || []).map(r => r.entry_id))];
-      const { data: es } = ids.length ? await sb.from('entries').select('id,title,status,poster_url,tmdb_id,ratings').in('id', ids) : { data: [] };
-      const by = {}; (rs || []).forEach(r => (by[r.entry_id] = by[r.entry_id] || []).push(r));
-      const latest = id => Math.max(...by[id].map(r => +new Date(r.updated_at)));
-      const shows = (es || []).filter(e => e.tmdb_id && by[e.id]).sort((a, b) => latest(b.id) - latest(a.id));
-      if (!shows.length) { el.innerHTML = mssEmpty({ art: 'episodes', title: 'No episodes rated yet', text: o.owner ? 'Rate episodes as you watch and the best ones rise to the top here.' : 'Not a single episode rated. Yet.',
-        actions: o.owner ? [{ label: 'Go to Episodes', href: 'episodes.html', primary: true }] : [] }); return; }
-      const eps = (rs || []).filter(r => r.episode_number > 0);
-      const avg = a => a.length ? a.reduce((x, r) => x + Number(r.score), 0) / a.length : 0;
-      const top = eps.length ? eps.reduce((a, b) => (Number(b.score) > Number(a.score) ? b : a)) : null;
-      const topShow = top && (es || []).find(e => e.id === top.entry_id);
-      const cardOpts = o.owner ? {} : { userId: o.userId, whoName: o.name || 'Their' };
-      el.innerHTML = `<div class="mss-toolbar">${mssToolbarHTML(o.owner ? 'Your Episodes' : `${possessive(o.name)} Episodes`, shows.length, '', 'show')}</div>
-        <div class="page-stats" style="margin-bottom:2rem;">
-          <div class="page-stat"><div class="page-stat-num">${eps.length}</div><div class="page-stat-label">Episodes rated</div></div>
-          <div class="page-stat"><div class="page-stat-num">${eps.length ? '★ ' + avg(eps).toFixed(1) : '—'}</div><div class="page-stat-label">Average</div></div>
-          <div class="page-stat"><div class="page-stat-num">${top ? '★ ' + Number(top.score).toFixed(1) : '—'}</div><div class="page-stat-label">${top ? `Top: ${escHTML(topShow?.title || '')} S${top.season_number}·E${top.episode_number}` : 'Top episode'}</div></div>
-        </div>
-        <div class="eg-shows">${shows.map(e => MSSEp.showCardHTML(e, by[e.id], cardOpts)).join('')}</div>`;
-    } catch (err) { console.error('Episodes tab:', err); mssErrorPage(mssErrorKind(err), { in: el, error: err }); }
+    el.innerHTML = '<div class="page-loading" data-skel="eph"></div>';
+    try { await MSSEpHome.mount(el, { userId: o.userId, owner: !!o.owner, name: o.name || '' }); }
+    catch (err) { console.error('Episodes tab:', err); mssErrorPage(mssErrorKind(err), { in: el, error: err }); }
   }
 
-  return { notes, lists, episodes, statsHTML, headSkel, toggleStats, _openNote: openNote, _openList: openList, _redrawNotes: renderNotes, _redrawLists: renderLists };
+  return { notes, lists, episodes, _openNote: openNote, _listMenu: listMenu, _redrawNotes: renderNotes, _moreNotes: moreNotes, _redrawLists: renderLists };
 })();

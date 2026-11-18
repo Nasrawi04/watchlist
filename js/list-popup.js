@@ -1,25 +1,21 @@
 /* ═══════════════════════════════════════════════════════════════
-   list-popup.js — List card + read-only list popup (v632)
+   list-popup.js — the list card (Lists redesign) and Add to List
 
-   The Lists page's card design, shared by the Lists page, the Friends
-   view and the Lists tab on profile.html / profile-view.html:
+   One card for every list grid — the Lists page (Mine, Friends, Community), the Lists tab on
+   profile.html / profile-view.html, a title page's lists and the Add to List picker:
 
-     MSSList.cardHTML(list, { resolve, onclick, ownerHTML, metaExtra, collabLine })
-       → the lc-card: title + Ranked/Unranked pill, title count, optional
-         owner / collaborators line, description and up to 5 posters
-     MSSList.open(list, { resolve, owner, eyebrow, collabLine, manage, social })
-       (social: someone else's list → like / dislike + "Add to My Lists")
-       → the lp-* popup, read-only: posters (+N), View List, and on your
-         own profile "Manage in Lists"
-     MSSList.addTo(entry)
-       → "Add to List" picker (ratings popup on Library / category pages):
-         your lists — and lists shared with you — one under another as list
-         cards; tap one to add the title (tap again to take it out). Ranked
-         lists with a set order (Highest, A–Z…) re-sort themselves.
-     MSSList.reorder(list, mode, resolve) → puts a list in its saved order (sort_mode)
-     MSSList.ORDER_GROUPS · orderLabel(mode) · sortBy(rows, mode) · orderValue(e, mode) · orderHint(e, mode)
-     MSSList.rankBadge(ranked) · countHTML(n) · postersHTML(items, resolve) ·
-     collabLineHTML(list, collaborators) · avatarHTML(profile)
+     MSSList.cardHTML(list, { resolve, open, menu, own, ownerHTML, collabLine, reacts, extra })
+       → the lc-card: a cover of the first five posters in the list's order (#1 large, no
+         numbers — the arrangement shows the order; "+N" over the fifth), Ranked / Collection
+         + how it's ordered ("By your score", "Your order"), title, two lines of description,
+         then (ranked) "#1 title ★ score", the average ★ when there are ratings, and the count.
+       open: JS for a click (the list page) · menu: JS for its ⋯ (MSSListActions) ·
+       own: the viewer's list (wording) · reacts: the Community like / dislike buttons
+     MSSList.addTo(entry) → "Add to List": your lists (and lists shared with you) as cards in a
+       side panel — tap one to add the title (again to take it out); a list kept in order re-sorts.
+     MSSList.rankBadge(ranked) (Ranked / Collection) · officialBadge · ownerHTML · avatarHTML ·
+       collabLineHTML(list, collaborators) · average(list, resolve)
+     MSSList.reorder · sortBy · orderValue · orderHint · ORDER_GROUPS · orderLabel · byLabel (MSSOrder, config.js)
 
    Lists can hold titles added straight from Discover ("tmdb:movie:123").
    MSSList.tmdb(id) resolves those from a device cache (14 days, shared by
@@ -71,19 +67,14 @@ const MSSList = (() => {
   }
 
   /* ── Pieces ── */
+  // Ranked (green) or Collection (the other kind — was "Unranked"); a list that's neither shows none
   function rankBadge(ranked) {
     if (ranked === true)  return `<span class="list-rank-badge is-ranked">Ranked</span>`;
-    if (ranked === false) return `<span class="list-rank-badge is-unranked">Unranked</span>`;
+    if (ranked === false) return `<span class="list-rank-badge is-collection">Collection</span>`;
     return '';
   }
-  // Lists by the official account (065)
+  // Lists by the official account (065) — green like Ranked (yellow is for 9.80+ only)
   const officialBadge = list => list?.official ? `<span class="list-rank-badge is-official">${icon('crown', 11)} Official</span>` : '';
-  const countHTML = n => `<b>${n}</b> ${n === 1 ? 'title' : 'titles'}`;
-  function postersHTML(items, resolve) {
-    const posters = (items || []).slice(0, 5).map(resolve).filter(Boolean);
-    if (!posters.length) return `<div class="lc-posters"><div class="lc-poster lc-poster-empty">No titles yet</div></div>`;
-    return `<div class="lc-posters">${posters.map(e => `<div class="lc-poster"${MSSAge.attr(e.tmdb_type || e.media_type, e.tmdb_id, 'soft')}>${posterHTML(e, 'big')}</div>`).join('')}</div>`;
-  }
   function ownerHTML(p) {
     const u = safeURL(p?.avatar_url);
     return `<div class="social-list-owner"><div class="social-list-avatar">${u ? `<img src="${u}" loading="lazy" alt="">` : esc((p?.username || '?')[0].toUpperCase())}</div><div class="social-list-username">@${esc(p?.username || 'user')}</div></div>`;
@@ -105,150 +96,82 @@ const MSSList = (() => {
     <span>${joined.length ? `With <b>${names}</b>${joined.length > 3 ? ` +${joined.length - 3}` : ''}` : ''}${joined.length && pending ? ' · ' : ''}${pending ? `${pending} invite${pending === 1 ? '' : 's'} pending` : ''}</span></div>`;
   }
 
-  // Card body — the Lists page wraps it with its reorder bar when reordering
+  // The average of the list's scores — only when every title it holds from a library is known
+  // here (a Discover pick has no score) and at least one has a score; null otherwise
+  function average(list, resolve) {
+    let sum = 0, n = 0;
+    for (const id of list.items || []) {
+      if (isTmdbId(id)) continue;
+      const e = resolve(id);
+      if (!e) return null;
+      const v = liveScore(e);
+      if (v != null) { sum += Number(v); n++; }
+    }
+    return n ? sum / n : null;
+  }
+  // The cover: five cells (#1 spans both rows), the list's own order, "+N" over the fifth
+  // (a title still being looked up shows as a grey cell, so the cover keeps its shape)
+  function coverHTML(items, resolve) {
+    const first = (items || []).slice(0, 5);
+    if (!first.length) return `<div class="lc-cover is-empty"><span>${icon('layers', 22)}No titles yet</span></div>`;
+    const more = (items || []).length - 5;
+    return `<div class="lc-cover n${first.length}" aria-hidden="true">${first.map((id, i) => {
+      const e = resolve(id), plus = i === 4 && more > 0 ? `<span class="lc-plus">+${more}</span>` : '';
+      return e ? `<div class="lc-cell"${MSSAge.attr(e.tmdb_type || e.media_type, e.tmdb_id, 'soft')}>${posterHTML(e, 'big', i ? '(max-width:640px) 22vw, 90px' : '(max-width:640px) 36vw, 150px')}${plus}</div>`
+        : `<div class="lc-cell">${plus}</div>`;
+    }).join('')}</div>`;
+  }
+  // The card's body (the Add to List picker wraps it in its own button)
   function cardInnerHTML(list, o = {}) {
-    const items = list.items || [];
-    return `${o.ownerHTML || ''}
-    <div class="lc-title-row"><div class="lc-title" translate="no">${esc(list.title)}</div>${officialBadge(list) || rankBadge(list.ranked)}${mssVisBadge(list.visibility)}</div>
-    <div class="lc-meta">${countHTML(items.length)}${o.metaExtra || ''}</div>
-    ${o.collabLine || ''}
-    ${list.description ? `<div class="lc-desc" translate="no">${esc(list.description)}</div>` : ''}
-    ${postersHTML(items, o.resolve)}`;
-  }
-  const cardHTML = (list, o = {}) => `<div class="lc-card" onclick="${o.onclick}">${cardInnerHTML(list, o)}</div>`;
-
-  /* ── Read-only popup ── */
-  function close() {
-    MSSDialog.close(document.getElementById('mssListOverlay'));
-  }
-  function open(list, o = {}) {
-    let ov = document.getElementById('mssListOverlay');
-    if (!ov) {
-      ov = document.createElement('div');
-      ov.id = 'mssListOverlay';
-      ov.innerHTML = `<div id="mssListCard" role="dialog" aria-modal="true" aria-label="List" data-dbl-like></div>`;   // double-tap → Like (when the list has one)
-      MSSDialog.bind(ov, close);
-      document.body.appendChild(ov);
-    }
-    const items = list.items || [];
-    const shown = items.map(o.resolve).filter(Boolean);
-    const max = shown.length > 8 ? 7 : 8, posters = shown.slice(0, max), extra = shown.length - posters.length;
-    const head = o.owner ? mssProfileLinkHTML(o.owner, ownerHTML(o.owner).replace('class="social-list-owner"', 'class="social-list-owner" style="margin-bottom:0;"'))
-      : `<div class="lp-eyebrow">${esc(o.eyebrow || 'List')}${list.forked_from ? '<span class="lp-tag">Imported</span>' : ''}</div>`;
-    const url = `list-view.html?list=${encodeURIComponent(list.id)}`;
-    document.getElementById('mssListCard').innerHTML = `
-      <div class="lp-head">${head}<button type="button" class="lp-close" onclick="MSSList.close()" aria-label="Close">${icon('x', 18)}</button></div>
-      <div class="lp-title-row"><div class="lp-title" translate="no">${esc(list.title)}</div>${officialBadge(list) || rankBadge(list.ranked)}${mssVisBadge(list.visibility)}</div>
-      ${list.description ? `<div class="lp-desc" translate="no">${esc(list.description)}</div>` : ''}
-      <div class="lp-meta">${countHTML(items.length)}</div>
+    const items = list.items || [], n = items.length, resolve = o.resolve || (() => null);
+    const top = list.ranked === true ? resolve(items[0]) : null, topScore = top ? liveScore(top) : null;
+    const avg = average(list, resolve);
+    const orderChip = list.official ? '' : `<span class="lc-chip">${esc(MSSOrder.byLabel(list.sort_mode, o.own))}</span>`;
+    return `${coverHTML(items, resolve)}
+    <div class="lc-body">
+      ${o.ownerHTML || ''}
+      <div class="lc-chips">${officialBadge(list) || rankBadge(list.ranked)}${orderChip}${mssVisBadge(list.visibility)}${o.extra || ''}</div>
+      <h3 class="lc-title" translate="no">${esc(list.title)}</h3>
+      ${list.description ? `<p class="lc-desc" translate="no">${esc(list.description)}</p>` : ''}
       ${o.collabLine || ''}
-      ${posters.length ? `<div class="lp-posters">${posters.map(e => `<div class="lp-poster"${MSSAge.attr(e.tmdb_type || e.media_type, e.tmdb_id, 'soft')}>${posterHTML(e, 'big')}</div>`).join('')}${extra > 0 ? `<div class="lp-poster lp-more">+${extra}</div>` : ''}</div>` : ''}
-      ${o.social ? `<div id="lpPopupActions" class="lp-actions lp-actions-social">${socialHTML(null, null)}</div>` : ''}
-      <div id="lpNavPopupActions" class="lp-footer${o.manage ? ' lp-footer-manage' : ''}">${footerHTML(list, o)}</div>
-      ${o.social && window._navUser?.id && list.user_id && list.user_id !== window._navUser.id ? `<div class="lp-report-row"><button type="button" class="mss-report-link" onclick="mssReport('list', ${escHTML(JSON.stringify(list.id))})">${icon('flag', 12)} Report this list</button></div>` : ''}`;
-    MSSDialog.open(ov);
-    cur = { list, o, react: null, imported: null };
-    if (o.social) {
-      const me = window._navUser?.id, c = cur;
-      Promise.all([
-        mssReactions('list', list.id).catch(() => null),
-        me ? sb.from('favorite_lists').select('id').eq('user_id', me).eq('forked_from', list.id).limit(1).then(r => !!(r.data && r.data.length), () => false) : Promise.resolve(false),
-      ]).then(([st, imp]) => { if (cur === c) { c.react = st; c.imported = imp; drawFooter(); } });
-    }
-  }
-
-  /* Same layout as the Lists page popup (lists.html): on someone else's list
-     (o.social) a row with like / dislike + "Add to My Lists" (a copy in your
-     Lists), then the footer — View List + Close, or Manage on your own profile */
-  let cur = null;
-  function socialHTML(react, imported) {
-    const st = react || { like: 0, dislike: 0, mine: null };
-    return `<div class="lp-react-pair">
-        <button type="button" class="popup-action-btn lp-react${st.mine === 'like' ? ' is-on' : ''}" onclick="MSSList._react(true)" data-like aria-label="Like" aria-pressed="${st.mine === 'like'}" ${react ? '' : 'disabled'}>${icon(st.mine === 'like' ? 'thumbsUpFilled' : 'thumbsUp', 14)}<span>${st.like}</span></button>
-        <button type="button" class="popup-action-btn lp-react lp-react-down${st.mine === 'dislike' ? ' is-on' : ''}" onclick="MSSList._react(false)" aria-label="Dislike" aria-pressed="${st.mine === 'dislike'}" ${react ? '' : 'disabled'}>${icon(st.mine === 'dislike' ? 'thumbsDownFilled' : 'thumbsDown', 14)}<span>${st.dislike}</span></button>
+      <div class="lc-foot">
+        ${top ? `<span class="lc-top"><b>#1</b> <span translate="no">${esc(top.title)}</span></span>${topScore != null ? mssScoreHTML(topScore, { cls: 'lc-score' }) : ''}` : '<span class="lc-top"></span>'}
+        ${avg != null ? `<span class="lc-avg${top ? ' is-side' : ''}">Avg ${mssScoreHTML(avg, { cls: 'lc-score' })}</span>` : ''}
+        <span class="lc-n">${n} ${n === 1 ? 'title' : 'titles'}</span>
       </div>
-      <button type="button" class="popup-action-btn lp-add" ${imported ? 'disabled' : ''} onclick="MSSList._import(this)">${imported ? 'Added to My Lists ✓' : '+ Add to My Lists'}</button>`;
+      ${o.reacts ? `<div class="lc-reacts">${o.reacts}</div>` : ''}
+    </div>`;
   }
-  function footerHTML(list, o) {
-    const url = `list-view.html?list=${encodeURIComponent(list.id)}`;
-    return `<button type="button" class="popup-action-btn lp-view" onclick="MSSList.close();location.href=${escHTML(JSON.stringify(url))}">${icon('list', 14)} View List</button>`
-      // Share with friends (Social → Recommendations, social.js via mssRecommend)
-      + (window._navUser && (!list.cat || list.cat === 'custom') && (list.visibility === 'anyone' || list.user_id === window._navUser.id) ? `<button type="button" class="popup-action-btn lp-share" onclick="mssRecommend(${escHTML(JSON.stringify({ kind: 'list', list_id: list.id, title: list.title, count: (list.items || []).length }))})">${icon('send', 14)} Share</button>` : '')
-      + (o.manage
-        ? `<button type="button" class="popup-action-btn lp-manage" onclick="location.href='lists.html'">${icon('edit', 14)} Manage in Lists</button>`
-        : `<button type="button" class="popup-action-btn lp-replies" onclick="MSSList.close()">Close</button>`);
-  }
-  function drawFooter() {
-    const el = document.getElementById('lpPopupActions');
-    if (el && cur) el.innerHTML = socialHTML(cur.react, cur.imported);
-  }
-  async function react(isLike) {
-    if (!cur || !cur.react) return;
-    const c = cur;
-    c.react = await mssReact('list', c.list.id, isLike, c.react);
-    if (cur === c) drawFooter();
-  }
-  // Copy into your Lists: their titles become yours (your entry when you have
-  // the title, otherwise the TMDB title) — same as "Import" on list-view.html
-  async function importList(btn) {
-    const me = window._navUser?.id;
-    if (mssGuestGate('save lists') || !me) return;
-    if (!cur) return;
-    const { list, o } = cur;
-    btn.disabled = true;
-    try {
-      const { data: mine } = await sb.from('entries').select('id, tmdb_id, tmdb_type').eq('user_id', me).not('tmdb_id', 'is', null);
-      const myByTmdb = Object.fromEntries((mine || []).map(e => [`${e.tmdb_type}:${e.tmdb_id}`, e.id]));
-      const items = [];
-      (list.items || []).forEach(id => {
-        let next = id;
-        if (isTmdbId(id)) { const [, t, n] = id.split(':'); next = myByTmdb[`${t}:${n}`] || id; }
-        else { const e = o.resolve(id); if (e?.tmdb_id && e?.tmdb_type) next = myByTmdb[`${e.tmdb_type}:${e.tmdb_id}`] || `tmdb:${e.tmdb_type}:${e.tmdb_id}`; }
-        if (!items.includes(next)) items.push(next);
-      });
-      const { error } = await sb.from('favorite_lists').insert({
-        user_id: me, cat: 'custom', genre: list.genre || '', title: list.title, description: list.description || null,
-        items, ranked: list.ranked ?? null, forked_from: list.id,
-      });
-      if (error) throw error;
-      showToast('Added to your lists!');
-      cur.imported = true; drawFooter();
-    } catch (err) {
-      console.error('Add list:', err);
-      showToast(isRateLimitError?.(err) ? RATE_LIMIT_MESSAGE : 'Couldn’t add that list — try again.', 'err');
-      btn.disabled = false;
-    }
-  }
+  const cardHTML = (list, o = {}) => `<article class="lc-card" data-list-id="${esc(list.id)}" role="link" tabindex="0" aria-label="${esc(list.title)}"
+      onclick="if(!event.target.closest('button,a'))${o.open}" onkeydown="if((event.key==='Enter')&&event.target===this){event.preventDefault();${o.open}}"${o.dbl ? ' data-dbl-like' : ''}>
+      ${cardInnerHTML(list, o)}
+      ${o.menu ? `<button type="button" class="lc-more" onclick="event.stopPropagation();${o.menu}" aria-label="Actions for ${esc(list.title)}" aria-haspopup="menu">${icon('moreV', 16)}</button>` : ''}
+    </article>`;
+  // The list page's address
+  const url = list => `list-view.html?list=${encodeURIComponent(list.id)}`;
 
   // A list's saved order (sort_mode): MSSOrder in config.js — also used by db.js to keep lists in order
-  const { ORDER_GROUPS, orderLabel, orderValue, sortBy, reorder, orderHint } = MSSOrder;
+  const { ORDER_GROUPS, orderLabel, byLabel, orderValue, sortBy, reorder, orderHint } = MSSOrder;
 
   /* ── "Add to List" picker ── */
   let add = null;     // { entry, lists, map }
   const tmdbKey = e => e.tmdb_id && e.tmdb_type ? `tmdb:${e.tmdb_type}:${e.tmdb_id}` : null;
   const holds = (l, e) => (l.items || []).some(id => id === e.id || (tmdbKey(e) && id === tmdbKey(e)));
   const addResolve = id => isTmdbId(id) ? tmdb(id) : add?.map[id] || null;
-  function addClose() { MSSDialog.close(document.getElementById('mssListAddOverlay')); }
+  // a side panel S (full page on phones) with the title's backdrop: your lists to tick, New list, Done
+  let addPanel = null;
+  function addClose() { addPanel?.close(); }
   async function addTo(entry) {
     const me = window._navUser?.id;
     if (!entry || !me) return;
-    let ov = document.getElementById('mssListAddOverlay');
-    if (!ov) {
-      ov = document.createElement('div');
-      ov.id = 'mssListAddOverlay';
-      ov.innerHTML = `<div id="mssListAddCard" role="dialog" aria-modal="true" aria-labelledby="mssListAddTitle">
-          <div class="sf-header"><div><div class="lp-eyebrow" id="mssListAddFor"></div><div class="sf-title" id="mssListAddTitle">Add to List</div></div>
-            <button type="button" class="sf-close" onclick="MSSList._addClose()" aria-label="Close">${icon('x', 18)}</button></div>
-          <div class="sf-body" id="mssListAddBody"></div>
-          <div class="sf-footer"><a class="sf-clear-btn la-new" href="lists.html">${icon('plus', 14)} New list</a><button type="button" class="sf-apply-btn" onclick="MSSList._addClose()">Done</button></div>
-        </div>`;
-      MSSDialog.bind(ov, addClose);
-      document.body.appendChild(ov);
-    }
+    await mssLoadScript('js/panel.js');
+    const h = MSSPanel.open({ size: 'S', kind: 'title', tallHero: true, poster: mssSharpPoster(entry.poster_url) || null, title: 'Add to List', subtitle: entry.title,
+      backdrop: entry.tmdb_id ? entry : null,
+      body: '<div id="mssListAddBody"><div class="page-loading"><div class="spinner"></div></div></div>',
+      footer: { secondary: [{ label: 'New list', lead: icon('plus', 16), onClick: () => { location.href = 'lists.html'; } }], primary: { label: 'Done', onClick: x => x.close() } },
+      onClose: () => { if (addPanel === h) { addPanel = null; add = null; } } });
+    addPanel = h;
     add = { entry, lists: null, map: { [entry.id]: entry } };
-    document.getElementById('mssListAddFor').innerHTML = `<span translate="no">${esc(entry.title)}</span>`;
-    document.getElementById('mssListAddBody').innerHTML = '<div class="page-loading"><div class="spinner"></div></div>';
-    MSSDialog.open(ov);
     const cur = add;
     try {
       const [own, shared, entries] = await Promise.all([
@@ -274,7 +197,7 @@ const MSSList = (() => {
       if (await hydrate(lists, 5) && add === cur) drawAdd();
     } catch (err) {
       console.error('Add to list:', err);
-      if (add === cur) document.getElementById('mssListAddBody').innerHTML = '<div class="sf-empty">Couldn’t load your lists — try again.</div>';
+      if (add === cur) document.getElementById('mssListAddBody').innerHTML = '<p class="lyr-rows-msg">Couldn’t load your lists — try again.</p>';
     }
   }
   function drawAdd() {
@@ -311,5 +234,5 @@ const MSSList = (() => {
     if (add === c) drawAdd();
   }
 
-  return { _react: react, _import: importList, addTo, reorder, sortBy, orderValue, orderHint, ORDER_GROUPS, orderLabel, _addClose: addClose, _addToggle: addToggle, cardHTML, cardInnerHTML, open, close, rankBadge, officialBadge, countHTML, postersHTML, ownerHTML, avatarHTML, collabLineHTML, tmdb, isTmdbId, hydrate, cache };
+  return { addTo, reorder, sortBy, orderValue, orderHint, ORDER_GROUPS, orderLabel, byLabel, _addClose: addClose, _addToggle: addToggle, cardHTML, cardInnerHTML, url, average, rankBadge, officialBadge, ownerHTML, avatarHTML, collabLineHTML, tmdb, isTmdbId, hydrate, cache };
 })();

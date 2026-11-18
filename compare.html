@@ -7,28 +7,31 @@
 <script src="js/i18n.js"></script>
 <title>Compare — MyScreenFolio</title>
 <link rel="stylesheet" href="css/fonts.css">
+<link rel="stylesheet" href="css/theme.css">
 <link rel="stylesheet" href="css/style.css">
 <link rel="stylesheet" href="css/social.css">
   <!-- PWA -->
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#1E5C26">
+  <meta name="theme-color" content="#F3EEDC">
+  <meta name="color-scheme" content="light dark">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="MyScreenFolio">
-  <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
-  <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <link rel="icon" type="image/svg+xml" sizes="any" href="icons/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
 </head>
 <body>
-<div class="page-wrap fr-page">
+<div class="page-wrap fr-page soc-page">
 
-  <div class="cat-page-header fade-up">
+  <div class="soc-bar" id="socStrip" role="navigation" aria-label="Social"></div>
+  <div class="cat-page-header soc-page-head fade-up">
     <div>
+      <div class="soc-kicker">People</div>
       <h1 class="cat-page-title">Compare</h1>
       <div class="cat-page-sub" id="socPageSub">Line your taste up with a friend’s, side by side.</div>
     </div>
   </div>
-  <div class="pn-toggle soc-strip" id="socStrip" role="navigation" aria-label="People"></div>
 
   <section aria-label="Compare">
     <div class="fr-toolbar" id="frToolbar"></div>
@@ -42,7 +45,7 @@
 <script src="js/db.js"></script>
 <script src="js/nav.js"></script>
 <script src="js/info-popup.js"></script>
-<script src="js/rating-popup.js"></script>
+<script src="js/title-view.js"></script>
 <script src="js/easter-egg.js"></script>
 <script src="js/note-popup.js"></script>
 <script src="js/episode-ratings.js"></script>
@@ -94,66 +97,128 @@ SF.register('frShared', {
 
 // Taste match with one friend: how closely your scores line up
 // (shared formula: mssTasteMatch, config.js — also on friend cards and profiles)
+let _cmpPickQ = '';
+// The friend picker: sorted by taste match (no data last), a search for long friend lists
+function _cmpPickerHTML(uid) {
+  const q = _cmpPickQ.trim().toLowerCase();
+  const fr = _frAccepted.filter(f => !q || [_frName(f.friendId), f.friendProfile?.username].some(t => (t || '').toLowerCase().includes(q)))
+    .sort((x, y) => (_frMatchPct(y.friendId) ?? -1) - (_frMatchPct(x.friendId) ?? -1) || _frName(x.friendId).localeCompare(_frName(y.friendId)));
+  return `<section class="cp-pick" aria-label="Compare with">
+    <div class="cp-pick-head"><h2 class="cp-pick-title">Compare with</h2>
+      <label class="cp-pick-search"><span class="sr-only">Find a friend</span>${icon('search', 14)}<input type="search" placeholder="Find a friend…" value="${escHTML(_cmpPickQ)}" autocomplete="off" spellcheck="false" oninput="_cmpPickQ=this.value;_cmpPaintPicker()"></label>
+      <span class="cp-pick-hint">Sorted by taste match</span></div>
+    <div class="cp-pick-row" id="cmpPickRow">${fr.length ? fr.map(f => { const on = f.friendId === uid, m = _frMatchPct(f.friendId);
+      return `<button type="button" class="cp-person${on ? ' on' : ''}" aria-pressed="${on}" onclick="_cmpToggle(${attrJSON(f.friendId)})">${_frAvHTML(f.friendProfile, 52)}${on ? `<i aria-hidden="true">${icon('check', 10)}</i>` : ''}<span translate="no">${escHTML(_frName(f.friendId))}</span><small>${m != null ? m + '%' : '—'}</small></button>`; }).join('')
+      : `<div class="cp-pick-none">No friend called “${escHTML(_cmpPickQ)}”</div>`}</div>
+  </section>`;
+}
+function _cmpPaintPicker() {
+  const row = document.getElementById('cmpPickRow'); if (!row) return;
+  const tmp = document.createElement('div'); tmp.innerHTML = _cmpPickerHTML(_cmpWith[0]);
+  row.replaceWith(tmp.querySelector('#cmpPickRow'));
+}
+// The two people, side by side — the same spots before and after a friend is picked
+function _cmpSide(p, name, cls = '') {
+  return `<div class="cp-side${cls}">${p ? _frAvHTML(p, 72) : `<span class="cp-slot" aria-hidden="true">${icon('user', 26)}</span>`}<b translate="no">${escHTML(name)}</b></div>`;
+}
+// An empty Agreements / Splits list: the same card, an icon, what it means
+function _cmpNone(ic, title, text) {
+  return `<div class="cp-pairs cp-empty"><span class="cp-empty-ic" aria-hidden="true">${icon(ic, 18)}</span><div><b>${title}</b><p>${text}</p></div></div>`;
+}
+function _cmpFact(ic, html) { return `<li>${icon(ic, 14)}<span>${html}</span></li>`; }
+// Rows for Biggest agreements / Biggest splits: poster, title, your score vs theirs (bars on wide screens), the gap
+function _cmpPairRow(p, uid) {
+  const gap = Math.abs(p.a - p.b), e = p.m;
+  return `<li class="cp-pair" role="button" tabindex="0" onclick="_cmpOpen(${attrJSON(_cmpKeyOf(e))})" onkeydown="if(event.key==='Enter')this.click()">
+    ${_frPosterHTML(e, 'cp-pair-poster')}
+    <div class="cp-pair-main"><b class="cp-pair-title" translate="no">${escHTML(e.title)}</b>
+      <div class="cp-pair-bars"><span class="me" style="--w:${p.a * 10}%"></span><span class="them" style="--w:${p.b * 10}%"></span></div></div>
+    <div class="cp-pair-sc"><b class="me">${p.a.toFixed(2)}</b><small>You</small></div>
+    <div class="cp-pair-sc"><b class="them">${p.b.toFixed(2)}</b><small translate="no">${escHTML(_frName(uid))}</small></div>
+    <div class="cp-pair-gap">${gap < .005 ? 'Same' : '±' + gap.toFixed(2)}</div>
+  </li>`;
+}
 async function _frRenderCompare() {
   const c = document.getElementById('frContent');
-  if (!_cmpMine) { document.getElementById('frToolbar').style.display = 'none'; c.innerHTML = `<div class="page-loading"><div class="spinner"></div></div>`; await _cmpLoad(); if (_frTab !== 'compare') return; }
-  _cmpWith = _cmpWith.filter(u => _frProfiles[u]);
-  // 1) Who
-  const picker = `<section class="cp-pick">
-      <div class="cp-pick-head"><div class="fr-toolbar-title">Compare with</div><div class="cp-pick-hint">${_cmpWith.length ? `${_cmpWith.length} selected · tap to change` : 'Pick one or more friends'}</div></div>
-      <div class="cp-pick-row">${_frAccepted.map(f => { const on = _cmpWith.includes(f.friendId);
-        return `<button type="button" class="cp-person${on ? ' on' : ''}" aria-pressed="${on}" onclick="_cmpToggle(${attrJSON(f.friendId)})">${_frAvHTML(f.friendProfile, 52)}<span translate="no">${escHTML(_frName(f.friendId))}</span>${on ? `<i>${icon('check', 11)}</i>` : ''}</button>`; }).join('')}</div>
-    </section>`;
-  if (!_cmpWith.length) {
-    document.getElementById('frToolbar').style.display = 'none';
-    c.innerHTML = picker + _frEmptyHTML('compare', 'Who do you want to compare with?', 'Choose a friend above to see how your taste lines up — shared titles, score differences, favorites and notes.');
-    return;
-  }
-  if (_cmpKey) return _cmpShowTitle(picker);
-  // 2) Taste match cards
-  const matches = `<div class="cp-matches">${_cmpWith.map(uid => { const m = _cmpMatch(uid);
-    const ring = m.pct != null ? m.pct : 0;
-    return `<div class="cp-match">
-      <div class="cp-ring" style="--p:${ring}"><div><b>${m.pct != null ? m.pct + '%' : '—'}</b><span>match</span></div></div>
-      <div class="cp-match-info">
-        <div class="cp-match-name">You & ${escHTML(_frName(uid))}</div>
-        <div class="cp-match-stats"><span><b>${m.shared}</b> shared</span><span><b>${m.rated}</b> rated by both</span>${m.avgDiff != null ? `<span><b>±${m.avgDiff.toFixed(1)}</b> avg difference</span>` : ''}</div>
-        ${m.loved ? `<div class="cp-match-line">${icon('heart', 12)} You both love <b translate="no">${escHTML(m.loved.m.title)}</b></div>` : ''}
-        ${m.split ? `<div class="cp-match-line">${icon('zap', 12)} Split on <b translate="no">${escHTML(m.split.m.title)}</b> — you ${m.split.a.toFixed(1)}, them ${m.split.b.toFixed(1)}</div>` : ''}
-      </div>
-    </div>`; }).join('')}</div>`;
-  // 3) Shared titles
-  const list = SF.list('frShared', 'all');
   document.getElementById('frToolbar').style.display = 'none';
-  // Shared-titles toolbar sits between the match cards and the list
-  c.innerHTML = picker + matches + `
-    <div class="fr-toolbar" id="cmpToolbar"><div class="fr-toolbar-label"><div class="fr-toolbar-title">Shared Titles</div><div class="fr-toolbar-count"><b>${list.length}</b> ${list.length === 1 ? 'title' : 'titles'}</div></div>${SF.bar('frShared', 'all')}</div>
-    <div class="cp-search fused-search-wrap"><input id="cmpInput" class="add-friend-input" placeholder="Search shared titles…" autocomplete="off" spellcheck="false" value="${escHTML(_cmpQuery)}" oninput="_cmpQuery=this.value;SF.invalidate&&SF.invalidate('frShared');_cmpRenderList()"><button type="button" class="fused-search-btn" tabindex="-1" onclick="document.getElementById('cmpInput').focus()">${icon('search', 16)}</button></div>
-    <div id="cmpList"></div>`;
+  if (!_cmpMine) { c.innerHTML = `<div class="page-loading"><div class="spinner"></div></div>`; await _cmpLoad(); if (_frTab !== 'compare') return; }
+  _cmpWith = _cmpWith.filter(u => _frProfiles[u]).slice(0, 1);
+  const uid = _cmpWith[0], me = _cmpProfiles[_fUser.id] || _fProfile;
+  const picker = _cmpPickerHTML(uid);
+  if (uid && _cmpKey) return _cmpShowTitle(picker);
+  const m = uid ? _cmpMatch(uid) : null;
+  const name = uid ? _frName(uid) : '';
+  // The hero: you · the match ring · them (an empty spot until you pick someone)
+  const facts = m ? [
+      _cmpFact('bookmark', `<b>${m.shared}</b> titles in both libraries · <b>${m.rated}</b> rated by both`),
+      m.avgDiff != null ? _cmpFact('compare', `Scores differ by <b>±${mssR1(m.avgDiff)}</b> on average`) : '',
+      m.loved ? _cmpFact('heart', `You both love <b translate="no">${escHTML(m.loved.m.title)}</b>`) : '',
+      m.split ? _cmpFact('shuffle', `Split on <b translate="no">${escHTML(m.split.m.title)}</b> — you ${mssR1(m.split.a)}, ${escHTML(name)} ${mssR1(m.split.b)}`) : '',
+    ].join('')
+    : ['Titles in both libraries', 'How far apart your scores are', 'A favourite you share', 'Your biggest split'].map(t => `<li class="is-ghost">${icon('compare', 14)}<span>${t}</span></li>`).join('');
+  const hero = `<section class="cp-hero2${m ? '' : ' is-empty'}" aria-label="${m ? `You and ${escHTML(name)}` : 'Pick a friend to compare with'}">
+    <div class="cp-duo">
+      ${_cmpSide(me, 'You')}
+      <div class="cp-ring cp-ring-big" style="--p:${m?.pct ?? 0}"><div><b>${m?.pct != null ? m.pct + '%' : '—'}</b><span>taste match</span></div></div>
+      ${_cmpSide(uid ? _frProfiles[uid] : null, uid ? name : 'Pick a friend', uid ? '' : ' is-slot')}
+    </div>
+    <div class="cp-hero2-body">
+      <h2 class="cp-hero2-title">${m ? `You & <span translate="no">${escHTML(name)}</span>` : 'Line your taste up with a friend’s'}</h2>
+      ${m ? '' : `<p class="cp-hero2-lead">Pick someone above and this fills in: your match, the titles you share, where you agree and where you split.</p>`}
+      <ul class="cp-facts">${facts}</ul>
+      ${m && m.pct == null ? `<p class="cp-hero2-lead">Rate a few more of the same titles to get a match — ${MSS_MATCH_MIN} rated by both are needed.</p>` : ''}
+    </div>
+    <div class="cp-hero2-act">${uid
+      ? `<a class="btn-add-entry" href="blend.html?with=${encodeURIComponent(uid)}">${icon('shuffle', 14)} Blend with ${escHTML(name)}</a><a class="fm-btn" href="messages.html?with=${encodeURIComponent(uid)}">${icon('inbox', 13)} Message</a>`
+      : `<a class="fm-btn" href="blend.html">${icon('shuffle', 13)} Open Blend</a>`}</div>
+  </section>`;
+  if (!uid) { c.innerHTML = picker + hero; return; }
+  // Biggest agreements (both 9+, closest first; else simply the closest) and splits (widest gaps)
+  const rated = m.list;
+  const gap = p => Math.abs(p.a - p.b);
+  let agree = rated.filter(p => p.a >= 9 && p.b >= 9).sort((x, y) => gap(x) - gap(y) || (y.a + y.b) - (x.a + x.b));
+  if (agree.length < 3) agree = rated.slice().sort((x, y) => gap(x) - gap(y) || (y.a + y.b) - (x.a + x.b));
+  agree = agree.slice(0, 5);
+  const splits = rated.filter(p => gap(p) >= 1).sort((x, y) => gap(y) - gap(x)).slice(0, 5);
+  const lists = rated.length ? `<div class="cp-lists">
+      <section class="cp-listsec"><h2 class="fr-sec-title">Biggest agreements</h2>${agree.length ? `<ul class="cp-pairs">${agree.map(p => _cmpPairRow(p, uid)).join('')}</ul>`
+        : _cmpNone('heart', 'No agreements yet', `Rate a few more of the titles you’ve both watched and the ones you see the same way show up here.`)}</section>
+      <section class="cp-listsec"><h2 class="fr-sec-title">Biggest splits</h2>${splits.length ? `<ul class="cp-pairs">${splits.map(p => _cmpPairRow(p, uid)).join('')}</ul>`
+        : _cmpNone('check', 'No real splits', `You and ${escHTML(name)} are within a point of each other on all ${rated.length} ${rated.length === 1 ? 'title' : 'titles'} you’ve both rated${(() => { const w = rated.slice().sort((x, y) => gap(y) - gap(x))[0]; return w ? ` — the widest gap is <b translate="no">${escHTML(w.m.title)}</b> (±${gap(w).toFixed(2)})` : ''; })()}.`)}</section>
+    </div>` : '';
+  // Shared titles: every title you've both watched and rated, searchable
+  const list = SF.list('frShared', 'all');
+  c.innerHTML = picker + hero + `<div class="cp-fade">${lists}
+    <div class="cp-shared-head"><div class="fr-sec-head"><h2 class="fr-sec-title">Shared titles</h2><span class="fr-sec-sub" id="cmpCount">${list.length} ${list.length === 1 ? 'title' : 'titles'}</span></div>${SF.bar('frShared', 'all')}</div>
+    <div class="sf-search cp-search2${_cmpQuery ? ' has-q' : ''}" role="search"><span class="sf-search-ic" aria-hidden="true">${icon('search', 16)}</span>
+      <input type="search" id="cmpInput" class="sf-search-input" placeholder="Search shared titles…" aria-label="Search shared titles" autocomplete="off" spellcheck="false" value="${escHTML(_cmpQuery)}" oninput="_cmpQuery=this.value;this.parentElement.classList.toggle('has-q',!!this.value);SF.invalidate&&SF.invalidate('frShared');_cmpRenderList()">
+      <button type="button" class="sf-search-clear" aria-label="Clear search" onclick="const i=document.getElementById('cmpInput');i.value='';i.dispatchEvent(new Event('input'));i.focus()">${icon('x', 14)}</button></div>
+    <div id="cmpList"></div></div>`;
   _cmpRenderList();
 }
 function _cmpRenderList() {
   const el = document.getElementById('cmpList'); if (!el) return;
-  const list = SF.list('frShared', 'all');
-  const cnt = document.querySelector('#cmpToolbar .fr-toolbar-count b'); if (cnt) cnt.textContent = list.length;
-  el.innerHTML = list.length ? `<div class="cp-list">${list.slice(0, 120).map(g => {
-    const cols = [_fUser.id, ..._cmpWith].map(u => { const e = g.byUser[u]; const sc = e ? _frScore(e) : null;
-      return `<div class="cp-cell${u === _fUser.id ? ' me' : ''}"><span>${u === _fUser.id ? 'You' : escHTML(_frName(u))}</span><b>${e ? (sc != null ? '★ ' + sc.toFixed(2) : '—') : '·'}</b></div>`; }).join('');
-    const d = g._diff;
-    // Same card as the Library's list view; score columns are a fixed width
-    // so they line up row to row however many friends are compared
-    return `<div class="fv-rank-row cp-row" role="button" tabindex="0" onclick="_cmpOpen(${attrJSON(g.key)})" onkeydown="if(event.key==='Enter')this.click()" style="--cp-n:${_cmpWith.length + 1}">
-      <div class="fv-rank-poster">${posterHTML(g)}</div>
-      <div class="fv-rank-info">
-        <div class="fv-rank-title" translate="no">${escHTML(g.title)}${g.year ? `<span class="title-year-inline">${escHTML(String(g.year).slice(0, 4))}</span>` : ''}</div>
-        <div class="fv-rank-meta">${_frTypeBadge(g)}${d != null ? `<span class="cp-delta ${Math.abs(d) < .5 ? 'same' : d > 0 ? 'up' : 'down'}">${Math.abs(d) < .5 ? 'In sync' : (d > 0 ? '+' : '') + d.toFixed(1) + ' vs you'}</span>` : ''}</div>
-      </div>
-      <div class="cp-cells">${cols}</div>
-    </div>`;
-  }).join('')}</div>` : _frEmptyHTML('search', _cmpQuery ? 'No shared titles match' : 'Nothing shared yet', _cmpQuery ? 'Try a different search.' : 'Once you both log the same title, it shows up here.');
+  const list = SF.list('frShared', 'all'), uid = _cmpWith[0];
+  const cnt = document.getElementById('cmpCount'); if (cnt) cnt.textContent = `${list.length} ${list.length === 1 ? 'title' : 'titles'}`;
+  // the same rows as the agreements / splits: you vs them, the gap ("—" where one of you hasn't rated it)
+  el.innerHTML = list.length ? `<ul class="cp-pairs cp-pairs-all">${list.slice(0, 120).map(g => {
+    const a = g._mine, b = g._theirs, d = g._diff;
+    return `<li class="cp-pair" role="button" tabindex="0" onclick="_cmpOpen(${attrJSON(g.key)})" onkeydown="if(event.key==='Enter')this.click()">
+      ${_frPosterHTML(g, 'cp-pair-poster')}
+      <div class="cp-pair-main"><b class="cp-pair-title" translate="no">${escHTML(g.title)}${g.year ? ` <span class="cp-pair-year">${escHTML(String(g.year).slice(0, 4))}</span>` : ''}</b>
+        <div class="cp-pair-meta">${_frTypeBadge(g)}</div></div>
+      <div class="cp-pair-sc"><b class="me">${a != null ? a.toFixed(2) : '—'}</b><small>You</small></div>
+      <div class="cp-pair-sc"><b class="them">${b != null ? b.toFixed(2) : '—'}</b><small translate="no">${escHTML(_frName(uid))}</small></div>
+      <div class="cp-pair-gap">${d == null ? '' : Math.abs(d) < .005 ? 'Same' : '±' + Math.abs(d).toFixed(2)}</div>
+    </li>`;
+  }).join('')}</ul>` : _frEmptyHTML('search', _cmpQuery ? 'No shared titles match' : 'Nothing shared yet', _cmpQuery ? 'Try a different search.' : 'Once you both log the same title, it shows up here.');
 }
+// One friend at a time (comparing several is Blend's job); tapping the one picked clears it
 function _cmpToggle(uid) {
-  _cmpWith = _cmpWith.includes(uid) ? _cmpWith.filter(u => u !== uid) : [..._cmpWith, uid];
+  _cmpWith = _cmpWith[0] === uid ? [] : [uid];
+  const url = new URL(location.href);
+  if (_cmpWith[0]) url.searchParams.set('with', _cmpWith[0]); else url.searchParams.delete('with');
+  history.replaceState(history.state, '', url.pathname + url.search);
   _cmpKey = null; SF.invalidate && SF.invalidate('frShared'); _frRender();
 }
 function _cmpOpen(key) { _cmpKey = key; _frRender(); document.getElementById('frContent').scrollIntoView({ behavior: 'smooth', block: 'start' }); }
@@ -231,7 +296,7 @@ function _cmpShowTitle(picker) {
           ${agree != null ? `<div><b>${agree}%</b><span>Ratings agree</span></div>` : ''}
           <div><b>${finished}/${people.length}</b><span>Finished</span></div>
         </div>
-        ${topRow ? `<div class="cp-hero-line">${icon('ratingStar', 12)} Rated highest together: <b>${escHTML(topRow.r.label)}</b> (${topRow.avg.toFixed(1)} avg)</div>` : ''}
+        ${topRow ? `<div class="cp-hero-line">${icon('ratingStar', 12)} Rated highest together: <b>${escHTML(topRow.r.label)}</b> (${mssR1(topRow.avg)} avg)</div>` : ''}
       </div>
     </div>
     <div class="cp-pcards">${people.map(card).join('')}</div>
@@ -240,7 +305,7 @@ function _cmpShowTitle(picker) {
       <tbody>${groups.map((gr, gi) => `${gr.kind === 'bonus' && groups[gi - 1]?.kind !== 'bonus' ? `<tr class="cp-kind"><th scope="rowgroup" colspan="${people.length + 1}">Bonus</th></tr>` : ''}
         <tr class="cp-grp"><th scope="row">${escHTML(gr.name)}</th>${people.map(u => { const a = groupAvg(gr, u); return `<td>${a != null ? a.toFixed(2).replace(/0$/, '') : '—'}</td>`; }).join('')}</tr>
         ${gr.items.map(r => { const vals = people.map(u => rv(g.byUser[u], r.key)); const nums = vals.filter(v => v != null); const top = nums.length > 1 ? Math.max(...nums) : null;
-        return `<tr><td>${escHTML(r.label)}</td>${vals.map(v => `<td class="${v != null && v === top ? 'best' : ''}">${v != null ? v.toFixed(1) : '—'}</td>`).join('')}</tr>`; }).join('')}`).join('')}
+        return `<tr><td>${escHTML(r.label)}</td>${vals.map(v => `<td class="${v != null && v === top ? 'best' : ''}">${v != null ? mssR1(v) : '—'}</td>`).join('')}</tr>`; }).join('')}`).join('')}
         <tr class="cp-total"><td>Final score</td>${people.map(u => { const v = _frScore(g.byUser[u]); return `<td>${v != null ? '★ ' + v.toFixed(2) : '—'}</td>`; }).join('')}</tr></tbody></table></div>` : ''}
     ${people.some(u => g.byUser[u].notes && g.byUser[u].notes.trim()) ? `<div class="fr-toolbar-title cp-sec">Notes</div>
     <div class="fn-grid">${people.filter(u => g.byUser[u].notes && g.byUser[u].notes.trim()).map(u => { const e = g.byUser[u];

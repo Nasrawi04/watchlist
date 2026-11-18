@@ -19,7 +19,7 @@ function _discTodayStr() {
 // consistent everywhere.
 function _discFloorScore(score) {
   if (score == null || isNaN(score)) return null;
-  return (Math.floor(Number(score) * 10) / 10).toFixed(1);
+  return mssR1(score);   // (mssR1, config.js: also keeps 8.7 from turning into 8.6)
 }
 
 /* ── Official TMDB poster for a title ──
@@ -39,19 +39,24 @@ function _discPosterSave() {
   clearTimeout(_discPosterSaveTimer);
   _discPosterSaveTimer = setTimeout(() => { try { localStorage.setItem(_DISC_POSTER_STORE, JSON.stringify(_discPosterMem)); } catch {} }, 300);
 }
-async function _discOfficialPoster(type, id) {
+// → { poster, overview, backdrop_path, score, votes } from the title's TMDB page (kept 30 days with the poster;
+//   an entry saved before the overview was kept is asked again once). Top Rated on MSF's list rows use the rest.
+async function _discOfficialDetails(type, id) {
   if (!type || !id) return null;
   const key = `${type}:${id}`, cache = _discPosterCache(), hit = cache[key];
-  if (hit && Date.now() - hit.t < _DISC_POSTER_TTL) return hit.p ? TMDB_FULL + hit.p : null;
+  const out = h => ({ poster: h.p ? TMDB_FULL + h.p : null, overview: h.o || '', backdrop_path: h.b || null, score: h.va || null, votes: h.vc || 0 });
+  if (hit && 'o' in hit && Date.now() - hit.t < _DISC_POSTER_TTL) return out(hit);
   try {
     const res = await tmdbFetch(`${TMDB_BASE}/${type}/${id}?language=en-US`);
-    if (!res.ok) return null;
-    const path = (await res.json()).poster_path || null;
-    cache[key] = { p: path, t: Date.now() };
+    if (!res.ok) return hit ? out(hit) : null;
+    const d = await res.json();
+    cache[key] = { p: d.poster_path || null, o: (d.overview || '').slice(0, 420), b: d.backdrop_path || null,
+      va: typeof d.vote_average === 'number' && d.vote_average > 0 ? d.vote_average : null, vc: d.vote_count || 0, t: Date.now() };
     _discPosterSave();
-    return path ? TMDB_FULL + path : null;
-  } catch { return null; }
+    return out(cache[key]);
+  } catch { return hit ? out(hit) : null; }
 }
+async function _discOfficialPoster(type, id) { return (await _discOfficialDetails(type, id))?.poster || null; }
 
 // Normalizes a raw TMDB result (movie or tv) into the shape every
 // Discover card expects: { id, media_type, title, poster_url, year, score, origin_country }
@@ -69,6 +74,8 @@ function _discNormalize(r, mediaType) {
     genre_ids: r.genre_ids || [],
     genres: mssGenreNames(r.genre_ids),
     overview: r.overview || '',
+    votes: r.vote_count || 0,
+    backdrop_path: r.backdrop_path || null,
   };
 }
 
@@ -196,8 +203,10 @@ function _discAttrJSON(value) {
 window._discItemMap = window._discItemMap || {};
 // lock: search results show mature titles locked for 13–17 accounts; everywhere
 // else (Discover, recommendations, related) they're left out (MSSAge, 088)
-// A season / episode card's second line: "One Piece · S1 E3" (MSSCard's `below`)
-const _discSubHTML = it => it.sub ? `<div class="disc-card-sub" translate="no">${escHTML(it.sub)}</div>` : '';
+// A season / episode card's second line: "One Piece · S1 E3" (MSSCard's `sub`)
+const _discSubHTML = it => it.sub ? `<span translate="no">${escHTML(it.sub)}</span>` : '';
+// A TMDB item as the card wants it: its TMDB score floored to 1 decimal (as before)
+const _discCardItem = it => ({ ...it, score: _discFloorScore(it.score) });
 function _discClickAttr(it, lock) {
   if (it.href) return `onclick="location.href=${escHTML(JSON.stringify(it.href))}"` + MSSAge.attr('tv', it.show_id, !lock);   // a season / episode → its page
   if (it.id != null && it.media_type) {
@@ -210,74 +219,51 @@ function _discClickAttr(it, lock) {
   return `onclick='_discOpenLinkPopup(${_discAttrJSON(it.title || '')}, ${_discAttrJSON(it.derived_type || 'tv')})'`;
 }
 
-/* ── Link-to-TMDB popup for unlinked MyScreenFolio titles ──
-   Same picker design as Create Card's "Link to TMDB" (#cardLinkCard / .card-link-* in style.css). */
-function _discInjectLinkOverlay() {
-  if (document.getElementById('discLinkOverlay')) return;
-  const el = document.createElement('div');
-  el.id = 'discLinkOverlay';
-  el.innerHTML = `<div id="discLinkCard" role="dialog" aria-modal="true" aria-labelledby="discLinkTitle">
-      <div class="rf-header">
-        <div class="rf-title" id="discLinkTitle">Link to TMDB</div>
-        <button type="button" class="rf-close" onclick="_discCloseLinkPopup()" aria-label="Close">${icon('x', 18)}</button>
-      </div>
-      <div class="card-link-sub" id="discLinkSubtitle"></div>
-      <div class="card-link-input-wrap">
-        <input class="card-link-input" id="discLinkSearchInput" placeholder="Search for the right title…" aria-label="Search for the right title" autocomplete="off">
-      </div>
-      <div class="rf-list" id="discLinkResults"></div>
-    </div>`;
-  MSSDialog.bind(el, _discCloseLinkPopup);
-  document.body.appendChild(el);
-  document.getElementById('discLinkSearchInput').addEventListener('input', () => {
-    clearTimeout(_discLinkSearchTimer);
-    _discLinkSearchTimer = setTimeout(_discRunLinkSearch, MSS_SEARCH_MS);
-  });
-}
-
+/* ── Link to TMDB for unlinked MyScreenFolio titles: a side panel S (full page on phones),
+   the same search field and result rows as Create card's (mssRowHTML) ── */
 let _discLinkSearchTimer = null;
 let _discLinkContext = null; // { title, derivedType }
+let _discLinkPanel = null;
 
-function _discOpenLinkPopup(title, derivedType) {
-  _discInjectLinkOverlay();
+async function _discOpenLinkPopup(title, derivedType) {
   _discLinkContext = { title, derivedType };
-  document.getElementById('discLinkSubtitle').textContent = `Find the correct TMDB match for "${title}" to combine everyone's ratings into one score.`;
+  await mssLoadScript('js/panel.js');
+  const h = MSSPanel.open({ size: 'S', kind: 'generic', title: 'Link to TMDB',
+    body: `<p class="lyr-hint disc-link-sub">${escHTML(`Find the correct TMDB match for "${title}" to combine everyone's ratings into one score.`)}</p>
+      <div class="lyr-search"><span class="lyr-search-ic" aria-hidden="true">${icon('search', 16)}</span>
+        <input class="lyr-field" id="discLinkSearchInput" placeholder="Search for the right title…" aria-label="Search for the right title" autocomplete="off" enterkeyhint="search"></div>
+      <div id="discLinkResults" aria-live="polite"></div>`,
+    onClose: () => { if (_discLinkPanel === h) _discLinkPanel = null; } });
+  _discLinkPanel = h;
   const input = document.getElementById('discLinkSearchInput');
   input.value = title;
-  document.getElementById('discLinkResults').innerHTML = '';
-  MSSDialog.open(document.getElementById('discLinkOverlay'));
+  input.addEventListener('input', () => { clearTimeout(_discLinkSearchTimer); _discLinkSearchTimer = setTimeout(_discRunLinkSearch, MSS_SEARCH_MS); });
   _discRunLinkSearch();
 }
 
-function _discCloseLinkPopup() { MSSDialog.close(document.getElementById('discLinkOverlay')); }
+function _discCloseLinkPopup() { _discLinkPanel?.closeNow(); }
 
 async function _discRunLinkSearch() {
   const input = document.getElementById('discLinkSearchInput');
   const resultsEl = document.getElementById('discLinkResults');
+  if (!input || !resultsEl) return;
   const query = input.value.trim();
   if (query.length < 2) { resultsEl.innerHTML = ''; return; }
-  resultsEl.innerHTML = '<div class="card-link-msg">Searching…</div>';
+  resultsEl.innerHTML = '<p class="lyr-rows-msg">Searching…</p>';
 
   const mediaType = _discLinkContext?.derivedType === 'movie' ? 'movie' : 'tv';
   try {
     const data = await _discFetchJSON(`${TMDB_BASE}/search/${mediaType}?language=en-US&query=${encodeURIComponent(query)}`);
     if (input.value.trim() !== query) return;      // a newer search is on its way
     const results = (data.results || []).slice(0, 8);
-    if (!results.length) { resultsEl.innerHTML = '<div class="card-link-msg">No matches found.</div>'; return; }
-    resultsEl.innerHTML = results.map(r => {
-      const title = (mediaType === 'movie' ? r.title : r.name) || 'Untitled';
+    if (!results.length) { resultsEl.innerHTML = '<p class="lyr-rows-msg">No matches found.</p>'; return; }
+    resultsEl.innerHTML = `<ul class="lyr-rows">${results.map(r => { const title = (mediaType === 'movie' ? r.title : r.name) || 'Untitled';
       const year = ((mediaType === 'movie' ? r.release_date : r.first_air_date) || '').split('-')[0];
-      return `<button type="button" class="card-link-result" onclick='_discSelectLinkResult(${Number(r.id)}, ${JSON.stringify(mediaType)})'>
-        <span class="card-link-result-poster">${r.poster_path ? `<img src="${escHTML(TMDB_IMG + r.poster_path)}" alt="" loading="lazy">` : escHTML((title[0] || '?').toUpperCase())}</span>
-        <span>
-          <span class="card-link-result-title" translate="no">${escHTML(title)}</span>
-          <span class="card-link-result-meta">${mediaType === 'movie' ? 'Movie' : 'TV Show'}${year ? ' · ' + escHTML(year) : ''}</span>
-        </span>
-      </button>`;
-    }).join('');
+      return mssRowHTML({ img: r.poster_path ? TMDB_IMG + r.poster_path : null, title, sub: (mediaType === 'movie' ? 'Movie' : 'TV Show') + (year ? ' · ' + year : ''),
+        attrs: `onclick='_discSelectLinkResult(${Number(r.id)}, ${JSON.stringify(mediaType)})'` }); }).join('')}</ul>`;
   } catch (err) {
     console.error('Discover link search error:', err);
-    resultsEl.innerHTML = '<div class="card-link-msg">Search failed — try again.</div>';
+    resultsEl.innerHTML = '<p class="lyr-rows-msg">Search failed — try again.</p>';
   }
 }
 
@@ -419,7 +405,7 @@ function _discTopItem(x, kind) {
     title: ep ? x.name || `Episode ${x.n}` : x.show, year: (x.air || '').slice(0, 4), score: x.score,
     poster_url: (x.poster || x.show_poster) ? TMDB_FULL + (x.poster || x.show_poster) : null,
     sub: ep ? `${x.show} · S${x.s} E${x.n}` : `${mssSeasonLabel(x.s, x.name)} · ${x.eps} episodes`,
-    overview: x.overview || '', genre_ids: x.genre_ids, origin_country: x.origin_country,
+    overview: x.overview || '', genre_ids: x.genre_ids, genres: mssGenreNames(x.genre_ids || []), origin_country: x.origin_country, votes: x.votes || 0,
     href: ep ? `episode.html?show=${x.show_id}&s=${x.s}&e=${x.n}` : `season.html?show=${x.show_id}&s=${x.s}`,
   };
 }
@@ -479,7 +465,7 @@ const DISCOVER_CATEGORIES = [
     }
   },
   {
-    key: 'top_rated_mss',
+    key: 'top_rated_mss', v: 2, max: 500,   // v2: rows carry the overview, backdrop and TMDB score · max: Sort & Filter load all 500 (not cap: the list stays open-ended)
     navLabel: 'Top Rated on MSF',
     title: 'Top Rated on MSF',
     // Sourced from our own users' ratings (final_score), not TMDB — see
@@ -495,7 +481,7 @@ const DISCOVER_CATEGORIES = [
       // Linked titles use their official TMDB poster (cached); the entry's
       // own poster is only a fallback (unlinked titles, or TMDB has none).
       const official = await Promise.all((data || []).map(r =>
-        r.tmdb_id ? _discOfficialPoster(r.tmdb_type || r.derived_type, r.tmdb_id) : null));
+        r.tmdb_id ? _discOfficialDetails(r.tmdb_type || r.derived_type, r.tmdb_id) : null));
       return (data || []).map((r, i) => ({
         id: r.tmdb_id,
         // Falls back to derived_type (computed server-side from the
@@ -506,7 +492,11 @@ const DISCOVER_CATEGORIES = [
         // entries) rendered with a missing/wrong type tag instead.
         media_type: r.tmdb_type || r.derived_type,
         title: r.title,
-        poster_url: official[i] || r.poster_url || null,
+        poster_url: official[i]?.poster || r.poster_url || null,
+        overview: official[i]?.overview || '',               // the list rows' description, TMDB score and backdrop
+        backdrop_path: official[i]?.backdrop_path || null,
+        tmdb_score: official[i]?.score ?? null,
+        votes: official[i]?.votes || 0,
         year: r.year || '',
         score: r.avg_score != null ? Number(r.avg_score) : null,
         // cat/genres come from 018_top_rated_mss_details.sql — used by the
@@ -521,14 +511,14 @@ const DISCOVER_CATEGORIES = [
   },
   {
     key: 'top250_movies',
-    cap: 250,
+    cap: 250, v: 2,   // v2: 5,000 votes (the Discover redesign) — brand-new releases can't jump the queue
     navLabel: 'Top 250 Movies',
     title: 'Top 250 Movies',
     // Uses discover (not /movie/top_rated) so we can require a real minimum
     // vote count — otherwise a handful of 10.0-rated titles with 3 votes
     // can outrank genuinely well-reviewed ones.
     async fetch(page) {
-      const data = await _discFetchJSON(`${TMDB_BASE}/discover/movie?language=en-US&sort_by=vote_average.desc&vote_count.gte=1000&page=${page}`);
+      const data = await _discFetchJSON(`${TMDB_BASE}/discover/movie?language=en-US&sort_by=vote_average.desc&vote_count.gte=5000&page=${page}`);
       const items = await Promise.all((data.results || []).map(r => _discNormalizeChecked(r, 'movie')));
       return _discExcludeFamilyAnimation(items);
     }
@@ -671,6 +661,57 @@ const DISCOVER_CATEGORIES = [
   },
 ];
 
+/* ── What each list is, for the Discover redesign: its Browse by List tile and its list page ──
+     eyebrow · tile (the tile's one-line description) · desc (the list page's) · a / b (the tile's colours —
+     Home's Explore cards share them) · kind ('movie' | 'tv' | 'mixed': the Type filter and type tags) ·
+     ranked (#1, #2… badges) · rotate (a list that changes all the time: its header rotates through the
+     first five backdrops; the others wear their #1's) · minVotes (shown in the header) · more (under
+     "More lists" on Discover) · mss (scores are MyScreenFolio's, not TMDB's) */
+const DISCOVER_META = {
+  trending_week:    { eyebrow: 'This week', tile: 'What everyone is watching', a: '#B0642A', b: '#331705', kind: 'mixed', ranked: true, rotate: true,
+    desc: 'The movies and shows the whole world is watching most this week, refreshed every day.' },
+  popular:          { eyebrow: 'Right now', tile: 'Popular right now', a: '#8A5A1C', b: '#2B1A08', kind: 'mixed', rotate: true,
+    desc: 'What people are searching for, adding and talking about right now: movies and shows side by side.' },
+  airing_today:     { eyebrow: 'Tonight', tile: 'New episodes today', a: '#1F6F78', b: '#0A2427', kind: 'tv', rotate: true,
+    desc: 'Shows with a new episode out today, wherever you are in the world.' },
+  top_rated_mss:    { eyebrow: 'Community', tile: 'Highest rated by members', a: '#2E7D32', b: '#0E2F14', kind: 'mixed', ranked: true, mss: true,
+    desc: 'The titles MyScreenFolio members rate the highest, ranked by everyone’s scores combined.' },
+  top250_movies:    { eyebrow: 'Ranked · Movies', tile: 'The best films ever', a: '#9C3D1C', b: '#2E1007', kind: 'movie', ranked: true, minVotes: 5000,
+    desc: 'The best-rated films on TMDB with at least 5,000 votes, so brand-new releases can’t jump the queue.' },
+  top250_shows:     { eyebrow: 'Ranked · TV', tile: 'The best TV ever', a: '#2F5F8A', b: '#0C1D2E', kind: 'tv', ranked: true, minVotes: 1000,
+    desc: 'The best-rated shows on TMDB with at least 1,000 votes. Anime and family cartoons have lists of their own.' },
+  top250_anime:     { eyebrow: 'Ranked · Anime', tile: 'The best anime', a: '#7A3E78', b: '#240F24', kind: 'mixed', ranked: true, minVotes: 1000,
+    desc: 'The best-rated anime series and films on TMDB with at least 1,000 votes, in one ranking.' },
+  top250_cartoons:  { eyebrow: 'Ranked · Cartoons', tile: 'The best animation', a: '#3F7A6E', b: '#0D2520', kind: 'mixed', ranked: true, minVotes: 1000,
+    desc: 'The best-rated cartoons, series and films, with at least 1,000 votes on TMDB. Anime and adult animation are left out.' },
+  niche_movies:     { eyebrow: 'Gems · Movies', tile: 'Loved, but barely seen', a: '#4A5A8C', b: '#141A30', kind: 'movie', ranked: true, minVotes: 50,
+    desc: 'Films with glowing scores that almost nobody has rated yet: between 50 and 300 votes on TMDB.' },
+  niche_shows:      { eyebrow: 'Gems · TV', tile: 'Hidden TV treasures', a: '#5B4A7A', b: '#1A1228', kind: 'tv', ranked: true, minVotes: 50,
+    desc: 'Shows with glowing scores that almost nobody has rated yet: between 50 and 300 votes on TMDB.' },
+  upcoming_movies:  { eyebrow: 'Soon · Movies', tile: 'Out soon in cinemas', a: '#A8452F', b: '#2F0F08', kind: 'movie', rotate: true,
+    desc: 'Films coming to cinemas over the next few weeks, most anticipated first.' },
+  upcoming_tv:      { eyebrow: 'Soon · TV', tile: 'New series on the way', a: '#2C6A8E', b: '#0B2030', kind: 'tv', rotate: true,
+    desc: 'Brand-new series that haven’t premiered yet, most anticipated first.' },
+  top_seasons:      { eyebrow: 'Ranked · Seasons', tile: 'The greatest single seasons', a: '#6B5A1E', b: '#221B06', kind: 'tv', ranked: true, more: true,
+    desc: 'The best-rated seasons of TMDB’s top shows. A season needs 50 votes across its episodes, and its show more than 900.' },
+  top_episodes:     { eyebrow: 'Ranked · Episodes', tile: 'The greatest single episodes', a: '#7A2F4A', b: '#250D17', kind: 'tv', ranked: true, more: true,
+    desc: 'The best-rated episodes of TMDB’s top shows. An episode needs at least 20 votes, and its show more than 900.' },
+  upcoming_anime:   { eyebrow: 'Soon · Anime', tile: 'Anime on the way', a: '#8A3F6A', b: '#2A0F20', kind: 'mixed', rotate: true, more: true,
+    desc: 'Anime series and films that haven’t come out yet, most anticipated first.' },
+  upcoming_cartoons:{ eyebrow: 'Soon · Cartoons', tile: 'Cartoons on the way', a: '#2F7A55', b: '#0B2618', kind: 'mixed', rotate: true, more: true,
+    desc: 'Family animation, series and films, that hasn’t come out yet, most anticipated first.' },
+  recommended:      { eyebrow: 'For you', tile: 'Based on your favourites', a: '#2E6B45', b: '#153C24', kind: 'mixed', ranked: false,
+    desc: 'Titles TMDB recommends for the favourites on your profile, highest rated first.' },
+};
+const discoverMeta = key => DISCOVER_META[key] || { eyebrow: 'Discover', tile: '', a: '#2E6B45', b: '#153C24', kind: 'mixed', desc: '' };
+// Anime / Cartoon / Movie / TV Show for a TMDB item (the Type filter on list and Browse pages)
+function _discCatOf(it) {
+  if (it.cat) return it.cat;
+  const anim = (it.genre_ids || []).includes(_ANIMATION_GENRE) || (it.genres || []).includes('Animation');
+  if (anim) return _discIsAnimeOrigin(it) ? 'anime' : 'cartoons';
+  return it.media_type === 'movie' ? 'movies' : 'tv';
+}
+
 // "See All" arrow (Discover rows, home Recommended for You)
 const _SEE_ALL_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>`;
 
@@ -765,7 +806,10 @@ function getDiscoverCategory(key) {
    cards as Discover) instead of a dropdown, and the page's other sections
    step aside until the search is cleared. Titles open the info popup,
    people open their page.
-     initInlineSearch('heroSearch', { hide: ['.xp', '#homeWatching'] }) */
+     initInlineSearch('heroSearch', { hide: ['.xp', '#homeWatching'] })
+   opts.live === false: the grid waits for the returned run() (Discover — the header-style dropdown shows while you type);
+   emptying the box still clears it. → { run(q?) }
+   opts.users: MyScreenFolio members first, in their own Users section (searchUsers, db.js) */
 /* ── Hide from results: titles you already know about, in the site's Filter popup ──
    Only ever a view: nothing is deleted, and clearing the filter brings it all back.
      MSSHide.choice(test)            → the Filter section (signed in only)
@@ -800,7 +844,7 @@ const MSSHide = (() => {
 function initInlineSearch(inputId, opts = {}) {
   const input = document.getElementById(inputId);
   if (!input) return;
-  const anchor = input.closest('.hero-search-wrap') || input;
+  const anchor = input.closest('.hero-search-wrap, .sf-search') || input;
   const box = document.createElement('section');
   box.className = 'inline-search';
   box.id = inputId + 'Results';
@@ -831,11 +875,9 @@ function initInlineSearch(inputId, opts = {}) {
   // Movie / TV Show tag, full title + year, TMDB ★ score
   function cardHTML(r) {
     if (r.media_type === 'person') return MSSCard.poster({ cls: 'is-person', href: `person.html?id=${encodeURIComponent(r.id)}`, title: r.name,
-      poster: r.profile_path ? TMDB_FULL + r.profile_path : null,
-      typeHTML: `<span class="type-label type-label-overlay-bottom inline-search-person-tag">${esc(r.known_for_department || 'Person')}</span>` });
+      poster: r.profile_path ? TMDB_FULL + r.profile_path : null, meta: r.known_for_department || 'Person' });
     const it = _discNormalize(r, r.media_type);
-    return MSSCard.poster({ attrs: _discClickAttr(it, true), title: it.title, year: it.year, poster: it.poster_url,
-      type: it.media_type === 'movie' ? 'movie' : 'tv', score: _discFloorScore(it.score) });
+    return MSSCard.tmdb(_discCardItem(it), { attrs: _discClickAttr(it, true) });
   }
 
   // opts.filter: the results get the Filter popup's Hide from Results (sort-filter.js)
@@ -846,14 +888,20 @@ function initInlineSearch(inputId, opts = {}) {
     const n = SF.filterCount('isr', 'all');
     return `<div class="inline-search-filter">${SF.typeFilterButton("SF.openFilter('isr','all')", n ? `Filter (${n})` : 'Filter', n > 0)}</div>`;
   }
+  // a member: their photo and name, @username under it → their profile
+  const userCard = u => MSSCard.poster({ cls: 'is-person', href: `profile-view.html?id=${encodeURIComponent(u.id)}&u=${encodeURIComponent(u.username || '')}`,
+    title: u.display_name || u.username, poster: safeURL(u.avatar_url) || null, meta: '@' + u.username });
   function drawResults() {
-    const { q, results } = shown, hide = hideValue();
+    const { q, results } = shown, users = shown.users || [], hide = hideValue();
     const list = results.filter(r => r.media_type === 'person' || !MSSHide.hides(r.media_type, r.id, hide));
     const hidden = results.length - list.length;
     box.innerHTML = `<div class="inline-search-head"><div class="section-eyebrow">Search</div>
         <div class="section-title" style="margin-bottom:0">Results for “${esc(q)}”</div>
-        <div class="inline-search-count"><b>${list.length}</b> ${list.length === 1 ? 'result' : 'results'}${hidden ? ` · ${hidden} hidden` : ''}</div>${filterBtn()}</div>`
-      + (list.length ? `<div class="inline-search-grid">${list.map(cardHTML).join('')}</div>`
+        <div class="inline-search-count"><b>${list.length + users.length}</b> ${list.length + users.length === 1 ? 'result' : 'results'}${hidden ? ` · ${hidden} hidden` : ''}</div>${filterBtn()}</div>`
+      + (users.length ? `<div class="section-eyebrow inline-search-sub">Users</div><div class="inline-search-grid msf-grid">${users.map(userCard).join('')}</div>`
+          + (list.length ? `<div class="section-eyebrow inline-search-sub">Titles &amp; people</div>` : '') : '')
+      + (list.length ? `<div class="inline-search-grid msf-grid">${list.map(cardHTML).join('')}</div>`
+        : users.length ? ''
         : hidden ? mssEmpty({ art: 'filter', title: 'All of these are hidden', text: `Your filter hides ${hidden === 1 ? 'the only result' : `all ${hidden} results`}. They’re still there whenever you want them.`,
             actions: [{ label: 'Show them', icon: 'x', onclick: "SF.clearFilters('isr', 'all');SF.refresh('isr')", primary: true }] })
         : mssEmpty({ art: 'search', title: `No luck with “${q}”`, text: 'Check the spelling, or try the original title. TMDB knows a lot, but not everything.' }));
@@ -937,16 +985,19 @@ function initInlineSearch(inputId, opts = {}) {
     setSearching(true);
     box.innerHTML = `<div class="inline-search-head"><div class="section-eyebrow">Search</div><div class="section-title" style="margin-bottom:0">Results for “${esc(q)}”</div></div>
       <div class="page-loading" style="padding:2rem"><div class="spinner"></div></div>`;
-    const [results] = await Promise.all([_tmdbSearch(q, 20, opts.includePersons !== false), hideValue() ? MSSHide.load().catch(() => {}) : null]);
+    const [results, , users] = await Promise.all([_tmdbSearch(q, 20, opts.includePersons !== false), hideValue() ? MSSHide.load().catch(() => {}) : null,
+      opts.users && typeof searchUsers === 'function' ? searchUsers(q, 12).catch(() => []) : []]);
     if (my !== seq) return;               // a newer search is already on the way
-    shown = { q, results };
+    shown = { q, results, users };
     drawResults();
     if (rememberNext && results.length) remember(q);
     rememberNext = false;
   }
 
-  input.addEventListener('input', () => { syncClear(); syncRecent(); clearTimeout(timer); timer = setTimeout(run, input.value.trim().length < 2 ? 0 : MSS_SEARCH_MS); });
+  const live = opts.live !== false;
+  input.addEventListener('input', () => { syncClear(); syncRecent(); clearTimeout(timer); if (live || input.value.trim().length < 2) timer = setTimeout(run, input.value.trim().length < 2 ? 0 : MSS_SEARCH_MS); });
   input.addEventListener('keydown', e => {
+    if (!live && e.key === 'Enter') return;                            // the dropdown decides (a result, or the grid via run())
     if (e.key === 'ArrowDown' && !recent.hidden) { e.preventDefault(); recent.querySelector('.hero-recent-pick')?.focus(); return; }
     if (e.key === 'Escape') { if (!recent.hidden) { recent.hidden = true; return; } input.value = ''; syncClear(); run(); }
     if (e.key === 'Enter') {
@@ -955,8 +1006,11 @@ function initInlineSearch(inputId, opts = {}) {
       run();
     }
   });
-  // Enter / Space on a result card (they're divs with onclick)
-  box.addEventListener('keydown', e => {
-    if ((e.key === 'Enter' || e.key === ' ') && e.target.classList.contains('q-card') && !e.target.href) { e.preventDefault(); e.target.click(); }
-  });
+  return {
+    run(q) {
+      if (q != null) input.value = q;
+      syncClear(); recent.hidden = true; clearTimeout(timer); rememberNext = true;
+      run();
+    },
+  };
 }

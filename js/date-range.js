@@ -14,7 +14,8 @@
    MSSDateRange.set(id, start, end)                        e.g. from a preset
    MSSDateRange.when(id, { value, min, onChange })         date + time (value: Date / ISO / null)
    MSSDateRange.get(id)                                    → { start, end } | { date, time, value }
-   MSSDateRange.pickDate({ value, min, max, label, view, onPick })   one date in a popup: tap the title to jump to a
+   MSSDateRange.pickDate({ value, min, max, label, view, anchor, onPick })   one date: a calendar popover under anchor (default: the
+                                                           focused button) or a full page on phones; tap the title to jump to a
                                                            month or year ('YYYY-MM-DD'; view: 'years' to start on years)
    Hidden inputs: range → #<id>S / #<id>E; date + time → #<id> ('YYYY-MM-DDTHH:MM' or '').
 
@@ -248,26 +249,20 @@ const MSSDateRange = (() => {
     box.innerHTML = popBody();
     box.querySelector(focus || '.dr-day[tabindex="0"], .dr-pop-cell.is-on, .dr-pop-cell:not(:disabled)')?.focus({ preventScroll: true });
   }
+  // One date: a calendar popover under the button that opened it (desktop), a full page on phones (MSSPanel)
+  let popEl = null, popPage = null;
   function popClose() {
-    const ov = document.getElementById('drPopOverlay'); if (!ov) return;
-    MSSDialog.close(ov); P = null;
-    setTimeout(() => ov.remove(), 220);
+    if (popPage) { const h = popPage; popPage = null; P = null; h.closeNow(); return; }
+    const ov = popEl; if (!ov) return;
+    popEl = null; P = null;
+    ov.classList.add('is-leaving');
+    MSSDialog.close(ov);
+    setTimeout(() => ov.remove(), matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 120);
   }
-  function pickDate(o) {
-    const base = o.value || (o.max && iso(new Date()) > o.max ? o.max : iso(new Date()));
-    P = { value: o.value || null, min: o.min || null, max: o.max || null, onPick: o.onPick, view: o.view && !o.value ? o.view : 'days', y: +base.slice(0, 4), m: +base.slice(5, 7) };
-    const ov = document.createElement('div');
-    ov.id = 'drPopOverlay'; ov.className = 'confirm-overlay';
-    ov.innerHTML = `<div class="confirm-card dr-pop" role="dialog" aria-modal="true" aria-labelledby="drPopT">
-        <div class="dr-pop-top"><div class="confirm-title" id="drPopT">${escHTML(o.label || 'Pick a date')}</div>
-          <button type="button" class="dr-nav" data-close aria-label="Close">${icon('x', 16)}</button></div>
-        <div id="drPopBody"></div>
-      </div>`;
-    MSSDialog.bind(ov, popClose);
-    document.body.appendChild(ov);
-    ov.addEventListener('click', e => {
-      if (e.target === ov) return popClose();
-      const b = e.target.closest('button'); if (!b || b.disabled) return;
+  function wire(root) {
+    root.addEventListener('click', e => {
+      if (e.target === root && root === popEl) return popClose();
+      const b = e.target.closest('button'); if (!b || b.disabled || !P) return;
       if (b.dataset.close != null) return popClose();
       if (b.dataset.d) { const on = P.onPick, v = b.dataset.d; popClose(); on?.(v); return; }
       if (b.dataset.view) { P.view = b.dataset.view; return popDraw(); }
@@ -279,7 +274,7 @@ const MSSDateRange = (() => {
         popDraw(`[data-go="${b.dataset.go}"]:not(:disabled)`);
       }
     });
-    ov.addEventListener('keydown', e => {
+    root.addEventListener('keydown', e => {
       const b = e.target.closest('.dr-day'); if (!b || !P) return;
       const step = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 }[e.key]; if (!step) return;
       e.preventDefault();
@@ -288,8 +283,42 @@ const MSSDateRange = (() => {
       P.y = +to.slice(0, 4); P.m = +to.slice(5, 7);
       popDraw(`[data-d="${to}"]`);
     });
+  }
+  async function pickDate(o) {
+    const anchor = o.anchor || (document.activeElement !== document.body ? document.activeElement : null);
+    popClose();
+    const base = o.value || (o.max && iso(new Date()) > o.max ? o.max : iso(new Date()));
+    P = { value: o.value || null, min: o.min || null, max: o.max || null, onPick: o.onPick, view: o.view && !o.value ? o.view : 'days', y: +base.slice(0, 4), m: +base.slice(5, 7) };
+    const label = escHTML(o.label || 'Pick a date');
+    if (innerWidth < 560 || !anchor?.getBoundingClientRect) {
+      await mssLoadScript('js/panel.js');
+      const at = P;
+      const h = MSSPanel.open({ as: 'page', kind: 'generic', title: o.label || 'Pick a date', body: '<div id="drPopBody" class="dr-pop is-page"></div>',
+        onClose: () => { if (popPage === h) { popPage = null; if (P === at) P = null; } } });
+      popPage = h;
+      wire(h.body);
+      popDraw();
+      return;
+    }
+    const ov = document.createElement('div');
+    ov.className = 'dr-pop-ov';
+    ov.innerHTML = `<section class="dr-pop is-popover" role="dialog" aria-modal="true" aria-labelledby="drPopT" tabindex="-1">
+        <div class="dr-pop-top"><h2 class="lyr-title dr-pop-h" id="drPopT">${label}</h2>
+          <button type="button" class="lyr-x" data-close aria-label="Close">${icon('x', 16)}</button></div>
+        <div id="drPopBody"></div>
+      </section>`;
+    MSSDialog.bind(ov, popClose);
+    document.body.appendChild(ov);
+    popEl = ov;
+    wire(ov);
     MSSDialog.open(ov, { focus: '.dr-pop' });
     popDraw();
+    // under the button (flips up near the bottom of the screen), kept on screen
+    const card = ov.firstElementChild, r = anchor.getBoundingClientRect(), w = card.offsetWidth, h = card.offsetHeight, gap = 6;
+    const up = r.bottom + gap + h > innerHeight - 8 && r.top - gap - h > 8;
+    card.style.left = Math.max(8, Math.min(r.left, innerWidth - w - 8)) + 'px';
+    card.style.top = Math.max(8, up ? r.top - gap - h : Math.min(r.bottom + gap, innerHeight - h - 8)) + 'px';
+    card.classList.toggle('is-up', up);
   }
 
   return { pickDate, html, set, when,

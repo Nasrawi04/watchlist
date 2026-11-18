@@ -1,153 +1,128 @@
 /* ══════════════════════════════════════════
    settings-nav.js — Getting around Settings (settings.html)
-   Three levels, each with its own link:
-     settings.html              the sections (on a computer they stay beside everything else)
-     settings.html#account      a section's list of settings
-     settings.html#account/setUsernameCard   one setting, on its own screen
-   A section with a single setting opens it straight away. Back goes up one level.
-   Search works like iPhone Settings: results say where a setting lives, and open it.
-   From settings.html: settingsDirty(item), settingsReset(item), settingsValue(item).
+   Every section is one page with its settings on it. Privacy + Security share a page, and so do
+   Appearance + Preferences; the nav keeps all 8 links and scrolls to each. Only long lists open a
+   page of their own ("doors"): Blocked people, My uploads, Message lock, and on phones Signed-in devices.
+     settings.html                     computers: My Profile · phones: the list of sections
+     settings.html#privacy             a section (#security scrolls to Security on the shared page)
+     settings.html#privacy/blocked     a door
+     settings.html#notifications/who   a tab of Notifications (get · who · hear)
+     settings.html#account/setUsernameCard   a section, and that setting flashes (search, older links)
+   Search matches names and descriptions on every page; Enter or a tap jumps there and flashes the row.
+   From settings.html: settingsDirty(), settingsReset() (unsaved text fields ask before you leave).
 ══════════════════════════════════════════ */
 const MSSSettingsNav = (() => {
+  // id · name · line on the phone list · icon · its page
   const SECTIONS = [
-    ['profile', 'My Profile', 'Photo, name, bio, share link', 'user'],
-    ['account', 'Account', 'Username, email, delete account', 'idCard'],
-    ['data', 'Data', 'Import, export, your uploads', 'download'],
-    ['privacy', 'Privacy', 'Private account, blocked people', 'eye'],
-    ['security', 'Security', 'Password, devices, message lock', 'lock'],
-    ['notifications', 'Notifications', 'Alerts and what you share', 'bell'],
-    ['preferences', 'Preferences', 'Language, episodes, screensaver', 'settings'],
-    ['appearance', 'Appearance', 'Light, Dark or System', 'brush'],
+    ['profile', 'My Profile', 'Photo, name, bio, share link', 'user', 'profile'],
+    ['account', 'Account', 'Username, email, delete account', 'idCard', 'account'],
+    ['data', 'Data', 'Import, export, your uploads', 'download', 'data'],
+    ['privacy', 'Privacy', 'Private account, blocked people', 'eye', 'safety'],
+    ['security', 'Security', 'Password, devices, message lock', 'lock', 'safety'],
+    ['notifications', 'Notifications', 'What you get and what you share', 'bell', 'notifications'],
+    ['preferences', 'Preferences', 'Language, episodes, region, screensaver', 'settings', 'look'],
+    ['appearance', 'Appearance', 'Light, Dark or System', 'brush', 'look'],
   ];
   const GROUPS = [['You', ['profile', 'account', 'data']], ['Safety', ['privacy', 'security']], ['App', ['notifications', 'preferences', 'appearance']]];
-  // Each section's settings: [the card, its name, optional group heading, optional style]
-  const ITEMS = {
-    profile: [['setPhoto', 'Profile Photo'], ['setDetails', 'Name and Bio'], ['setShare', 'Share Profile']],
-    account: [['setUsernameCard', 'Username'], ['setEmailCard', 'Email'], ['setDelete', 'Delete Account', null, 'danger']],
-    data: [['setImport', 'Import'], ['setExport', 'Export and Backup'], ['setUploads', 'My Uploads']],
-    privacy: [['setPrivate', 'Private Account'], ['setOnline', 'Online Status'], ['setBlocked', 'Blocked People']],
-    security: [['setPassword', 'Password'], ['setSessions', 'Active Sessions'], ['setMessages', 'Message Lock and Recovery']],
-    notifications: [['nsAlertsT', 'Alerts', 'Receiving'], ['nsGetT', 'Notify Me About', 'Receiving'], ['nsWhoT', 'Who Gets Notified', 'Sending'], ['nsShareT', 'What They Hear About', 'Sending']],
-    preferences: [['setLang', 'Language'], ['setEpisodes', 'Episode Ratings'], ['setWeekStart', 'Week Starts On'], ['setScreensaver', 'Screensaver']],
-    appearance: [['setTheme', 'Theme']],
+  const DOORS = { 'privacy/blocked': 'blocked', 'data/uploads': 'uploads', 'security/lock': 'lock', 'security/devices': 'devices' };
+  const TABS = ['get', 'who', 'hear'];
+  // older links (the one-setting-per-screen Settings, Messages' link to the lock)
+  const ALIAS = { msgCard: 'security/lock', 'security/setMessages': 'security/lock', 'privacy/setBlocked': 'privacy/blocked', 'data/setUploads': 'data/uploads',
+    'notifications/nsAlertsT': 'notifications/get/nsAlerts', 'notifications/nsGetT': 'notifications/get', 'notifications/nsWhoT': 'notifications/who',
+    'notifications/nsShareT': 'notifications/hear' };
+  // more words people might search for, per setting
+  const WORDS = {
+    setPhoto: 'photo picture avatar image backdrop banner poster circle', setDetails: 'display name bio quote tagline about',
+    setShare: 'link copy url qr code', setUsernameCard: 'handle name change', setEmailCard: 'address mail', setDelete: 'remove close erase delete account',
+    setImport: 'letterboxd imdb trakt anilist myanimelist tv time file history', setExport: 'download pdf image spreadsheet csv backup',
+    setUploads: 'pictures images photos posters copyright remove', setPrivate: 'public followers requests', setConnections: 'followers following friends lists who can see view hide', setOnline: 'last seen active',
+    setBlocked: 'block unblock users', setPassword: 'change new reset', setSessions: 'devices sessions logins sign out log out everywhere others',
+    setMessages: 'passcode pin chats messages recovery code', setLang: 'translate english', setEpisodes: 'rate prompt ask always never',
+    setWeekStart: 'diary calendar monday sunday saturday first day', setRegion: 'country where to watch streaming release dates',
+    setScreensaver: 'bouncing logo idle preview', setTheme: 'dark mode light mode system colour color night', nsAlerts: 'pop-up alerts bell sound',
   };
-  const sectionName = id => SECTIONS.find(s => s[0] === id)[1];
-  const itemOf = (section, id) => ITEMS[section].find(i => i[0] === id);
-  const isNotif = id => id.startsWith('ns');
-  const ALIAS = { msgCard: 'security/setMessages' };    // older links
 
-  // label · section · the setting's screen · other words people might search for
-  const INDEX = [
-    ['Profile Photo', 'profile', 'setPhoto', 'picture avatar image'],
-    ['Display Name', 'profile', 'setDetails', 'name'],
-    ['Bio', 'profile', 'setDetails', 'about description'],
-    ['Quote', 'profile', 'setDetails', 'tagline'],
-    ['Share Profile', 'profile', 'setShare', 'link copy url'],
-    ['Username', 'account', 'setUsernameCard', 'handle name change'],
-    ['Email', 'account', 'setEmailCard', 'address mail'],
-    ['Delete Account', 'account', 'setDelete', 'remove close erase'],
-    ['Import', 'data', 'setImport', 'letterboxd imdb trakt anilist myanimelist tv time word text file history'],
-    ['Export', 'data', 'setExport', 'download pdf image spreadsheet csv letterboxd'],
-    ['Full Backup', 'data', 'setExport', 'save copy download'],
-    ['My Uploads', 'data', 'setUploads', 'pictures images photos posters avatar copyright remove delete'],
-    ['Private Account', 'privacy', 'setPrivate', 'public followers lock requests'],
-    ['Online Status', 'privacy', 'setOnline', 'show when online last seen active'],
-    ['Blocked People', 'privacy', 'setBlocked', 'block unblock users'],
-    ['Password', 'security', 'setPassword', 'change new reset current'],
-    ['Active Sessions', 'security', 'setSessions', 'devices signed in logins'],
-    ['Sign Out of All Devices', 'security', 'setSessions', 'log out logout everywhere'],
-    ['Message Passcode', 'security', 'setMessages', 'lock pin chats messages'],
-    ['Message Recovery Code', 'security', 'setMessages', 'chats messages forgot restore'],
-    ['Alerts', 'notifications', 'nsAlertsT', 'bell popups sound notification'],
-    ...NS_RECEIVE.map(r => [r[1], 'notifications', 'nsGetT', 'notify notification ' + r[2]]),
-    ['Who Gets Notified', 'notifications', 'nsWhoT', 'activity audience friends followers sending'],
-    ['What They Hear About', 'notifications', 'nsShareT', 'activity sending share hide'],
-    ['Language', 'preferences', 'setLang', 'translate english'],
-    ['Episode Ratings', 'preferences', 'setEpisodes', 'rate prompt ask always never'],
-    ['Week Starts On', 'preferences', 'setWeekStart', 'diary calendar monday sunday saturday first day'],
-    ['Screensaver', 'preferences', 'setScreensaver', 'bouncing logo idle'],
-    ['Theme', 'appearance', 'setTheme', 'dark mode light mode system colour color night'],
-  ];
-
-  let shell, shown = null;        // shown: what's on screen, as 'section' or 'section/item'
-  const stack = [];               // the addresses behind this one, so Back can go up a level without piling up history
+  let shell, shown = null;
+  const stack = [];                       // the addresses behind this one, so Back goes up without piling up history
   const $ = id => document.getElementById(id);
-  const hasRoomForList = () => !matchMedia('(max-width:900px)').matches;
+  const phoneMQ = matchMedia('(max-width:900px)');
+  const sec = id => SECTIONS.find(s => s[0] === id);
 
+  /* ── Where are we ── */
   function parse() {
     let h = decodeURIComponent(location.hash.slice(1));
     h = ALIAS[h] || h;
-    const [section, item] = h.split('/');
-    if (!ITEMS[section]) return { section: null, item: null };
-    const only = ITEMS[section].length === 1 ? ITEMS[section][0][0] : null;
-    return { section, item: only || (itemOf(section, item) ? item : null) };
+    const [s, a, b] = h.split('/');
+    if (!sec(s)) return { sec: null };
+    const r = { sec: s, page: sec(s)[4], door: null, tab: null, row: null };
+    if (DOORS[s + '/' + a]) {
+      if (DOORS[s + '/' + a] === 'devices' && !phoneMQ.matches) r.row = 'setSessions';   // inline on a computer
+      else r.door = DOORS[s + '/' + a];
+    } else if (s === 'notifications' && TABS.includes(a)) { r.tab = a; r.row = b || null; }
+    else if (a) r.row = a;
+    return r;
   }
-  const keyOf = r => r.section ? r.section + (r.item && ITEMS[r.section].length > 1 ? '/' + r.item : '') : null;
+  const keyOf = r => r.sec ? [r.sec, r.door || r.tab].filter(Boolean).join('/') : (phoneMQ.matches ? '' : 'profile');
 
   /* ── Drawing ── */
-  const CHEVRON = `<svg class="set-row-go" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>`;
-  const rowIcon = id => icon(SECTIONS.find(s => s[0] === id)[3], 17);
-
-  function paintRows(section) {
-    const box = $('rows-' + section);
-    if (!box) return;
-    const groups = [];
-    ITEMS[section].forEach(item => {
-      const el = isNotif(item[0]) ? null : $(item[0]);
-      if (el?.hidden) return;                // not available on this account
-      const name = item[2] || '';
-      if (groups[groups.length - 1]?.name !== name) groups.push({ name, items: [] });
-      groups[groups.length - 1].items.push(item);
-    });
-    box.innerHTML = groups.map(g => `${g.name ? `<div class="set-rows-head">${g.name}</div>` : ''}<div class="set-rows-list">${g.items.map(([id, label, , style]) => {
-      const value = settingsValue(id);
-      return `<a class="set-item${style ? ' is-' + style : ''}" href="#${section}/${id}"><span class="set-item-name">${escHTML(label)}</span>${value ? `<span class="set-item-value" translate="no">${escHTML(value)}</span>` : ''}${CHEVRON}</a>`;
-    }).join('')}</div>`).join('');
-  }
-
+  const ic = (name, size) => icon(name, size);
   function paint(moveFocus) {
-    const r = parse(), open = r.section || 'profile', key = keyOf(r) || (hasRoomForList() ? 'profile' : null);
-    const changed = key !== shown;
-    SECTIONS.forEach(([id]) => { $('pane-' + id).hidden = id !== open; });
+    const r = parse(), s = r.sec || (phoneMQ.matches ? null : 'profile'), key = keyOf(r), changed = key !== shown;
+    const pageId = r.door ? 'page-' + r.door : s ? 'page-' + sec(s)[4] : null;
+    document.querySelectorAll('#setMain > .set-page').forEach(p => { p.hidden = p.id !== pageId; });
     shown = key;
-    shell.classList.toggle('is-open', !!r.section);
-    document.body.classList.toggle('set-open', !!r.section);
-    document.querySelectorAll('#setList .set-row').forEach(a => {
-      if (a.dataset.s === open) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
+    shell.classList.toggle('is-open', !!r.sec);
+    document.querySelectorAll('#setList .set-nav').forEach(a => { if (a.dataset.s === s) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
+    placeDevices(r.door === 'devices');
+    if (s === 'notifications' && typeof MSSNotifSettings !== 'undefined') MSSNotifSettings.tab(r.tab || 'get');
+    titles(s);
+    const page = pageId && $(pageId), title = page?.querySelector('.set-title');
+    document.title = (s ? (title?.textContent || sec(s)[1]) + ' · ' : '') + 'Settings — MyScreenFolio';
+    if (!changed && !r.row) return;
+    // where to land: the setting (flashes), the second half of a shared page, or the top
+    const row = r.row && $(r.row);
+    const half = !r.door && page && page.querySelector('.set-pane') !== $('pane-' + s) ? $('pane-' + s) : null;
+    requestAnimationFrame(() => {
+      if (row && !row.closest('[hidden]')) { row.scrollIntoView({ block: 'center', behavior: reduced() ? 'auto' : 'smooth' }); flash(row); }
+      else if (half) half.scrollIntoView({ block: 'start' });
+      else if (changed) window.scrollTo(0, 0);
+      if (changed && moveFocus && r.sec) (row || title)?.focus?.({ preventScroll: true });
     });
-
-    const pane = $('pane-' + open), item = r.item && itemOf(open, r.item), single = ITEMS[open].length === 1;
-    pane.classList.toggle('is-item', !!item && !single);
-    pane.querySelectorAll(':scope > .settings-section, :scope > #setNotif').forEach(c => c.classList.remove('set-on'));
-    if (item) {
-      const card = isNotif(r.item) ? $('setNotif') : $(r.item);
-      card.classList.add('set-on');
-      if (isNotif(r.item)) card.dataset.part = r.item;
-    }
-    paintRows(open);
-    $('rows-' + open)?.toggleAttribute('hidden', !!item);
-
-    const label = item && !single ? item[1] : sectionName(open);
-    $('paneT-' + open).textContent = label;
-    pane.querySelector('.set-trail').innerHTML = item && !single
-      ? `<a href="#${open}">${sectionName(open)}</a><span aria-hidden="true">›</span><span aria-current="page">${escHTML(label)}</span>` : '';
-    document.title = (r.section ? label + ' · ' : '') + 'Settings — MyScreenFolio';
-    if (changed && moveFocus) { window.scrollTo(0, 0); if (r.section) $('paneT-' + open).focus({ preventScroll: true }); }
+  }
+  const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // a shared page is named after the link you came from on a phone (PDF), and after both on a computer
+  function titles(s) {
+    document.querySelectorAll('#setMain .set-title[data-title]').forEach(t => {
+      const mine = s && t.closest('.set-page').dataset.sections.split(' ').includes(s);
+      t.textContent = phoneMQ.matches && mine ? sec(s)[1] : t.dataset.title;
+    });
+  }
+  // Signed-in devices: inline on Security (computers), its own screen on phones
+  function placeDevices(asDoor) {
+    const box = $('setSessions'), home = $('devicesHome');
+    if (asDoor && box.parentElement !== home) home.appendChild(box);
+    if (!asDoor && box.parentElement === home) $('setPassword').after(box);
+  }
+  function flash(el) {
+    const t = el.closest('.set-row, .set-devices, .ns-row, .ns-box, .set-themes, .set-field, .set-card') || el;
+    t.classList.remove('set-flash'); void t.offsetWidth; t.classList.add('set-flash');
+    setTimeout(() => t.classList.remove('set-flash'), 1900);
+    if (!t.hasAttribute('tabindex') && !t.matches('a, button')) { t.tabIndex = -1; t.addEventListener('blur', () => t.removeAttribute('tabindex'), { once: true }); }
+    t.focus({ preventScroll: true });
   }
 
-  const askLeave = () => showConfirm({ title: 'Leave without saving?', message: 'Your changes on this screen haven’t been saved.', confirmText: 'Leave', cancelText: 'Keep editing' });
-  const shownItem = () => shown?.split('/')[1] || null;
-  const isDirty = () => !!shownItem() && settingsDirty(shownItem());
-
-  /* Leaving a setting with unsaved edits asks first. The address has already changed, so it's put back meanwhile. */
+  /* ── Leaving with unsaved text asks first (the address has already changed, so it's put back meanwhile) ── */
+  const askLeave = () => showConfirm({ title: 'Leave without saving?', message: 'Your changes on this page haven’t been saved.', confirmText: 'Leave', cancelText: 'Keep editing', danger: false });
+  const pageOf = key => { const s = (key || '').split('/')[0]; return s ? sec(s)?.[4] : null; };
+  const isDirty = () => !!shown && settingsDirty(pageOf(shown));
   async function onHash() {
-    const key = keyOf(parse()) || (hasRoomForList() ? 'profile' : null);
-    if (key !== shown && isDirty()) {
-      const want = location.hash, from = shown, item = shownItem();
+    const key = keyOf(parse());
+    if (pageOf(key) !== pageOf(shown) && isDirty()) {
+      const want = location.hash, from = shown;
       history.pushState(null, '', '#' + from);
       paint(false);
       if (!(await askLeave())) return;
-      settingsReset(item);
+      settingsReset(pageOf(from));
       location.hash = want;
       return;
     }
@@ -156,73 +131,120 @@ const MSSSettingsNav = (() => {
     else if (stack[stack.length - 1] !== here) stack.push(here);
     paint(true);
   }
-
-  /* Back: up one level */
-  async function back() {
-    const r = parse();
-    const parent = r.item && ITEMS[r.section].length > 1 ? '#' + r.section : '';
-    if (stack[stack.length - 2] === parent) { history.back(); return; }
-    if (parent) { location.replace(parent); return; }
-    if (isDirty()) {
-      if (!(await askLeave())) return;
-      settingsReset(shownItem());
-    }
+  // Back on a phone: up one level (a door → its section → the list)
+  async function back(to) {
+    if (stack[stack.length - 2] === to || (to === '' && stack[stack.length - 2] === '')) { history.back(); return; }
+    if (to) { location.replace(to); return; }
+    if (isDirty()) { if (!(await askLeave())) return; settingsReset(pageOf(shown)); }
     history.replaceState(null, '', location.pathname + location.search);
     stack[stack.length - 1] = '';
     paint(true);
   }
 
-  /* ── Search ── */
+  /* ── Search: names and descriptions on every page ── */
+  const pathOf = (s, extra) => sec(s)[1] + (extra ? ' → ' + extra : '');
+  function index() {
+    const out = [];
+    document.querySelectorAll('#setMain .set-pane').forEach(pane => {
+      const s = pane.id.replace('pane-', ''); if (!sec(s)) return;
+      pane.querySelectorAll('.set-row[id], .set-card[id], .set-themes[id], .set-devices[id]').forEach(el => {
+        if (el.hidden || el.parentElement.closest('.set-row[hidden]')) return;   // not on this account
+        const name = el.querySelector('.set-name')?.textContent.trim() || el.getAttribute('aria-label') || $(el.getAttribute('aria-labelledby'))?.textContent.trim();
+        if (!name) return;
+        const door = el.matches('a.is-door[href^="#"]') ? el.getAttribute('href') : null;
+        out.push({ name, desc: el.querySelector('.set-desc')?.textContent.trim() || '', more: WORDS[el.id] || '', href: door || `#${s}/${el.id}`, where: pathOf(s) });
+      });
+    });
+    // inside My Profile's card, the theme pictures and the Notifications switches
+    [['Display name', 'setDisplayName', 'name'], ['Quote', 'setQuote', 'tagline'], ['Bio', 'setBio', 'about'], ['Profile photo', 'pfNew', 'avatar picture poster circle'], ['Backdrop', 'setBackdrop', 'banner header']]
+      .forEach(([name, id, more]) => out.push({ name, desc: '', more, href: `#profile/${id}`, where: pathOf('profile') }));
+    [['Light', 'light'], ['Dark', 'dark'], ['System', 'system']].forEach(([name]) => out.push({ name: name + ' theme', desc: '', more: 'theme mode', href: '#appearance/setTheme', where: pathOf('appearance') }));
+    out.push({ name: 'Pop-up alerts', desc: 'A banner when something new arrives while MSF is open.', more: WORDS.nsAlerts, href: '#notifications/get/nsAlerts', where: pathOf('notifications') });
+    NS_RECEIVE.forEach(([k, name, desc]) => out.push({ name, desc, more: 'notify notification', href: `#notifications/get/nsG-${k}`, where: pathOf('notifications', 'What you get') }));
+    out.push({ name: 'Who gets notified', desc: 'Friends & followers, friends only, or no one.', more: 'audience activity sharing', href: '#notifications/who', where: pathOf('notifications') });
+    NS_KINDS.forEach(([k, name, desc]) => out.push({ name, desc, more: 'activity share hide', href: `#notifications/hear/nsL-${k}`, where: pathOf('notifications', 'What they hear') }));
+    out.push({ name: 'Sign out', desc: 'Sign out of MSF on this device.', more: 'log out logout', href: '#signout', where: 'Settings' });
+    return out;
+  }
+  const norm = t => String(t || '').toLowerCase();
+  function mark(text, q) {
+    const i = norm(text).indexOf(q);
+    return i < 0 ? escHTML(text) : escHTML(text.slice(0, i)) + `<mark>${escHTML(text.slice(i, i + q.length))}</mark>` + escHTML(text.slice(i + q.length));
+  }
+  let hits = [], active = 0;
   function search() {
-    const q = $('setSearch').value.trim().toLowerCase(), hits = $('setHits'), list = $('setList');
-    list.hidden = !!q;
-    hits.hidden = !q;
-    if (!q) { hits.innerHTML = ''; $('setSearchLive').textContent = ''; return; }
+    const raw = $('setSearch').value.trim(), q = norm(raw), box = $('setHits');
+    $('setList').hidden = !!q;
+    box.hidden = !q;
+    if (!q) { box.innerHTML = ''; $('setSearchLive').textContent = ''; hits = []; return; }
     const words = q.split(/\s+/);
-    const found = INDEX.filter(([label, sec, card, more]) => {
-      if (!isNotif(card) && $(card)?.hidden) return false;       // not available on this account
-      const text = `${label} ${sectionName(sec)} ${more}`.toLowerCase();
-      return words.every(w => text.includes(w));
-    }).sort((a, b) => Number(b[0].toLowerCase().startsWith(q)) - Number(a[0].toLowerCase().startsWith(q)));
-    $('setSearchLive').textContent = found.length ? `${found.length} ${found.length === 1 ? 'result' : 'results'}` : 'No results';
-    hits.innerHTML = found.length
-      ? `<div class="set-hits">${found.map(([label, sec, card]) => {
-        const where = isNotif(card) && itemOf(sec, card)[1] !== label ? `${sectionName(sec)} › ${itemOf(sec, card)[1]}` : sectionName(sec);
-        return `<a class="set-row" href="#${sec}/${card}">
-          <span class="set-row-ic">${rowIcon(sec)}</span>
-          <span class="set-row-text"><span class="set-row-name">${escHTML(label)}</span><span class="set-row-sub">${escHTML(where)}</span></span>${CHEVRON}</a>`;
-      }).join('')}</div>`
-      : mssEmpty({ compact: true, art: 'search', title: `No luck with “${q}”`, text: 'Try another word, like “password” or “blocked”.' });
+    hits = index().filter(h => words.every(w => norm(`${h.name} ${h.desc} ${h.more} ${h.where}`).includes(w)))
+      .sort((a, b) => (norm(b.name).startsWith(q) - norm(a.name).startsWith(q)) || (norm(b.name).includes(q) - norm(a.name).includes(q)));
+    active = 0;
+    const n = hits.length;
+    $('setSearchLive').textContent = n ? `${n} ${n === 1 ? 'result' : 'results'}` : 'No results';
+    box.innerHTML = n
+      ? `<div class="set-hits-n" aria-hidden="true">${n} ${n === 1 ? 'result' : 'results'}</div>${hits.map((h, i) => `<a class="set-hit${i === 0 ? ' is-on' : ''}" href="${h.href}" data-i="${i}">
+          <span class="set-hit-t"><b>${mark(h.name, q)}</b><small>${escHTML(h.where)}</small></span></a>`).join('')}`
+      : mssEmpty({ compact: true, art: 'search', title: `No luck with “${raw}”`, text: 'Try another word, like “password” or “blocked”.' });
+  }
+  function go(h) {
+    if (!h) return;
+    $('setSearch').value = ''; search();
+    if (h.href === '#signout') { handleLogout(); return; }
+    if (location.hash === h.href) paint(true); else location.hash = h.href.slice(1);
+  }
+  function keys(ev) {
+    if (!hits.length) return;
+    const els = [...document.querySelectorAll('#setHits .set-hit')];
+    if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') {
+      ev.preventDefault();
+      active = (active + (ev.key === 'ArrowDown' ? 1 : -1) + els.length) % els.length;
+      els.forEach((e, i) => e.classList.toggle('is-on', i === active));
+      els[active].scrollIntoView({ block: 'nearest' });
+    } else if (ev.key === 'Enter') { ev.preventDefault(); go(hits[active]); }
+    else if (ev.key === 'Escape') { $('setSearch').value = ''; search(); }
   }
 
-  /* The page finished loading something. known: whether a setting is available is now settled,
-     so a link to one this account doesn't have goes to its section instead. */
+  /* The page finished loading something: a link to a setting this account doesn't have goes to its section */
   function refresh(known) {
-    if (!shell) return;
+    if (typeof settingsValues === 'function') settingsValues();
+    if (!shell || !known) return;
     const r = parse();
-    if (known && r.item && !isNotif(r.item) && $(r.item)?.hidden) { location.replace('#' + r.section); return; }
-    paintRows(r.section || 'profile');
+    if (r.door === 'lock' && $('setMessages').hidden) location.replace('#security');
   }
 
   function init() {
     shell = $('setShell');
-    $('setList').innerHTML = GROUPS.map(([name, ids]) => `<div class="set-group"><div class="set-group-head">${name}</div><div class="set-group-list">${ids.map(id => {
-      const [, label, sub] = SECTIONS.find(s => s[0] === id);
-      return `<a class="set-row" data-s="${id}" href="#${id}"><span class="set-row-ic">${rowIcon(id)}</span><span class="set-row-text"><span class="set-row-name">${label}</span><span class="set-row-sub">${sub}</span></span>${CHEVRON}</a>`;
-    }).join('')}</div></div>`).join('');
-    SECTIONS.forEach(([id]) => {
-      if (ITEMS[id].length === 1) return;
-      const rows = document.createElement('div');
-      rows.className = 'set-rows'; rows.id = 'rows-' + id;
-      $('pane-' + id).querySelector('.set-pane-head').after(rows);
-    });
+    document.querySelectorAll('.set-shell [data-ic]').forEach(e => { e.innerHTML = ic(e.dataset.ic, e.closest('.set-ic, .set-nav-ic') ? 15 : 16); });
+    $('setList').innerHTML = GROUPS.map(([name, ids]) => `<div class="set-group"><div class="set-group-head" id="grp-${name}">${name}</div><div class="set-group-list" role="list" aria-labelledby="grp-${name}">${ids.map(id => {
+      const [, label, sub, icn] = sec(id);
+      return `<a class="set-nav" role="listitem" data-s="${id}" href="#${id}"><span class="set-nav-ic" aria-hidden="true">${ic(icn, 16)}</span><span class="set-nav-t">${label}<span class="set-nav-sub">${sub}</span></span><span class="set-nav-go" aria-hidden="true">${ic('chevright', 15)}</span></a>`;
+    }).join('')}</div></div>`).join('')
+      // Help: not settings pages — they open Help & Guides (guide.js) and Set up your folio (onboarding.js)
+      + `<div class="set-group"><div class="set-group-head" id="grp-Help">Help</div><div class="set-group-list" role="list" aria-labelledby="grp-Help">${[
+        ['guide', 'Help & Guides', 'How every feature works', 'help'], ['setup', 'Set up your folio', 'Photo, Top 5, ratings, people, friends', 'sparkles']].map(([a, label, sub, icn]) =>
+        `<button type="button" class="set-nav" role="listitem" onclick="mssHelp('${a}')"><span class="set-nav-ic" aria-hidden="true">${ic(icn, 16)}</span><span class="set-nav-t">${label}<span class="set-nav-sub">${sub}</span></span><span class="set-nav-go" aria-hidden="true">${ic('chevright', 15)}</span></button>`).join('')}</div></div>`;
+    // a click on the link you're already on still scrolls to it (shared pages)
+    $('setList').addEventListener('click', ev => { const a = ev.target.closest('.set-nav'); if (a && location.hash === a.getAttribute('href')) { ev.preventDefault(); paint(true); } });
+    $('setHits').addEventListener('click', ev => { const a = ev.target.closest('.set-hit'); if (!a) return; ev.preventDefault(); go(hits[+a.dataset.i]); });
+    document.querySelectorAll('#setMain [data-back]').forEach(a => a.addEventListener('click', ev => { ev.preventDefault(); back(''); }));
+    document.querySelectorAll('#setMain .set-door-page .set-back, #setMain .set-trail a').forEach(a => a.addEventListener('click', ev => { ev.preventDefault(); back(a.getAttribute('href')); }));
     $('setSearch').addEventListener('input', search);
+    $('setSearch').addEventListener('keydown', keys);
+    // "/" jumps to search (not while typing somewhere)
+    document.addEventListener('keydown', ev => {
+      if (ev.key !== '/' || ev.ctrlKey || ev.metaKey || ev.altKey || ev.target.closest?.('input, textarea, select, [contenteditable]')) return;
+      if (phoneMQ.matches && shell.classList.contains('is-open')) return;
+      ev.preventDefault(); $('setSearch').focus();
+    });
     window.addEventListener('hashchange', onHash);
     window.addEventListener('beforeunload', ev => { if (isDirty()) ev.preventDefault(); });
+    phoneMQ.addEventListener('change', () => paint(false));
     stack.push(location.hash);
     paint(false);
   }
   document.addEventListener('DOMContentLoaded', init);
 
-  return { back, refresh };
+  return { refresh };
 })();

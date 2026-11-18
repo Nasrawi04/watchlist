@@ -1,27 +1,31 @@
 /* ══════════════════════════════════════════════════════════════
-   list-studio.js — the List Studio (MSSListStudio): make or edit a list in
-   one popup, laid out like the Export Studio.
+   list-studio.js — the list editor (MSSListStudio), a full page (Lists redesign): make or edit
+   a list on list-view.html?new=1 / ?list=…&edit=1 — the list page in edit mode.
 
-   Left  · Details (name, description, Ranked / Unranked, Who can view +
-           its private link, Collaborate)
-         · Add titles (My Library / Discover, search, Sort, Status, Type,
-           Genre, Selected only, Select all shown) — tap to add / remove
-   Right · Your list, live: Order by (score, date watched, release date,
-           title, a rating, shuffle) + "Keep sorted automatically" (saved as
-           sort_mode, so titles added later slot into place), and moving by
-           hand — drag, ↑ ↓, or type a position (ranked lists).
-   Phones: two tabs — Options · My list (n).
+   Head   · "Lists · Editing", the name, Cancel · Save changes (phones: a bar fixed above the
+            bottom bar)
+   Left   · Details: name, description (50 words, counted live), Ranked / Collection, who can see
+            it (+ its private link), invite friends (a new list), Order (every order in one
+            dropdown, Shuffle, Keep sorted automatically — saved as sort_mode, so titles added
+            later slot into place)
+          · Your list: drag by the handle (mouse or touch), ↑ ↓, or type a position (ranked); ×
+          · Delete this list… (yours, not a new one)
+   Right  · Add titles (sticks while you scroll): My Library / Discover, search, Sort, Status,
+            Type, Genre, "In the list only", Add all shown (asks above 20) — + / ✓ on each row
+   Phones: one column — details, your list, then Add titles.
+   Leaving with unsaved changes asks first (Cancel, Back, a link, closing the tab).
 
    MSSListStudio.init({
-     lists: () => all your lists (incl. shared with you: _collab, _owner),
+     root: the page element it draws into,
+     lists: () => the lists it can open (the one on the page),
      entries: () => your library, resolve: id → title (entry or tmdb:…),
-     save: list → saved row (insert when no id), afterSave(list, isNew),
-     collab: (listId, then) → opens Collaborate,
+     save: list → saved row (insert when no id), afterSave(list, isNew), onClose(),
+     collab: (list, then) → opens Collaborate, remove: list → deletes it (asks first),
    })
    MSSListStudio.open({ id })   no id = new list
    Requires config.js, nav.js (tmdbFetch, attachClearButton), sort-filter.js (SF.dd — the
    site's dropdowns), list-popup.js (MSSList.ORDER_GROUPS / orderLabel / sortBy / orderHint /
-   reorder / cache), MSSDialog, showConfirm, showToast.
+   reorder / cache), showConfirm, showToast.
 ══════════════════════════════════════════════════════════════ */
 const MSSListStudio = (() => {
   let C = null, S = null;
@@ -50,88 +54,78 @@ const MSSListStudio = (() => {
       title: list?.title || '', desc: list?.description || '', ranked: list ? list.ranked ?? null : null, collab: false, vis: list?.visibility || 'anyone',
       ids: (list?.items || []).slice(), mode, auto: mode !== 'picked',
       src: 'library', q: '', f: { sort: 'highest', status: 'watched', type: '', genre: '', onlySel: false }, shown: SHOW_STEP,
-      disc: null, tab: 'opts', busy: false,
+      disc: null, busy: false,
     };
     S.start = JSON.stringify(snap());
     S.locked = S.shared && mode !== 'picked';   // the owner keeps a shared list sorted
-    const ov = overlay();
-    $('lsTitleH').textContent = S.isNew ? 'New List' : S.shared ? 'Edit Shared List' : 'Edit List';
-    drawOpts(); drawSide(); drawTabs(); drawFoot();
-    // laptops: straight into the name / search box (phones would pop the keyboard up over everything)
-    MSSDialog.open(ov, { focus: phone() ? null : S.shared ? '#lsSearch' : '#lsName' });
+    frame();
+    drawOpts(); drawSide(); drawAdd(); drawFoot();
+    // laptops: straight into the name (phones would pop the keyboard up over everything)
+    if (!phone()) (S.shared ? $('lsSearch') : $('lsName'))?.focus();
   }
   const snap = () => ({ t: S.title.trim(), d: S.desc.trim(), r: S.ranked, v: S.vis, i: S.ids, m: S.auto ? S.mode : 'picked', c: S.collab });
-  const dirty = () => S && JSON.stringify(snap()) !== S.start;
+  const dirty = () => !!S && !S.done && JSON.stringify(snap()) !== S.start;
   async function close(force) {
     if (!S || S.busy) return;
-    if (!force && dirty() && !(await showConfirm({ title: 'Discard changes?', message: 'Your changes to this list won’t be saved.', confirmText: 'Discard', iconName: 'x' }))) return;
-    MSSDialog.close($('lsOverlay'));
+    if (!force && dirty() && !(await confirmLeave())) return;
     S = null;
+    C.onClose();
   }
+  const confirmLeave = () => showConfirm({ title: 'Discard changes?', message: 'Your changes to this list won’t be saved.', confirmText: 'Discard', cancelText: 'Keep editing', iconName: 'x', danger: false });
+  // Leaving with unsaved changes: closing the tab / reloading (the browser asks), or a link on the page (we ask)
+  addEventListener('beforeunload', ev => { if (dirty()) { ev.preventDefault(); ev.returnValue = ''; } });
+  document.addEventListener('click', async ev => {
+    const a = ev.target.closest('a[href]');
+    if (!a || !dirty() || a.target === '_blank' || ev.defaultPrevented || a.getAttribute('href').startsWith('#')) return;
+    ev.preventDefault(); ev.stopPropagation();
+    if (await confirmLeave()) { S.done = true; location.href = a.href; }
+  }, true);
 
-  function overlay() {
-    let ov = $('lsOverlay');
-    if (ov) return ov;
-    ov = document.createElement('div'); ov.id = 'lsOverlay'; ov.className = 'soc-overlay xs-overlay';
-    ov.innerHTML = `<div class="soc-card xs-card ls-card" role="dialog" aria-modal="true" aria-labelledby="lsTitleH">
-        <div class="sf-header xs-head"><div><div class="sf-title" id="lsTitleH">New List</div><div class="xs-head-sub"><span class="ls-sub-wide">Add titles on the left — your list fills in on the right.</span><span class="ls-sub-phone">Add titles in Options — they fill in under My list.</span></div></div>
-          <button type="button" class="sf-close" aria-label="Close" onclick="MSSListStudio.close()">${icon('x', 18)}</button></div>
-        <div class="pn-toggle ls-tabs" id="lsTabs" role="tablist" aria-label="List Studio"></div>
-        <div class="xs-grid ls-grid" id="lsGrid">
-          <div class="xs-opts" id="lsOpts"></div>
-          <div class="xs-side ls-side" id="lsSide"></div>
-        </div>
-        <div class="sf-footer xs-foot">
-          <button type="button" class="sf-clear-btn" onclick="MSSListStudio.close()">Cancel</button>
-          <button type="button" class="sf-apply-btn" id="lsSave" onclick="MSSListStudio._save()">${icon('check', 15)} Save List</button>
+  // The page: head (Cancel · Save changes), the details + your list on the left, Add titles on the right
+  function frame() {
+    const save = `<button type="button" class="le-cancel" onclick="MSSListStudio.close()">Cancel</button>
+      <button type="button" class="le-save" id="lsSave" onclick="MSSListStudio._save()">${icon('check', 15)} Save changes</button>`;
+    C.root.innerHTML = `<div class="le-page">
+        <header class="le-head">
+          <div class="le-head-l"><div class="lib-kicker">Lists · ${S.isNew ? 'New list' : 'Editing'}</div>
+            <h1 class="le-name" id="lsTitleH" translate="no"></h1></div>
+          <div class="le-bar" id="lsBar">${save}</div>
+        </header>
+        <div class="le-cols">
+          <div class="le-main">
+            <section class="le-panel" id="lsOpts" aria-label="Details"></section>
+            <section class="le-panel" id="lsSide" aria-label="Your list"></section>
+            ${!S.isNew && !S.shared ? `<div class="le-danger"><button type="button" class="le-del" onclick="MSSListStudio._delete()">${icon('trash', 14)} Delete this list…</button><span>It asks you to confirm.</span></div>` : ''}
+          </div>
+          <aside class="le-panel le-add" id="lsAdd" aria-label="Add titles"></aside>
         </div>
       </div>`;
-    MSSDialog.bind(ov, () => close());
-    // an open dropdown floats over the popup — keep it on its button while a panel
-    // scrolls, and close it once the button scrolls out of view
-    const follow = ev => {
-      const dd = ov.querySelector('.sf-dd.open');
-      if (!dd) return;
-      const r = dd.querySelector('.sf-dd-trigger').getBoundingClientRect(), box = ev.currentTarget.getBoundingClientRect(), m = dd.querySelector('.td-dd-menu');
-      if (r.bottom < box.top || r.top > box.bottom) { SF.closeDD(); return; }
-      if (m.style.top && m.style.top !== 'auto') m.style.top = r.bottom + 'px'; else m.style.bottom = (window.innerHeight - r.top) + 'px';
-    };
-    ['lsOpts', 'lsSide', 'lsGrid'].forEach(id => ov.querySelector('#' + id).addEventListener('scroll', follow, { passive: true }));
-    document.body.appendChild(ov);
-    return ov;
   }
-
-  /* ── phone tabs ── */
-  function drawTabs() {
-    $('lsTabs').innerHTML = [['opts', 'Options'], ['list', `My list (${S.ids.length})`]].map(([k, l]) =>
-      `<button type="button" role="tab" class="pn-toggle-btn${S.tab === k ? ' active' : ''}" aria-selected="${S.tab === k}" onclick="MSSListStudio._tab('${k}')">${l}</button>`).join('');
-    $('lsGrid').dataset.tab = S.tab;
-  }
-  function tab(k) { S.tab = k; drawTabs(); $('lsGrid').scrollTop = 0; }
 
   function drawFoot() {
     const b = $('lsSave');
     b.disabled = S.busy || !S.title.trim();
-    b.innerHTML = S.busy ? 'Saving…' : `${icon('check', 15)} ${S.isNew ? 'Create List' : 'Save List'}`;
+    b.innerHTML = S.busy ? 'Saving…' : `${icon('check', 15)} ${S.isNew ? 'Create list' : 'Save changes'}`;
+    $('lsTitleH').textContent = S.title.trim() || (S.isNew ? 'New list' : 'Untitled list');
   }
 
-  /* ── left: details + add titles ── */
-  const sec = (id, label, body, sub) => `<div class="xs-sec" id="${id}"><div class="xs-sec-label">${label}${sub ? `<span>${sub}</span>` : ''}</div>${body}</div>`;
+  /* ── left: details ── */
+  const sec = (id, label, body, sub) => `<div class="le-sec" id="${id}"><div class="le-label">${label}${sub ? `<span>${sub}</span>` : ''}</div>${body}</div>`;
   const sw = (on, act, label, sub) => `<button type="button" class="xs-switch" role="switch" aria-checked="${on}" onclick="${act}"><span class="xs-switch-text"><b>${label}</b>${sub ? `<small>${sub}</small>` : ''}</span><i aria-hidden="true"></i></button>`;
   function rankedHTML() {
     if (S.shared || S.official) return '';
     const r = S.ranked;
-    return `<div class="la-seg" role="radiogroup" aria-label="Ranked or unranked">
+    return `<div class="ls-field"><span class="ls-field-l" id="lsTypeL">Type</span><div class="la-seg" role="radiogroup" aria-labelledby="lsTypeL">
         <button type="button" role="radio" aria-checked="${r === true}" class="${r === true ? 'on' : ''}" onclick="MSSListStudio._ranked(true)">${icon('trophy', 13)} Ranked<small>Numbered — #1 is your top pick</small></button>
-        <button type="button" role="radio" aria-checked="${r === false}" class="${r === false ? 'on' : ''}" onclick="MSSListStudio._ranked(false)">${icon('list', 13)} Unranked<small>A collection, in the order you choose</small></button>
-      </div>`;
+        <button type="button" role="radio" aria-checked="${r === false}" class="${r === false ? 'on' : ''}" onclick="MSSListStudio._ranked(false)">${icon('layers', 13)} Collection<small>No numbers, in the order you choose</small></button>
+      </div></div>`;
   }
   // Who can view (068) — enforced by the database; official lists are always public
   const VIS = [['anyone', 'globe', 'Anyone', 'Community, your profile, search'], ['friends', 'users', 'Friends', 'Only your friends'], ['link', 'lock', 'Private link', 'Only people with the link, or you send it to']];
   function visHTML() {
     if (S.shared || S.official) return '';
     const cur = VIS.find(v => v[0] === S.vis);
-    return `<div class="ls-field"><span class="ls-field-l" id="lsVisL">Who can view</span>
+    return `<div class="ls-field"><span class="ls-field-l" id="lsVisL">Who can see it</span>
         <div class="ls-vis" role="radiogroup" aria-labelledby="lsVisL">${VIS.map(([k, ic, l, sub]) =>
           `<button type="button" role="radio" aria-checked="${S.vis === k}" class="ls-vis-opt${S.vis === k ? ' on' : ''}" onclick="MSSListStudio._vis('${k}')">${icon(ic, 15)}<b>${l}</b><small>${sub}</small></button>`).join('')}</div>
         ${S.vis === 'anyone' ? '' : S.isNew
@@ -147,15 +141,36 @@ const MSSListStudio = (() => {
     const details = S.shared
       ? `<div class="la-note">${icon('users', 14)}<span><b>${esc(S.title)}</b> is shared with you${S.list._owner?.username ? ` by @${esc(S.list._owner.username)}` : ''} — you can add, remove and move titles.</span></div>`
       : `<label class="ls-field"><span class="ls-field-l">Name</span>
-          <input class="xs-input" id="lsName" maxlength="60" placeholder="e.g. Comfort Shows" value="${esc(S.title)}" oninput="MSSListStudio._title(this.value)" onkeydown="if(event.key==='Enter')MSSListStudio._save()"></label>
-        <label class="ls-field"><span class="ls-field-l">Description <small>(optional, up to ${MAX_WORDS} words)</small></span>
-          <textarea class="list-desc-field" id="lsDesc" maxlength="500" placeholder="What’s this list about?" oninput="MSSListStudio._desc(this)">${esc(S.desc)}</textarea>
-          <span class="list-desc-count" id="lsDescCount"></span></label>
+          <input class="xs-input le-name-in" id="lsName" maxlength="60" placeholder="e.g. Comfort Shows" value="${esc(S.title)}" oninput="MSSListStudio._title(this.value)" onkeydown="if(event.key==='Enter')MSSListStudio._save()"></label>
+        <label class="ls-field"><span class="ls-field-l">Description <small id="lsDescCount" class="list-desc-count" aria-live="polite"></small></span>
+          <textarea class="list-desc-field" id="lsDesc" maxlength="500" placeholder="What’s this list about?" oninput="MSSListStudio._desc(this)">${esc(S.desc)}</textarea></label>
         <div id="lsRanked">${rankedHTML()}</div>
         <div id="lsVis">${visHTML()}</div>
-        ${S.isNew ? `<div class="xs-switches" id="lsCollab" style="margin-top:10px">${sw(S.collab, 'MSSListStudio._collab()', 'Invite friends to this list', 'They can add and remove titles with you — only you can rename or delete it')}</div>` : ''}`;
-    $('lsOpts').innerHTML = sec('lsSecDetails', 'Details', details)
-      + sec('lsSecAdd', 'Add titles', `
+        ${S.isNew ? `<div class="xs-switches" id="lsCollab">${sw(S.collab, 'MSSListStudio._collab()', 'Invite friends to edit', 'They can add and reorder titles with you — only you can rename or delete it')}</div>` : ''}`;
+    $('lsOpts').innerHTML = sec('lsSecDetails', 'Details', details) + `<div id="lsOrder">${orderHTML()}</div>`;
+    if (!S.shared) descCount();
+  }
+  // Order: every order in one dropdown (Your order first, then the Sort menus' groups), Shuffle, Keep sorted
+  function orderHTML() {
+    const locked = S.locked, label = MSSList.orderLabel(S.mode), n = S.ids.length;
+    const opt = (k, l) => `<div class="td-dd-opt${S.mode === k ? ' active' : ''}" role="option" aria-selected="${S.mode === k}" onclick="event.stopPropagation();SF.closeDD();MSSListStudio._mode('${k}')">${esc(l)}</div>`;
+    const menu = opt('picked', 'Your order (drag to move)') + MSSList.ORDER_GROUPS.map(([h, opts]) => `<div class="sf-dd-subgroup-label">${h}</div>` + opts.map(([k, l]) => opt(k, l)).join('')).join('');
+    const cur = S.mode === 'picked' ? 'Your order (drag to move)' : label;
+    return sec('lsSecOrder', 'Order', `
+      ${locked ? `<div class="la-note">${icon('info', 14)}<span>The owner keeps this list sorted by <b>${esc(label)}</b> — titles you add slot into place.</span></div>`
+        : `<div class="le-order"><div class="ls-dd">${SF.dd('lsDD-order', esc(cur), false, menu)}</div>
+          <button type="button" class="fp-chip" ${n < 2 ? 'disabled' : ''} onclick="MSSListStudio._shuffle()">${icon('shuffle', 12)} Shuffle</button></div>
+        ${S.shared ? '' : `<div class="xs-switches" style="margin-top:10px">${sw(S.auto && S.mode !== 'picked', S.mode === 'picked' ? "MSSListStudio._mode('highest')" : 'MSSListStudio._auto()', 'Keep sorted automatically',
+          S.mode === 'picked' ? 'Pick an order above — for now it’s your own order, new titles go at the end.'
+          : S.auto ? `Titles added later slot into place (${esc(label)}).` : 'Sorted once — after this it’s your own order, new titles go at the end.')}</div>`}`}`);
+  }
+  function descCount() {
+    const n = words(S.desc), el = $('lsDescCount');
+    if (el) { el.textContent = n >= MAX_WORDS ? `· the limit (${MAX_WORDS} / ${MAX_WORDS} words)` : `· ${n} / ${MAX_WORDS} words`; el.classList.toggle('over', n >= MAX_WORDS); }
+  }
+  /* ── right: add titles ── */
+  function drawAdd() {
+    $('lsAdd').innerHTML = sec('lsSecAdd', 'Add titles', `
         <div class="pn-toggle ls-src" role="tablist" aria-label="Where from">
           <button type="button" role="tab" class="pn-toggle-btn${S.src === 'library' ? ' active' : ''}" aria-selected="${S.src === 'library'}" onclick="MSSListStudio._src('library')">My Library</button>
           <button type="button" role="tab" class="pn-toggle-btn${S.src === 'discover' ? ' active' : ''}" aria-selected="${S.src === 'discover'}" onclick="MSSListStudio._src('discover')">Discover</button>
@@ -167,13 +182,8 @@ const MSSListStudio = (() => {
         </div>
         <div id="lsTools"></div>
         <div class="ls-results" id="lsResults" aria-live="polite"></div>`);
-    if (!S.shared) descCount();
     attachClearButton('lsSearch');
     drawTools(); drawResults();
-  }
-  function descCount() {
-    const n = words(S.desc), el = $('lsDescCount');
-    if (el) { el.textContent = n >= MAX_WORDS ? `Reached the limit (${MAX_WORDS}/${MAX_WORDS} words)` : `${n} / ${MAX_WORDS} words`; el.classList.toggle('over', n >= MAX_WORDS); }
   }
   function drawTools() {
     if (S.src === 'discover') { $('lsTools').innerHTML = ''; return; }
@@ -253,26 +263,12 @@ const MSSListStudio = (() => {
     if (S && S.src === 'discover') drawResults();
   }
 
-  /* ── right: your list ── */
+  /* ── left, below the details: your list ── */
   function drawSide() {
     const n = S.ids.length, ranked = S.ranked === true, locked = S.locked;
-    const label = MSSList.orderLabel(S.mode);
     const hintMode = ['watched_new', 'watched_old', 'release_new', 'release_old'].includes(S.mode) ? S.mode : '';
-    // every order laid out, grouped like the site's Sort menus — all shown, nothing to scroll:
-    // My Order / Shuffle by the heading, a card per group (buttons like the edit page's genre tags)
-    const chip = (k, l, short) => `<button type="button" class="genre-opt${S.mode === k ? ' selected' : ''}" aria-pressed="${S.mode === k}" ${short ? `aria-label="${l}" title="${l}"` : ''} ${locked ? 'disabled' : ''} onclick="MSSListStudio._mode('${k}')">${short || l}</button>`;
-    const card = ([h, opts]) => `<div class="ls-og${opts.length > 2 ? ' ls-og-wide' : ''}${opts.some(o => o[0] === S.mode) ? ' on' : ''}" role="group" aria-label="${h}"><span class="ls-og-h">${h}</span><div class="ls-og-btns">${opts.map(([k, l, short]) => chip(k, l, short)).join('')}</div></div>`;
-    const head = `<div class="ls-order-top">${chip('picked', 'My Order')}<button type="button" class="genre-opt" ${locked || n < 2 ? 'disabled' : ''} onclick="MSSListStudio._shuffle()">${icon('shuffle', 12)} Shuffle</button></div>`;
-    const chips = MSSList.ORDER_GROUPS.map(card).join('');
     $('lsSide').innerHTML = `
-      <div class="xs-sec" id="lsSecOrder"><div class="ls-order-head"><div class="xs-sec-label">Order by</div>${head}</div>
-        <div class="ls-order">${chips}</div>
-        ${locked ? `<div class="la-note" style="margin-top:10px">${icon('info', 14)}<span>The owner keeps this list sorted by <b>${esc(label)}</b> — titles you add slot into place.</span></div>`
-          : S.shared ? '' : `<div class="xs-switches" style="margin-top:10px">${sw(S.auto && S.mode !== 'picked', S.mode === 'picked' ? "MSSListStudio._mode('highest')" : 'MSSListStudio._auto()', 'Keep sorted automatically',
-            S.mode === 'picked' ? 'Pick an order above — for now it’s your own order, new titles go at the end.'
-            : S.auto ? `Titles added later slot into place (${esc(label)}).` : 'Sorted once — after this it’s your own order, new titles go at the end.')}</div>`}
-      </div>
-      <div class="xs-sec"><div class="xs-sec-label">Your list<span>${n} ${n === 1 ? 'title' : 'titles'}${S.ranked === true ? ' · ranked' : S.ranked === false ? ' · unranked' : ''}</span></div>
+      <div class="le-sec"><div class="le-label">Your list<span>${n} ${n === 1 ? 'title' : 'titles'}${S.ranked === true ? ' · ranked' : S.ranked === false ? ' · collection' : ''}</span></div>
         ${n > 1 && !locked ? `<div class="la-help"><span>Move a title by hand: drag it by <span class="la-help-grip">${GRIP}</span>, use the arrows${ranked ? ' or type its position' : ''}.</span></div>` : ''}
         <div class="ls-list" id="lsList">${n ? S.ids.map((id, i) => {
           const e = item(id) || { title: 'Loading…' };
@@ -290,11 +286,12 @@ const MSSListStudio = (() => {
             </div>`}
             <button type="button" class="la-mv la-x" onclick="MSSListStudio._remove(${i})" aria-label="Remove ${esc(e.title)}">${icon('x', 13)}</button>
           </div>`;
-        }).join('') : `<div class="ls-empty">${icon('layers', 30)}<b>Your list is empty</b><span>Add titles from the left${phone() ? ' (Options tab)' : ''} — they show up here.</span></div>`}</div>
-      </div>`;  }
+        }).join('') : `<div class="ls-empty">${icon('layers', 30)}<b>Your list is empty</b><span>Add titles ${phone() ? 'below' : 'from the right'} — they show up here.</span></div>`}</div>
+      </div>`;
+  }
 
   /* ── changes ── */
-  function changed(side = true) { if (side) drawSide(); drawTabs(); drawFoot(); }
+  function changed(side = true) { if (side) drawSide(); $('lsOrder').innerHTML = orderHTML(); drawFoot(); }
   function sortNow() { S.ids = MSSList.sortBy(S.ids.map(id => ({ id, item: item(id) || {} })), S.mode).map(r => r.id); }
   function toggle(id) {
     const i = S.ids.indexOf(id);
@@ -309,8 +306,11 @@ const MSSListStudio = (() => {
     if (S.f.onlySel && S.src === 'library') drawResults();
     changed();
   }
-  function addShown() {
-    libraryRows().forEach(e => { if (!S.ids.includes(e.id)) S.ids.push(e.id); });
+  async function addShown() {
+    const add = libraryRows().filter(e => !S.ids.includes(e.id));
+    if (!add.length) return showToast('Everything shown is already in the list.');
+    if (add.length > 20 && !(await showConfirm({ title: `Add ${add.length} titles?`, message: 'Every title shown here goes into the list. You can take any out again before you save.', confirmText: `Add ${add.length}`, iconName: 'plus', danger: false }))) return;
+    add.forEach(e => S.ids.push(e.id));
     if (S.auto && S.mode !== 'picked' || S.locked) sortNow();
     drawResults(); changed();
   }
@@ -342,15 +342,14 @@ const MSSListStudio = (() => {
     changed();
   }
 
-  /* ── drag a row by its handle (mouse or finger); the panel scrolls near its edges ── */
+  /* ── drag a row by its handle (mouse or finger); the page scrolls near the screen's edges ── */
   let drag = null;
   document.addEventListener('pointerdown', ev => {
     const h = ev.target.closest('#lsList .la-grip');
     if (!h || !S) return;
     ev.preventDefault();
     const row = h.closest('.la-row'), rows = [...document.querySelectorAll('#lsList .la-row')];
-    const box = phone() ? $('lsGrid') : $('lsSide');
-    drag = { row, rows, box, from: rows.indexOf(row), to: rows.indexOf(row), y0: ev.clientY, s0: box.scrollTop, h: row.getBoundingClientRect().height };
+    drag = { row, rows, from: rows.indexOf(row), to: rows.indexOf(row), y0: ev.clientY, s0: scrollY, h: row.getBoundingClientRect().height };
     row.classList.add('dragging');
     document.addEventListener('pointermove', dragMove);
     document.addEventListener('pointerup', dragEnd);
@@ -358,9 +357,8 @@ const MSSListStudio = (() => {
   });
   function dragMove(ev) {
     const d = drag; if (!d) return;
-    const r = d.box.getBoundingClientRect();
-    if (ev.clientY < r.top + 50) d.box.scrollTop -= 10; else if (ev.clientY > r.bottom - 50) d.box.scrollTop += 10;
-    const dy = ev.clientY - d.y0 + (d.box.scrollTop - d.s0);
+    if (ev.clientY < 90) scrollBy(0, -10); else if (ev.clientY > innerHeight - 140) scrollBy(0, 10);   // clear the bars at the top and bottom
+    const dy = ev.clientY - d.y0 + (scrollY - d.s0);
     d.row.style.transform = `translateY(${dy}px)`;
     const to = Math.max(0, Math.min(d.rows.length - 1, d.from + Math.round(dy / d.h)));
     if (to === d.to) return;
@@ -385,7 +383,7 @@ const MSSListStudio = (() => {
   async function save() {
     if (!S || S.busy) return;
     const title = S.title.trim();
-    if (!title) { tab('opts'); $('lsName')?.focus(); showToast('Give your list a name first.', 'err'); return; }
+    if (!title) { $('lsName')?.focus(); showToast('Give your list a name first.', 'err'); return; }
     S.busy = true; drawFoot();
     const sortMode = S.auto && S.mode !== 'picked' ? S.mode : 'picked';
     try {
@@ -408,11 +406,9 @@ const MSSListStudio = (() => {
         saved = l;
       }
       const collab = S.collab;
-      S.busy = false;
-      close(true);
-      C.afterSave(saved, isNew);
+      S.busy = false; S.done = true;
       showToast(isNew ? `“${title}” created!` : 'Saved!');
-      if (isNew && collab) setTimeout(() => C.collab(saved.id), 300);
+      C.afterSave(saved, isNew, collab);
     } catch (e) {
       console.error('List Studio save:', e);
       if (S) { S.busy = false; drawFoot(); }
@@ -422,12 +418,12 @@ const MSSListStudio = (() => {
 
   return {
     init, open, close,
-    _save: save, _tab: tab, _toggle: toggle, _addShown: addShown, _mode: setMode, _shuffle: shuffle, _remove: remove,
+    _save: save, _toggle: toggle, _addShown: addShown, _mode: setMode, _shuffle: shuffle, _remove: remove,
     _move: (a, b, f) => move(a, b, f),
     _pos: (i, v) => { const n = parseInt(v, 10); if (n >= 1) move(i, n - 1, '.la-pos'); else drawSide(); },
     _auto: () => { S.auto = !S.auto; S.autoTouched = true; changed(); },
     _ranked: v => { S.ranked = S.ranked === v ? null : v; $('lsRanked').innerHTML = rankedHTML(); changed(); },
-    _collab: () => { S.collab = !S.collab; $('lsCollab').innerHTML = sw(S.collab, 'MSSListStudio._collab()', 'Invite friends to this list', 'They can add and remove titles with you — only you can rename or delete it'); drawFoot(); },
+    _collab: () => { S.collab = !S.collab; $('lsCollab').innerHTML = sw(S.collab, 'MSSListStudio._collab()', 'Invite friends to edit', 'They can add and reorder titles with you — only you can rename or delete it'); drawFoot(); },
     _title: v => { S.title = v; drawFoot(); },
     _vis: k => { S.vis = k; $('lsVis').innerHTML = visHTML(); drawFoot(); },
     _link: fresh => S?.list && mssCopyShareLink('list', S.list.id, fresh),
@@ -435,7 +431,8 @@ const MSSListStudio = (() => {
       if (words(el.value) > MAX_WORDS) el.value = el.value.trim().split(/\s+/).slice(0, MAX_WORDS).join(' ');
       S.desc = el.value; descCount(); drawFoot();
     },
-    _src: k => { S.src = k; S.q = ''; S.disc = null; drawOpts(); $('lsSearch')?.focus(); },
+    _src: k => { S.src = k; S.q = ''; S.disc = null; drawAdd(); $('lsSearch')?.focus(); },
+    _delete: async () => { if (S && !S.busy && await C.remove(S.list)) { S.done = true; C.onClose(true); } },
     _q: v => {
       S.q = v.trim().toLowerCase(); S.shown = SHOW_STEP;
       if (S.src === 'discover') { S.disc = null; clearTimeout(discTimer); drawResults(); if (S.q) discTimer = setTimeout(runDiscover, 350); }
