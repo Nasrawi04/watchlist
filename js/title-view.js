@@ -1026,14 +1026,18 @@ const MSSViews = (() => {
   }
 
   /* ── the list a card was in (‹ › step through it by clicking the next card on the page) ── */
-  addEventListener('click', ev => { const c = ev.target.closest?.('.msf-card, .msf-row'); if (c && !ev.target.closest('.lyr, .msf-card__controls')) lastCard = c; }, true);
-  addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === ' ') { const c = ev.target.closest?.('.msf-card, .msf-row'); if (c && !c.closest('.lyr')) lastCard = c; } }, true);
-  const clickable = c => c.matches('[role="button"]') ? c : c.querySelector(':scope > .msf-card__main, :scope [role="button"]');
+  // a title in any view: the grid's card, and the list views' rows — the site's row, Discover's (.dx-row) and the
+  // Library's / a list page's (.lp-card) — so ‹ › step through a list view as they do through a grid
+  const ITEM = '.msf-card, .msf-row, .dx-row, .lp-card';
+  addEventListener('click', ev => { const c = ev.target.closest?.(ITEM); if (c && !ev.target.closest('.lyr, .msf-card__controls, .lp-ctrls, .dx-chips')) lastCard = c; }, true);
+  addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === ' ') { const c = ev.target.closest?.(ITEM); if (c && !c.closest('.lyr')) lastCard = c; } }, true);
+  // what opens it: the card / row itself when it's the button, else its main part (a Library row opens from the row)
+  const clickable = c => c.matches('[role="button"]') ? c : c.querySelector(':scope > .msf-card__main, :scope > .dx-main, :scope [role="button"]') || (c.matches('.lp-card') ? c : null);
   function listCtx() {
     const c = lastCard; if (!c?.isConnected) return null;
-    const box = c.closest('.section-block, [data-tv-list]') || c.closest('.msf-rail, .msf-grid, .msf-rows');
+    const box = c.closest('.section-block, [data-tv-list]') || c.closest('.msf-rail, .msf-grid, .msf-rows, .dx-list, .lp-grid');
     if (!box) return null;
-    const cards = [...box.querySelectorAll('.msf-card:not(.is-decor), .msf-row')].filter(x => clickable(x) && !x.closest('.lyr'));
+    const cards = [...box.querySelectorAll('.msf-card:not(.is-decor), .msf-row, .dx-row, .lp-card')].filter(x => clickable(x) && !x.closest('.lyr'));
     const i = cards.indexOf(c);
     if (i < 0 || cards.length < 2) return null;
     const label = (box.closest('.section-block')?.querySelector('.section-block-title')?.textContent || box.closest('section')?.querySelector('h2, h3')?.textContent || '').trim();
