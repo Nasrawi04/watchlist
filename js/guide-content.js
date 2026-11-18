@@ -245,7 +245,7 @@ const MSS_GUIDE = [
   { id: 'discover', s: 'discover', t: 'Discover', shot: 'discover',
     what: 'Find something to watch: the featured title, what’s trending, lists and searches.',
     why: 'Your next favourite is in here somewhere.',
-    how: ['Swipe through Featured, check Also trending, or open a list.', 'Search for any title or person.'],
+    how: ['Swipe through Featured (a finger, a mouse drag or a two-finger swipe on a trackpad) or use its dots, check Also trending, or open a list.', 'Search for any title or person.'],
     where: [['Discover', 'discover.html']], k: 'discover find new trending featured popular what to watch', rel: ['browse', 'discover-lists', 'for-your-taste'] },
   { id: 'for-your-taste', s: 'discover', t: 'For Your Taste',
     what: 'Recommendations picked from what you love.',

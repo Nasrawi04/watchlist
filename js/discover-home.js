@@ -116,12 +116,17 @@ const MSSDiscoverHome = (() => {
     featSwipe(box);
     featShow(0, true);
   }
-  /* Swipe (touch / pen): left → the next title, right → the one before. Vertical drags still scroll the page
-     (touch-action: pan-y); a swipe that started on a button doesn't also press it. */
+  /* Swipe: left → the next title, right → the one before.
+     - touch, pen and mouse: drag across it (vertical drags still scroll the page, touch-action: pan-y); a drag that
+       started on a button or link doesn't also press it, and a mouse press on one is left to it
+     - laptop trackpad (and sideways scroll wheels): a two-finger swipe sideways, one title per swipe */
   function featSwipe(box) {
+    const dirOf = left => (getComputedStyle(box).direction === 'rtl' ? -1 : 1) * (left ? 1 : -1);
+    const step = d => featShow((F.i + d + F.items.length) % F.items.length);
     let x0 = null, y0 = 0, id = null, swiped = false;
     box.addEventListener('pointerdown', e => {
-      if (e.pointerType === 'mouse' || F.items.length < 2) return;
+      if (F.items.length < 2 || e.button > 0) return;
+      if (e.pointerType === 'mouse' && e.target.closest('a, button, input, select, textarea')) return;
       x0 = e.clientX; y0 = e.clientY; id = e.pointerId; swiped = false;
     }, { passive: true });
     const end = e => {
@@ -129,12 +134,27 @@ const MSSDiscoverHome = (() => {
       const dx = e.clientX - x0, dy = e.clientY - y0; x0 = null;
       if (Math.abs(dx) < 45 || Math.abs(dx) < Math.abs(dy) * 1.3) return;
       swiped = true;
-      const dir = (getComputedStyle(box).direction === 'rtl' ? -1 : 1) * (dx < 0 ? 1 : -1);
-      featShow((F.i + dir + F.items.length) % F.items.length);
+      if (e.pointerType === 'mouse') getSelection()?.removeAllRanges();   // the drag isn't left as selected text
+      step(dirOf(dx < 0));
     };
     box.addEventListener('pointerup', end, { passive: true });
     box.addEventListener('pointercancel', () => { x0 = null; }, { passive: true });
     box.addEventListener('click', e => { if (swiped) { swiped = false; e.preventDefault(); e.stopPropagation(); } }, true);
+    box.addEventListener('dragstart', e => e.preventDefault());   // a mouse drag over the picture moves the titles, not the image
+    // trackpad: add up the sideways scroll; once it's a swipe, step once and ignore the rest of that gesture
+    // (its momentum) until the fingers have been still for a moment
+    let sum = 0, locked = false, quiet = 0;
+    box.addEventListener('wheel', e => {
+      if (F.items.length < 2 || Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return;
+      e.preventDefault();   // no browser back/forward swipe while moving through the titles
+      clearTimeout(quiet); quiet = setTimeout(() => { sum = 0; locked = false; }, 180);
+      if (locked) return;
+      sum += e.deltaX;
+      if (Math.abs(sum) < 60) return;
+      locked = true;
+      step(dirOf(sum > 0));
+      sum = 0;
+    }, { passive: false });
   }
   function recommend(key) {
     const it = window._discItemMap[key]; if (!it) return;
@@ -306,7 +326,7 @@ const MSSDiscoverHome = (() => {
       };
       if (c) return use(c);
       // seasons / episodes come from the weekly shared list — only once it's there (never worked out just for a tile)
-      if (cat.lazy && !s) return;
+      if (cat.lazy) { cat.peek().then(items => items && use(items)).catch(() => {}); return; }
       setTimeout(() => firstPage(key).then(use).catch(() => {}), (delay += 260));
     });
   }

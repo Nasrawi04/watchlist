@@ -303,6 +303,7 @@ async function _discSelectLinkResult(tmdbId, tmdbType) {
    can't do it, the device works it out itself (~210 requests, 6 at a time), as before.
    Minimum votes keep tiny samples out: an episode needs 20, a season 50 across its episodes.
      await MSSTopEps.get()  → { seasons: [...], episodes: [...] }, best first (cached)
+     await MSSTopEps.peek() → the same when it's already on this device or saved for everyone, else null (never works it out)
      MSSTopEps.onProgress(fn) → fn(0…1) while it's being worked out */
 const MSSTopEps = (() => {
   const STORE = 'mss_top_eps_v2', TTL = 7 * 864e5, SHOWS = 200, PER = 6, MIN_EP = 20, MIN_SEASON = 50, KEEP = 250, MIN_SHOW = 900;
@@ -394,7 +395,15 @@ const MSSTopEps = (() => {
       .finally(() => { running = null; });
     return running;
   }
-  return { get, onProgress: fn => { listeners.add(fn); return () => listeners.delete(fn); } };
+  // for the Discover tiles' posters: only a list that's already there, never one worked out just for a tile
+  async function peek() {
+    const c = cached();
+    if (c) return c;
+    if (typeof sb === 'undefined') return null;
+    const saved = await row('msf:top_eps');
+    return saved?.body ? keep(saved) : null;
+  }
+  return { get, peek, onProgress: fn => { listeners.add(fn); return () => listeners.delete(fn); } };
 })();
 
 // Their cards open the Season / Episode page (href); the show is what Hide from Results and age checks look at
@@ -419,6 +428,11 @@ function _discTopProgress(key) {
     if (!bar) { box.querySelector('.page-loading')?.remove(); box.insertAdjacentHTML('afterbegin', `<div class="disc-top-progress" role="status"><span>Working out the top ${key === 'top_episodes' ? 'episodes' : 'seasons'} for everyone — only once a week…</span><i><u></u></i></div>`); bar = box.querySelector('.disc-top-progress'); }
     bar.querySelector('u').style.width = Math.round(f * 100) + '%';
   });
+}
+// The first page of a list from what's already there (Discover's tile posters), or null
+async function _discTopPeek(kind) {
+  const d = await MSSTopEps.peek();
+  return d ? (kind === 'episode' ? d.episodes : d.seasons).slice(0, 20).map(x => _discTopItem(x, kind)) : null;
 }
 async function _discTopPage(key, kind, page) {
   const off = _discTopProgress(key);
@@ -576,6 +590,7 @@ const DISCOVER_CATEGORIES = [
     title: 'Highest-Rated Seasons',
     // TMDB scores only, worked out from TMDB's top-rated shows (MSSTopEps)
     fetch: page => _discTopPage('top_seasons', 'season', page),
+    peek: () => _discTopPeek('season'),
   },
   {
     key: 'top_episodes',
@@ -583,6 +598,7 @@ const DISCOVER_CATEGORIES = [
     navLabel: 'Highest-Rated Episodes',
     title: 'Highest-Rated Episodes',
     fetch: page => _discTopPage('top_episodes', 'episode', page),
+    peek: () => _discTopPeek('episode'),
   },
   {
     key: 'niche_movies',
