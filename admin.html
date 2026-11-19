@@ -13,17 +13,117 @@
 <link rel="stylesheet" href="css/style.css">
 <style>
 /* ── Admin (site owners only — app_admins, migrations 036 / 037).
-   Page head + .pn-toggle tabs like Notifications; cards like Settings. ── */
+   Dashboard shell: a sidebar of sections on the left (a side panel under 1024px), the section on the right. ── */
+.adm-shell { display:grid; grid-template-columns:236px minmax(0, 1fr); gap:28px; align-items:start; }
+.adm-side { position:sticky; top:calc(var(--nav-h) + 16px); display:flex; flex-direction:column; gap:14px; padding:16px 12px; border-radius:var(--radius); background:var(--surface-card); border:1px solid var(--border); max-height:calc(100vh - var(--nav-h) - 32px); overflow-y:auto; }
+.adm-side-h { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:0 6px; }
+.adm-side-t { font-family:var(--serif); font-size:22px; font-weight:600; line-height:1.1; }
+.adm-side-x { display:none; }
+.adm-eyebrow { font-size:10.5px; font-weight:800; letter-spacing:1.6px; text-transform:uppercase; color:var(--text-3); }
+.adm-nav { display:flex; flex-direction:column; gap:12px; }
+.adm-nav-g { display:flex; flex-direction:column; gap:2px; }
+.adm-nav-g > .adm-eyebrow { padding:0 10px 4px; }
+.adm-nav-i { display:flex; align-items:center; gap:10px; width:100%; min-height:40px; padding:8px 10px; border-radius:var(--radius-sm); border:1px solid transparent; background:none; color:var(--text-2); font:600 13.5px 'Manrope',var(--sans); text-align:start; cursor:pointer; }
+.adm-nav-i svg { flex-shrink:0; opacity:.85; }
+.adm-nav-i:hover { background:var(--bg-3); color:var(--text); }
+.adm-nav-i[aria-current="page"] { background:var(--selected-bg); color:var(--selected-fg); border-color:var(--border-olive); }
+.adm-nav-i[aria-current="page"] svg { opacity:1; }
+.adm-nav-i:focus-visible, .adm-side-x:focus-visible, .adm-menu:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
+.adm-nav-l { flex:1; min-width:0; }
+.adm-side-f { margin-top:auto; padding:10px 6px 0; border-top:1px solid var(--border); font-size:12px; color:var(--text-3); display:flex; align-items:center; gap:7px; }
+.adm-scrim { position:fixed; inset:0; z-index:1100; background:var(--scrim); }
+.adm-scrim[hidden] { display:none; }
 .adm-head { margin-bottom:1.25rem; display:flex; align-items:flex-end; justify-content:space-between; gap:12px; flex-wrap:wrap; }
-.adm-title { font-family:var(--serif); font-size:clamp(28px, 6vw, 44px); font-weight:600; line-height:1.15; margin:0; }
-.adm-sub { font-size:13.5px; color:var(--text-2); margin-top:4px; }
-.adm-refresh { display:inline-flex; align-items:center; gap:7px; padding:8px 14px; border-radius:var(--radius-sm); cursor:pointer; font:600 13px 'Manrope',var(--sans); background:var(--card); border:1px solid var(--border-2); color:var(--text-2); }
+.adm-head-l { display:flex; align-items:center; gap:12px; min-width:0; }
+.adm-title { font-family:var(--serif); font-size:clamp(28px, 5vw, 40px); font-weight:600; line-height:1.15; margin:2px 0 0; }
+.adm-sub { font-size:13px; color:var(--text-3); margin-top:4px; display:flex; align-items:center; gap:6px; }
+.adm-menu { display:none; align-items:center; justify-content:center; width:44px; height:44px; flex-shrink:0; border-radius:var(--radius-sm); border:1px solid var(--border-2); background:var(--surface-card); color:var(--text); cursor:pointer; }
+.adm-refresh { display:inline-flex; align-items:center; gap:7px; padding:8px 14px; min-height:40px; border-radius:var(--radius-sm); cursor:pointer; font:600 13px 'Manrope',var(--sans); background:var(--card); border:1px solid var(--border-2); color:var(--text-2); }
 .adm-refresh:hover { border-color:var(--border-olive); color:var(--text); }
-.adm-tabs { margin-bottom:1.5rem; max-width:100%; overflow-x:auto; scrollbar-width:none; }
-.adm-tabs::-webkit-scrollbar { display:none; }
-.adm-tabs .pn-toggle-btn { padding:9px clamp(12px, 2.4vw, 22px); white-space:nowrap; display:flex; align-items:center; gap:7px; }
-.adm-tab-count { font-size:11px; font-weight:700; min-width:18px; padding:1px 6px; border-radius:20px; background:var(--olive); color:var(--text-on-brand); }
+.adm-tab-count { font-size:11px; font-weight:700; min-width:20px; padding:1px 6px; border-radius:20px; text-align:center; background:var(--olive); color:var(--text-on-brand); }
 :focus-visible.adm-row, .adm-btn:focus-visible, .adm-refresh:focus-visible, .adm-link:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
+@media(max-width:1023px) {
+  .adm-shell { grid-template-columns:minmax(0, 1fr); }
+  .adm-side { position:fixed; z-index:1101; top:0; bottom:0; left:0; width:min(300px, 86vw); max-height:none; border-radius:0 var(--radius) var(--radius) 0; padding:calc(16px + env(safe-area-inset-top)) 12px calc(16px + env(safe-area-inset-bottom));
+    background:var(--surface-panel); transform:translateX(-102%); visibility:hidden; transition:transform .22s var(--ease), visibility 0s .22s; }
+  .adm-side.open { transform:none; visibility:visible; transition:transform .22s var(--ease); }
+  .adm-side-x { display:inline-flex; align-items:center; justify-content:center; width:40px; height:40px; border-radius:var(--radius-sm); border:1px solid var(--border-2); background:none; color:var(--text); cursor:pointer; }
+  .adm-menu { display:inline-flex; }
+  .adm-nav-i { min-height:44px; }
+  .adm-chart-sw button { min-height:40px; }
+}
+@media(max-width:560px) { .adm-head { flex-wrap:nowrap; align-items:flex-start; } .adm-refresh { width:44px; height:44px; padding:0; justify-content:center; } .adm-refresh-l { display:none; } }
+@media(prefers-reduced-motion:reduce) { .adm-side, .adm-side.open { transition:none; } }
+
+/* Dashboard: needs-you strip, KPI cards with sparklines, growth chart, live feed */
+.adm-needs { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:10px; margin-bottom:14px; }
+.adm-need { display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:var(--radius); border:1px solid var(--border); background:var(--surface-card); color:var(--text); font:inherit; text-align:start; cursor:pointer; min-width:0; }
+.adm-need:hover { border-color:var(--border-olive); }
+.adm-need:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
+.adm-need-i { display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; flex-shrink:0; border-radius:var(--radius-sm); background:var(--bg-3); color:var(--text-2); }
+.adm-need.todo { border-color:var(--warning-border); }
+.adm-need.todo .adm-need-i { background:var(--warning-bg); color:var(--warning-fg); }
+.adm-need-n { font-family:var(--bebas); font-size:28px; line-height:1; }
+.adm-need-l { font-size:12.5px; color:var(--text-2); display:block; }
+.adm-need-s { font-size:11.5px; font-weight:700; display:flex; align-items:center; gap:4px; color:var(--text-3); margin-top:2px; }
+.adm-need.todo .adm-need-s { color:var(--warning-fg); }
+.adm-kpis { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:10px; margin-bottom:10px; }
+.adm-kpi { position:relative; display:flex; flex-direction:column; gap:2px; padding:16px 16px 14px; border-radius:var(--radius); border:1px solid var(--border); background:var(--surface-card); min-width:0; overflow:hidden; }
+.adm-kpi-l { font-size:12.5px; font-weight:600; color:var(--text-2); display:flex; align-items:center; gap:6px; }
+.adm-kpi-n { font-family:var(--bebas); font-size:clamp(34px, 4vw, 46px); line-height:1; letter-spacing:.5px; margin-top:6px; }
+.adm-kpi-d { font-size:11.5px; font-weight:700; color:var(--olive-light); display:flex; align-items:center; gap:4px; }
+.adm-kpi-d.zero { color:var(--text-3); font-weight:500; }
+.adm-spark { display:block; width:100%; height:34px; margin-top:8px; }
+.adm-spark path.l { fill:none; stroke:var(--olive-light); stroke-width:1.75; vector-effect:non-scaling-stroke; }
+.adm-spark path.a { fill:var(--olive-light); fill-opacity:.14; stroke:none; }
+.adm-tiles.mini { grid-template-columns:repeat(6, minmax(0, 1fr)); }
+.adm-tiles.mini .adm-tile { padding:12px 14px; }
+.adm-tiles.mini .adm-tile-n { font-size:clamp(24px, 3vw, 30px); }
+.adm-card-h-wrap { flex-wrap:wrap; align-items:center; }
+.adm-chart-sw { display:inline-flex; flex-wrap:wrap; max-width:100%; gap:4px; padding:3px; border-radius:var(--radius-sm); border:1px solid var(--border-2); }
+.adm-chart-sw button { min-height:32px; padding:4px 12px; border-radius:7px; border:1px solid transparent; background:none; color:var(--text-2); font:600 12.5px 'Manrope',var(--sans); cursor:pointer; }
+.adm-chart-sw button[aria-pressed="true"] { background:var(--selected-bg); color:var(--selected-fg); border-color:var(--border-olive); }
+.adm-chart-sw button:focus-visible { outline:2px solid var(--olive-light); outline-offset:1px; }
+.adm-big { display:flex; align-items:baseline; gap:10px; margin:-4px 0 10px; }
+.adm-big b { font-family:var(--bebas); font-size:40px; line-height:1; font-weight:400; }
+.adm-big span { font-size:12.5px; color:var(--text-3); }
+.adm-area { position:relative; height:180px; border-bottom:1px solid var(--border-2); }
+.adm-area svg { position:absolute; inset:0; width:100%; height:100%; }
+.adm-area path.l { fill:none; stroke:var(--olive-light); stroke-width:2; vector-effect:non-scaling-stroke; stroke-linejoin:round; }
+.adm-area path.a { fill:var(--olive-light); fill-opacity:.16; }
+.adm-area line { stroke:var(--border); stroke-width:1; vector-effect:non-scaling-stroke; stroke-dasharray:3 4; }
+.adm-area .adm-bars { position:absolute; inset:0; height:auto; padding:0; border:0; gap:0; }
+.adm-area .adm-bar i { opacity:0; width:2px; margin:0 auto; border-radius:0; background:var(--olive); min-height:0; }
+.adm-area .adm-bar:hover i, .adm-area .adm-bar:focus-visible i { opacity:.5; background:var(--olive); }
+.adm-grid3 { display:grid; grid-template-columns:minmax(0, 1.4fr) minmax(0, 1fr); gap:12px; margin-bottom:12px; }
+.adm-feed { display:flex; flex-direction:column; }
+.adm-feed-r { display:flex; gap:10px; padding:10px 0; border-top:1px solid var(--border); font-size:13px; min-width:0; }
+.adm-feed-r:first-child { border-top:0; padding-top:0; }
+.adm-feed-r .adm-quote { -webkit-line-clamp:2; line-clamp:2; display:-webkit-box; -webkit-box-orient:vertical; overflow:hidden; margin-top:2px; }
+.adm-live { display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:700; color:var(--text-2); }
+.adm-live i { width:8px; height:8px; border-radius:50%; background:var(--olive-light); }
+.adm-bar-row { display:flex; align-items:center; justify-content:flex-end; gap:10px; flex-wrap:wrap; margin-bottom:12px; }
+.adm-bar-row:empty { display:none; }
+.adm-bar-row > .adm-card-s:first-child { margin-inline-end:auto; }
+.adm-note { display:flex; align-items:flex-start; gap:10px; margin-bottom:12px; font-size:13px; color:var(--text-2); border-color:var(--warning-border); }
+.adm-note svg { flex-shrink:0; color:var(--warning-fg); margin-top:1px; }
+.adm-kpi-d.down { color:var(--text-2); }
+.adm-feats { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:12px; align-items:start; }
+.adm-feat { display:grid; grid-template-columns:minmax(120px, 1.2fr) minmax(40px, 1fr) auto auto; gap:10px 12px; align-items:center; font-size:13px; }
+.adm-feat-l { color:var(--text); display:flex; flex-direction:column; gap:1px; min-width:0; }
+.adm-feat-l .adm-kpi-d { font-size:11px; }
+.adm-feat-t { font-size:12px; color:var(--text-3); font-variant-numeric:tabular-nums; text-align:end; min-width:44px; }
+.adm-feat-na { grid-column:2 / -1; }
+.adm-migs { display:flex; flex-wrap:wrap; gap:6px; }
+.adm-mig { display:inline-flex; align-items:center; gap:4px; padding:4px 9px; border-radius:var(--radius-sm); border:1px solid var(--success-border); background:var(--success-bg); color:var(--success-fg); font-size:12px; font-weight:700; font-variant-numeric:tabular-nums; }
+.adm-mig.no { border-color:var(--warning-border); background:var(--warning-bg); color:var(--warning-fg); }
+.adm-need-s.warn { color:var(--warning-fg); }
+.adm-split.adm-split-2 { grid-template-columns:auto 1fr; }
+.adm-split.adm-split-2 .adm-split-n { font-weight:500; color:var(--text-2); }
+@media(max-width:900px) { .adm-feats { grid-template-columns:1fr; } }
+@media(max-width:1199px) { .adm-tiles.mini { grid-template-columns:repeat(3, minmax(0, 1fr)); } }
+@media(max-width:900px) { .adm-needs, .adm-kpis { grid-template-columns:repeat(2, minmax(0, 1fr)); } .adm-grid3 { grid-template-columns:1fr; } }
+@media(max-width:480px) { .adm-tiles.mini { grid-template-columns:repeat(2, minmax(0, 1fr)); } .adm-need { padding:10px 12px; gap:10px; } .adm-area { height:150px; } }
 
 /* Overview */
 .adm-tiles { display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:10px; margin-bottom:1.25rem; }
@@ -115,7 +215,7 @@ a.adm-btn { text-decoration:none; }
 .adm-addword .pn-toggle { margin:0; }
 .adm-addword .pn-toggle-btn { padding:7px 12px; font-size:12.5px; }
 /* Flags, bans, pictures */
-.adm-tab-count.warn { background:var(--error-bg); }
+.adm-tab-count.warn { background:var(--warning-bg); color:var(--warning-fg); border:1px solid var(--warning-border); }
 .adm-kind.warn { background:color-mix(in srgb, var(--error-fg) 14%, transparent); color:var(--error-fg); }
 .adm-flagged { border-top:0.5px solid var(--border); }
 .adm-flagged:first-of-type { border-top:none; }
@@ -219,7 +319,6 @@ a.adm-btn { text-decoration:none; }
 @media(max-width:760px) { .adm-grid2 { grid-template-columns:1fr; } }
 @media(max-width:640px) {
   .adm-tiles { grid-template-columns:repeat(2, minmax(0, 1fr)); }
-  .adm-tabs .pn-toggle-btn { font-size:12.5px; padding:9px 8px; gap:5px; }
   .adm-row { flex-wrap:wrap; }
   .adm-actions { width:100%; }
   .adm-actions .adm-btn { flex:1; }
@@ -268,15 +367,25 @@ a.adm-btn { text-decoration:none; }
 </head>
 <body data-own-actions>
 <div class="page-wrap">
-  <div class="adm-head fade-up">
-    <div>
-      <h1 class="adm-title">Admin</h1>
-      <div class="adm-sub">Only the site’s owners can see this page.</div>
+ <div class="adm-shell">
+  <aside class="adm-side" id="admSide" aria-label="Admin sections">
+    <div class="adm-side-h"><div><div class="adm-eyebrow">MyScreenFolio</div><div class="adm-side-t">Admin</div></div>
+      <button type="button" class="adm-side-x" onclick="admSide(false)" aria-label="Close the menu"></button></div>
+    <div class="adm-nav" id="admTabs" role="navigation" aria-label="Admin sections"></div>
+    <div class="adm-side-f" id="admSideF"></div>
+  </aside>
+  <div class="adm-scrim" id="admScrim" hidden onclick="admSide(false)"></div>
+  <main class="adm-body">
+    <div class="adm-head fade-up">
+      <div class="adm-head-l">
+        <button type="button" class="adm-menu" id="admMenu" onclick="admSide(true)" aria-label="Open the admin menu" aria-controls="admSide" aria-expanded="false"></button>
+        <div><div class="adm-eyebrow" id="admGroup">Dashboard</div><h1 class="adm-title" id="admTitle">Overview</h1><div class="adm-sub" id="admUpdated">Only the site’s owners can see this page.</div></div>
+      </div>
+      <button type="button" class="adm-refresh" id="admRefresh" onclick="admTab(_admTab, true)" aria-label="Refresh"></button>
     </div>
-    <button type="button" class="adm-refresh" id="admRefresh" onclick="admTab(_admTab, true)">Refresh</button>
-  </div>
-  <div class="pn-toggle adm-tabs fade-up fade-up-1" role="tablist" aria-label="Admin sections" id="admTabs"></div>
-  <div id="admPanel" role="tabpanel" class="fade-up fade-up-2"><div class="page-loading"><div class="spinner"></div></div></div>
+    <div id="admPanel" class="fade-up fade-up-1" aria-labelledby="admTitle"><div class="page-loading"><div class="spinner"></div></div></div>
+  </main>
+ </div>
 </div>
 
 <script src="js/vendor/supabase-2.118.0.js"></script>
@@ -287,7 +396,17 @@ a.adm-btn { text-decoration:none; }
 <script>
 const esc = s => escHTML(s == null ? '' : String(s));
 const ADM_STATUS = [['watching', 'Watching'], ['up_next', 'Up Next'], ['paused', 'Taking a Break'], ['ongoing', 'To Be Continued'], ['completed', 'Watched'], ['queue', 'Watchlist'], ['dropped', 'Dropped']];
-const ADM_TABS = [['overview', 'Overview'], ['members', 'Members'], ['titles', 'Titles'], ['safety', 'Safety'], ['activity', 'Activity'], ['langs', 'Languages'], ['showcase', 'Guest showcase'], ['challenges', 'Official challenges']];
+// Sidebar: groups of sections — [group, [[key, label, icon]]]
+const ADM_NAV = [
+  ['Dashboard', [['overview', 'Overview', 'chart']]],
+  ['People', [['members', 'Members', 'users']]],
+  ['Safety', [['safety', 'Safety', 'shield']]],
+  ['Content', [['titles', 'Titles', 'film'], ['activity', 'Activity', 'activity'], ['langs', 'Languages', 'globe']]],
+  ['Community', [['challenges', 'Official challenges', 'trophy'], ['social', 'Feature use', 'poll']]],
+  ['Site', [['showcase', 'Guest showcase', 'eye']]],
+  ['System', [['health', 'Health', 'zap']]],
+];
+const ADM_TABS = ADM_NAV.flatMap(([g, items]) => items.map(([k, l, i]) => [k, l, i, g]));
 const ADM_KIND = { comment: 'Comment', note_reply: 'Note reply', list_reply: 'List reply' };
 const _admNum = n => Number(n || 0).toLocaleString(MSSI18n.locale);
 const _admFmt = d => d ? new Date(d).toLocaleDateString(MSSI18n.locale, { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
@@ -304,15 +423,40 @@ const _admSpin = () => '<div class="page-loading"><div class="spinner"></div></d
 let _admTab = 'overview', _admQuery = '', _admUserQuery = '', _admTitles = [], _admTimer = null, _admLangOpen = 0, _admFlagOpen = 0, _admPicOpen = 0, _admReportOpen = 0;
 
 function _admPaintTabs() {
-  document.getElementById('admTabs').innerHTML = ADM_TABS.map(([k, l]) =>
-    `<button type="button" role="tab" id="admTab-${k}" class="pn-toggle-btn${k === _admTab ? ' active' : ''}" aria-selected="${k === _admTab}" aria-controls="admPanel" onclick="admTab('${k}')">${l}${k === 'langs' && _admLangOpen ? `<span class="adm-tab-count" aria-label="${_admLangOpen} open">${_admLangOpen}</span>` : ''}${k === 'safety' && _admFlagOpen + _admPicOpen + _admReportOpen ? `<span class="adm-tab-count warn" aria-label="${_admFlagOpen + _admPicOpen + _admReportOpen} to look at">${_admFlagOpen + _admPicOpen + _admReportOpen}</span>` : ''}</button>`).join('');
+  const safety = _admFlagOpen + _admPicOpen + _admReportOpen;
+  const count = k => k === 'langs' && _admLangOpen ? `<span class="adm-tab-count" aria-label="${_admLangOpen} open">${_admLangOpen}</span>`
+    : k === 'safety' && safety ? `<span class="adm-tab-count warn" aria-label="${safety} to look at">${safety}</span>` : '';
+  document.getElementById('admTabs').innerHTML = ADM_NAV.map(([g, items]) => `<div class="adm-nav-g" role="group" aria-label="${g}"><span class="adm-eyebrow" aria-hidden="true">${g}</span>${items.map(([k, l, i]) =>
+    `<button type="button" class="adm-nav-i" id="admTab-${k}"${k === _admTab ? ' aria-current="page"' : ''} onclick="admTab('${k}'); admSide(false)">${icon(i, 17)}<span class="adm-nav-l">${l}</span>${count(k)}</button>`).join('')}</div>`).join('');
+  if (_admTab === 'overview') _admPaintNeeds();
+}
+// Phones and tablets: the sidebar is a side panel
+function admSide(open) {
+  const side = document.getElementById('admSide');
+  if (!side || open === side.classList.contains('open')) return;
+  side.classList.toggle('open', open);
+  document.getElementById('admScrim').hidden = !open;
+  document.getElementById('admMenu').setAttribute('aria-expanded', open);
+  document.querySelector('.adm-body').inert = open;   // keyboard stays in the open menu
+  if (open) side.querySelector('[aria-current]')?.focus(); else document.getElementById('admMenu').focus({ preventScroll: true });
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.getElementById('admSide')?.classList.contains('open')) admSide(false); });
+// "Updated …" under the title; the Overview refreshes itself every minute while the page is in view
+let _admLoadedAt = 0;
+function _admStamp() {
+  const el = document.getElementById('admUpdated');
+  if (el && _admLoadedAt) el.innerHTML = `${icon('clock', 13)} Updated ${(Date.now() - _admLoadedAt) < 45000 ? 'just now' : _admAgo(_admLoadedAt)}${_admTab === 'overview' ? ' · refreshes every minute' : ''}`;
 }
 function admTab(key, refresh) {
   _admTab = ADM_TABS.some(([k]) => k === key) ? key : 'overview';
   history.replaceState(null, '', '#' + _admTab);
   _admPaintTabs();
-  document.getElementById('admPanel').setAttribute('aria-labelledby', 'admTab-' + _admTab);
-  ({ overview: admOverview, members: admMembers, titles: admTitlesView, safety: admSafety, activity: admActivity, langs: admLoadLanguages, showcase: admShowcase, challenges: admChallenges })[_admTab](refresh);
+  const [, label, , group] = ADM_TABS.find(([k]) => k === _admTab);
+  document.getElementById('admTitle').textContent = label;
+  document.getElementById('admGroup').textContent = group;
+  document.title = `${label} · Admin — MyScreenFolio`;
+  _admLoadedAt = Date.now(); _admStamp();
+  ({ overview: admOverview, members: admMembers, titles: admTitlesView, safety: admSafety, activity: admActivity, langs: admLoadLanguages, showcase: admShowcase, challenges: admChallenges, social: admSocial, health: admHealth })[_admTab](refresh);
 }
 function admError(err) {
   console.error(err);
@@ -373,40 +517,179 @@ function _admRank(rows, value) {
     return `<${tag} class="adm-rank-row"${href ? ` href="${href}"` : ''}><span class="adm-rank-n">${i + 1}</span>${_admPoster(t.poster_url)}<span class="adm-rank-t" translate="no">${esc(t.title)}</span><span class="adm-rank-v">${value(t)}</span></${tag}>`;
   }).join('')}</div>` : '<div class="adm-card-s">Not enough ratings yet.</div>';
 }
-async function admOverview() {
+// A small trend line under a KPI (one series, no axes)
+function _admSpark(days) {
+  if (!days?.length) return '';
+  const max = Math.max(1, ...days.map(d => d.n)), w = 100, h = 30, step = w / Math.max(1, days.length - 1);
+  const pts = days.map((d, i) => `${(i * step).toFixed(2)},${(h - d.n / max * (h - 2) - 1).toFixed(2)}`);
+  return `<svg class="adm-spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true"><path class="a" d="M0,${h} L${pts.join(' L')} L${w},${h} Z"/><path class="l" d="M${pts.join(' L')}"/></svg>`;
+}
+// The big chart: a filled line with a hover/focus point for each day (reuses the bar tooltips)
+function _admArea(days, noun) {
+  if (!days?.length) return '<div class="adm-card-s">Nothing yet.</div>';
+  const max = Math.max(1, ...days.map(d => d.n)), w = 300, h = 100, step = w / Math.max(1, days.length - 1);
+  const pts = days.map((d, i) => `${(i * step).toFixed(2)},${(h - d.n / max * (h - 6) - 1).toFixed(2)}`);
+  const label = d => new Date(d.day + 'T00:00:00').toLocaleDateString(MSSI18n.locale, { month: 'short', day: 'numeric' });
+  const total = days.reduce((t, d) => t + d.n, 0);
+  return `<div class="adm-big"><b>${_admNum(total)}</b><span>${noun} in the last ${days.length} days · busiest day ${_admNum(max)}</span></div>
+    <div class="adm-area"><svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true"><line x1="0" x2="${w}" y1="${h / 2}" y2="${h / 2}"/><path class="a" d="M0,${h} L${pts.join(' L')} L${w},${h} Z"/><path class="l" d="M${pts.join(' L')}"/></svg>
+      <div class="adm-bars" role="img" aria-label="${total} ${noun} in the last ${days.length} days">${days.map(d => `<span class="adm-bar" tabindex="0" aria-label="${label(d)}: ${d.n}"><i style="height:100%"></i><span class="adm-tip">${label(d)} · ${d.n}</span></span>`).join('')}</div></div>
+    <div class="adm-axis"><span>${label(days[0])}</span><span>${label(days[days.length - 1])}</span></div>`;
+}
+// "Needs you": what's waiting, each with an icon + word (never colour alone); repainted as the counts arrive
+const ADM_NEEDS = [['report', 'Open reports', 'flag', 'safety'], ['flag', 'Flagged members', 'shield', 'safety'], ['pic', 'Pictures to check', 'image', 'safety'], ['lang', 'Language requests', 'globe', 'langs']];
+function _admPaintNeeds() {
+  const box = document.getElementById('admNeeds');
+  if (!box) return;
+  const n = { report: _admReportOpen, flag: _admFlagOpen, pic: _admPicOpen, lang: _admLangOpen };
+  box.innerHTML = ADM_NEEDS.map(([k, l, i, tab]) => `<button type="button" class="adm-need${n[k] ? ' todo' : ''}" onclick="admTab('${tab}')">
+    <span class="adm-need-i">${icon(i, 18)}</span><span><span class="adm-need-n">${_admNum(n[k])}</span><span class="adm-need-l">${l}</span>
+    <span class="adm-need-s">${n[k] ? `${icon('info', 12)} Needs a look` : `${icon('check', 12)} All clear`}</span></span></button>`).join('');
+}
+// Range (7 / 30 / 90 days) for the Overview and Feature use — needs sql/137; without it the Overview shows the last 30 days
+let _admDays = 30, _admV2 = null, _admO = null, _admChart = 'signups';
+const ADM_SERIES = { signups: 'New members', active: 'Active members', adds: 'Titles added', comments: 'Comments' };
+const ADM_NOUN = { signups: 'new members', active: 'active members (each day)', adds: 'titles added', comments: 'comments & replies' };
+const _admNo137 = what => `<div class="adm-card adm-note">${icon('info', 16)}<span>${what} Run <b>sql/137_admin_dashboard_v2.sql</b> in Supabase’s SQL editor (it only adds read-only admin views), then refresh.</span></div>`;
+function _admRange(fn) {
+  return `<span class="adm-chart-sw" role="group" aria-label="Date range">${[7, 30, 90].map(n => `<button type="button" aria-pressed="${n === _admDays}" onclick="_admDays=${n}; ${fn}()">${n} days</button>`).join('')}</span>`;
+}
+// Change against the range before, in words + an arrow (never colour alone)
+function _admCmp(cur, prev) {
+  if (prev == null || cur == null) return '';
+  const vs = `vs previous ${_admDays} days`;
+  if (!prev) return cur ? `<span class="adm-kpi-d">${icon('chevup', 12)} Up from none ${vs}</span>` : `<span class="adm-kpi-d zero">None in either period</span>`;
+  const pct = Math.round((cur - prev) / prev * 100);
+  return pct === 0 ? `<span class="adm-kpi-d zero">Same as previous ${_admDays} days</span>`
+    : `<span class="adm-kpi-d${pct < 0 ? ' down' : ''}">${icon(pct > 0 ? 'chevup' : 'chevdown', 12)} ${pct > 0 ? 'Up' : 'Down'} ${Math.abs(pct)}% ${vs}</span>`;
+}
+function admChart(k) {
+  const series = _admV2?.series || { signups: _admO?.signups, adds: _admO?.adds };
+  _admChart = series[k] ? k : 'signups';
+  document.querySelectorAll('#admChartSw button').forEach(b => b.setAttribute('aria-pressed', b.dataset.k === _admChart));
+  document.getElementById('admChartBox').innerHTML = _admArea(series[_admChart] || [], ADM_NOUN[_admChart]);
+}
+async function admOverview(refresh) {
   const panel = document.getElementById('admPanel');
-  panel.innerHTML = _admSpin();
-  const { data: o, error } = await sb.rpc('admin_overview');
+  const quiet = refresh === 'live' && _admO;       // the minute refresh keeps the page in place
+  if (!quiet) panel.innerHTML = _admSpin();
+  const [{ data: o, error }, { data: feed }, v2] = await Promise.all([sb.rpc('admin_overview'), sb.rpc('admin_recent_activity', { p_limit: 6 }), sb.rpc('admin_dashboard_v2', { p_days: _admDays })]);
   if (_admTab !== 'overview') return;
-  if (error) return admError(error);
-  const tile = (n, l, d) => `<div class="adm-tile"><div class="adm-tile-n">${_admNum(n)}</div><div class="adm-tile-l">${l}</div>${d != null ? `<div class="adm-tile-d${d ? '' : ' zero'}">${d ? '+' + _admNum(d) : 'No change'} this week</div>` : ''}</div>`;
+  if (error) return quiet ? null : admError(error);
+  _admO = o; _admV2 = v2.error ? null : v2.data;
+  const V = _admV2, K = V?.kpi || {}, r = `in ${_admDays} days`;
+  const delta = (d, unit = 'this week') => `<span class="adm-kpi-d${d ? '' : ' zero'}">${d ? `${icon('chevup', 12)} +${_admNum(d)} ${unit}` : `No change ${unit}`}</span>`;
+  const kpi = (l, i, n, d, spark) => `<div class="adm-kpi"><span class="adm-kpi-l">${icon(i, 14)} ${l}</span><span class="adm-kpi-n">${_admNum(n)}</span>${d}${spark || ''}</div>`;
+  const tile = (n, l) => `<div class="adm-tile"><div class="adm-tile-n">${n == null ? '—' : _admNum(n)}</div><div class="adm-tile-l">${l}</div></div>`;
+  const S = V?.series || { signups: o.signups, adds: o.adds };
+  const kpis = V ? `
+      ${kpi('Members', 'users', o.users, `<span class="adm-kpi-d zero">+${_admNum(K.signups[0])} ${r}</span>${_admCmp(K.signups[0], K.signups[1])}`, _admSpark(S.signups))}
+      ${kpi(`Active members · ${_admDays} days`, 'activity', K.active[0], `<span class="adm-kpi-d zero">${o.users ? Math.round(K.active[0] / o.users * 100) : 0}% of members</span>${_admCmp(K.active[0], K.active[1])}`, _admSpark(S.active))}
+      ${kpi('Titles in libraries', 'layers', o.entries, `<span class="adm-kpi-d zero">+${_admNum(K.adds[0])} ${r}</span>${_admCmp(K.adds[0], K.adds[1])}`, _admSpark(S.adds))}
+      ${kpi(`Comments · ${_admDays} days`, 'comment', K.comments[0], _admCmp(K.comments[0], K.comments[1]), _admSpark(S.comments))}`
+    : `
+      ${kpi('Members', 'users', o.users, delta(o.users_7d), _admSpark(o.signups))}
+      ${kpi('Active this week', 'activity', o.active_7d, `<span class="adm-kpi-d zero">${o.users ? Math.round(o.active_7d / o.users * 100) : 0}% of members</span>`)}
+      ${kpi('Titles in libraries', 'layers', o.entries, delta(o.entries_7d), _admSpark(o.adds))}
+      ${kpi('Rated titles', 'ratingStar', o.rated, `<span class="adm-kpi-d zero">${o.entries ? Math.round(o.rated / o.entries * 100) : 0}% of library titles</span>`)}`;
+  const tiles = V
+    ? `${tile(K.signed_in[0], `Signed in · ${_admDays} days`)}${tile(K.episode_ratings[0], `Episode ratings · ${_admDays} days`)}${tile(K.diary[0], `Diary logs · ${_admDays} days`)}
+       ${tile(K.lists[0], `New lists · ${_admDays} days`)}${tile(o.rated, 'Rated titles (all)')}${tile(o.friendships, 'Friendships (all)')}`
+    : `${tile(o.signed_in_7d, 'Signed in this week')}${tile(o.episode_ratings, 'Episode ratings')}${tile(o.notes, 'Notes')}
+       ${tile(o.comments, 'Comments & replies')}${tile(o.lists, 'Lists')}${tile(o.friendships, 'Friendships')}`;
   panel.innerHTML = `
-    <div class="adm-tiles">
-      ${tile(o.users, 'Members', o.users_7d)}
-      ${tile(o.active_7d, 'Active this week')}
-      ${tile(o.signed_in_7d, 'Signed in this week')}
-      ${tile(o.entries, 'Titles in libraries', o.entries_7d)}
-      ${tile(o.rated, 'Rated titles')}
-      ${tile(o.episode_ratings, 'Episode ratings')}
-      ${tile(o.notes, 'Notes')}
-      ${tile(o.comments, 'Comments & replies')}
-      ${tile(o.lists, 'Lists')}
-      ${tile(o.friendships, 'Friendships')}
+    <div class="adm-bar-row">${V ? `<span class="adm-card-s">Showing</span>${_admRange('admOverview')}` : ''}</div>
+    ${V ? '' : _admNo137('Date ranges, comparisons, Feature use and Health need one more database update.')}
+    <div class="adm-needs" id="admNeeds"></div>
+    <div class="adm-kpis">${kpis}</div>
+    <div class="adm-tiles mini">${tiles}</div>
+    <div class="adm-grid3">
+      <section class="adm-card" aria-labelledby="admChartT"><div class="adm-card-h adm-card-h-wrap"><span class="adm-card-t" id="admChartT">Growth</span>
+        <span class="adm-chart-sw" id="admChartSw" role="group" aria-label="What the chart shows">${Object.keys(ADM_SERIES).filter(k => S[k]).map(k =>
+          `<button type="button" data-k="${k}" aria-pressed="${_admChart === k}" onclick="admChart('${k}')">${ADM_SERIES[k]}</button>`).join('')}</span></div>
+        <div id="admChartBox"></div></section>
+      <section class="adm-card" aria-labelledby="admFeedT"><div class="adm-card-h"><span class="adm-card-t" id="admFeedT">Latest comments</span><span class="adm-live">${icon('zap', 12)} Live</span></div>
+        <div class="adm-feed">${(feed || []).map(r => `<div class="adm-feed-r">${_admAv(r)}<span class="adm-main">
+          <span class="adm-meta"><b translate="no" style="color:var(--text)">@${esc(r.username || '?')}</b><span>on <span translate="no">${esc(r.on_title || '—')}</span></span><span>${_admAgo(r.created_at)}</span></span>
+          <span class="adm-quote" translate="no">${esc(r.content)}</span></span></div>`).join('') || '<div class="adm-card-s">No comments or replies yet.</div>'}</div>
+        <button type="button" class="adm-link" style="background:none;border:none;cursor:pointer;padding:8px 0 0" onclick="admTab('activity')">All activity</button></section>
     </div>
     <div class="adm-grid2">
-      <div class="adm-card"><div class="adm-card-h"><span class="adm-card-t">New members</span><span class="adm-card-s">last 30 days · ${_admNum(o.users_30d)}</span></div>${_admBars(o.signups || [], 'new members')}</div>
-      <div class="adm-card"><div class="adm-card-h"><span class="adm-card-t">Titles added</span><span class="adm-card-s">last 30 days · ${_admNum((o.adds || []).reduce((a, d) => a + d.n, 0))}</span></div>${_admBars(o.adds || [], 'titles added')}</div>
-    </div>
-    <div class="adm-grid2">
-      <div class="adm-card"><div class="adm-card-h"><span class="adm-card-t">Libraries by status</span></div>${_admSplit(o.by_status, ADM_STATUS)}</div>
-      <div class="adm-card"><div class="adm-card-h"><span class="adm-card-t">Libraries by category</span></div>${_admSplit(o.by_cat, Object.entries(CAT_META).map(([k, m]) => [k, m.label]))}</div>
+      <div class="adm-card"><div class="adm-card-h"><span class="adm-card-t">Libraries by status</span><span class="adm-card-s">all time</span></div>${_admSplit(o.by_status, ADM_STATUS)}</div>
+      <div class="adm-card"><div class="adm-card-h"><span class="adm-card-t">Libraries by category</span><span class="adm-card-s">all time</span></div>${_admSplit(o.by_cat, Object.entries(CAT_META).map(([k, m]) => [k, m.label]))}</div>
     </div>
     <div class="adm-grid2">
       <div class="adm-card"><div class="adm-card-h"><span class="adm-card-t">Most added</span><span class="adm-card-s">people</span></div>${_admRank(o.top_added || [], t => _admNum(t.people))}</div>
       <div class="adm-card"><div class="adm-card-h"><span class="adm-card-t">Best rated</span><span class="adm-card-s">2+ ratings</span></div>${_admRank(o.top_rated || [], t => `${scoreBadge(t.avg, 'sm')} <span>${_admNum(t.people)}</span>`)}</div>
     </div>
-    <div class="adm-card"><div class="adm-card-h"><span class="adm-card-t">Newest members</span><button type="button" class="adm-link" style="background:none;border:none;cursor:pointer" onclick="admTab('members')">See all</button></div>
-      <div class="adm-list">${(o.newest || []).map(u => `<button type="button" class="adm-row" onclick="admUser('${esc(u.id)}')">${_admAv(u)}<span class="adm-main"><span class="adm-name" translate="no">${esc(u.display_name || '@' + u.username)}</span><span class="adm-meta"><span translate="no">@${esc(u.username)}</span><span>joined ${_admAgo(u.created_at)}</span></span></span></button>`).join('') || '<div class="adm-card-s">No members yet.</div>'}</div></div>`;
+    <div class="adm-card"><div class="adm-card-h"><span class="adm-card-t">Newest members</span><span class="adm-card-s">${_admNum(o.users_30d)} in the last 30 days</span></div>
+      <div class="adm-list">${(o.newest || []).map(u => `<button type="button" class="adm-row" onclick="admUser('${esc(u.id)}')">${_admAv(u)}<span class="adm-main"><span class="adm-name" translate="no">${esc(u.display_name || '@' + u.username)}</span><span class="adm-meta"><span translate="no">@${esc(u.username)}</span><span>joined ${_admAgo(u.created_at)}</span></span></span></button>`).join('') || '<div class="adm-card-s">No members yet.</div>'}</div>
+      <button type="button" class="adm-link" style="background:none;border:none;cursor:pointer;padding:8px 0 0" onclick="admTab('members')">See all members</button></div>`;
+  _admPaintNeeds(); admChart(_admChart);
+  _admLoadedAt = Date.now(); _admStamp();
+}
+
+/* ── Feature use (sql/137): how much each part of MSF is used — counts only, never message or note text ── */
+const ADM_FEATURES = [
+  ['People', [['friendships', 'Friendships'], ['follows', 'Follows']]],
+  ['Messages', [['messages', 'Messages sent'], ['conversations', 'Conversations']]],
+  ['Together', [['movie_nights', 'Movie nights'], ['movie_night_votes', 'Movie night votes'], ['polls', 'Polls'], ['poll_votes', 'Poll votes'],
+                ['challenges', 'Challenges'], ['challenge_members', 'Challenge joins'], ['episode_chat', 'Episode chat posts']]],
+  ['Library & talk', [['diary_watches', 'Diary logs'], ['favorite_lists', 'Lists'], ['list_collaborators', 'List collaborators'], ['comments', 'Comments'],
+                ['note_replies', 'Note replies'], ['list_replies', 'List replies'], ['note_reactions', 'Note reactions'], ['import_batches', 'Imports']]],
+  ['Site', [['notifications', 'Notifications sent']]],
+];
+async function admSocial() {
+  const panel = document.getElementById('admPanel');
+  panel.innerHTML = _admSpin();
+  const { data, error } = await sb.rpc('admin_social_stats', { p_days: _admDays });
+  if (_admTab !== 'social') return;
+  if (error) return error.code === 'PGRST202' ? (panel.innerHTML = _admNo137('Feature use needs one more database update.')) : admError(error);
+  const by = Object.fromEntries((data.rows || []).map(r => [r.key, r]));
+  const max = Math.max(1, ...(data.rows || []).map(r => r.range || 0));
+  panel.innerHTML = `<div class="adm-bar-row"><span class="adm-card-s">Counts only — no message or note text is ever shown.</span>${_admRange('admSocial')}</div>
+    <div class="adm-feats">${ADM_FEATURES.map(([g, rows]) => `<section class="adm-card" aria-label="${g}"><div class="adm-card-h"><span class="adm-card-t">${g}</span><span class="adm-card-s">${_admDays} days · all time</span></div>
+      <div class="adm-feat">${rows.map(([k, l]) => { const r = by[k] || {};
+        return r.total == null ? `<span class="adm-feat-l">${l}</span><span class="adm-card-s adm-feat-na">Not set up</span>`
+          : `<span class="adm-feat-l">${l}${_admCmp(r.range, r.prev)}</span><span class="adm-split-b" aria-hidden="true"><i style="width:${(r.range || 0) / max * 100}%"></i></span>
+             <span class="adm-split-n">${r.range == null ? '—' : _admNum(r.range)}</span><span class="adm-feat-t">${_admNum(r.total)}</span>`; }).join('')}</div></section>`).join('')}</div>`;
+  _admLoadedAt = Date.now(); _admStamp();
+}
+
+/* ── Health (sql/137): migrations run, database size, cache, limits ── */
+const _admBytes = b => b >= 1073741824 ? (b / 1073741824).toFixed(2) + ' GB' : b >= 1048576 ? (b / 1048576).toFixed(1) + ' MB' : Math.round(b / 1024) + ' KB';
+async function admHealth() {
+  const panel = document.getElementById('admPanel');
+  panel.innerHTML = _admSpin();
+  const { data: h, error } = await sb.rpc('admin_health');
+  if (_admTab !== 'health') return;
+  if (error) return error.code === 'PGRST202' ? (panel.innerHTML = _admNo137('The Health page needs one more database update.')) : admError(error);
+  const missing = (h.migrations || []).filter(m => !m.ok);
+  const tmax = Math.max(1, ...(h.tables || []).map(t => t.bytes));
+  const tile = (n, l) => `<div class="adm-tile"><div class="adm-tile-n">${n}</div><div class="adm-tile-l">${l}</div></div>`;
+  panel.innerHTML = `
+    <div class="adm-tiles mini">
+      ${tile(_admBytes(h.db_bytes), 'Database size')}${tile(_admNum(h.tmdb_cache?.rows), 'Titles in the TMDB cache')}${tile(_admNum(h.tmdb_cache?.day), 'Cached in the last day')}
+      ${tile(_admNum(h.rate_limit_day), 'Rate-limit hits · 24 h')}${tile(_admNum(h.imports_30d), 'Imports · 30 days')}${tile(`${_admNum(h.admins)} · ${_admNum(h.banned)}`, 'Admins · banned')}
+    </div>
+    <div class="adm-grid2">
+      <section class="adm-card" aria-labelledby="admMigT"><div class="adm-card-h"><span class="adm-card-t" id="admMigT">Database updates</span>
+        <span class="adm-need-s ${missing.length ? 'warn' : ''}">${missing.length ? `${icon('info', 12)} ${missing.length} not run` : `${icon('check', 12)} All run`}</span></div>
+        <div class="adm-migs">${(h.migrations || []).map(m => `<span class="adm-mig${m.ok ? '' : ' no'}">${icon(m.ok ? 'check' : 'x', 12)} ${m.n}<span class="sr-only">${m.ok ? ' run' : ' not run'}</span></span>`).join('')}</div>
+        <p class="adm-card-s" style="margin-top:12px">Checks the updates from 120 on (123 and 131 have nothing to check for; 131 runs after launch). Files are in the <b>sql</b> folder.</p></section>
+      <section class="adm-card" aria-labelledby="admTblT"><div class="adm-card-h"><span class="adm-card-t" id="admTblT">Biggest tables</span><span class="adm-card-s">size · rows</span></div>
+        <div class="adm-split">${(h.tables || []).map(t => `<span class="adm-split-l" translate="no">${esc(t.name)}</span><span class="adm-split-b" aria-hidden="true"><i style="width:${t.bytes / tmax * 100}%"></i></span><span class="adm-split-n">${_admBytes(t.bytes)} · ${_admNum(t.rows)}</span>`).join('')}</div></section>
+    </div>
+    <div class="adm-card"><div class="adm-card-h"><span class="adm-card-t">Last changes</span></div>
+      <div class="adm-split adm-split-2"><span class="adm-split-l">TMDB cache saved</span><span class="adm-split-n">${_admAgo(h.tmdb_cache?.last)}</span>
+        <span class="adm-split-l">Guest showcase edited</span><span class="adm-split-n">${_admAgo(h.site_config_at)}</span></div></div>`;
+  _admLoadedAt = Date.now(); _admStamp();
+}
+function _admCounts() {
+  sb.rpc('admin_language_requests').then(({ data: l }) => { if (l) { _admLangOpen = l.filter(r => r.status === 'open').length; _admPaintTabs(); } });
+  sb.rpc('admin_flagged_users').then(({ data: f }) => { if (f) { _admFlagOpen = f.filter(u => u.open > 0 && !u.banned).length; _admPaintTabs(); } });
+  sb.rpc('admin_picture_queue').then(({ data: p }) => { if (p) { _admPicOpen = p.length; _admPaintTabs(); } });
+  sb.rpc('admin_report_count').then(({ data: n }) => { if (n != null) { _admReportOpen = Number(n) || 0; _admPaintTabs(); } });
 }
 
 /* ── Members ── */
@@ -1297,16 +1580,20 @@ document.addEventListener('DOMContentLoaded', () => {
   initPage(async () => {
     const { data, error } = await sb.rpc('is_app_admin');
     if (error || data !== true) {
-      document.getElementById('admTabs').style.display = 'none';
-      document.getElementById('admRefresh').style.display = 'none';
+      document.querySelector('.adm-shell').style.gridTemplateColumns = '1fr';
+      ['admSide', 'admRefresh', 'admMenu'].forEach(id => { document.getElementById(id).style.display = 'none'; });
       return admError(error || { code: '42501' });
     }
+    document.getElementById('admRefresh').innerHTML = `${icon('refresh', 15)}<span class="adm-refresh-l">Refresh</span>`;
+    document.getElementById('admMenu').innerHTML = icon('list', 20);
+    document.querySelector('.adm-side-x').innerHTML = icon('x', 18);
+    document.getElementById('admSideF').innerHTML = `${icon('lock', 13)} Only the site’s owners can see this page.`;
     admTab(location.hash.slice(1) || 'overview');
-    // open language requests on the tab, without opening it
-    sb.rpc('admin_language_requests').then(({ data: l }) => { if (l) { _admLangOpen = l.filter(r => r.status === 'open').length; _admPaintTabs(); } });
-    sb.rpc('admin_flagged_users').then(({ data: f }) => { if (f) { _admFlagOpen = f.filter(u => u.open > 0 && !u.banned).length; _admPaintTabs(); } });
-    sb.rpc('admin_picture_queue').then(({ data: p }) => { if (p) { _admPicOpen = p.length; _admPaintTabs(); } });
-    sb.rpc('admin_report_count').then(({ data: n }) => { if (n != null) { _admReportOpen = Number(n) || 0; _admPaintTabs(); } });
+    _admCounts();   // the to-do counts on the sidebar and the Overview's "Needs you"
+    setInterval(() => {
+      _admStamp();
+      if (document.visibilityState === 'visible' && _admTab === 'overview' && Date.now() - _admLoadedAt > 60000) { _admCounts(); admOverview('live'); }
+    }, 15000);
   });
 });
 </script>
