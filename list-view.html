@@ -327,7 +327,7 @@ async function _lvPickBackdrop() {
 }
 function _bpFooter(canUse) {
   const pick = _lvBdPick();
-  return { secondary: [{ label: 'Cancel', onClick: x => x.close() }, ...(pick.id ? [{ label: 'Reset to default', onClick: () => _lvSetBackdrop(null) }] : [])],
+  return { secondary: [{ label: 'Cancel', onClick: x => x.close() }, ...(pick.id ? [{ label: 'Reset to default', onClick: () => _lvSetBackdrop(null) }] : [])], stack: !!pick.id,
     primary: { label: 'Use this backdrop', disabled: !canUse, onClick: () => { const p = _bp.pics[_bp.sel]; if (p) _lvSetBackdrop(`${_bp.item.id}|${p.file_path}`); } } };
 }
 // Step 1: the list's titles as posters (a normal poster picker, the pp-* grid)

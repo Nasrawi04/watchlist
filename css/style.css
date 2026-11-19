@@ -8435,7 +8435,7 @@ body:has(.tv-page.is-phone:not(.de-page)) #mainNav, body:has(.tv-page.is-phone:n
   background:rgba(0,0,0,.66); font:700 12px 'Manrope',var(--sans); opacity:0; transition:opacity .15s; }
 .tv-poster.de-poster:hover .de-edit-hint, .tv-poster.de-poster:focus-visible .de-edit-hint { opacity:1; }
 .de-poster:focus-visible { outline:2px solid var(--tv-green); outline-offset:3px; }
-@media (hover:none) { .tv-poster.de-poster .de-edit-hint { opacity:1; inset:auto 6px 6px auto; width:30px; min-height:30px; padding:0; border-radius:var(--radius-sm); font-size:0; } }   /* touch: a small picture badge */
+@media (hover:none) { .tv-poster.de-poster .de-edit-hint { opacity:1; inset:auto 6px 6px auto; width:30px; min-height:30px; padding:0; gap:0; line-height:0; border-radius:var(--radius-sm); font-size:0; } }   /* touch: a small picture badge — no gap, so the icon sits centred */
 /* "Editing entry": green, with a pulsing dot */
 .de-badge { display:inline-flex; align-items:center; gap:7px; min-height:24px; padding:0 10px; border-radius:6px; background:var(--tv-green, var(--olive-light)); color:#10230c;
   font:800 10.5px/1 'Manrope',var(--sans); letter-spacing:.14em; text-transform:uppercase; white-space:nowrap; }

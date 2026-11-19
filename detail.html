@@ -743,6 +743,7 @@ async function _openPosterPicker(kind = 'poster') {
       <div class="pp-sel" id="ppSel" hidden></div>
       <div id="ppGrid">${linked ? `<div class="pp-grid${bd ? ' is-wide' : ''}" aria-label="Loading">${'<span class="pp-skel"></span>'.repeat(bd ? 3 : 6)}</div>` : `<p class="pp-empty">This entry isn't linked to TMDB, so there aren't other posters to choose from — upload your own instead.</p>`}</div>`,
     footer: { secondary: [{ label: 'Cancel', onClick: x => x.close() }, ...(bd && draftRatings._backdrop ? [{ label: 'Reset to default', onClick: _resetBackdrop }] : [])],
+      stack: !!(bd && draftRatings._backdrop),   // three buttons: on phones the main one goes full width on top
       primary: { label: `Use this ${name}`, disabled: true, onClick: _usePoster } },
     onClose: () => { if (_pp?.h === h) { if (!_pp.used) _ppPreview(null); _pp = null; } } });
   _pp.h = h;
