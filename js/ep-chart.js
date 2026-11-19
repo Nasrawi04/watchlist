@@ -82,7 +82,8 @@ const MSSEpChart = (() => {
       if (!src) return null;
       if (!cors) return tryLoad(src, false);
       return (await tryLoad(src + (src.includes('?') ? '&' : '?') + '_cb=' + Date.now(), true))
-          || tryLoad('https://wsrv.nl/?url=' + encodeURIComponent(src.replace(/^https?:\/\//, '')), true);
+          || (typeof MSSConsent !== 'undefined' && !MSSConsent.allows('outside') ? null   // Extra sources off (consent.js): no wsrv.nl
+            : tryLoad('https://wsrv.nl/?url=' + encodeURIComponent(src.replace(/^https?:\/\//, '')), true));
     };
     const { data: who } = userId ? await sb.from('profiles').select('username,avatar_url').eq('id', userId).maybeSingle() : { data: null };
     const tl = typeof tmdbLogo === 'function' ? tmdbLogo(show) : null;   // the show's name artwork (nav.js), as on its title page / Create Card

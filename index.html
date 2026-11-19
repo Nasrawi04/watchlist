@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="js/consent.js"></script>
 <script src="js/splash.js"></script>
 <script>/* signed in (splash.js's hint, before auth answers) → the personal home, not the landing page, from the first paint */
 if (window.mssSignedInHint) document.documentElement.classList.add('mh-on');</script>
@@ -405,7 +406,8 @@ function renderGuestLanding() {
     <div class="guest-cta">
       <a href="login.html" class="guest-btn-primary">Sign In</a>
       <a href="login.html#signup" class="guest-btn-secondary">Create Account</a>
-    </div>`;
+    </div>
+    <p class="guest-legal">Free, no ads, and your data is never sold. <a href="about.html">About MSF</a> · <a href="terms.html">Terms</a> · <a href="privacy.html">Privacy</a> · <a href="cookies.html">Cookies</a></p>`;
 }
 
 // Returning via browser back/forward can restore this page from the

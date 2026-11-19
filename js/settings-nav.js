@@ -221,10 +221,13 @@ const MSSSettingsNav = (() => {
       const [, label, sub, icn] = sec(id);
       return `<a class="set-nav" role="listitem" data-s="${id}" href="#${id}"><span class="set-nav-ic" aria-hidden="true">${ic(icn, 16)}</span><span class="set-nav-t">${label}<span class="set-nav-sub">${sub}</span></span><span class="set-nav-go" aria-hidden="true">${ic('chevright', 15)}</span></a>`;
     }).join('')}</div></div>`).join('')
-      // Help: not settings pages — they open Help & Guides (guide.js) and Set up your folio (onboarding.js)
+      // Help: not settings pages — they open Help & Guides (guide.js), Set up your folio (onboarding.js), About and the legal pages
       + `<div class="set-group"><div class="set-group-head" id="grp-Help">Help</div><div class="set-group-list" role="list" aria-labelledby="grp-Help">${[
         ['guide', 'Help & Guides', 'How every feature works', 'help'], ['setup', 'Set up your folio', 'Photo, Top 5, ratings, people, friends', 'sparkles']].map(([a, label, sub, icn]) =>
-        `<button type="button" class="set-nav" role="listitem" onclick="mssHelp('${a}')"><span class="set-nav-ic" aria-hidden="true">${ic(icn, 16)}</span><span class="set-nav-t">${label}<span class="set-nav-sub">${sub}</span></span><span class="set-nav-go" aria-hidden="true">${ic('chevright', 15)}</span></button>`).join('')}</div></div>`;
+        `<button type="button" class="set-nav" role="listitem" onclick="mssHelp('${a}')"><span class="set-nav-ic" aria-hidden="true">${ic(icn, 16)}</span><span class="set-nav-t">${label}<span class="set-nav-sub">${sub}</span></span><span class="set-nav-go" aria-hidden="true">${ic('chevright', 15)}</span></button>`).join('')}${[
+        // About and the legal pages (about.html, privacy.html…): their own pages
+        ['about.html', 'About & contact', 'Who makes MSF, how to reach us', 'info'], ['privacy.html', 'Privacy & Terms', 'Privacy, Terms and Cookie policies', 'shield']].map(([href, label, sub, icn]) =>
+        `<a class="set-nav" role="listitem" href="${href}"><span class="set-nav-ic" aria-hidden="true">${ic(icn, 16)}</span><span class="set-nav-t">${label}<span class="set-nav-sub">${sub}</span></span><span class="set-nav-go" aria-hidden="true">${ic('chevright', 15)}</span></a>`).join('')}</div></div>`;
     // a click on the link you're already on still scrolls to it (shared pages)
     $('setList').addEventListener('click', ev => { const a = ev.target.closest('.set-nav'); if (a && location.hash === a.getAttribute('href')) { ev.preventDefault(); paint(true); } });
     $('setHits').addEventListener('click', ev => { const a = ev.target.closest('.set-hit'); if (!a) return; ev.preventDefault(); go(hits[+a.dataset.i]); });

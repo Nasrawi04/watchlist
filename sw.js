@@ -3,7 +3,7 @@
    Cache strategy: stale-while-revalidate
 ══════════════════════════════════════════ */
 
-const CACHE_VERSION = 'msf-v18';     // MyScreenFolio — restarted at v1 for the redesign launch on 18 Nov 2026 (was msf-v520; before that mss-v787)
+const CACHE_VERSION = 'msf-v22';     // MyScreenFolio — restarted at v1 for the redesign launch on 18 Nov 2026 (was msf-v520; before that mss-v787)
 const STATIC_CACHE  = `${CACHE_VERSION}-site`;   // a new suffix: an old "msf-v1-static" left on a device from the first v1 is never reused
 
 /* Long-lived caches — deliberately NOT tied to CACHE_VERSION. Every deploy
@@ -60,6 +60,14 @@ const STATIC_ASSETS = [
   'login.html',
   'user.html',
   'offline.html',
+  'about.html',
+  'contact.html',
+  'privacy.html',
+  'terms.html',
+  'cookies.html',
+  'css/legal.css',
+  'js/legal.js',
+  'js/consent.js',
   'css/theme.css',
   'css/style.css',
   'css/profile.css',

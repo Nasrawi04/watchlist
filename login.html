@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; img-src 'self' data: blob: https://image.tmdb.org https://res.cloudinary.com https://yqbfjtkcsgyvnablmuzp.supabase.co; connect-src 'self' https://yqbfjtkcsgyvnablmuzp.supabase.co wss://yqbfjtkcsgyvnablmuzp.supabase.co">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<script src="js/consent.js"></script>
 <script src="js/i18n.js"></script>
 <title>Sign In — MyScreenFolio</title>
 <link rel="stylesheet" href="css/fonts.css">
@@ -149,6 +150,15 @@ body { background:var(--bg); min-height:100dvh; }
 .au-avail.bad { color:var(--danger); }
 .au-next { margin:2px 0 0; font-size:12px; color:var(--text-3); text-align:center; line-height:1.45; }
 .au-back { align-self:flex-start; }
+/* "I agree to the Terms…" — required to create an account */
+.au-agree { display:flex; align-items:flex-start; gap:10px; padding:12px 14px; border:1px solid var(--border-2); border-radius:12px; background:var(--bg-2); }
+.au-agree input { width:20px; height:20px; margin:1px 0 0; flex-shrink:0; cursor:pointer; }
+.au-agree label { font-size:13px; line-height:1.5; color:var(--text-2); cursor:pointer; }
+.au-agree a, .au-legal a, .au-legal button { color:var(--text-link); font-weight:700; text-decoration:underline; text-underline-offset:2px; }
+.au-agree input:focus-visible, .au-agree a:focus-visible, .au-legal a:focus-visible, .au-legal button:focus-visible { outline:2px solid var(--focus-ring); outline-offset:2px; border-radius:3px; }
+/* About · Privacy · Terms · Cookies under the card */
+.au-legal { display:flex; flex-wrap:wrap; justify-content:center; gap:0 6px; }
+.au-legal a, .au-legal button { display:inline-flex; align-items:center; min-height:40px; padding:0 6px; border:0; background:none; font:700 12.5px var(--sans); color:var(--text-supporting); cursor:pointer; }
 .au-label-row .au-link { padding:0; font-size:12.5px; }
 .au-switch { margin:4px 0 0; text-align:center; font-size:13px; color:var(--text-2); }
 .au-switch .au-link { display:inline; align-self:auto; padding:0; }
@@ -310,7 +320,7 @@ body { background:var(--bg); min-height:100dvh; }
               <div id="suGuide"></div>
             </div>
             <button class="au-btn" id="btnSUNext" type="submit"><span>Continue</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
-            <p class="au-next">Next: your birthday (kept private) and a public or private profile.</p>
+            <p class="au-next">Next: your birthday (kept private), a public or private profile, and our Terms.</p>
           </fieldset>
           <fieldset class="au-step au-form" id="suStep2" hidden style="border:0;margin:0;padding:0;min-width:0">
             <legend class="sr-only">About you</legend>
@@ -331,6 +341,11 @@ body { background:var(--bg); min-height:100dvh; }
                   <span><b>Private</b><small>You approve followers</small></span></button>
               </div>
             </div>
+            <div class="au-agree">
+              <input type="checkbox" id="suAgree" aria-describedby="suAgreeHint" onchange="if (this.checked) showErr('suError', '')">
+              <label for="suAgree">I agree to the <a href="terms.html" target="_blank" rel="noopener">Terms of Service</a> and the <a href="privacy.html" target="_blank" rel="noopener">Privacy Policy</a>, and I’ve read the <a href="cookies.html" target="_blank" rel="noopener">Cookie Policy</a>.</label>
+            </div>
+            <div class="au-hint" id="suAgreeHint" style="margin-top:-6px">Under 18? Ask a parent or guardian first. The links open in a new tab — what you’ve typed stays here.</div>
             <button class="au-btn" id="btnSignUp" type="submit"><span>Create my folio</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
           </fieldset>
         </form>
@@ -391,7 +406,8 @@ body { background:var(--bg); min-height:100dvh; }
         </div>
       </div>
     </div>
-
+    <div class="au-legal" role="navigation" aria-label="Legal"><a href="about.html">About</a><a href="privacy.html">Privacy</a><a href="terms.html">Terms</a><a href="cookies.html">Cookies</a>
+      <button type="button" onclick="MSSConsent.open()">Cookie settings</button><a href="contact.html">Contact</a></div>
   </section>
 </main>
 
@@ -594,6 +610,8 @@ async function doSignUp(e) {
   if (!birth)                   { showErr('suError', 'Please add your date of birth.'); return; }
   if (birth === 'invalid')      { showErr('suError', 'That date doesn’t exist — check the day.'); return; }
   if (mssAgeFrom(birth) < 13) { try { localStorage.setItem('mss_age_block', String(Date.now())); } catch {} showErr('suError', AU_UNDER_13); return; }
+  // Terms (consent.js MSF_LEGAL): no account without agreeing — the versions and the time go on the account
+  if (!$('suAgree').checked) { showErr('suError', 'Please agree to the Terms of Service and Privacy Policy to create your account.'); $('suAgree').focus(); return; }
   showErr('suError', '');
 
   _auBtn('btnSignUp', 'Creating your folio…', true);
@@ -603,7 +621,8 @@ async function doSignUp(e) {
   let data, error;
   try {
     MSSRemember.set(true);
-    ({ data, error } = await sb.auth.signUp({ email, password: pass, options: { data: { username, display_name: username, email, is_private: _auPrivate ? 'true' : 'false', birth } } }));
+    ({ data, error } = await sb.auth.signUp({ email, password: pass, options: { data: { username, display_name: username, email, is_private: _auPrivate ? 'true' : 'false', birth,
+      terms_version: MSF_LEGAL.terms, privacy_version: MSF_LEGAL.privacy, terms_accepted_at: new Date().toISOString() } } }));
   } catch {
     showErr('suError', 'Couldn’t reach MyScreenFolio — check your connection and try again.'); again(); return;
   }

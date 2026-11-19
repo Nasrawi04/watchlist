@@ -958,7 +958,7 @@ nav.bnav, [data-theme="light"] nav.bnav { top:auto; background:none; border:0; -
 .ft-brand { display:flex; flex-direction:column; gap:14px; font-size:13.5px; line-height:1.55; color:var(--ft-text-2); }
 .ft-brand p { margin:0; max-width:270px; }
 .ft-logo { height:48px; width:auto; aspect-ratio:467 / 198; display:block; align-self:flex-start; }
-.ft-cols { display:grid; grid-template-columns:repeat(5, minmax(0, 1fr)); gap:24px clamp(12px, 2vw, 28px); }
+.ft-cols { display:grid; grid-template-columns:repeat(6, minmax(0, 1fr)); gap:24px clamp(12px, 2vw, 28px); }
 .ft-h { margin-bottom:12px; font-size:10.5px; font-weight:800; letter-spacing:1.8px; text-transform:uppercase; color:var(--ft-text-2); }
 
 .ft-col ul { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; }
@@ -1004,6 +1004,7 @@ nav.bnav, [data-theme="light"] nav.bnav { top:auto; background:none; border:0; -
   .ft-col a { min-height:40px; font-size:14px; }
   .ft-bottom { flex-direction:column; justify-content:center; text-align:center; gap:6px; padding:14px 16px 20px; font-size:12px; line-height:1.5; }
 }
+@media (min-width:901px) and (max-width:1279px) { .ft-cols { grid-template-columns:repeat(3, minmax(0, 1fr)); } }
 
 
 
@@ -1022,6 +1023,9 @@ nav.bnav, [data-theme="light"] nav.bnav { top:auto; background:none; border:0; -
 .home-title em { color:var(--olive-light); font-style:normal; text-decoration:underline; text-decoration-thickness:3px; text-underline-offset:6px; }
 .home-sub { font-size:15px; color:var(--text-2); max-width:460px; margin:0 auto; }
 .guest-cta { display:flex; gap:12px; justify-content:center; margin-top:2.5rem; flex-wrap:wrap; }
+.guest-legal { margin:14px auto 0; max-width:520px; text-align:center; font-size:13px; line-height:1.9; color:var(--text-supporting); }
+.guest-legal a { color:var(--text-link); font-weight:700; text-decoration:underline; text-underline-offset:2px; }
+.guest-legal a:focus-visible { outline:2px solid var(--focus-ring); outline-offset:2px; border-radius:3px; }
 .guest-btn-primary { background:var(--action-primary-bg); color:var(--text-on-primary); border:none; border-radius:var(--radius-xs); padding:11px 28px; font-size:14px; font-weight:600; cursor:pointer; text-decoration:none; transition:background var(--trans) var(--ease); }
 .guest-btn-primary:hover { background:var(--action-primary-hover); }
 .guest-btn-secondary { background:transparent; color:var(--text-2); border:1px solid var(--border); border-radius:var(--radius-xs); padding:11px 28px; font-size:14px; cursor:pointer; text-decoration:none; transition:border-color var(--trans) var(--ease),color var(--trans) var(--ease); }
@@ -9819,3 +9823,44 @@ a.pw-tile:hover::after { opacity:1; }
 .dvf-sb b { font:700 calc(var(--w, 250px) * .052)/1 var(--sans); letter-spacing:-.2px; }
 .dvf-sb i { display:flex; align-items:center; gap:calc(var(--w, 250px) * .016); }
 .dvf-sb svg { height:calc(var(--w, 250px) * .042); width:auto; fill:currentColor; }
+
+/* ═════════════════════════════════════════════════════════════
+   §75  Cookies & storage — the banner and the choices popup (js/consent.js; Cookie Policy: cookies.html)
+   The banner sits at the bottom until you choose; it never blocks the page. Phones / tablets: above the bottom bar.
+   Reject optional and Accept all are the same size (rejecting is as easy as accepting); Accept all is the one brass button.
+   ═════════════════════════════════════════════════════════════ */
+.ck-banner { position:fixed; z-index:1900; inset-inline-start:24px; bottom:24px; width:min(480px, calc(100vw - 48px)); box-sizing:border-box;
+  display:flex; flex-direction:column; gap:14px; padding:18px 18px 16px; border-radius:var(--radius); border:1px solid var(--border-strong);
+  background:var(--surface-modal); color:var(--text-body); animation:cfIn .22s var(--ease); }
+.ck-b-t { display:flex; align-items:center; gap:8px; margin:0 0 6px; font:600 17px/1.2 var(--serif); color:var(--text-heading); }
+.ck-b-t svg { color:var(--olive-light); flex-shrink:0; }
+.ck-b-txt p { margin:0; font-size:13.5px; line-height:1.55; color:var(--text-supporting); }
+.ck-banner a, .ck-d a { color:var(--text-link); text-decoration:underline; text-underline-offset:2px; font-weight:700; }
+.ck-b-acts, .ck-acts { display:flex; flex-wrap:wrap; gap:8px; }
+.ck-btn { flex:1 1 auto; display:inline-flex; align-items:center; justify-content:center; min-height:40px; padding:0 14px; border-radius:var(--radius-sm);
+  border:1px solid var(--action-secondary-border); background:var(--action-secondary-bg); color:var(--text-body); font:700 13.5px var(--sans); cursor:pointer;
+  white-space:nowrap; transition:background-color .15s, border-color .15s; }
+.ck-btn:hover { background:var(--action-secondary-hover); }
+.ck-btn.is-primary { background:var(--action-primary-bg); border-color:var(--action-primary-bg); color:var(--text-on-primary); }
+.ck-btn.is-primary:hover { background:var(--action-primary-hover); border-color:var(--action-primary-hover); }
+.ck-btn:focus-visible, .ck-banner a:focus-visible, .ck-d a:focus-visible { outline:2px solid var(--focus-ring); outline-offset:2px; }
+@media (max-width:1199px) { body:has(.bnav) .ck-banner { bottom:calc(var(--bnav-top) + 10px); } }
+@media (max-width:559px) {
+  .ck-banner { inset-inline:12px; width:auto; bottom:calc(12px + env(safe-area-inset-bottom)); padding:16px 14px 14px; }
+  .ck-btn { min-height:44px; }
+  .ck-b-acts .is-primary { order:-1; flex-basis:100%; }
+}
+/* the choices popup — the confirm card, left-aligned and wider */
+.ck-card { max-width:540px; text-align:start; align-items:stretch; max-height:calc(100dvh - 40px); overflow-y:auto; }
+.ck-d { margin:0; font-size:13.5px; line-height:1.55; color:var(--text-supporting); }
+.ck-rows { display:flex; flex-direction:column; border:1px solid var(--border-default); border-radius:var(--radius-sm); }
+.ck-row { display:flex; align-items:flex-start; gap:12px; padding:14px; }
+.ck-row + .ck-row { border-top:1px solid var(--border-default); }
+.ck-ic { display:flex; width:32px; height:32px; flex-shrink:0; align-items:center; justify-content:center; border-radius:var(--radius-xs);
+  background:var(--fill-subtle); color:var(--olive-light); }
+.ck-row-t { flex:1; min-width:0; }
+.ck-name { font-weight:800; font-size:14px; color:var(--text-heading); }
+.ck-desc { margin-top:3px; font-size:12.5px; line-height:1.5; color:var(--text-supporting); }
+.ck-row .push-switch { margin-top:2px; }
+.ck-always { display:inline-flex; align-items:center; gap:4px; flex-shrink:0; margin-top:4px; font-size:12px; font-weight:800; color:var(--success-fg); white-space:nowrap; }
+@media (prefers-reduced-motion:reduce) { .ck-banner { animation:none; } }

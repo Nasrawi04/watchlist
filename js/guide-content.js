@@ -31,6 +31,7 @@ const MSS_GUIDE_SECTIONS = [
   ['privacy', 'Privacy & Security', 'Who sees what, blocking, devices', 'lock'],
   ['data', 'Import & Export', 'Export Studio, backups, imports', 'download'],
   ['settings', 'Settings & Appearance', 'Theme, language, preferences', 'settings'],
+  ['legal', 'About & Legal', 'Who we are, privacy, terms, cookies', 'shield'],
 ];
 
 const MSS_GUIDE = [
@@ -43,7 +44,7 @@ const MSS_GUIDE = [
   { id: 'account', s: 'start', t: 'Creating an account',
     what: 'A free account with a username, email and password.',
     why: 'Browsing works as a guest, but you need an account to keep a library, rate and follow people.',
-    how: ['Tap Create account (top right, or on the sign-in page).', 'Pick a username, enter your email and a password.', 'Choose whether your account is public or private — you can change it later.'],
+    how: ['Tap Create account (top right, or on the sign-in page).', 'Pick a username, enter your email and a password.', 'Choose whether your account is public or private — you can change it later.', 'Add your date of birth and tick that you agree to the Terms of Service and Privacy Policy.'],
     where: [['Sign in · Create account', 'login.html#signup']], k: 'sign up register join create account new user guest', rel: ['set-up', 'private-account'] },
   { id: 'set-up', s: 'start', t: 'Setting up your folio',
     what: 'A short, skippable setup: a profile photo, your Top 5, rating them, favourite people and friends.',
@@ -579,5 +580,27 @@ const MSS_GUIDE = [
     what: 'Change your username (every 14 days), see your email, or delete your account.',
     why: 'Keep your account details right.',
     how: ['Settings › Account.'],
-    where: [['Settings › Account', 'settings.html#account']], k: 'username change email delete account remove close', rel: ['password'] },
+    where: [['Settings › Account', 'settings.html#account']], k: 'username change email delete account remove close', rel: ['password', 'privacy-policy'] },
+
+  /* ── About & Legal (about.html, contact.html, privacy.html, terms.html, cookies.html; js/consent.js) ── */
+  { id: 'about-msf', s: 'legal', t: 'About MSF and contacting us',
+    what: 'Who makes MyScreenFolio, how it started, everything it can do, and how to reach us.',
+    why: 'To know who’s behind MSF, and to tell us about a bug, an idea or a problem.',
+    how: ['Open About from the footer (or Settings › Help › About & contact).', 'Contact has one-tap emails for bugs, ideas, account help, privacy requests, appeals and security problems.', 'To report a person or post, use Report in its ⋯ menu instead.'],
+    where: [['About', 'about.html'], ['Contact', 'contact.html'], ['Footer › MyScreenFolio', '']], k: 'about us who made creators founders story contact email support help bug feedback idea suggestion', rel: ['what-is-msf', 'privacy-policy'] },
+  { id: 'privacy-policy', s: 'legal', t: 'How MSF uses your data',
+    what: 'The Privacy Policy: what MSF collects, why, who else handles it, how long it’s kept and your rights.',
+    why: 'So you know exactly what happens to your data — no ads, no selling, no trackers — and how to see, export or delete it.',
+    how: ['It starts with a short version, then the detail in numbered sections.', 'Use On this page to jump to a section.', 'Email myscreenfolio@gmail.com to get a copy of your data, correct it or delete it.'],
+    where: [['Privacy Policy', 'privacy.html'], ['Footer › Privacy', ''], ['Settings › Privacy', 'settings.html#privacy']], k: 'privacy policy data personal information gdpr pdpl delete my data rights ip address what do you collect', rel: ['terms', 'cookie-choices', 'backup', 'account-settings'] },
+  { id: 'terms', s: 'legal', t: 'Terms of Service',
+    what: 'The rules for using MSF: who can join, your account and content, community rules and moderation.',
+    why: 'Everyone agrees to them when they create an account, so it helps to know what they say.',
+    how: ['You agree by ticking the box when you create your account.', 'When the Terms change, MSF shows you the new version once and asks you to agree.', 'Breaking the community rules can mean a warning, a suspension or a ban — you can appeal by email.'],
+    where: [['Terms of Service', 'terms.html'], ['Footer › Terms', '']], k: 'terms of service conditions rules agreement community guidelines ban suspend appeal age 13', rel: ['privacy-policy', 'account'] },
+  { id: 'cookie-choices', s: 'legal', t: 'Cookies and storage choices',
+    what: 'What MSF may keep on this device: necessary storage (always on) and three optional kinds you choose.',
+    why: 'Turn on Remember my choices, Faster pages or Extra sources only if you want them — nothing optional is saved until you say yes.',
+    how: ['The first time you visit, choose Accept all, Reject optional or Choose….', 'Change it any time: the footer’s Cookie settings, or Settings › Privacy › Cookies & storage.', 'Turning a kind off deletes what it had saved straight away. Each device asks once.'],
+    where: [['Cookie Policy', 'cookies.html'], ['Settings › Privacy › Cookies & storage', 'settings.html#privacy'], ['Footer › Cookie settings', '']], k: 'cookies cookie banner storage consent local storage accept reject optional anilist cache tracking', rel: ['privacy-policy'] },
 ];

@@ -607,6 +607,7 @@ function _mssRestoreScroll() {
 // it themselves. Callbacks that only take (user) start immediately.
 async function _runPageReady(user, onReady) {
   const navP = _fillNavUser(user).catch(err => { console.error('Nav fill error:', err); return null; });
+  _navTermsCheck(user);
   if (typeof onReady !== 'function') { await navP; _mssRestoreScroll(); return; }
   try {
     if (onReady.length >= 2) {
@@ -617,6 +618,26 @@ async function _runPageReady(user, onReady) {
   } finally {
     _mssRestoreScroll();
   }
+}
+
+/* Terms & Privacy (MSF_LEGAL, consent.js): a member who hasn't agreed to the current Terms — everyone who joined before
+   they existed, and everyone again when the Terms version changes — is asked once per visit, after the launch screen and
+   any other popup. I agree → saved on the account (user_metadata.terms_version / privacy_version / terms_accepted_at; sign-up
+   saves the same, login.html). Read them first → terms.html (the legal pages never ask). Not now → asked again next visit. */
+function _navTermsCheck(user) {
+  if (!user || typeof MSF_LEGAL === 'undefined' || user.user_metadata?.terms_version === MSF_LEGAL.terms) return;
+  if (/(login|terms|privacy|cookies|about|contact|admin|cabinet)\.html$/.test(location.pathname)) return;
+  try { if (sessionStorage.getItem('msf_terms_later')) return; } catch {}
+  mssAfterLaunch().then(() => setTimeout(async () => {
+    if (MSSDialog.top()) return;                                   // something else is asking — next page
+    const v = await showConfirm({ title: 'Our Terms and Privacy Policy',
+      message: 'MyScreenFolio now has Terms of Service, a Privacy Policy and a Cookie Policy: the rules, what we collect and why, and the choices you have. Please read them — choosing “I agree” means you accept them.',
+      confirmText: 'I agree', cancelText: 'Not now', altText: 'Read them first', iconName: 'shield', danger: false });
+    if (v === 'alt') { location.href = 'terms.html'; return; }
+    if (v !== true) { try { sessionStorage.setItem('msf_terms_later', '1'); } catch {} return; }
+    const { error } = await sb.auth.updateUser({ data: { terms_version: MSF_LEGAL.terms, privacy_version: MSF_LEGAL.privacy, terms_accepted_at: new Date().toISOString() } });
+    showToast(error ? 'Couldn’t save that — we’ll ask again next time.' : 'Thanks — you’ve agreed to the Terms and Privacy Policy.', error ? 'err' : 'ok');
+  }, 1200));
 }
 
 /* Guest-friendly init — the same; pages that work signed out (Home, Discover, titles, people…) */
@@ -1994,6 +2015,10 @@ function _shellFooterEl() {
         <div class="ft-col"><div class="ft-h" id="ftH4">Help</div>
           <ul aria-labelledby="ftH4"><li><a href="#" onclick="return mssHelp('guide')">Help &amp; Guides</a></li><li class="nav-auth-only"><a href="#" onclick="return mssHelp('setup')">Set up your folio</a></li>
             <li class="nav-auth-only"><a href="#" onclick="return mssHelp('welcome')">Watch the welcome again</a></li></ul></div>
+        <div class="ft-col"><div class="ft-h" id="ftH5">MyScreenFolio</div>
+          <ul aria-labelledby="ftH5"><li><a href="about.html">About us</a></li><li><a href="contact.html">Contact</a></li><li><a href="privacy.html">Privacy Policy</a></li>
+            <li><a href="terms.html">Terms of Service</a></li><li><a href="cookies.html">Cookie Policy</a></li>
+            <li><a href="#" onclick="MSSConsent.open(); return false">Cookie settings</a></li></ul></div>
         <div class="ft-col"><div class="ft-h" id="ftH3">Appearance</div>
           <div class="ft-theme">${mssThemeSwitch('ftH3')}</div>
           <ul aria-labelledby="ftH3"><li><a href="settings.html" data-lock="you" onclick="return _bnavGo(event, 'you')">Settings</a></li><li><a href="export.html" data-lock="you" onclick="return _bnavGo(event, 'you')">Export</a></li></ul></div>
@@ -2406,8 +2431,9 @@ function getReleaseDateValue(e) {
 }
 
 /* ── AniList GraphQL query ── */
-// Private pages (<html data-no-anilist>) never contact AniList
-const _mssAniListOff = () => 'noAnilist' in document.documentElement.dataset;
+// Private pages (<html data-no-anilist>) never contact AniList, and nor does anyone who hasn't allowed
+// Extra sources (Cookie settings, consent.js)
+const _mssAniListOff = () => 'noAnilist' in document.documentElement.dataset || (typeof MSSConsent !== 'undefined' && !MSSConsent.allows('outside'));
 async function _anilistSearch(query) {
   if (_mssAniListOff()) return [];
   try {
@@ -2871,7 +2897,7 @@ async function _tmdbStored(url, opts = {}) {
   return (await job).clone();
 }
 async function _tmdbLoad(url, opts) {
-  if (!('caches' in window)) return _tmdbQueued(url, opts);
+  if (!('caches' in window) || (typeof MSSConsent !== 'undefined' && !MSSConsent.allows('speed'))) return _tmdbQueued(url, opts);   // Faster pages off (consent.js): nothing kept
   let box;
   try {
     box = await caches.open(TMDB_STORE);

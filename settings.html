@@ -7,6 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#F3EEDC">
 <meta name="color-scheme" content="light dark">
+<script src="js/consent.js"></script>
 <script src="js/splash.js"></script>
 <script src="js/i18n.js"></script>
 <title>Settings — MyScreenFolio</title>
@@ -213,7 +214,13 @@
               <div class="set-txt"><div class="set-name">Blocked people</div><div class="set-desc">They can’t find you, follow you or message you.</div></div>
               <div class="set-ctl"><span class="set-val" id="blockVal"></span><span class="set-go" data-ic="chevright"></span></div>
             </a>
+            <a class="set-row is-door" id="setCookies" href="cookies.html" role="button" onclick="return MSSConsent.open()">
+              <span class="set-ic" data-ic="shield"></span>
+              <div class="set-txt"><div class="set-name">Cookies &amp; storage</div><div class="set-desc">What MSF may keep on this device: necessary, remembered choices, faster pages, extra sources.</div></div>
+              <div class="set-ctl"><span class="set-val" id="cookiesVal"></span><span class="set-go" data-ic="chevright"></span></div>
+            </a>
           </div>
+          <p class="set-legal">How your data is used: <a href="privacy.html">Privacy Policy</a> · <a href="terms.html">Terms of Service</a> · <a href="cookies.html">Cookie Policy</a></p>
         </section>
         <section class="set-pane" id="pane-security" aria-labelledby="paneT-security">
           <h2 class="set-sub" id="paneT-security">Security</h2>
@@ -540,7 +547,9 @@ function settingsValues() {
   document.getElementById('uploadsVal').textContent = MSSUploads.value();
   const d = document.querySelectorAll('#sessList .set-dev').length;
   document.querySelectorAll('.sess-count').forEach(e => { e.textContent = d === 1 ? '1 device' : d ? `${d} devices` : ''; });
+  document.getElementById('cookiesVal').textContent = MSSConsent.summary();
 }
+document.addEventListener('msf:consent', () => settingsValues());
 
 function checkUsernameLive() {
   const hint = document.getElementById('usernameHint');
