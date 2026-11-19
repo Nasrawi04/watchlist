@@ -1985,7 +1985,7 @@ function _shellFooterEl() {
   const f = document.createElement('footer');
   f.className = 'site-footer';
   f.innerHTML = `<div class="ft-in">
-      <div class="ft-brand">${mssLogoSVG('ft-logo', 'MyScreenFolio')}<p>Everything you watch, in one folio. Track it, rate it, rank it, share it.</p></div>
+      <div class="ft-brand">${mssLogoSVG('ft-logo', 'MyScreenFolio')}<p>Everything you watch, in one folio. Track it, rate it, rank it, share it.</p>${mssSocialHTML('ft-social')}</div>
       <div class="ft-quick" role="navigation" aria-label="Main links"><ul>${SHELL_FOOTER_QUICK.map(([l, href]) =>
           `<li><a href="${href}">${l}</a></li>`).join('')}<li><a href="#" onclick="return mssHelp('guide')">Help</a></li></ul>
         <div class="ft-quick-row">${mssThemeSwitch()}<button type="button" class="ft-more" aria-expanded="false" aria-controls="ftCols" onclick="_shellFooterMore(this)">More links ${icon('chevdown', 14)}</button></div></div>

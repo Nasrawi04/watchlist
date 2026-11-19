@@ -986,6 +986,12 @@ nav.bnav, [data-theme="light"] nav.bnav { top:auto; background:none; border:0; -
 .ft-brand { display:flex; flex-direction:column; gap:14px; font-size:13.5px; line-height:1.55; color:var(--ft-text-2); }
 .ft-brand p { margin:0; max-width:270px; }
 .ft-logo { height:48px; width:auto; aspect-ratio:467 / 198; display:block; align-self:flex-start; }
+/* MSF on social media (mssSocialHTML): round outlined buttons, the footer's own colours */
+.ft-social { list-style:none; margin:2px 0 0; padding:0; display:flex; gap:10px; }
+.ft-social a { display:grid; place-items:center; width:40px; height:40px; border-radius:50%; border:1px solid var(--ft-line); color:var(--ft-text); background:rgba(0,0,0,.12);
+  transition:background var(--trans) var(--ease), border-color var(--trans) var(--ease); }
+.ft-social a:hover { background:rgba(255,255,255,.14); border-color:var(--ft-text-2); }
+.ft-social a:focus-visible { outline:2px solid #fff; outline-offset:2px; }
 .ft-cols { display:grid; grid-template-columns:repeat(6, minmax(0, 1fr)); gap:24px clamp(12px, 2vw, 28px); }
 .ft-h { margin-bottom:12px; font-size:10.5px; font-weight:800; letter-spacing:1.8px; text-transform:uppercase; color:var(--ft-text-2); }
 
