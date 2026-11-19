@@ -208,12 +208,11 @@ const MSSHome = (() => {
     const bdKey = MSSBackdrop.key(e);
     return `<article class="mh-hero" data-id="${esc(e.id)}"${bdKey ? ` data-bd="${esc(bdKey)}"` : ''}>
       <span class="mh-hero-bd" aria-hidden="true"></span><span class="mh-hero-shade" aria-hidden="true"></span>
-      <header class="mh-hero-top"><h2 class="mh-hero-k" id="mhwt-continue">Continue watching</h2>
+      <header class="mh-hero-top"><div class="mh-hero-tl"><h2 class="mh-hero-k" id="mhwt-continue">Continue watching</h2>${badge}</div>
         <button type="button" class="mh-hero-open" onclick="MSSHome.act.open(${id})">Open title ${ARROW}</button></header>
       <div class="mh-hero-in">
         <button type="button" class="mh-hero-poster" onclick="MSSHome.act.open(${id})" tabindex="-1" aria-hidden="true">${posterHTML(e, '', '(max-width:700px) 96px, 168px')}</button>
         <div class="mh-hero-body">
-          ${badge}
           <h3 class="mh-hero-t" translate="no">${esc(e.title)}</h3>
           ${upnext}${bar}
           <div class="mh-hero-acts lc-row">${acts}</div>
@@ -224,6 +223,7 @@ const MSSHome = (() => {
     const h = root.querySelector('.mh-hero');
     if (!h) return;
     const bd = h.querySelector('.mh-hero-bd'), e = entry(h.dataset.id);
+    if (e && typeof mssPaintLogo === 'function') mssPaintLogo(h.querySelector('.mh-hero-t'), e);   // the title's name artwork, as Top Favorites (owner, 19 Nov 2026)
     if (e) MSSBackdrop.url(e, 'w1280').then(u => {
       const src = u || safeURL(e.poster_url);
       if (!src) return;
@@ -571,7 +571,7 @@ const MSSHome = (() => {
     const n = (k, f) => Array.from({ length: k }, (_, i) => f(i)).join('');
     const poster = o => MSSCard.poster({ title: 'Sample title', year: '2024', posterHTML: '', type: 'tv', ...o });
     const S = {
-      continue: () => `<article class="mh-hero is-skel"><header class="mh-hero-top"><span class="mh-hero-k" data-skel-keep>Continue watching</span></header><div class="mh-hero-in"><span class="mh-hero-poster skel-media-box"></span><div class="mh-hero-body"><span class="mh-badge">Watching · S2 E4</span><h3 class="mh-hero-t">Sample title here</h3><div class="mh-up"><span class="mh-up-still"></span><span class="mh-up-t"><small>Up next · S2 E5</small><b>Episode name</b><span>50 min</span></span></div><div class="mh-prog"><div class="lp-bar"><i style="width:60%"></i></div><div class="lp-count">14 of 20 episodes · 70%</div></div><div class="mh-hero-acts lc-row"><button class="lc-btn">Watched S2 E5</button><button class="lc-btn">Rate</button></div></div></div></article>`,
+      continue: () => `<article class="mh-hero is-skel"><header class="mh-hero-top"><div class="mh-hero-tl"><span class="mh-hero-k" data-skel-keep>Continue watching</span><span class="mh-badge">Watching · S2 E4</span></div></header><div class="mh-hero-in"><span class="mh-hero-poster skel-media-box"></span><div class="mh-hero-body"><h3 class="mh-hero-t">Sample title here</h3><div class="mh-up"><span class="mh-up-still"></span><span class="mh-up-t"><small>Up next · S2 E5</small><b>Episode name</b><span>50 min</span></span></div><div class="mh-prog"><div class="lp-bar"><i style="width:60%"></i></div><div class="lp-count">14 of 20 episodes · 70%</div></div><div class="mh-hero-acts lc-row"><button class="lc-btn">Watched S2 E5</button><button class="lc-btn">Rate</button></div></div></div></article>`,
       progress: () => `<div class="mh-plist">${n(4, () => MSSCard.row({ title: 'Sample title', year: '2024', posterHTML: '', type: 'tv', progress: { badge: 'S1 · E3', count: '3 / 10 eps', pct: 30 }, cls: 'mh-prow', controls: '<div class="lc-row"><button class="lc-btn lc-ic">-</button><button class="lc-btn lc-ic">+</button></div>' }))}</div>`,
       glance: () => `<div class="mh-glance"><div class="mh-avg"><span class="mh-ring skel-media-box"></span></div><dl class="lg-kpis mh-kpis">${n(4, () => '<div class="lg-kpi"><dt>Label</dt><dd><b>123</b></dd></div>')}</dl></div>`,
       friends: () => rail('', n(5, () => poster({ over: '<span class="hf-av"></span>', score: 8.5, controls: '<span class="mh-who"><span class="mh-who-av"></span><span class="mh-who-t"><b>@friend</b><small>2d ago</small></span></span>', cls: 'mh-fcard' }))),

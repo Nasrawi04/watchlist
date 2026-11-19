@@ -4689,6 +4689,11 @@ html:has(#toast.visible) .mss-slow { bottom:calc(28px + 64px); }
 .mss-logo-name { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
 .mss-logo-failed .mss-logo { display:none; }
 /* the big backdrop cards (mssPaintLogo): the title's name artwork in place of the written title, sized to each card */
+/* Home's Continue watching: the title's name artwork, big (owner, 19 Nov 2026) */
+.mh-hero-t.mss-logo-title:not(.mss-logo-failed) { display:block; line-height:0; text-shadow:none; }
+.mh-hero-t .mss-logo { max-width:min(100%, 440px); max-height:clamp(64px, 4vw + 40px, 120px); }
+.mh-hero-t.mss-logo-tall .mss-logo { max-width:min(100%, 240px); max-height:clamp(90px, 5vw + 56px, 150px); }
+.mh-hero-t.mss-logo-wide .mss-logo { max-height:clamp(44px, 3vw + 24px, 80px); }
 :is(.pf-fav-title, .mh-fav-title, .lib-pod-title).mss-logo-title:not(.mss-logo-failed) { display:block; line-height:0; padding-bottom:4px; -webkit-line-clamp:unset; overflow:visible; }
 :is(.pf-fav-title, .mh-fav-title, .lib-pod-title) .mss-logo { max-width:min(100%, 240px); max-height:56px; }
 :is(.pf-fav-title, .mh-fav-title, .lib-pod-title).mss-logo-tall .mss-logo { max-width:min(100%, 150px); max-height:78px; }
@@ -9411,7 +9416,9 @@ a.mh-more:focus-visible { outline:2px solid var(--mc-focus); outline-offset:2px;
 .mh-hero-bd.is-poster { filter:blur(22px) saturate(1.2); transform:scale(1.15); opacity:.7; }
 .mh-hero-shade { position:absolute; inset:0; z-index:-1; background:linear-gradient(90deg, rgba(4,19,10,.94) 0%, rgba(4,19,10,.78) 42%, rgba(4,19,10,.28) 100%), linear-gradient(0deg, rgba(4,19,10,.88) 0%, rgba(4,19,10,0) 60%); }
 [dir="rtl"] .mh-hero-shade { transform:scaleX(-1); }
-.mh-hero-top { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.mh-hero-top { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+.mh-hero-tl { display:flex; flex-direction:column; align-items:flex-start; gap:10px; min-width:0; }   /* the heading, then where you are (Watching · S3 E8) right under it */
+.mh-hero-tl .mh-hero-k { min-height:24px; display:flex; align-items:center; }
 .mh-hero-k { font:800 11px/1.2 var(--sans); letter-spacing:.2em; text-transform:uppercase; color:var(--olive-light); }
 .mh-hero-open { display:inline-flex; align-items:center; gap:6px; min-height:44px; padding:0 4px; border:0; background:none; color:#fff; font:700 13px var(--sans); cursor:pointer; }
 .mh-hero-open:hover { text-decoration:underline; text-underline-offset:3px; }
@@ -9735,10 +9742,14 @@ html.mh-dragging, html.mh-dragging * { cursor:grabbing !important; user-select:n
   .mh-presets .pn-toggle-btn:nth-child(n+3) { border-top:0.5px solid var(--border-2); }
   .mh-bar-btns .lc-btn { flex:1 1 auto; height:44px; }
   .mh-hero { min-height:0; gap:14px; padding:16px; }
-  .mh-hero-in { display:grid; grid-template-columns:96px minmax(0, 1fr); align-items:end; gap:12px 14px; margin-top:4px; }
+  /* phones: the backdrop is a clear band across the top, fading into the dark under the poster and title — not one picture
+     stretched over the whole tall card and darkened everywhere (as the profile header — owner, 19 Nov 2026) */
+  .mh-hero-bd { bottom:auto; height:260px; -webkit-mask-image:linear-gradient(180deg, black 55%, transparent 100%); mask-image:linear-gradient(180deg, black 55%, transparent 100%); }
+  .mh-hero-shade { background:linear-gradient(180deg, rgba(4,19,10,.5) 0%, rgba(4,19,10,.12) 22%, rgba(4,19,10,.5) 40%, rgba(4,19,10,.84) 58%, rgba(4,19,10,.9) 100%); }
+  .mh-hero-t .mss-logo { max-width:100%; max-height:64px; } .mh-hero-t.mss-logo-tall .mss-logo { max-height:88px; }
+  .mh-hero-in { display:grid; grid-template-columns:96px minmax(0, 1fr); align-items:end; gap:12px 14px; margin-top:110px; }   /* under the band's clear part */
   .mh-hero-body { display:contents; }
-  .mh-hero-poster { width:96px; grid-row:1 / span 2; }
-  .mh-badge { grid-column:2; justify-self:start; }
+  .mh-hero-poster { width:96px; }
   .mh-hero-t { grid-column:2; font-size:clamp(26px, 6vw + 6px, 34px); }
   .mh-up, .mh-prog, .mh-hero-acts { grid-column:1 / -1; max-width:none; }
   .mh-hero-acts .lc-btn:not(.lc-ic) { flex:1 1 auto; }
