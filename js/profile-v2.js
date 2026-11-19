@@ -347,7 +347,7 @@ const MSSProfile = (() => {
     const o = O(); if (!o) return;
     // Top Favorites beside the side column; Top 5 by category under both, the full width (four panels need the room)
     // Top 5 titles (Movies, TV, Anime, Cartoons), then the people (Actors, Actresses, Directors) in their own section under it
-    const fav = favHTML(), keys = t5Keys(), t5 = top5HTML(keys.filter(k => !SECTIONS[k].people), 'pfT5Rail', 'Top 5', 'Favorite Titles', true),
+    const fav = favHTML(), keys = t5Keys(), t5 = top5HTML(keys.filter(k => !SECTIONS[k].people), 'pfT5Rail', 'Top 5', 'Favorite Titles'),
       t5p = top5HTML(keys.filter(k => SECTIONS[k].people), 'pfT5PRail', 'Top 5', 'Favorite People');
     o.el.innerHTML = `<div class="pf-ov">
       <div class="pf-main">${fav || (t5 || o.editable ? '' : mssEmpty({ compact: true, art: 'watched', title: 'Nothing picked yet', text: 'No favourites on show here. Yet.' }))}</div>
@@ -425,15 +425,15 @@ const MSSProfile = (() => {
       return !c || o.entries.some(e => e.cat === c && (done(e) || e.status === 'watching' || e.status === 'paused'));
     });
   }
-  // titles: the Library's list cards, two categories side by side on a computer (Movies | TV Shows, then Anime | Cartoons —
-  // owner, 18 Nov 2026); people: up to four small lists side by side. Phones: one at a time, with tabs, for both.
-  function top5HTML(keys, rid, eyebrow, title, titles) {
+  // Favorite Titles and Favorite People look the same (owner, 19 Nov 2026 — back from the Library cards): up to four
+  // ranked lists side by side, arrows for the rest; phones: one at a time, with tabs
+  function top5HTML(keys, rid, eyebrow, title) {
     if (!keys.length) return '';
-    const cols = titles ? Math.min(2, keys.length) : Math.min(4, keys.length);
+    const cols = Math.min(4, keys.length);   // as many side by side as there are (up to four)
     const tabs = `<div class="pf-t5-tabs" role="tablist" aria-label="${esc(title)}">${keys.map((k, i) => `<button type="button" role="tab" class="pf-t5-tab${i ? '' : ' on'}" data-t5go="${i}" aria-selected="${!i}">${esc(SECTIONS[k].title)}</button>`).join('')}</div>`;
-    const arrows = !titles && keys.length > cols ? `<div class="pf-t5-nav"><button type="button" class="pf-arrow" data-t5dir="-1" aria-label="Previous categories" disabled>${icon('chevleft', 16)}</button><button type="button" class="pf-arrow" data-t5dir="1" aria-label="More categories">${icon('chevright', 16)}</button></div>` : '';
-    return `<section class="pf-sec pf-t5-sec${titles ? ' is-titles' : ''}">${secHead(eyebrow, title, null, arrows)}${tabs}
-      <div class="pf-t5-rail is-c${cols}${titles ? ' is-titles' : ''}" id="${rid}" tabindex="-1" style="--pf-t5c:${cols}">${keys.map(t5Panel).join('')}</div></section>`;
+    const arrows = keys.length > cols ? `<div class="pf-t5-nav"><button type="button" class="pf-arrow" data-t5dir="-1" aria-label="Previous categories" disabled>${icon('chevleft', 16)}</button><button type="button" class="pf-arrow" data-t5dir="1" aria-label="More categories">${icon('chevright', 16)}</button></div>` : '';
+    return `<section class="pf-sec pf-t5-sec">${secHead(eyebrow, title, null, arrows)}${tabs}
+      <div class="pf-t5-rail is-c${cols}" id="${rid}" tabindex="-1" style="--pf-t5c:${cols}">${keys.map(t5Panel).join('')}</div></section>`;
   }
   function t5Panel(key) {
     const sec = SECTIONS[key], o = O(), list = itemsOf(key);
@@ -443,19 +443,21 @@ const MSSProfile = (() => {
         <span class="pf-t5-none-ic" aria-hidden="true">${icon(sec.people ? 'users' : 'trophy', 22)}</span>
         <b>Your top 5 ${esc(sec.title.toLowerCase())}</b><small>${sec.people ? `Search TMDB for the ${esc(sec.many)} you rate highest` : `Rank the ${esc(sec.many)} you love most`}</small>
         <button type="button" class="pf-btn-soft" onclick="MSSProfile.rank('${key}')">${icon('plus', 14)} Pick 5</button></div></article>`;
-    // titles: the Library's list card (mssListCard), compact — rank badge, backdrop on the right, your score ring
-    if (!sec.people) return `<article class="pf-t5 is-cards" data-t5="${key}">${head}<div class="lp-grid pf-t5-cards">${list.map((x, i) =>
-      mssListCard(x, { rank: i + 1, onclick: `MSSProfile._open(${attrJSON(x.id)})`, cls: 'pf-t5-card' })).join('')}</div></article>`;
     return `<article class="pf-t5" data-t5="${key}">${head}<ol class="pf-t5-list">${list.map((x, i) => t5Row(key, x, i)).join('')}</ol></article>`;
   }
-  // a favourite person (Actors, Actresses, Directors): rank, photo, name, what they're known for → their page
+  // one ranked row: a title (poster, year, your score → its panel) or a person (photo, known for → their page)
   function t5Row(key, x, i) {
-    const r = i + 1;
-    const img = x.path ? `<img src="${IMG}w185${esc(x.path)}" alt="" loading="lazy">` : `<span class="pf-t5-letter">${esc((x.name || '?')[0])}</span>`;
-    return `<li class="pf-t5-row${r === 1 ? ' is-lead' : ''}"><a class="pf-t5-a" href="person.html?id=${Number(x.id)}" aria-label="#${r} ${esc(x.name)}">
+    const r = i + 1, people = !!SECTIONS[key].people;
+    const img = people ? (x.path ? `<img src="${IMG}w185${esc(x.path)}" alt="" loading="lazy">` : `<span class="pf-t5-letter">${esc((x.name || '?')[0])}</span>`)
+      : posterHTML(x, r === 1 ? 'big' : '', r === 1 ? '64px' : '40px');
+    const title = people ? x.name : x.title, sub = people ? (x.known ? `Known for ${x.known}` : '') : yearOf(x);
+    const sv = people ? null : liveScore(x);
+    const act = people ? `href="person.html?id=${Number(x.id)}"` : `href="#" onclick="event.preventDefault();MSSProfile._open(${attrJSON(x.id)})"`;
+    return `<li class="pf-t5-row${r === 1 ? ' is-lead' : ''}"><a class="pf-t5-a" ${act} aria-label="#${r} ${esc(title)}">
       <span class="pf-rk is-${r}" aria-hidden="true">${r}</span>
-      <span class="pf-t5-img is-person">${img}</span>
-      <span class="pf-t5-tx"><b translate="no">${esc(x.name)}</b>${x.known ? `<small>${esc(`Known for ${x.known}`)}</small>` : ''}</span></a></li>`;
+      <span class="pf-t5-img${people ? ' is-person' : ''}">${img}</span>
+      <span class="pf-t5-tx"><b translate="no">${esc(title)}</b>${sub ? `<small>${esc(sub)}</small>` : ''}</span>
+      ${sv != null ? mssScoreRing(sv, 'pf-t5-ring') : ''}</a></li>`;   // the score as the site's rating ring (owner, 19 Nov 2026)
   }
   // four side by side (one on phones), slide for the rest: arrows on a computer, swipe + tabs on a phone
   function t5Wire(rid) {
@@ -614,7 +616,7 @@ const MSSProfile = (() => {
         <span class="pf-rk is-${i + 1}" aria-hidden="true">${i + 1}</span>
         <button type="button" class="pf-rk-main" data-replace="${i}" aria-label="Replace #${i + 1}, ${esc(title)}">
           <span class="pf-t5-img${people ? ' is-person' : ''}">${img}</span><span class="pf-t5-tx"><b translate="no">${esc(title)}</b>${sub ? `<small>${esc(sub)}</small>` : ''}</span>
-          ${sv != null ? mssScoreHTML(sv, { cls: 'pf-t5-score' }).replace('★ ', '') : ''}</button>
+          ${sv != null ? mssScoreRing(sv, 'pf-t5-ring') : ''}</button>
         <span class="pf-rk-moves"><button type="button" class="pf-rk-mv" data-up="${i}" aria-label="Move up"${i ? '' : ' disabled'}>${icon('chevup', 14)}</button><button type="button" class="pf-rk-mv" data-down="${i}" aria-label="Move down"${i < list.length - 1 ? '' : ' disabled'}>${icon('chevdown', 14)}</button></span>
         <button type="button" class="pf-rk-x" data-rm="${i}" aria-label="Remove ${esc(title)}">${icon('x', 14)}</button></li>`;
     };

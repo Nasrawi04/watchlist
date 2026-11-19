@@ -1965,6 +1965,14 @@ function mssHelp(what) {
   else mssLoadScript('js/onboarding.js').then(() => typeof MSSOnboarding !== 'undefined' && (what === 'welcome' ? MSSOnboarding.welcome() : MSSOnboarding.setup()));
   return false;
 }
+// The footer's link columns fold to their headings (owner, 19 Nov 2026 — the footer felt too tall): a heading opens just
+// its own section, like an accordion. Appearance (Light / Dark) is always open. Phones: "More links" shows the headings first.
+const _ftTog = (h, i) => `<div class="ft-h" id="ftH${i}"><button type="button" class="ft-tog" aria-expanded="false" aria-controls="ftL${i}" onclick="_shellFooterCol(this)">${h}${icon('chevdown', 13)}</button></div>`;
+function _shellFooterCol(btn) {
+  const open = btn.getAttribute('aria-expanded') !== 'true';
+  btn.setAttribute('aria-expanded', open);
+  btn.closest('.ft-col').classList.toggle('is-open', open);
+}
 function _shellFooterMore(btn) {
   const open = btn.getAttribute('aria-expanded') !== 'true';
   btn.setAttribute('aria-expanded', open);
@@ -1989,13 +1997,13 @@ function _shellFooterEl() {
       <div class="ft-quick" role="navigation" aria-label="Main links"><ul>${SHELL_FOOTER_QUICK.map(([l, href]) =>
           `<li><a href="${href}">${l}</a></li>`).join('')}<li><a href="#" onclick="return mssHelp('guide')">Help</a></li></ul>
         <div class="ft-quick-row">${mssThemeSwitch()}<button type="button" class="ft-more" aria-expanded="false" aria-controls="ftCols" onclick="_shellFooterMore(this)">More links ${icon('chevdown', 14)}</button></div></div>
-      <div class="ft-cols" id="ftCols" role="navigation" aria-label="Footer">${SHELL_FOOTER.map(([h, links], i) => `<div class="ft-col"><div class="ft-h" id="ftH${i}">${h}</div>
-        <ul aria-labelledby="ftH${i}">${links.map(([l, href]) => `<li><a href="${href}">${l}${_navLockHTML(href, 'ft-lock')}</a></li>`).join('')}</ul></div>`).join('')}
-        <div class="ft-col"><div class="ft-h" id="ftH4">Help</div>
-          <ul aria-labelledby="ftH4"><li><a href="#" onclick="return mssHelp('guide')">Help &amp; Guides</a></li><li class="nav-auth-only"><a href="#" onclick="return mssHelp('setup')">Set up your folio</a></li>
+      <div class="ft-cols" id="ftCols" role="navigation" aria-label="Footer">${SHELL_FOOTER.map(([h, links], i) => `<div class="ft-col">${_ftTog(h, i)}
+        <ul class="ft-fold" id="ftL${i}" aria-labelledby="ftH${i}">${links.map(([l, href]) => `<li><a href="${href}">${l}${_navLockHTML(href, 'ft-lock')}</a></li>`).join('')}</ul></div>`).join('')}
+        <div class="ft-col">${_ftTog('Help', 4)}
+          <ul class="ft-fold" id="ftL4" aria-labelledby="ftH4"><li><a href="#" onclick="return mssHelp('guide')">Help &amp; Guides</a></li><li class="nav-auth-only"><a href="#" onclick="return mssHelp('setup')">Set up your folio</a></li>
             <li class="nav-auth-only"><a href="#" onclick="return mssHelp('welcome')">Watch the welcome again</a></li></ul></div>
-        <div class="ft-col"><div class="ft-h" id="ftH5">MyScreenFolio</div>
-          <ul aria-labelledby="ftH5"><li><a href="about.html">About us</a></li><li><a href="contact.html">Contact</a></li><li><a href="privacy.html">Privacy Policy</a></li>
+        <div class="ft-col">${_ftTog('MyScreenFolio', 5)}
+          <ul class="ft-fold" id="ftL5" aria-labelledby="ftH5"><li><a href="about.html">About us</a></li><li><a href="contact.html">Contact</a></li><li><a href="privacy.html">Privacy Policy</a></li>
             <li><a href="terms.html">Terms of Service</a></li><li><a href="cookies.html">Cookie Policy</a></li>
             <li><a href="#" onclick="MSSConsent.open(); return false">Cookie settings</a></li></ul></div>
         <div class="ft-col"><div class="ft-h" id="ftH3">Appearance</div>
