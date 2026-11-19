@@ -723,8 +723,8 @@ const DISCOVER_META = {
     desc: 'Anime series and films that haven’t come out yet, most anticipated first.' },
   upcoming_cartoons:{ eyebrow: 'Soon · Cartoons', tile: 'Cartoons on the way', a: '#2F7A55', b: '#0B2618', kind: 'mixed', rotate: true, more: true,
     desc: 'Family animation, series and films, that hasn’t come out yet, most anticipated first.' },
-  recommended:      { eyebrow: 'For you', tile: 'Based on your favourites', a: '#2E6B45', b: '#153C24', kind: 'mixed', ranked: false,
-    desc: 'Titles TMDB recommends for the favourites on your profile, highest rated first.' },
+  recommended:      { eyebrow: 'Picked for your taste', tile: 'Based on your taste', a: '#2E6B45', b: '#153C24', kind: 'mixed', ranked: false,
+    desc: 'Worked out from your favourites, Top 5s, top scores, favourite people and the genres you score highest — your closest matches first, with a wild card now and then. Nothing already in your library.' },
 };
 const discoverMeta = key => DISCOVER_META[key] || { eyebrow: 'Discover', tile: '', a: '#2E6B45', b: '#153C24', kind: 'mixed', desc: '' };
 // Anime / Cartoon / Movie / TV Show for a TMDB item (the Type filter on list and Browse pages)

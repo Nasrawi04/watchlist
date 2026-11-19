@@ -80,9 +80,10 @@ const $dl = id => document.getElementById(id);
 
 // A type tag only where a list mixes movies and shows (the list's name already says it otherwise)
 const _dlType = () => _dlMeta.kind === 'mixed' ? undefined : false;
+const _dlRecs = _dlCategory.key === 'recommended';   // Picked for your taste / Recommended for you: never in your library, so no progress box
 const _dlItemHTML = (it, rank) => _dlView === 'list'
-  ? MSSResults.row(it, { rank, mss: _dlIsMss, type: _dlType() })
-  : it.why ? MSSResults.recCard(it, 'all')                          // Recommended for You: its reason, Wild card, ⋯ → Not interested
+  ? MSSResults.row(it.why ? { ...it, sub: it.why } : it, { rank, mss: _dlIsMss, type: _dlType() })   // a recommendation: its reason under the title
+  : it.why ? MSSResults.recCard(it, 'all')                          // a recommendation: its reason and Wild card (Not interested: the title's ⋯)
   : MSSResults.card(it, { rank, type: _dlType() });
 MSSResults.recHooks('all', { gone: it => { _dlAllItems = _dlAllItems.filter(x => x !== it); }, undo: () => location.reload() });
 
@@ -262,6 +263,11 @@ function _dlHero() {
   if (_dlMeta.rotate && !_dlUpcoming) s.push(stat('Updated', 'Every day'));
   if (_dlUpcoming) s.push(stat('Coming', 'Soon'));
   if (_dlTop) s.push(stat('Updated', 'Every week'));
+  if (_dlRecs && items.length) {
+    const wild = items.filter(it => it.kind === 'wild').length;
+    s.unshift(stat('Titles', `<b>${_dlFmt(items.length)}</b>`));
+    if (wild) s.push(stat('Wild cards', `<b>${wild}</b>`));
+  }
   if (_dlIsMss) s.push(stat('Ranked by', 'Members’ scores'));
   else if (_dlRanked && !_dlMeta.rotate) s.push(stat('Ranked by', 'TMDB score'));
   if (_dlMeta.kind === 'mixed' && !_dlTop && items.length) {
@@ -276,14 +282,14 @@ function _dlHero() {
     const name = it => it.sub ? `${it.title} · ${it.sub}` : it.title;
     _dlRot = MSSResults.rotate($dl('dlHero'), items, _dlMeta.rotate
       ? { count: 5, ms: 13000, captionEl: cap, caption: (it, i) => `<span>${_dlRanked ? '#' + (i + 1) : 'Featuring'}</span> <b translate="no">${escHTML(name(it))}</b>` }
-      : { single: true, captionEl: cap, caption: (it, i) => `<span>#${i + 1}</span> <b translate="no">${escHTML(name(it))}</b>` });
+      : { single: true, captionEl: cap, caption: (it, i) => `<span>#${i + 1}</span> <b translate="no">${escHTML(_dlRecs ? it.title : name(it))}</b>` });
   }
 }
 // Your progress: how many of the titles loaded so far you've seen (upcoming lists: how many are on your list),
 // and the next one that isn't in your library — signed in only
 function _dlProgress() {
   const box = $dl('dlProg');
-  if (!window._navUser || !_dlAllItems.length) { box.hidden = true; return; }
+  if (!window._navUser || !_dlAllItems.length || _dlRecs) { box.hidden = true; return; }
   const items = _dlAllItems.filter(it => !it.href && it.id != null);
   if (!items.length) { box.hidden = true; return; }
   const st = items.map(it => MSSResults.stateOf(it));
@@ -346,14 +352,16 @@ document.addEventListener('DOMContentLoaded', () => {
   $dl('dlDesc').hidden = !_dlMeta.desc;
   $dl('dlHero').style.setProperty('--dh-a', _dlMeta.a);
   $dl('dlHero').style.setProperty('--dh-b', _dlMeta.b);
-  if (_dlCategory.backTo) { $dl('dlBack').href = _dlCategory.backTo; $dl('dlBack').textContent = '‹ Home'; }
+  const fromDiscover = _dlParams.get('from') === 'discover';    // Picked for your taste's See all on Discover (Home's goes back Home)
+  if (_dlCategory.backTo && !fromDiscover) { $dl('dlBack').href = _dlCategory.backTo; $dl('dlBack').textContent = '‹ Home'; }
+  if (_dlRecs) $dl('dlBack').nextElementSibling.nextElementSibling.textContent = 'Recommendations';   // not "Browse by list"
   _dlRenderViewToggle();
   $dl('dlSfBar').innerHTML = SF.bar('dl', 'all');
 
   initPageGuest(async () => {
     if (_dlRestoreState()) return;
     $dl('dlGrid').className = MSSResults.wrap(_dlView, '').cls;   // the real grid, so the first rows know how many fit
-    await _dlFill();
+    await (_dlRecs ? _dlLoadAll() : _dlFill());               // recommendations are worked out already: all of them, so the stats count them all
     if (_dlAllItems.length) _dlRenderAll();
   });
   // added or removed something elsewhere on the page (a title's panel): the marks and your progress follow
