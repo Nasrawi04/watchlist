@@ -17,10 +17,6 @@
 .tp-refresh.busy svg { animation:td-spin .8s linear infinite; }
 @keyframes td-spin { to { transform:rotate(360deg); } }
 .tp-refresh:disabled { opacity:.65; }
-.tp-status { gap:7px; }
-.tp-status i { width:7px; height:7px; border-radius:50%; background:#10230c; flex:none; }
-.tp-status.is-off { background:rgba(0,0,0,.55); color:#fff; border:1px solid rgba(255,255,255,.26); -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); }
-.tp-status.is-off i { background:rgba(255,255,255,.7); }
 .tp-wtw-logos { display:inline-flex; }
 .tp-wtw-logos img { width:20px; height:20px; border-radius:5px; object-fit:cover; box-shadow:0 0 0 1.5px rgba(0,0,0,.45); }
 .tp-wtw-logos img + img { margin-inline-start:-6px; }
@@ -40,11 +36,15 @@
 .tp-like.is-thin b { font-size:20px; }
 .tp-like.is-loading b { color:rgba(255,255,255,.4); }
 
-.tp-page.is-phone .tp-scores { position:absolute; top:58px; inset-inline-end:14px; }
-.tp-page.is-phone .tp-scores .tv-ring { width:84px; }
-.tp-page.is-phone .tp-scores .tv-ring b { font-size:30px; }
+/* phones: your score where every page shows it — beside the title, at the bottom of the header — not up in the corner over
+   the backdrop (owner, 19 Nov 2026); "Will you like it?" takes its own row under the poster and title */
+.tp-page.is-phone .tp-hero .tv-hero-main { flex-wrap:wrap; }
+.tp-page.is-phone .tp-scores { position:static; align-self:flex-end; gap:6px; }
+.tp-page.is-phone .tp-scores:has(.tp-like) { flex-basis:100%; align-items:stretch; }
+.tp-page.is-phone .tp-scores .tv-ring { width:68px; }
+.tp-page.is-phone .tp-scores .tv-ring b { font-size:24px; }
 .tp-page.is-phone .tp-mine small { font-size:8.5px; letter-spacing:.12em; }
-.tp-page.is-phone .tp-like { width:150px; padding:9px 10px; }
+.tp-page.is-phone .tp-like { width:auto; padding:10px 12px; }
 .tp-page.is-phone .tp-like b { font-size:20px; margin:3px 0 2px; }
 .tp-page.is-phone .tp-like p { font-size:10.5px; }
 .tp-page.is-phone .tp-refresh-l { display:none; }

@@ -257,9 +257,9 @@ function _tpMineHTML(e) {
   return `<div class="tp-like is-loading" id="tpLike" aria-live="polite"><h3>Will you like it?</h3><b>…</b><p>Looking at your ratings</p></div>`;
 }
 
+// The header has no status tag over the title (Watched, Not in your library…) — your score ring and the slim bar say it (owner, 19 Nov 2026)
 function _tpHeroHTML(d, e) {
   const title = _tpMovie() ? d.title : d.name, poster = _tpPosterURL(d, e);
-  const label = e ? _tpStatusText(e) : _tdUser ? 'Not in your library' : '';
   const chips = [_tpYears(d), _tpCert(d),
     _tpMovie() ? _tpRuntime(d.runtime) : [d.number_of_seasons ? `${d.number_of_seasons} season${d.number_of_seasons === 1 ? '' : 's'}` : '', d.number_of_episodes ? `${d.number_of_episodes} eps` : ''].filter(Boolean).join(' · '),
     _tpStatusWord(d), ...tmdbGenreNames(d.genres),
@@ -277,7 +277,6 @@ function _tpHeroHTML(d, e) {
     <div class="tv-hero-main">
       <div class="tv-poster">${poster ? `<img src="${esc(poster)}" alt="" onerror="mssImgError(this)" data-letter="${esc((title || '?')[0])}">` : `<span>${esc((title || '?')[0].toUpperCase())}</span>`}</div>
       <div class="tv-hero-txt">
-        ${label ? `<span class="tv-status tp-status${e ? '' : ' is-off'}"><i aria-hidden="true"></i>${esc(label)}</span>` : ''}
         ${tmdbTitleHTML(d, title, 'tv-title', 'h1')}
         ${d.tagline ? `<p class="tv-tagline" translate="no">${esc(d.tagline)}</p>` : ''}
         <div class="tv-chips tp-chips">${chips.map(x => `<span class="tv-chip">${esc(x)}</span>`).join('')}</div>
