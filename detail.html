@@ -1640,7 +1640,19 @@ function _deChanged() {
     document.querySelectorAll('#detailLayout .de-save').forEach(b => { b.classList.toggle('is-dirty', !!n); b.setAttribute('aria-label', n ? `Save changes — ${n} unsaved` : 'Save changes'); });
   });
 }
-function _deGo(url) { _deLeaving = true; location.href = url; }
+// Leaving Edit (Save, Cancel, Back, Delete): back to the page you came from by stepping BACK in history when that's where you
+// came from — so the next Back goes where you were before it (Library → title → Edit → title → Library), never to Edit
+// again, and the title's trail doesn't list Edit (owner, 19 Nov 2026). Otherwise this page is replaced, not stacked.
+// The page you return to reloads itself when something changed (its pageshow → mssDataChangedSince).
+function _deGo(url) {
+  _deLeaving = true;
+  let back = false;
+  try {
+    const r = new URL(document.referrer), u = new URL(url, location.href);
+    back = history.length > 1 && r.origin === location.origin && r.pathname === u.pathname && r.search === u.search;
+  } catch {}
+  if (back) history.back(); else location.replace(url);
+}
 async function _deLeave(url) {
   if (_deDirty && !(await showConfirm({ title: 'Discard your changes?', message: `${_deDirty} unsaved change${_deDirty === 1 ? '' : 's'} to “${_deEl('dTitle').value || 'this entry'}” will be lost.`,
     confirmText: 'Discard', cancelText: 'Keep editing', iconName: 'x' }))) return;

@@ -244,7 +244,7 @@ a.pf-t5-a:focus-visible { outline:2px solid var(--olive-light); outline-offset:1
 .pf-t5-tx { flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; }
 .pf-t5-tx b { font:600 14px/1.25 var(--serif); color:var(--text-heading); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .pf-t5-tx small { font:500 11.5px 'Manrope',var(--sans); color:var(--text-3); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.pf-t5-ring.tv-ring { width:42px; align-self:center; }   /* the rating ring, the size the score number had (owner, 19 Nov 2026) */
+.pf-t5-ring.tv-ring, .tv-page .pf-t5-ring.tv-ring { width:42px; align-self:center; margin-inline-start:auto; }   /* on the right, centred in its row — on every screen (owner, 19 Nov 2026) */   /* the rating ring, the size the score number had (owner, 19 Nov 2026) */
 .pf-t5-ring.tv-ring circle { stroke-width:9; }
 .pf-t5-ring.tv-ring b { font-size:16px; }
 .pf-t5-ring .tv-ring-track { stroke:var(--border-2); }   /* a light panel in Light mode: the track the ring draws for dark surfaces would vanish */
@@ -434,10 +434,8 @@ a.pf-t5-a:focus-visible { outline:2px solid var(--olive-light); outline-offset:1
   .pf-fav:not(.is-r1) .pf-fav-title { font-size:17px; }
   .pf-fav:hover { translate:none; }
   /* Top 5: a tab for each category, swipe between them */
-  .pf-t5-tabs { display:flex; gap:6px; margin:0 -18px 12px; padding:0 18px; overflow-x:auto; scrollbar-width:none; }
-  .pf-t5-tabs::-webkit-scrollbar { display:none; }
-  .pf-t5-tab { flex:none; height:32px; padding:0 14px; border-radius:999px; cursor:pointer; border:1px solid var(--border-2); background:var(--card); color:var(--text-2); font:700 12.5px 'Manrope',var(--sans); }
-  .pf-t5-tab.on { background:var(--olive); border-color:var(--olive); color:var(--text-on-brand); }
+  .pn-toggle.pf-t5-tabs { display:flex; width:100%; margin:0 0 12px; }
+  .pf-t5-tabs .pn-toggle-btn { flex:1 1 0; min-width:0; min-height:44px; padding:0 6px; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .pf-t5-nav { display:none; }
   .pf-t5-rail { grid-auto-columns:100%; gap:12px; }
   .pf-t5 { padding:14px 14px 8px; }

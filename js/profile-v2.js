@@ -430,7 +430,8 @@ const MSSProfile = (() => {
   function top5HTML(keys, rid, eyebrow, title) {
     if (!keys.length) return '';
     const cols = Math.min(4, keys.length);   // as many side by side as there are (up to four)
-    const tabs = `<div class="pf-t5-tabs" role="tablist" aria-label="${esc(title)}">${keys.map((k, i) => `<button type="button" role="tab" class="pf-t5-tab${i ? '' : ' on'}" data-t5go="${i}" aria-selected="${!i}">${esc(SECTIONS[k].title)}</button>`).join('')}</div>`;
+    // phones: one category at a time, picked with the site's segmented toggle (pn-toggle), not pills (owner, 19 Nov 2026)
+    const tabs = `<div class="pn-toggle pf-t5-tabs" role="tablist" aria-label="${esc(title)}">${keys.map((k, i) => `<button type="button" role="tab" class="pn-toggle-btn pf-t5-tab${i ? '' : ' active'}" data-t5go="${i}" aria-selected="${!i}">${esc(SECTIONS[k].title)}</button>`).join('')}</div>`;
     const arrows = keys.length > cols ? `<div class="pf-t5-nav"><button type="button" class="pf-arrow" data-t5dir="-1" aria-label="Previous categories" disabled>${icon('chevleft', 16)}</button><button type="button" class="pf-arrow" data-t5dir="1" aria-label="More categories">${icon('chevright', 16)}</button></div>` : '';
     return `<section class="pf-sec pf-t5-sec">${secHead(eyebrow, title, null, arrows)}${tabs}
       <div class="pf-t5-rail is-c${cols}" id="${rid}" tabindex="-1" style="--pf-t5c:${cols}">${keys.map(t5Panel).join('')}</div></section>`;
@@ -466,7 +467,7 @@ const MSSProfile = (() => {
     const step = () => { const a = panels[0], b = panels[1]; return a ? (b ? b.offsetLeft - a.offsetLeft : a.offsetWidth) : 0; };
     const sync = () => {
       const s = step() || 1, i = Math.round(Math.abs(rail.scrollLeft) / s), end = rail.scrollWidth - rail.clientWidth - 2;
-      sec.querySelectorAll('[data-t5go]').forEach(t => { const on = +t.dataset.t5go === i; t.classList.toggle('on', on); t.setAttribute('aria-selected', on); if (on && phone()) t.scrollIntoView({ block: 'nearest', inline: 'nearest' }); });
+      sec.querySelectorAll('[data-t5go]').forEach(t => { const on = +t.dataset.t5go === i; t.classList.toggle('active', on); t.setAttribute('aria-selected', on); });
       const prev = sec.querySelector('[data-t5dir="-1"]'), next = sec.querySelector('[data-t5dir="1"]');
       if (prev) prev.disabled = Math.abs(rail.scrollLeft) <= 2;
       if (next) next.disabled = Math.abs(rail.scrollLeft) >= end;
