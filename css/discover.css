@@ -25,6 +25,7 @@
   box-shadow:0 8px 18px -10px rgba(0,0,0,.45); transition:transform var(--trans) var(--ease); }
 .dx-row:hover .dx-poster { transform:translateY(-2px); }
 .dx-poster img { width:100%; height:100%; object-fit:cover; display:block; }
+.page-loading .dx-poster.skel { background-color:var(--skel-bg); }   /* a loading row: the placeholder colour, not the card's own (owner, 19 Nov 2026) */
 .dx-rank-badge { display:none; }   /* phones only (the list cards) — computers keep the big rank number beside the poster */
 .dx-poster .msf-card__letter { position:static; font-size:24px; }
 .dx-body { flex:1; min-width:0; max-width:980px; display:flex; flex-direction:column; gap:6px; }
@@ -190,8 +191,7 @@ button.dh-prog-next:hover b { text-decoration:underline; text-underline-offset:3
 .bw-chip:hover { border-color:var(--olive-light); color:var(--text); }
 .bw-chip:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
 .bw-chip.on { background:var(--olive); border-color:var(--olive); color:var(--text-on-brand); }
-.bw-chip.is-skel { width:96px; border-style:dashed; cursor:default; animation:bw-pulse 1.2s ease-in-out infinite alternate; }
-@keyframes bw-pulse { from { opacity:.35; } to { opacity:.8; } }
+.bw-chip.is-skel { width:96px; border-color:transparent; cursor:default; }
 .bw-svc img { width:20px; height:20px; border-radius:5px; flex:none; }
 .bw-svc { padding-inline-start:8px; }
 .bw-range { display:grid; grid-template-columns:minmax(0, 1fr) auto minmax(0, 1fr); align-items:center; gap:10px; margin-top:12px; transition:opacity var(--trans); }
@@ -215,7 +215,7 @@ button.dh-prog-next:hover b { text-decoration:underline; text-underline-offset:3
   .bw-gm .lyr-seg { max-width:none; }
   .bw-more-svc { max-width:none; }
 }
-@media (prefers-reduced-motion:reduce) { .bw-chip.is-skel { animation:none; } .bw-row > summary > svg { transition:none; } }
+@media (prefers-reduced-motion:reduce) { .bw-row > summary > svg { transition:none; } }
 
 /* Browse Results: a clean header, no backdrop */
 .bx-head { display:grid; grid-template-columns:minmax(0, 1fr) auto; gap:24px 32px; margin-bottom:14px; padding:28px 30px; border-radius:22px; border:1px solid var(--border);
@@ -328,14 +328,13 @@ button.dh-prog-next:hover b { text-decoration:underline; text-underline-offset:3
 .df-dot[aria-selected="true"] { width:24px; background:var(--p-forest-300); }
 .df-dot:focus-visible { outline:2px solid var(--p-forest-300); outline-offset:3px; }
 .df-skel { display:flex; flex-direction:column; gap:12px; }
-.df-skel span { display:block; height:16px; width:320px; max-width:70vw; border-radius:6px; background:rgba(255,255,255,.12); }
-.df-skel span:nth-child(2) { height:44px; width:260px; }
-.df-skel span:nth-child(3) { width:200px; }
+.df-in:has(.df-skel) { position:static; }   /* so the shimmer covers the whole hero, not just the text column */
+.df-skel { position:absolute; inset:0; z-index:0; background-color:rgba(255,255,255,.04); }   /* the hero itself shimmers while it loads — no text bars (owner, 19 Nov 2026) */
 
 .dt { display:flex; flex-direction:column; }
 .dt .dz-sec-head { margin-bottom:8px; align-items:center; }
 .dt-list { flex:1; justify-content:space-between; }   /* the list rows in their compact size (MSSResults.row) */
-.dt-skel { height:72px; margin:6px 0; border-radius:8px; background:var(--card-2); }
+.dt-skel { height:72px; margin:6px 0; border-radius:8px; }
 .df-add { width:auto; justify-content:flex-start; padding:0; }
 
 /* Browse by list: the old Home page's Explore cards — the #1 poster blurred under the list's

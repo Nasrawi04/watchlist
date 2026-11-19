@@ -1678,7 +1678,6 @@ body.notif-sheet-open { overflow:hidden; }
 .spoiler-toggle input:focus-visible + .spoiler-toggle-box { box-shadow:0 0 0 3px var(--olive-faint); }
 .spoiler-toggle:has(input:checked) { border-color:var(--border-olive); background:var(--olive-faint); }
 .spoiler-toggle-text b { display:block; font-family:var(--sans); font-size:13px; font-weight:600; color:var(--text); }
-@keyframes mssPulse { 0%,100% { opacity:.55; } 50% { opacity:1; } }
 
 /* ── Profile dashboard (dashboard.js) ── */
 .dash-head { display:flex; align-items:flex-end; justify-content:space-between; gap:12px; margin-bottom:1rem; }
@@ -1822,7 +1821,7 @@ body.notif-sheet-open { overflow:hidden; }
   .nc-score { font-size:18px; }
   .nc-excerpt, .nc-quote { font-size:13px; }
 }
-.nf-card.is-skel { cursor:default; background:var(--card-2); border-color:var(--border); }
+.nf-card.is-skel { cursor:default; background-color:var(--card-2); border-color:var(--border); }
 
 /* ── The featured note (pinned, else latest): always dark, over the title's backdrop — the Library's Watching card look ── */
 .nf-card { --tv-green:var(--p-forest-300); --tv-gold:var(--p-score-top-dark);
@@ -2347,10 +2346,9 @@ body.notif-sheet-open { overflow:hidden; }
 .es-stage.is-updating .es-pages { opacity:.55; transition:opacity .2s; }
 .es-pages { display:flex; align-items:center; justify-content:center; gap:clamp(14px, 2vw, 28px); }
 .es-sheet { display:block; height:auto; border-radius:4px; border:1px solid rgba(243,238,220,.14); background:#1A2E20; box-shadow:0 24px 48px -20px rgba(0,0,0,.7); }
-.es-sheet.is-skel { width:min(46vh, 380px); aspect-ratio:210 / 297; animation:esPulse 1.4s ease-in-out infinite; }
+.es-sheet.is-skel { width:min(46vh, 380px); aspect-ratio:210 / 297; }
 .es-nextpg { padding:0; border:0; background:none; cursor:pointer; opacity:.45; transition:opacity .15s; }
 .es-nextpg:hover { opacity:.8; }
-@keyframes esPulse { 50% { opacity:.55; } }
 .es-imgwrap { display:flex; }
 .es-img { display:block; border-radius:8px; border:1px solid rgba(243,238,220,.14); box-shadow:0 24px 48px -20px rgba(0,0,0,.7); }
 .es-paper { width:min(100%, 720px); box-sizing:border-box; padding:18px; border-radius:var(--radius); border:1px solid rgba(243,238,220,.12); background:rgba(26,46,32,.92); }
@@ -2473,7 +2471,6 @@ body.notif-sheet-open { overflow:hidden; }
 @media (prefers-reduced-motion:reduce) {
   .es-ov, .es-prog-bar i, .es-stage.is-updating .es-pages, .es-nextpg, .es-more summary svg, .es-tile, .es-fav-bg { transition:none; }
   .es-tile:hover { translate:none; }
-  .es-sheet.is-skel { animation:none; }
 }
 
 /* shared with List Studio and Create Card: switches and fields */
@@ -3126,7 +3123,7 @@ body.notif-sheet-open { overflow:hidden; }
 .pp-opt:hover { border-color:var(--border-olive); }
 .pp-opt.selected { border-color:var(--olive-light); box-shadow:0 0 0 1px var(--olive-light); }
 .pp-opt:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
-.pp-skel { cursor:default; animation:mssPulse 1.2s ease-in-out infinite; }
+.pp-skel { cursor:default; }
 /* backdrops (the Edit page): wide, so one to a row — as big as the panel allows (owner, 13 Nov 2026) */
 .pp-grid.is-wide { grid-template-columns:minmax(0, 1fr); }
 .pp-grid.is-wide .pp-opt, .pp-grid.is-wide .pp-skel { aspect-ratio:16/9; }
@@ -3140,7 +3137,6 @@ body.notif-sheet-open { overflow:hidden; }
 .bp-back:hover { border-color:var(--border-olive); }
 
 .pp-empty { margin:0; padding:18px; border:1px dashed var(--border-2); border-radius:12px; text-align:center; font-size:13px; color:var(--text-3); }
-@media (prefers-reduced-motion:reduce) { .pp-skel { animation:none; } }
 /* the pickers' Back to top (MSSBdTools.toTop): the site's button inside the panel, above its footer (bottom set in JS) */
 .lyr-card .back-to-top.pp-top { position:absolute; inset-inline-end:20px; bottom:88px; z-index:5; }
 
@@ -3657,7 +3653,7 @@ button.rc-col:focus-visible { outline:2px solid var(--olive-light); outline-offs
 .qp-body { padding:18px 20px 4px; display:flex; flex-direction:column; gap:14px; }
 .qp-overview { margin:0; font-size:14.5px; line-height:1.6; color:var(--text-2); display:-webkit-box; -webkit-line-clamp:5; -webkit-box-orient:vertical; overflow:hidden; }
 .qp-overview:empty { display:none; }
-.qp-skel { display:block; height:12px; margin:6px 0; border-radius:6px; background:var(--card-2); }
+.qp-skel { display:block; height:12px; margin:6px 0; border-radius:6px; }
 .qp-skel.short { width:60%; }
 .qp-credit { display:flex; flex-wrap:wrap; gap:4px 18px; font-size:13px; color:var(--text-2); }
 .qp-credit:empty { display:none; }
@@ -4489,7 +4485,7 @@ a.egh-sum-c:focus-visible { outline:2px solid var(--olive-light); outline-offset
    Safari repaints those on every frame and runs out of memory on long pages) */
 @media (pointer: coarse) {
   .mss-img-fx :is([class*="poster"], [class*="still"], [class*="backdrop"], [class*="photo"], [class*="avatar"], [class*="cast"], [class*="cover"], [class*="thumb"], .fr-av).fx-vis:has(> img:not(.is-loaded)),
-  .skel, .page-loading:not(.has-skel)::before, .page-loading:not(.has-skel)::after, .skel-ghost {
+  .skel, .page-loading:not(.has-skel)::before, .page-loading:not(.has-skel)::after, .skel-ghost, .msf-card.is-skel :is(.msf-card__poster, .msf-card__skl), .msf-row.is-skel .msf-row__poster, .dt-skel, .qp-skel, .pp-skel, .nf-card.is-skel, .bw-chip.is-skel, .tv-people.is-loading .tv-face, .es-sheet.is-skel, .ex-pv.is-skel::after, .df-skel {
     background-attachment:scroll !important; background-size:300% 100% !important; animation-name:mssSweepEl !important; }
   .has-skel :is([class*="poster"], .skel-cover:not(.skel-round)).skel { background-size:min(34px, 34%) auto, 300% 100% !important; background-attachment:scroll, scroll !important; animation-name:mssSweepPlayEl !important; }
   .skel-txt { background:var(--aw-sweep) 150% 0 / 300% 100% no-repeat scroll, var(--skel-bg) !important; animation-name:mssSweepEl !important; }
@@ -4513,6 +4509,17 @@ a.egh-sum-c:focus-visible { outline:2px solid var(--olive-light); outline-offset
   background-color:var(--skel-bg); background-image:var(--aw-sweep); background-size:300vw 100vh; background-attachment:fixed; background-repeat:no-repeat;
   animation:mssSweep 2.1s var(--aw-ease) infinite;
 }
+/* Every loading placeholder shares that one sweep (owner, 19 Nov 2026 — some pulsed, some breathed, some stood still): the page
+   skeletons above and the ones components draw themselves — cards and rows, Discover's hero and Also trending, Browse's chips,
+   Pick for me, the poster / backdrop pickers, the notes header, cast photos, Export's previews */
+.msf-card.is-skel :is(.msf-card__poster, .msf-card__skl), .msf-row.is-skel .msf-row__poster, .dt-skel, .qp-skel, .pp-skel, .nf-card.is-skel, .bw-chip.is-skel, .tv-people.is-loading .tv-face, .es-sheet.is-skel, .ex-pv.is-skel::after, .df-skel {
+  background-image:var(--aw-sweep); background-size:300vw 100vh; background-attachment:fixed; background-repeat:no-repeat;
+  animation:mssSweep 2.1s var(--aw-ease) infinite;
+}
+.dt-skel, .qp-skel, .pp-skel, .bw-chip.is-skel, .tv-people.is-loading .tv-face { background-color:var(--skel-bg); }
+/* the ones on a surface that's dark in both themes (Discover's hero, Export): the dark theme's light sweep */
+.es-sheet.is-skel, .ex-pv.is-skel::after, .df-skel { background-image:var(--aw-sweep-dark); }
+:root { --aw-sweep-dark:linear-gradient(105deg, transparent 0 34%, rgba(166,204,177,.10) 41%, rgba(166,204,177,.38) 47%, rgba(226,218,208,.40) 50%, rgba(166,204,177,.38) 53%, rgba(166,204,177,.10) 59%, transparent 66% 100%); }
 /* poster placeholders: a faint play mark in the theme's green */
 .has-skel :is([class*="poster"], .skel-cover:not(.skel-round)).skel {
   background-image:var(--aw-play), var(--aw-sweep); background-size:min(34px, 34%) auto, 300vw 100vh; background-attachment:scroll, fixed;
@@ -4547,6 +4554,12 @@ html[data-theme="light"] {
   --aw-sweep:linear-gradient(105deg, transparent 0 34%, var(--aw-edge) 41%, var(--aw-glow) 47%, var(--aw-core) 50%, var(--aw-glow) 53%, var(--aw-edge) 59%, transparent 66% 100%);
 }
 .page-loading.skel-exact * { text-overflow:clip !important; }   /* no "…" left over from the sample text */
+/* Simpler, to the point (owner, 19 Nov 2026): a loading card or row shows its picture and its title — the small details
+   (badges on the poster, year, meta, scores, the overview) wait for the real thing. Hidden, not removed, so each card keeps
+   its height and nothing jumps when the content arrives. No dark shade over a poster that isn't there yet. */
+.page-loading .msf-card__poster::after { display:none; }
+.page-loading .msf-card__poster > *, .page-loading :is(.msf-card__year, .msf-card__line2, .msf-card__meta, .msf-card__sub),
+.page-loading :is(.dx-rank, .dx-year, .dx-meta, .dx-sub, .dx-ov, .dx-chips), .page-loading .msf-row__poster > * { visibility:hidden; }
 .skel-txt {
   color:transparent !important; -webkit-text-fill-color:transparent; border-radius:4px; -webkit-box-decoration-break:clone; box-decoration-break:clone;
   background:var(--aw-sweep) 100vw 0 / 300vw 100vh no-repeat fixed, var(--skel-bg);
@@ -4579,6 +4592,11 @@ html[data-theme="light"] {
 .page-loading :is(.msf-row, .fv-rank-row, .nc-card, .skel-row, .page-stat, .egh-row, .skel-tile):nth-child(6n+5) { animation-delay:0.4s; }
 .page-loading :is(.msf-row, .fv-rank-row, .nc-card, .skel-row, .page-stat, .egh-row, .skel-tile):nth-child(6n+6) { animation-delay:0.5s; }
 @keyframes mssSweep { from { background-position:100vw 0; } to { background-position:-200vw 0; } }
+/* Reduce motion: the placeholders stay still (the same boxes, no sweep, no breathing) */
+@media (prefers-reduced-motion:reduce) {
+  .skel, .skel-txt, .skel-ghost, .page-loading::before, .page-loading::after, .mss-img-fx .fx-vis, .msf-card.is-skel :is(.msf-card__poster, .msf-card__skl), .msf-row.is-skel .msf-row__poster, .dt-skel, .qp-skel, .pp-skel, .nf-card.is-skel, .bw-chip.is-skel, .tv-people.is-loading .tv-face, .es-sheet.is-skel, .ex-pv.is-skel::after, .df-skel,
+  .page-loading :is(.msf-row, .fv-rank-row, .nc-card, .skel-row, .page-stat, .egh-row, .skel-tile), .epc-skel-bub { animation:none !important; }
+}
 @keyframes mssSweepPlay { from { background-position:50% 46%, 100vw 0; } to { background-position:50% 46%, -200vw 0; } }
 @keyframes mssBreathe { 50% { opacity:.72; } }
 /* When the page's content replaces its loader it rises in, the first cards one after another (mssSkeleton
@@ -7673,14 +7691,10 @@ a.nc-author:hover span:last-child { color:var(--text); text-decoration:underline
 
 /* loading + arrival */
 .msf-card.is-skel { cursor:default; }
-.msf-card.is-skel .msf-card__poster, .msf-card.is-skel .msf-card__skl { background:var(--mc-tr); animation:mssBreathe 2.4s ease-in-out infinite; }
+.msf-card.is-skel .msf-card__poster, .msf-card.is-skel .msf-card__skl { background-color:var(--mc-tr); }
 .msf-card.is-skel .msf-card__poster::after { display:none; }
 .msf-card__skl { height:clamp(9px, 2cqi + 6.6px, 12px); border-radius:6px; margin-top:6px; }
-.msf-card__skl + .msf-card__skl { width:55%; }
-:is(.msf-grid, .msf-rail) > .msf-card.is-skel:nth-child(6n+2) :is(.msf-card__poster, .msf-card__skl) { animation-delay:.1s; }
-:is(.msf-grid, .msf-rail) > .msf-card.is-skel:nth-child(6n+3) :is(.msf-card__poster, .msf-card__skl) { animation-delay:.2s; }
-:is(.msf-grid, .msf-rail) > .msf-card.is-skel:nth-child(6n+4) :is(.msf-card__poster, .msf-card__skl) { animation-delay:.3s; }
-:is(.msf-grid, .msf-rail) > .msf-card.is-skel:nth-child(6n+5) :is(.msf-card__poster, .msf-card__skl) { animation-delay:.4s; }
+.msf-card__skl + .msf-card__skl { width:55%; visibility:hidden; }   /* the title's bar only, like the page skeletons — the line keeps the card's height */
 .mss-arrive :is(.msf-grid, .msf-rail) > .msf-card:nth-child(-n+12) { animation:mssArrive .45s cubic-bezier(.2,.8,.2,1) backwards; }
 .mss-arrive :is(.msf-grid, .msf-rail) > .msf-card:nth-child(2) { animation-delay:35ms; }
 .mss-arrive :is(.msf-grid, .msf-rail) > .msf-card:nth-child(3) { animation-delay:70ms; }
@@ -7699,7 +7713,6 @@ a.nc-author:hover span:last-child { color:var(--text); text-decoration:underline
   .msf-card:hover, .msf-card:active, .msf-card__main:active { transform:none; }
   .msf-card:hover .msf-card__poster img { transform:none; }
   .mss-arrive :is(.msf-grid, .msf-rail) > .msf-card { animation:none !important; }
-  .msf-card.is-skel :is(.msf-card__poster, .msf-card__skl) { animation:none; }
 }
 
 /* ── MSF's rating number: "★ 9.65" (yours 2 decimals, TMDB 1) — in its tier's colour (.st-<key>, css/theme.css) ── */
@@ -7898,7 +7911,7 @@ a.nc-author:hover span:last-child { color:var(--text); text-decoration:underline
 }
 
 .msf-row.is-skel { cursor:default; }
-.msf-row.is-skel .msf-row__poster { background:var(--mc-tr); }
+.msf-row.is-skel .msf-row__poster { background-color:var(--mc-tr); }
 .mss-arrive .msf-rows > :is(.msf-row, .msf-row-block):nth-child(-n+8) { animation:mssArrive .45s cubic-bezier(.2,.8,.2,1) backwards; }
 .mss-arrive .msf-rows > :nth-child(2) { animation-delay:35ms; } .mss-arrive .msf-rows > :nth-child(3) { animation-delay:70ms; } .mss-arrive .msf-rows > :nth-child(4) { animation-delay:105ms; }
 @media (prefers-reduced-motion:reduce) { .mss-arrive .msf-rows > * { animation:none !important; } }
@@ -8039,7 +8052,6 @@ a.nc-author:hover span:last-child { color:var(--text); text-decoration:underline
 .tv-person small { font:500 11px/1.25 'Manrope',var(--sans); color:var(--text-3); }
 a.tv-person:hover b { text-decoration:underline; }
 a.tv-person:focus-visible { outline:2px solid var(--olive-light); outline-offset:3px; border-radius:var(--radius-xs); }
-.tv-people.is-loading .tv-face { animation:mssPulse 1.2s ease-in-out infinite; }
 .tv-people.is-loading b { width:56px; height:10px; border-radius:4px; background:var(--raised); }
 .tv-glance, .tv-crew { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:10px; }
 .tv-crew { grid-template-columns:repeat(2, minmax(0, 1fr)); }
