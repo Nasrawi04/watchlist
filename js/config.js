@@ -238,6 +238,7 @@ const ICONS = {
   brandX: `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.75 3h3.07l-6.7 7.66L22 21h-6.17l-4.83-6.32L5.47 21H2.4l7.17-8.2L2 3h6.32l4.37 5.78L17.75 3Zm-1.08 16.18h1.7L7.4 4.73H5.58l11.09 14.45Z"/></svg>`,
   brandInstagram: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="2.5" width="19" height="19" rx="5.5"/><circle cx="12" cy="12" r="4.2"/><circle cx="17.6" cy="6.4" r=".9" fill="currentColor" stroke="none"/></svg>`,
   brandTikTok: `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.6 5.82A4.28 4.28 0 0 1 15.54 3h-3.09v12.4a2.59 2.59 0 0 1-2.59 2.5 2.6 2.6 0 0 1-2.6-2.6 2.6 2.6 0 0 1 3.4-2.47V9.67a5.68 5.68 0 0 0-.8-.06 5.69 5.69 0 0 0-5.69 5.69A5.69 5.69 0 0 0 9.86 21a5.69 5.69 0 0 0 5.69-5.69V9.01a7.33 7.33 0 0 0 4.29 1.38V7.3a4.3 4.3 0 0 1-3.24-1.48Z"/></svg>`,
+  brandTelegram: `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M21.94 4.6 18.9 19.04c-.23 1.02-.83 1.27-1.68.79l-4.64-3.42-2.24 2.16c-.25.25-.46.46-.94.46l.33-4.73 8.61-7.78c.37-.33-.08-.52-.58-.19L7.12 13l-4.58-1.43c-1-.31-1.01-1 .21-1.48l17.9-6.9c.83-.31 1.56.19 1.29 1.41z"/></svg>`,
   arrowRight: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>`,
   moreV:    `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></svg>`,
   check:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`,
@@ -337,6 +338,7 @@ const MSF_SOCIAL = [
   ['X', 'brandX', 'https://x.com/MyScreenFolio', '@MyScreenFolio'],
   ['Instagram', 'brandInstagram', 'https://www.instagram.com/myscreenfolio', '@myscreenfolio'],
   ['TikTok', 'brandTikTok', 'https://www.tiktok.com/@myscreenfolio', '@myscreenfolio'],
+  ['Telegram', 'brandTelegram', 'https://t.me/myscreenfolio', '@myscreenfolio'],
 ];
 const mssSocialHTML = cls => `<ul class="${cls}" aria-label="MyScreenFolio on social media">${MSF_SOCIAL.map(([name, ic, href]) =>
   `<li><a href="${href}" target="_blank" rel="noopener noreferrer me" aria-label="MyScreenFolio on ${name} (opens in a new tab)" title="${name}">${icon(ic, 18)}</a></li>`).join('')}</ul>`;
