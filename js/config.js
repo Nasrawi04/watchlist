@@ -2234,7 +2234,9 @@ function mssListCard(e, o = {}) {
   const real = o.real !== false, sc = real ? liveScore(e) : null, m = real ? mssMetaOf(e) : {};
   const bd = e.tmdb_id || e.ratings?._backdrop ? MSSBackdrop.key(e) : '', art = safeURL(e.poster_url) ? safeURL(e.poster_url).replace(/\/(w\d+|original)\//, '/w342/') : '';
   const frame = real ? MSSBackdrop.style(e, false, 'card') : '';
-  const kicker = [o.type, e.year ? String(e.year).slice(0, 4) : ''].filter(Boolean).join(' · ');
+  const yr = e.year ? String(e.year).slice(0, 4) : '';
+  // the year sits in the kicker (Movie · 2014) on a computer and right after the title on a phone (.lp-yr — owner, 19 Nov 2026)
+  const kicker = `${escHTML(o.type || '')}${yr ? `<span class="lp-k-yr">${o.type ? ' · ' : ''}${yr}</span>` : ''}`;
   const r = o.rank || 0, badge = r ? `<span class="cg-rank-badge ${r === 1 ? 'cg-rank-1' : r === 2 ? 'cg-rank-2' : r === 3 ? 'cg-rank-3' : 'cg-rank-other'}" aria-hidden="true">${r}</span>` : '';
   const label = [r ? '#' + r : '', e.title, sc != null ? `your score ${Number(sc).toFixed(2)}` : ''].filter(Boolean).join(', ');
   return `<article class="lp-card lv-lp${o.cls ? ' ' + o.cls : ''}" role="button" tabindex="0" onclick="${o.onclick || ''}" onkeydown="if(event.key==='Enter'){event.preventDefault();this.click()}" aria-label="${escHTML(label)}"${MSSAge.attr(e.tmdb_type || e.media_type, e.tmdb_id, 'soft')}>
@@ -2242,8 +2244,8 @@ function mssListCard(e, o = {}) {
     <span class="lp-shade" aria-hidden="true"></span>
     <span class="lp-poster" aria-hidden="true">${posterHTML(e, '', '(max-width:640px) 110px, 150px')}${badge}</span>
     <div class="lp-body">
-      <div class="lp-kicker"><span>${escHTML(kicker)}</span>${real && mssRewatchCount(e) > 1 ? mssRewatchBadgeHTML(mssRewatchCount(e)) : ''}</div>
-      <h3 class="lp-title" translate="no">${escHTML(e.title)}</h3>
+      <div class="lp-kicker"><span>${kicker}</span>${real && mssRewatchCount(e) > 1 ? mssRewatchBadgeHTML(mssRewatchCount(e)) : ''}</div>
+      <div class="lp-titlerow"><h3 class="lp-title" translate="no">${escHTML(e.title)}</h3>${yr ? `<span class="lp-yr">${yr}</span>` : ''}</div>
       ${m.long ? `<div class="lp-scoreline"><span class="lp-meta">${escHTML(m.long)}</span></div>` : ''}
     </div>
     ${real ? `<div class="lp-ringbox">${mssScoreRing(sc)}</div>` : ''}

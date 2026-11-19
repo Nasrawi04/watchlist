@@ -25,6 +25,7 @@
   box-shadow:0 8px 18px -10px rgba(0,0,0,.45); transition:transform var(--trans) var(--ease); }
 .dx-row:hover .dx-poster { transform:translateY(-2px); }
 .dx-poster img { width:100%; height:100%; object-fit:cover; display:block; }
+.dx-rank-badge { display:none; }   /* phones only (the list cards) — computers keep the big rank number beside the poster */
 .dx-poster .msf-card__letter { position:static; font-size:24px; }
 .dx-body { flex:1; min-width:0; max-width:980px; display:flex; flex-direction:column; gap:6px; }
 .dx-head { display:flex; align-items:baseline; gap:10px; min-width:0; }
@@ -488,6 +489,17 @@ button.dh-prog-next:hover b { text-decoration:underline; text-underline-offset:3
 @media (max-width:640px) {
   .dx-list:not(.is-bare) { gap:10px; }
   .dx-list:not(.is-bare) > .dx-row { padding:12px 12px 14px 4px; border-radius:16px; }
+  /* the poster fills the card's left side, edge to edge, with the rank on its corner; the year right after the title;
+     no Watched / On watchlist tag — your score chip already says it (owner, 19 Nov 2026) */
+  .dx-list:not(.is-bare) > .dx-row:not(.is-compact) { min-height:150px; padding:12px 12px 14px calc(100px + 14px); }
+  .dx-list:not(.is-bare) > .dx-row:not(.is-compact) .dx-main { position:static; padding:0; gap:0; }
+  .dx-list:not(.is-bare) > .dx-row:not(.is-compact) .dx-poster { position:absolute; top:0; bottom:0; inset-inline-start:0; width:100px; aspect-ratio:auto; border:0; border-radius:0; transform:none; }
+  .dx-list:not(.is-bare) > .dx-row:not(.is-compact) .dx-rank { display:none; }
+  .dx-list:not(.is-bare) > .dx-row:not(.is-compact) .dx-rank-badge { display:flex; z-index:2; }   /* the site's rank badge on the poster's corner (owner) */
+  .dx-list:not(.is-bare) > .dx-row:not(.is-compact) .dx-head { flex-direction:row; align-items:baseline; gap:8px; }
+  .dx-list:not(.is-bare) > .dx-row:not(.is-compact) .dx-title { min-width:0; }
+  .dx-list:not(.is-bare) > .dx-row:not(.is-compact) .dx-state { display:none; }
+  .dx-list:not(.is-bare) > .dx-row:not(.is-compact) .dx-chips { margin:10px 0 0; }
 }
 @media (prefers-reduced-motion:reduce) { .dx-list:not(.is-bare) > .dx-row:hover { transform:none; } }
 

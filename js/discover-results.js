@@ -155,7 +155,7 @@ const MSSResults = (() => {
       <div class="dx-main" ${_discClickAttr(it).replace(/ data-age[^ ]*/g, '')} role="button" tabindex="0" aria-label="${esc(label)}"
         onkeydown="if(event.target===this&&(event.key==='Enter'||event.key===' ')){event.preventDefault();this.click()}">
         ${r ? `<span class="dx-rank" aria-hidden="true">${r}</span>` : ''}
-        <span class="dx-poster" aria-hidden="true">${poster(it)}</span>
+        <span class="dx-poster" aria-hidden="true">${poster(it)}${r ? `<span class="cg-rank-badge dx-rank-badge ${r === 1 ? 'cg-rank-1' : r === 2 ? 'cg-rank-2' : r === 3 ? 'cg-rank-3' : 'cg-rank-other'}">${r}</span>` : ''}</span>
         <span class="dx-body" aria-hidden="true">
           <span class="dx-head"><span class="dx-title" translate="no">${esc(it.title)}</span>${it.year ? `<span class="dx-year">${esc(it.year)}</span>` : ''}</span>
           ${it.sub ? `<span class="dx-sub" translate="no">${esc(it.sub)}</span>` : ''}

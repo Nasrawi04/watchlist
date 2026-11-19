@@ -6159,6 +6159,16 @@ button.acc-sw-row:hover { border-color:var(--border-olive); }
 .lv-more { grid-column:1 / -1; }   /* Show more: its own row under the cards */
 .lv-rows .lp-poster .cg-rank-badge { z-index:3; }
 .lv-rows .lp-title { font-size:19px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.lp-titlerow { display:flex; align-items:baseline; gap:8px; min-width:0; }
+.lp-titlerow .lp-title { min-width:0; }
+.lp-yr { display:none; flex:none; font:600 12.5px/1 'Manrope',var(--sans); color:var(--text-3); font-variant-numeric:tabular-nums; }
+/* phones (owner, 19 Nov 2026): the poster fills the card's left side, edge to edge; the year right after the title */
+@media (max-width:640px) {
+  .lv-rows .lp-card:not(.is-main) { padding:0; padding-inline-end:12px; gap:14px; min-height:150px; }
+  .lv-rows .lp-card:not(.is-main) .lp-poster { min-width:100px; max-width:none; border-radius:0; box-shadow:none; }
+  .lv-rows .lp-kicker .lp-k-yr { display:none; }
+  .lv-rows .lp-yr { display:inline-block; padding:3px 6px; border-radius:6px; color:var(--text-2); background:color-mix(in srgb, var(--lib-card, var(--card)) 88%, transparent); }   /* readable over the backdrop */
+}
 @media(max-width:640px) {
   .lh { min-height:420px; padding:12px 14px 14px; border-radius:18px; gap:12px; }
   .lh-in { flex-direction:column; align-items:stretch; gap:10px; }
