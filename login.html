@@ -343,9 +343,9 @@ body { background:var(--bg); min-height:100dvh; }
             </div>
             <div class="au-agree">
               <input type="checkbox" id="suAgree" aria-describedby="suAgreeHint" onchange="if (this.checked) showErr('suError', '')">
-              <label for="suAgree">I agree to the <a href="terms.html" target="_blank" rel="noopener">Terms of Service</a> and the <a href="privacy.html" target="_blank" rel="noopener">Privacy Policy</a>, and I’ve read the <a href="cookies.html" target="_blank" rel="noopener">Cookie Policy</a>.</label>
+              <label for="suAgree">I agree to the <a href="terms.html">Terms of Service</a> and the <a href="privacy.html">Privacy Policy</a>, and I’ve read the <a href="cookies.html">Cookie Policy</a>.</label>
             </div>
-            <div class="au-hint" id="suAgreeHint" style="margin-top:-6px">Under 18? Ask a parent or guardian first. The links open in a new tab — what you’ve typed stays here.</div>
+            <div class="au-hint" id="suAgreeHint" style="margin-top:-6px">Under 18? Ask a parent or guardian first. Tap a link to read it, then Back — everything you’ve filled in will still be here.</div>
             <button class="au-btn" id="btnSignUp" type="submit"><span>Create my folio</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
           </fieldset>
         </form>
@@ -564,7 +564,7 @@ function _auSetupMessages(pass) {
 /* ── Sign Up ── */
 const AU_UNDER_13 = 'Sorry — you need to be 13 or older to make a MyScreenFolio account.';
 const _auAgeBlocked = () => { try { return Date.now() - Number(localStorage.getItem('mss_age_block') || 0) < 86400000; } catch { return false; } };
-document.addEventListener('DOMContentLoaded', () => { const b = document.getElementById('suBirth'); if (b) mssDateFields(b, 'suBirth', { label: 'Date of birth', view: 'years' }); });
+document.addEventListener('DOMContentLoaded', () => { const b = document.getElementById('suBirth'); if (b) mssDateFields(b, 'suBirth', { label: 'Date of birth', view: 'years', onChange: () => auDraftSave() }); auDraftRestore(); });
 // Public (default) or Private account (083) — saved with the sign-up, made into the profile by the database
 let _auPrivate = false;
 function auPriv(on) {
@@ -588,6 +588,39 @@ function _auStep1Error(username, email, pass) {
   if (!EMAIL_RE.test(email)) return 'That email doesn’t look right.';
   return MSSPass.error(pass) || (pass.length > 128 ? 'Your password can be 128 characters at most.' : '');
 }
+/* Sign-up in progress (owner, 19 Nov 2026): the Terms / Privacy / Cookies links in the "I agree" box open those pages in this
+   tab, and their ‹ Back (or the top bar's ←) brings you here with everything as you left it — username, email, password, step,
+   birthday, public / private and the tick. Kept in sessionStorage: this tab only, gone when it closes, and deleted as soon as
+   the account is made (described in the Cookie Policy › Moving between pages and the Privacy Policy › Password). */
+const AU_DRAFT = 'msf_signup_draft';
+function auDraftSave() {
+  if ($('suPanel').hidden || !$('suStep1')) return;
+  const pick = k => _mssDatePick('suBirth', k)?.value || '';
+  try { sessionStorage.setItem(AU_DRAFT, JSON.stringify({ u: $('suUser').value, e: $('suEmail').value, p: $('suPass').value, step: $('suStep2').hidden ? 1 : 2,
+    d: pick('D'), m: pick('M'), y: pick('Y'), priv: _auPrivate, agree: $('suAgree').checked, reading: auDraftSave.reading || false })); } catch {}
+}
+const auDraftClear = () => { try { sessionStorage.removeItem(AU_DRAFT); } catch {} };
+function auDraftRestore() {
+  let d = null;
+  try { d = JSON.parse(sessionStorage.getItem(AU_DRAFT) || 'null'); } catch {}
+  if (!d) return;
+  // back from reading the Terms (or a #signup link): straight to Create account; otherwise the fields wait there quietly
+  if (d.reading || location.hash === '#signup') setMode(true);
+  $('suUser').value = d.u || ''; $('suEmail').value = d.e || ''; $('suPass').value = d.p || '';
+  if (d.u) auUserHint();
+  if (d.p) auPassSU();
+  try { if (d.d) _mssDatePick('suBirth', 'D').value = d.d; if (d.m) _mssDatePick('suBirth', 'M').value = d.m; if (d.y) _mssDatePick('suBirth', 'Y').value = d.y; } catch {}
+  auPriv(!!d.priv);
+  $('suAgree').checked = !!d.agree;
+  if (d.step === 2) auStep(2);
+  if (d.reading) { auDraftSave.reading = false; auDraftSave(); $('suAgree').focus(); }
+}
+document.addEventListener('DOMContentLoaded', () => {
+  ['input', 'change', 'click'].forEach(t => $('suPanel').addEventListener(t, () => setTimeout(auDraftSave)));
+  $('suAgree').closest('.au-agree').addEventListener('click', ev => { if (ev.target.closest('a')) { auDraftSave.reading = true; auDraftSave(); } });
+  window.addEventListener('pagehide', auDraftSave);
+});
+
 async function doSignUp(e) {
   e.preventDefault();
   const username = $('suUser').value.trim();
@@ -628,6 +661,7 @@ async function doSignUp(e) {
   }
   if (error) { showErr('suError', /UNDER_13/.test(error.message || '') ? AU_UNDER_13 : error.message || 'Couldn’t create your account.'); again(); return; }
 
+  if (data?.session || data?.user) auDraftClear();     // the account exists — nothing to keep
   if (data?.session) {
     await _auSetupMessages(pass);
     window.location.href = mssAfterLogin();
