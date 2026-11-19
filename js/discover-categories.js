@@ -738,85 +738,205 @@ function _discCatOf(it) {
 // "See All" arrow (Discover rows, home Recommended for You)
 const _SEE_ALL_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>`;
 
-/* ══ Recommended for You — MSSRecs ══
-   Built from every movie, TV show and anime in your profile favorites
-   (Top Favorites, Top Picks and the Top 5 TV Shows / Movies / Anime):
-   TMDB's recommendations for each one are pooled; a title several
-   favorites point to weighs more (w). Anything already in your library is
-   left out. No cartoons, either way: cartoon favorites aren't used, and
-   cartoons (animation that isn't anime) are never recommended.
-   Each favorite's list is kept a day on the device.
-     MSSRecs.pool(entries, profile) → [{ it, w }]   (the home row draws from it)
-     MSSRecs.category                              (discover-list.html "See All":
-                                                    all of them, highest rated first)
-   Not one of the Discover rows — it lives on the home page. */
+/* ══ Recommendations — MSSRecs (owner, 19 Nov 2026) ══
+   ONE engine for Discover's Picked for your taste, Home's Recommended for you and its See all list.
+   Your taste, strongest first: Top Favorites → each Top 5 (Movies, TV Shows, Anime, Cartoons) → the titles you
+   rated highest (your own top fifth, at least 7.0 — not a fixed number, so a tough scorer still counts) → your
+   favourite actors, actresses and directors (their best-rated work on TMDB). The rating group you reward most
+   (e.g. Visuals) makes the titles you scored highest there count more as starting points — TMDB has no score for
+   that, so it works through your own titles. Genres count by how you SCORE them against your average: one you
+   score low counts against a title. Cartoons are treated like every other category.
+   Never recommended: anything in your library (any status) or on your Not interested list (MSSNotInterested).
+   The mix, in every 10: about 7 close matches, 2 neighbouring picks (well rated, a step from your usual genres)
+   and 1 wild card (outside your usual genres, very well rated, tied to someone or something you love) — each with
+   its reason. New accounts: what they have, plus well-rated popular titles in their genres (or MSF's well-rated
+   popular ones) — the more they rate and pick favourites, the sharper it gets.
+     await MSSRecs.build(entries, profile) → { items, genres, basis, newbie }
+       items: TMDB items + { why: 'Because you love Arcane', kind: 'close' | 'near' | 'wild' | 'start' }
+       genres: the genres you score highest (names) · basis: { favs, rated, people } · newbie: true while it's thin
+     MSSRecs.category                              (discover-list.html "See all")
+     MSSRecs.last()                                → this device's last result (or null)
+   TMDB lists are kept a day on the device (mss_recs_v4); the result 12 hours, or until your library, favourites
+   or Not interested list change. */
 const MSSRecs = (() => {
-  const STORE = 'mss_recs_v3', TTL = 864e5, KEYS = ['top_picks', 'recommended', 'fav_tv', 'fav_movies', 'fav_anime'];
-  async function recsOf(type, id, cache) {
-    const key = `${type}:${id}`, hit = cache[key];
-    if (hit && Date.now() - hit.t < TTL) return hit.items;
-    const d = await _discFetchJSON(`${TMDB_BASE}/${type}/${id}/recommendations?language=en-US&page=1`);
-    const items = [];
-    (d.results || []).forEach(r => {
-      if (r.media_type !== 'movie' && r.media_type !== 'tv') return;
-      const it = _discNormalize(r, r.media_type);
-      if (it.genre_ids.includes(_ANIMATION_GENRE) && !_discIsAnimeOrigin(it)) return;      // no cartoons
-      items.push({ id: it.id, media_type: it.media_type, title: it.title, poster_url: it.poster_url, year: it.year, score: it.score,
-        votes: r.vote_count || 0, genres: it.genres, overview: it.overview.slice(0, 300) });
-    });
-    cache[key] = { t: Date.now(), items };
+  const STORE = 'mss_recs_v4', TTL_LIST = 864e5, TTL_RESULT = 12 * 3600e3, MAX_SEEDS = 16, MAX_PEOPLE = 6, OUT = 60;
+  const FAVS = [['top_picks', 3], ['fav_movies', 2.2], ['fav_tv', 2.2], ['fav_anime', 2.2], ['fav_cartoons', 2.2]];
+  const PEOPLE = [['fav_actors', 'cast'], ['fav_actresses', 'cast'], ['fav_directors', 'Director']];
+  const keyOf = (type, id) => `${type === 'movie' ? 'movie' : 'tv'}:${Number(id)}`;
+  const typeOf = e => e.tmdb_type === 'movie' || e.tmdb_type === 'tv' ? e.tmdb_type : (mssIsMovieEntry(e) ? 'movie' : 'tv');
+  const finished = e => e.status === 'completed' || e.status === 'ongoing';
+  const mean = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : null;
+  try { localStorage.removeItem('mss_recs_v3'); localStorage.removeItem('mss_taste_v1'); } catch {}   // the two old engines' copies
+
+  /* ── TMDB lists, kept a day on the device ── */
+  let S = null;
+  const store = () => { if (S) return S; try { S = JSON.parse(localStorage.getItem(STORE) || '{}'); } catch { S = {}; } S.lists ||= {}; return S; };
+  const save = () => { try { localStorage.setItem(STORE, JSON.stringify(S)); } catch {} };
+  const slim = it => ({ id: it.id, media_type: it.media_type, title: it.title, poster_url: it.poster_url, year: it.year, score: it.score, votes: it.votes,
+    genre_ids: it.genre_ids, genres: it.genres, origin_country: it.origin_country, original_language: it.original_language, backdrop_path: it.backdrop_path, overview: it.overview.slice(0, 240) });
+  const norm = (r, type) => { if (type !== 'movie' && type !== 'tv') return null; const it = _discNormalize(r, type); return it.poster_url && it.title ? slim(it) : null; };
+  async function list(key, url, pick) {
+    const hit = store().lists[key];
+    if (hit && Date.now() - hit.t < TTL_LIST) return hit.items;
+    const items = pick(await _discFetchJSON(url)).filter(Boolean);
+    S.lists[key] = { t: Date.now(), items };
     return items;
   }
-  async function pool(entries, profile) {
-    const byId = new Map(entries.map(e => [e.id, e]));
-    const seeds = [], seen = new Set();
-    KEYS.forEach(k => (Array.isArray(profile?.[k]) ? profile[k] : []).forEach(id => {
-      const e = byId.get(id), type = e?.tmdb_type === 'movie' ? 'movie' : e?.tmdb_type === 'tv' ? 'tv' : null;
-      if (!type || !e.tmdb_id || e.cat === 'cartoons' || seen.has(`${type}:${e.tmdb_id}`)) return;
-      seen.add(`${type}:${e.tmdb_id}`); seeds.push({ type, id: e.tmdb_id });
-    }));
-    if (!seeds.length) return [];
-    let cache = {};
-    try { cache = JSON.parse(localStorage.getItem(STORE) || '{}'); } catch {}
-    const lists = [];
-    for (let i = 0; i < seeds.length; i += 4)                    // a few at a time — easier on TMDB
-      lists.push(...await Promise.all(seeds.slice(i, i + 4).map(s => recsOf(s.type, s.id, cache).catch(() => []))));
-    const keep = {};
-    seeds.forEach(s => { const k = `${s.type}:${s.id}`; if (cache[k]) keep[k] = cache[k]; });
-    try { localStorage.setItem(STORE, JSON.stringify(keep)); } catch {}
-    // higher on a favorite's list = more; on several lists = adds up
-    const have = new Set(entries.filter(e => e.tmdb_id).map(e => `${e.tmdb_type}:${e.tmdb_id}`));
-    const out = new Map();
-    lists.forEach(items => items.forEach((it, i) => {
-      const k = `${it.media_type}:${it.id}`;
-      if (have.has(k) || seen.has(k)) return;
-      const p = out.get(k) || { it, w: 0 };
-      p.w += 1 + (20 - Math.min(i, 20)) / 20;
-      out.set(k, p);
-    }));
-    return [...out.values()];
+  const recsOf = s => list(`r:${s.k}`, `${TMDB_BASE}/${s.type}/${s.id}/recommendations?language=en-US&page=1`, d => (d.results || []).map(r => norm(r, r.media_type)));
+  // a person's best-rated work: directing for directors; for actors and actresses only real roles — top-billed in a film,
+  // or in 5+ episodes of a show (not a cameo, not as themselves); enough votes to trust
+  const worksOf = p => list(`p2:${p.role}:${p.id}`, `${TMDB_BASE}/person/${p.id}/combined_credits?language=en-US`, d => {
+    const raw = p.role === 'Director' ? (d.crew || []).filter(c => c.job === 'Director')
+      : (d.cast || []).filter(c => !/\b(himself|herself|themselves|self)\b/i.test(c.character || '') && (c.media_type === 'movie' ? (c.order ?? 99) <= 4 : (c.episode_count || 0) >= 5));
+    const seen = new Set();
+    return raw.filter(c => (c.vote_count || 0) >= (c.media_type === 'movie' ? 300 : 150) && !seen.has(keyOf(c.media_type, c.id)) && seen.add(keyOf(c.media_type, c.id)))
+      .sort((a, b) => (b.vote_average || 0) - (a.vote_average || 0)).slice(0, 12).map(c => norm(c, c.media_type));
+  });
+  // a new account's starting point: well-rated popular titles in its genres, else MSF-wide well-rated popular ones
+  const startOf = (type, gIds) => list(`s:${type}:${gIds.join('|')}`,
+    `${TMDB_BASE}/discover/${type}?language=en-US&sort_by=vote_average.desc&vote_count.gte=${type === 'movie' ? 3000 : 1000}${gIds.length ? `&with_genres=${gIds.join('|')}` : ''}&page=1`,
+    d => (d.results || []).map(r => norm(r, type)));
+
+  /* ── your taste ── */
+  function taste(entries, profile) {
+    const rated = entries.filter(e => finished(e) && e.tmdb_id).map(e => ({ e, s: liveScore(e) })).filter(x => x.s != null);
+    const avg = mean(rated.map(x => x.s)) ?? 7;
+    // genres: how you score them against your own average (shrunk, so one title can't decide a genre), plus a little for how much you watch them
+    const acc = {};
+    rated.forEach(({ e, s }) => mssGenreList(e.genres || []).forEach(g => { if (!MSS_GENRES[g]) return; const a = acc[g] ||= { sum: 0, n: 0 }; a.sum += s - avg; a.n++; }));
+    entries.filter(e => !finished(e)).forEach(e => mssGenreList(e.genres || []).forEach(g => { if (MSS_GENRES[g]) (acc[g] ||= { sum: 0, n: 0 }).seen = ((acc[g].seen || 0) + 1); }));
+    const fit = {};
+    Object.entries(acc).forEach(([g, a]) => { fit[g] = a.sum / (a.n + 3) + Math.min(a.n + (a.seen || 0) * .5, 20) / 40; });
+    const genres = Object.entries(acc).filter(([, a]) => a.n >= 2).sort((a, b) => fit[b[0]] - fit[a[0]]).slice(0, 3).map(x => x[0]);
+    // the rating group you reward most (core groups only), when 3+ titles have it
+    const grp = {};
+    rated.forEach(({ e }) => mssRatedGroups(e.ratings, e.cat, mssIsMovieEntry(e)).filter(g => g.kind === 'core').forEach(g => (grp[g.name] ||= []).push(g.avg)));
+    const reward = Object.entries(grp).filter(([, v]) => v.length >= 3).map(([name, v]) => ({ name, avg: mean(v) })).sort((a, b) => b.avg - a.avg)[0]?.name || null;
+    // starting points
+    const byId = new Map(entries.map(e => [e.id, e])), seeds = new Map();
+    const seed = (e, w, why) => {   // why: the whole reason shown on the card
+      if (!e?.tmdb_id) return;
+      const k = keyOf(typeOf(e), e.tmdb_id), had = seeds.get(k);
+      if (had) { had.w += w * .5; return; }
+      seeds.set(k, { k, type: typeOf(e), id: Number(e.tmdb_id), w, why });
+    };
+    const love = e => e && `Because you love ${e.title}`;
+    FAVS.forEach(([key, w]) => (Array.isArray(profile?.[key]) ? profile[key] : []).forEach(id => seed(byId.get(id), w, love(byId.get(id)))));
+    const scores = rated.map(x => x.s).sort((a, b) => b - a);
+    const bar = Math.max(7, scores.length ? scores[Math.min(scores.length - 1, Math.floor(scores.length * .2))] : 10);
+    rated.filter(x => x.s >= bar).sort((a, b) => b.s - a.s).slice(0, 14).forEach(({ e, s }) => {
+      const rg = reward && mssRatedGroups(e.ratings, e.cat, mssIsMovieEntry(e)).find(g => g.name === reward);
+      seed(e, 1 + (s - bar) * .8 + (rg && rg.avg >= s + .3 ? .6 : 0), love(e));
+    });
+    // a thin library: what you're watching or saved counts too, lightly, until there's more to go on
+    if (seeds.size < 3) entries.filter(e => e.tmdb_id && !finished(e) && e.status !== 'dropped').sort((a, b) => String(b.updated_at || '').localeCompare(String(a.updated_at || ''))).slice(0, 6)
+      .forEach(e => seed(e, .7, e.status === 'queue' ? `Because ${e.title} is on your watchlist` : `Because you're watching ${e.title}`));
+    const people = [];
+    PEOPLE.forEach(([key, role]) => (Array.isArray(profile?.[key]) ? profile[key] : []).forEach(x => { if (Number(x?.id) && x.name && people.length < MAX_PEOPLE) people.push({ id: Number(x.id), name: x.name, role }); }));
+    return { rated, avg, fit, genres, reward, seeds: [...seeds.values()].sort((a, b) => b.w - a.w).slice(0, MAX_SEEDS), people,
+      favs: FAVS.reduce((n, [key]) => n + (Array.isArray(profile?.[key]) ? profile[key].length : 0), 0) };
   }
-  // All of them, highest TMDB rating first. Titles with under 50 votes go
-  // after the rest (a 10/10 from three people isn't a real rating yet).
+
+  /* ── one cheap fingerprint of everything the result depends on ── */
+  function sigOf(entries, profile) {
+    const parts = [entries.map(e => `${e.tmdb_id}:${e.status}:${Math.round((liveScore(e) || 0) * 10)}`).sort().join(','),
+      JSON.stringify(FAVS.map(([k]) => profile?.[k] || [])), JSON.stringify(PEOPLE.map(([k]) => (profile?.[k] || []).map(x => x?.id))),
+      MSSNotInterested.list().map(x => `${x.type}:${x.id}`).sort().join(',')];
+    let h = 5381; const str = parts.join('|');
+    for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) | 0;
+    return String(h >>> 0);
+  }
+
+  async function build(entries, profile) {
+    entries = entries || []; profile = profile || {};
+    await MSSNotInterested.load();
+    const uid = window._navUser?.id || '', sig = sigOf(entries, profile), st = store();
+    const out = keep => ({ ...keep, items: keep.items.filter(it => !MSSNotInterested.has(it.media_type, it.id)) });
+    if (st.result && st.result.uid === uid && st.result.sig === sig && Date.now() - st.result.t < TTL_RESULT) return out(st.result.data);
+    const T = taste(entries, profile);
+    const have = new Set(entries.filter(e => e.tmdb_id).map(e => keyOf(typeOf(e), e.tmdb_id)));
+    // left out: what you have, what you hid, anything not out yet, and anything TMDB's members don't rate well or enough to trust
+    const year = new Date().getFullYear();
+    const skip = it => have.has(keyOf(it.media_type, it.id)) || MSSNotInterested.has(it.media_type, it.id) || !it.year || Number(it.year) > year
+      || (it.votes || 0) < 150 || (it.score || 0) < 6.6;
+    const pool = new Map();
+    const add = (it, w, src) => {
+      if (!it || skip(it)) return;
+      const k = keyOf(it.media_type, it.id), p = pool.get(k) || { it, w: 0, srcs: new Map() };
+      p.w += w; p.srcs.set(src.name, (p.srcs.get(src.name) || 0) + w); if (src.person) p.person = true; if (src.start) p.start = true;
+      pool.set(k, p);
+    };
+    // what TMDB recommends for each starting point (higher on its list = more), a few at a time
+    const jobs = [...T.seeds.map(s => () => recsOf(s).then(items => items.forEach((it, i) => add(it, s.w * (1 + (20 - Math.min(i, 20)) / 20) / 2, { name: s.why || 'Picked for your taste' }))).catch(() => {})),
+      ...T.people.map(p => () => worksOf(p).then(items => items.forEach((it, i) => add(it, 1.5 * (1 - i / 16), { name: `From ${p.name}`, person: true }))).catch(() => {}))];
+    // a thin library: well-rated popular titles in your genres (or MSF-wide), so there's always something good to start from
+    const newbie = T.seeds.length + T.people.length < 3 || T.rated.length < 5;
+    if (newbie) {
+      const gIds = T.genres.length ? T.genres.slice(0, 2) : Object.keys(T.fit).sort((a, b) => T.fit[b] - T.fit[a]).slice(0, 2);
+      ['movie', 'tv'].forEach(type => {
+        const ids = gIds.map(g => MSS_GENRES[g]?.[type === 'movie' ? 0 : 1]).filter(Boolean);
+        // the reason names a genre the title really has
+        const why = it => { const g = gIds.find(x => (it.genres || []).includes(x)); return g ? `Well loved in ${g}` : 'A good place to start'; };
+        jobs.push(() => startOf(type, ids).then(items => items.forEach((it, i) => add(it, .9 * (1 - i / 30), { name: why(it), start: true }))).catch(() => {}));
+      });
+    }
+    for (let i = 0; i < jobs.length; i += 4) await Promise.all(jobs.slice(i, i + 4).map(f => f()));
+    save();
+    // one score for each title: who points to it, how it fits the genres you score highly, how well rated it is
+    const fitOf = it => { const v = (it.genres || []).filter(g => g in T.fit).map(g => T.fit[g]); return v.length ? mean(v) : 0; };
+    const ranked = [...pool.values()].map(p => {
+      // trust: how many people rated it (log scale — 150 votes is thin, 10,000 is solid); it scales everything else
+      const fit = fitOf(p.it), q = Math.max(-1.4, Math.min(1.8, ((p.it.score || 0) - 7) * .9)), trust = Math.max(.35, Math.min(1, (Math.log10((p.it.votes || 0) + 1) - 2) / 2));
+      const why = [...p.srcs.entries()].sort((a, b) => b[1] - a[1])[0][0];
+      return { ...p, fit, q, n: p.srcs.size, why, total: (p.w + fit * 2.2 + q + (p.srcs.size >= 2 ? .6 : 0)) * trust };
+    }).filter(p => p.person || p.start || p.fit > -.6)   // a genre you score low counts against it — far enough, it's out
+      .sort((a, b) => b.total - a.total);
+    // the mix: in every 10, slots 4 and 8 a neighbouring pick, slot 10 a wild card; the rest the closest matches.
+    // No one favourite takes over: each reason gives at most 2 of every 10 (more only when nothing else is left)
+    const used = new Set(), per = new Map();
+    const fair = p => (per.get(p.why) || 0) < 2 + Math.floor(items.length / 10) * 2;
+    const take = (arr, kind) => {
+      const p = arr.find(x => !used.has(x) && fair(x)) || (kind === 'close' ? arr.find(x => !used.has(x)) : null);
+      if (!p) return null; used.add(p); per.set(p.why, (per.get(p.why) || 0) + 1); return { p, kind };
+    };
+    const items = [];
+    // "familiar" is relative to YOUR range (someone who scores most genres highly still gets neighbours and wild cards):
+    // neighbouring = the less familiar half, wild = the least familiar third — both well rated and well known
+    const fits = ranked.map(p => p.fit).sort((a, b) => a - b), at = f => fits[Math.floor(fits.length * f)] ?? 0;
+    const solid = p => !p.start && (p.it.votes || 0) >= 400;
+    const near = ranked.filter(p => solid(p) && p.fit <= at(.5) && p.fit > at(.15) && (p.it.score || 0) >= 7.1);
+    const wild = ranked.filter(p => solid(p) && p.fit <= at(.33) && (p.it.score || 0) >= 7.4).sort((a, b) => (b.it.score || 0) - (a.it.score || 0));
+    for (let i = 0; items.length < OUT && i < OUT * 2; i++) {
+      const slot = i % 10, pick = (slot === 3 || slot === 7 ? take(near, 'near') : slot === 9 ? take(wild, 'wild') : null) || take(ranked, 'close');
+      if (!pick) break;
+      const kind = pick.p.start && pick.kind === 'close' ? 'start' : pick.kind;
+      items.push({ ...pick.p.it, kind, why: pick.p.why });
+    }
+    const data = { items, genres: T.genres, basis: { favs: T.favs, rated: T.rated.length, people: T.people.length }, newbie };
+    st.result = { uid, sig, t: Date.now(), data };
+    save();
+    return data;
+  }
   let ranked = null;
   const category = {
     key: 'recommended',
     title: 'Recommended for You',
     href: 'discover-list.html?list=recommended&title=' + encodeURIComponent('Recommended for You'),
     backTo: 'index.html',
-    emptyMsg: 'Pick favorites on your profile and recommendations based on them will show up here.',
+    emptyMsg: 'Rate a few titles or pick favourites on your profile, and recommendations based on them show up here.',
     async fetch(page) {
       if (!ranked) {
         const user = await getCurrentUser();
         if (!user) return [];
         const [entries, profile] = await Promise.all([getEntries(user.id), getProfile(user.id)]);
-        const sure = p => p.it.votes >= 50;
-        ranked = (await pool(entries, profile)).sort((a, b) => (sure(b) - sure(a)) || ((b.it.score ?? 0) - (a.it.score ?? 0)) || (b.w - a.w)).map(p => p.it);
+        ranked = (await build(entries, profile)).items;
       }
-      return ranked.slice((page - 1) * 20, page * 20);
+      return ranked.filter(it => !MSSNotInterested.has(it.media_type, it.id)).slice((page - 1) * 20, page * 20);   // hidden since: left out
     },
   };
-  return { pool, category };
+  // the last result on this device, for holding Discover's row in place while the new one is worked out
+  const last = () => store().result?.data || null;
+  return { build, category, last };
 })();
 
 function getDiscoverCategory(key) {

@@ -4,8 +4,8 @@
    1. Featured — #1 of Trending This Week over its backdrop, rotating through the top five
       (year · runtime · genres · your MSF score or TMDB's · your status · Open title · Trailer · Recommend)
    2. Also trending — #2–#5, See all → the Trending This Week list
-   3. For your taste — titles picked from everything you rated 9.0 or higher (at least 10 of them):
-      the genres and keywords they share, and what TMDB recommends for them together (MSSTaste)
+   3. Picked for your taste — the one recommendation engine (MSSRecs): a reason on each card, Wild card on the
+      wild ones, ⋯ → Not interested
    4. Browse by list — 12 colour tiles with fanned posters, the other 4 under More lists
    5. Top rated on MSF — a rail, with how many of them you've seen
    6. Your TV — new episodes, guide and calendar (tv-schedule.js), as before
@@ -167,95 +167,20 @@ const MSSDiscoverHome = (() => {
     $('dzAlsoList').innerHTML = items.slice(1, 5).map((it, j) => MSSResults.row(it, { rank: j + 2, compact: true })).join('');
   }
 
-  /* ══ 3. For your taste ══ */
-  const MSSTaste = (() => {
-    const STORE = 'mss_taste_v1', SEEDS = 12, TTL_SEED = 3 * 864e5, TTL_RESULT = 12 * 3600e3;
-    const MIN_TITLES = 10, MIN_SCORE = 9;
-    const qualifying = entries => entries.filter(e => e.tmdb_id && (e.tmdb_type === 'movie' || e.tmdb_type === 'tv') && liveScore(e) != null && liveScore(e) >= MIN_SCORE);
-    async function seedData(s, cache) {
-      const k = `${s.type}:${s.id}`, hit = cache[k];
-      if (hit && Date.now() - hit.t < TTL_SEED) return hit;
-      const [rec, kw] = await Promise.all([
-        _discFetchJSON(`${TMDB_BASE}/${s.type}/${s.id}/recommendations?language=en-US&page=1`).catch(() => ({ results: [] })),
-        _discFetchJSON(`${TMDB_BASE}/${s.type}/${s.id}/keywords`).catch(() => ({})),
-      ]);
-      const recs = (rec.results || []).filter(r => r.media_type === 'movie' || r.media_type === 'tv').map(r => {
-        const it = _discNormalize(r, r.media_type);
-        return { id: it.id, media_type: it.media_type, title: it.title, poster_url: it.poster_url, year: it.year, score: it.score, votes: it.votes,
-          genre_ids: it.genre_ids, genres: it.genres, origin_country: it.origin_country, original_language: it.original_language, backdrop_path: it.backdrop_path, overview: it.overview.slice(0, 240) };
-      });
-      const kws = (kw.keywords || kw.results || []).slice(0, 20).map(x => ({ id: x.id, name: x.name }));
-      return (cache[k] = { t: Date.now(), recs, kws });
-    }
-    // → { items, n, genres: [names], keywords: [names] } or null (fewer than 10 titles rated 9+)
-    async function build(entries) {
-      const top = qualifying(entries);
-      if (top.length < MIN_TITLES) return null;
-      const uid = window._navUser?.id || '';
-      const sig = top.map(e => `${e.tmdb_type}:${e.tmdb_id}`).sort().join(',');
-      let store = {};
-      try { store = JSON.parse(localStorage.getItem(STORE) || '{}'); } catch {}
-      if (store.result && store.result.uid === uid && store.result.sig === sig && Date.now() - store.result.t < TTL_RESULT) return store.result.data;
-      // genres you rate highest, by how often they come up
-      const gCount = {};
-      top.forEach(e => mssGenreList(e.genres || []).forEach(g => { if (MSS_GENRES[g] && g !== 'Animation') gCount[g] = (gCount[g] || 0) + 1; }));
-      const genres = Object.entries(gCount).sort((a, b) => b[1] - a[1]).slice(0, 3).map(x => x[0]);
-      const gIds = new Set(genres.flatMap(g => MSS_GENRES[g]).filter(Boolean));
-      // the titles you rated highest (most recent first among equals) are the seeds
-      const seeds = top.slice().sort((a, b) => liveScore(b) - liveScore(a) || String(b.updated_at || '').localeCompare(String(a.updated_at || '')))
-        .slice(0, SEEDS).map(e => ({ type: e.tmdb_type, id: e.tmdb_id }));
-      const cache = store.seeds || {};
-      const data = [];
-      for (let i = 0; i < seeds.length; i += 4) data.push(...await Promise.all(seeds.slice(i, i + 4).map(s => seedData(s, cache).catch(() => ({ recs: [], kws: [] })))));
-      // keywords several of them share: the themes you keep coming back to
-      const kCount = new Map();
-      data.forEach(d => d.kws.forEach(k => { const x = kCount.get(k.id) || { ...k, n: 0 }; x.n++; kCount.set(k.id, x); }));
-      const themes = [...kCount.values()].filter(k => k.n >= 2).sort((a, b) => b.n - a.n).slice(0, 6);
-      // more titles on those themes, from TMDB (well rated, enough votes)
-      let themed = [];
-      if (themes.length) {
-        const kw = themes.map(k => k.id).join('|');
-        const [m, t] = await Promise.all(['movie', 'tv'].map(type => _discFetchJSON(`${TMDB_BASE}/discover/${type}?language=en-US&with_keywords=${kw}&sort_by=vote_average.desc&vote_count.gte=${type === 'movie' ? 400 : 200}&page=1`).catch(() => ({ results: [] }))));
-        themed = [...(m.results || []).map(r => _discNormalize(r, 'movie')), ...(t.results || []).map(r => _discNormalize(r, 'tv'))];
-      }
-      // every candidate scored on all of it together: how many of your favourites point to it, the genres and
-      // themes it shares, and how well rated it is — never one row per title
-      const have = new Set(entries.filter(e => e.tmdb_id).map(e => `${e.tmdb_type}:${e.tmdb_id}`));
-      const pool = new Map();
-      const add = (it, w, why) => {
-        const k = `${it.media_type}:${it.id}`;
-        if (have.has(k) || !it.poster_url || (it.votes || 0) < 50) return;
-        const p = pool.get(k) || { it, w: 0, seeds: 0, theme: false };
-        p.w += w; if (why === 'seed') p.seeds++; if (why === 'theme') p.theme = true;
-        pool.set(k, p);
-      };
-      data.forEach(d => d.recs.forEach((it, i) => add(it, 1 + (20 - Math.min(i, 20)) / 20, 'seed')));
-      themed.forEach((it, i) => add(it, 1.2 + (20 - Math.min(i, 20)) / 40, 'theme'));
-      pool.forEach(p => {
-        const g = (p.it.genre_ids || []).filter(id => gIds.has(id)).length;
-        p.score = p.w + g * 0.6 + (p.theme && p.seeds ? 1 : 0) + Math.max(0, ((p.it.score || 0) - 6.5)) * 0.5;
-      });
-      const items = [...pool.values()].sort((a, b) => b.score - a.score).slice(0, 18).map(p => p.it);
-      const out = { items, n: top.length, genres, keywords: themes.slice(0, 2).map(k => k.name) };
-      // keep only the seeds still in use
-      const keep = {}; seeds.forEach(s => { const k = `${s.type}:${s.id}`; if (cache[k]) keep[k] = cache[k]; });
-      try { localStorage.setItem(STORE, JSON.stringify({ seeds: keep, result: { uid, sig, t: Date.now(), data: out } })); } catch {}
-      return out;
-    }
-    // the last result on this device (any account), for holding the row's place while the real one is worked out
-    const last = () => { try { return JSON.parse(localStorage.getItem(STORE) || '{}').result?.data || null; } catch { return null; } };
-    return { build, qualifying, last, MIN_TITLES };
-  })();
+  /* ══ 3. Picked for your taste — the one recommendation engine (MSSRecs, discover-categories.js; owner, 19 Nov 2026) ══
+     Each card says why it's there; a wild card says so on its poster; ⋯ → Not interested (gone at once, Undo) */
   const andList = a => a.length < 2 ? a.join('') : `${a.slice(0, -1).join(', ')} & ${a[a.length - 1]}`;
+  const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
   function tasteHead(t) {
     $('dzTasteT').textContent = t.genres.length ? `Because you love ${andList(t.genres)}` : 'Picked for your taste';
-    $('dzTasteSub').textContent = `From the ${t.n} titles you rated 9 or higher${t.keywords.length ? ` · stories about ${t.keywords.join(' and ')}` : ''}`;
+    const b = t.basis || {}, from = [b.favs ? plural(b.favs, 'favourite', 'favourites') : '', b.rated ? plural(b.rated, 'rated title', 'rated titles') : '', b.people ? plural(b.people, 'favourite person', 'favourite people') : ''].filter(Boolean);
+    $('dzTasteSub').textContent = t.newbie || !from.length ? 'A starting point — rate what you watch and pick favourites, and these get sharper' : `From your ${andList(from)}`;
   }
   // It sits above Browse by list but takes longest to work out: when this device showed it before, its heading and
   // placeholder cards hold its place from the start, so the lists below don't jump down when it arrives
   function tasteHold() {
-    const t = MSSTaste.last();
-    if (!t?.items?.length) return;
+    const t = MSSRecs.last();
+    if (!window.mssSignedInHint || !t?.items?.length) return;
     tasteHead(t);
     $('dzTasteRail').innerHTML = MSSCard.skel(8);
     $('dzTaste').hidden = false;
@@ -263,13 +188,15 @@ const MSSDiscoverHome = (() => {
   async function renderTaste() {
     const sec = $('dzTaste');
     if (!window._navUser) { sec.hidden = true; return; }
-    const t = await MSSTaste.build(MSSResults.entries()).catch(e => { console.warn('For your taste:', e); return null; });
+    for (let i = 0; i < 40 && !window._navUserProfile; i++) await new Promise(r => setTimeout(r, 100));   // your favourites come with your profile
+    const t = await MSSRecs.build(MSSResults.entries(), window._navUserProfile || {}).catch(e => { console.warn('Picked for your taste:', e); return null; });
     if (!t || !t.items.length) { sec.hidden = true; return; }
     tasteHead(t);
-    $('dzTasteRail').innerHTML = t.items.map(it => MSSResults.card(it)).join('');
+    $('dzTasteRail').innerHTML = t.items.slice(0, 20).map(it => MSSResults.recCard(it, 'discover')).join('');
     sec.hidden = false;
     mssRailEdges($('dzTasteRail'));
   }
+  MSSResults.recHooks('discover', { empty: () => { $('dzTaste').hidden = true; }, undo: () => renderTaste() });
 
   /* ══ 4. Browse by list ══ */
   // the four Upcoming lists are the bottom row (owner, 16 Nov 2026)
@@ -395,5 +322,5 @@ const MSSDiscoverHome = (() => {
   }
   document.addEventListener('mss:library-changed', () => { MSSResults.refresh().then(ok => { if (ok) redrawMine(); }).catch(() => {}); });
 
-  return { init, signedIn, go: featGo, recommend, toggleMore, MSSTaste };
+  return { init, signedIn, go: featGo, recommend, toggleMore };
 })();

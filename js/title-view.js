@@ -224,6 +224,8 @@ const MSSViews = (() => {
       return items;
     }
     if (!isMovie(t) && it.tmdb_id) add('Episode chart', 'episodes', () => { location.href = `episodes.html?show=${Number(it.tmdb_id)}`; });
+    // opened from a recommendation (Discover, Home, See all): Not interested is here, not on the card (owner, 19 Nov 2026)
+    if (t.rec && user && it.tmdb_id) add(t.rec.hidden ? 'Recommend it again' : 'Not interested', t.rec.hidden ? 'eye' : 'eyeOff', () => act('notInt'));
     return items;
   }
 
@@ -1054,7 +1056,7 @@ const MSSViews = (() => {
 
   /* ── addresses ── */
   function pageURL(t, tab) {
-    const q = t.e ? `id=${encodeURIComponent(t.e.id)}` : `t=${t.it.media_type}:${Number(t.it.tmdb_id)}`;
+    const q = t.e ? `id=${encodeURIComponent(t.e.id)}` : `t=${t.it.media_type}:${Number(t.it.tmdb_id)}${t.rec ? '&rec=1' : ''}`;
     const x = tab || t.tab || '';
     if (t.noteView) return `item.html?${q}&note=1${x && x !== 'review' ? '&tab=' + x : ''}`;
     return `item.html?${q}${x && x !== (ratingDesign(t) ? 'ratings' : 'info') ? '&tab=' + x : ''}`;
@@ -1109,7 +1111,7 @@ const MSSViews = (() => {
     const it = { ...item, tmdb_id: item.tmdb_id || item.id || null, media_type: item.media_type === 'movie' ? 'movie' : 'tv' };
     if (!it.tmdb_id) return;
     if (!(await MSSAge.guard(it.media_type, it.tmdb_id))) return;
-    const t = { e: null, it, own: false, o: {}, mine: undefined, tab: null };
+    const t = { e: null, it, own: false, o: {}, mine: undefined, tab: null, rec: item.why || lastCard?.matches?.('.dz-rec') ? {} : null };   // a recommendation's card
     if (!sideFits()) { goPage(pageURL(t)); return; }
     show(t);
   }
@@ -1149,7 +1151,8 @@ const MSSViews = (() => {
       const d = await details(q.item);
       if (!d) return false;
       const movie = q.item.media_type === 'movie';
-      t = { e: null, it: { ...q.item, title: movie ? d.title : d.name, year: ((movie ? d.release_date : d.first_air_date) || '').slice(0, 4), poster_url: d.poster_path ? TMDB_FULL + d.poster_path : null, overview: d.overview }, own: false, o: {}, mine: null, d };
+      t = { e: null, it: { ...q.item, title: movie ? d.title : d.name, year: ((movie ? d.release_date : d.first_air_date) || '').slice(0, 4), poster_url: d.poster_path ? TMDB_FULL + d.poster_path : null, overview: d.overview }, own: false, o: {}, mine: null, d, rec: q.rec ? {} : null };
+      if (t.rec) { await MSSNotInterested.load(); t.rec.hidden = MSSNotInterested.has(t.it.media_type, t.it.tmdb_id); }
     } else return false;
     t.noteView = !!q.note && !!t.e && hasReview(t.e);
     start(t, q.tab === 'review' || (t.noteView && !q.tab) ? 'note' : q.tab);
@@ -1267,6 +1270,7 @@ const MSSViews = (() => {
       }
       case 'mine': if (!t.mine) return;   // your own copy: here, or on its page where this page has no note editor
         return typeof MSSNote === 'undefined' ? goPage(`item.html?id=${encodeURIComponent(t.mine.id)}`) : open(t.mine, { own: true });
+      case 'notInt': return notInterested(t);
       case 'recommend': return mssRecommend({ tmdb_id: it.tmdb_id, media_type: it.media_type, title: it.title, poster_url: posterURL(t), year: it.year });
       case 'discover': return MSSInfo.discover(e || it, el);
       case 'list': return e && MSSList.addTo(e);
@@ -1444,6 +1448,27 @@ const MSSViews = (() => {
       showToast('Couldn’t save that — try again.', 'err');
       mssVisSet('tvVis', prev);
     }
+  }
+
+  // Not interested (a recommendation's ⋯): never recommend it again. The side panel closes and its card leaves the row;
+  // the full page stays, its ⋯ then offers Recommend it again. Undo either way.
+  async function notInterested(t) {
+    const it = t.it, type = it.media_type, id = it.tmdb_id;
+    if (t.rec.hidden) {
+      try { await MSSNotInterested.remove(type, id); } catch (err) { console.warn('Not interested:', err); return showToast('Couldn’t save that — try again.', 'err'); }
+      t.rec.hidden = false; if (t === T) paint();
+      return showToast(`“${it.title}” can be recommended again.`);
+    }
+    try { await MSSNotInterested.add({ type, id, title: it.title, poster: posterURL(t) }); }
+    catch (err) { console.warn('Not interested:', err); return showToast('Couldn’t save that — try again.', 'err'); }
+    t.rec.hidden = true;
+    if (panel) closeView(); else if (t === T) paint();
+    const wheres = typeof MSSResults !== 'undefined' && MSSResults.recGone ? MSSResults.recGone(type, id) : [];
+    showUndoToast(`“${it.title}” won’t be recommended again`, async () => {
+      await MSSNotInterested.remove(type, id);
+      t.rec.hidden = false; if (t === T && page) paint();
+      if (wheres.length) MSSResults.recBack(type, id, wheres);
+    });
   }
 
   // ?panel=title&id=… (a reload or Forward onto the panel's address) → open it again

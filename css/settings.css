@@ -259,6 +259,10 @@ button.set-nav { width:100%; border:0; background:none; text-align:start; cursor
 .sess-out { flex:none; min-height:34px; padding:0 12px; border-radius:var(--radius-sm); background:var(--card); border:1px solid var(--border-2); color:var(--text); font:700 12.5px 'Manrope',var(--sans); cursor:pointer; transition:border-color .15s, color .15s; }
 .sess-out:hover { border-color:var(--danger); color:var(--danger); }
 .sess-out:disabled { opacity:.6; cursor:progress; }
+/* Not interested: a small poster, and Show again in the site's green (not the red of Unblock / Sign out) */
+.ni-poster { flex:none; width:34px; aspect-ratio:2/3; border-radius:6px; overflow:hidden; background:var(--fill-subtle); border:1px solid var(--border); }
+.ni-poster img { width:100%; height:100%; object-fit:cover; display:block; }
+.sess-out.ni-again:hover { border-color:var(--olive-light); color:var(--text); }
 .sess-out:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
 .upl-thumb { flex-shrink:0; width:42px; height:63px; object-fit:cover; border-radius:6px; border:1px solid var(--border); background:var(--bg-3); }
 .upl-thumb.is-round { width:48px; height:48px; border-radius:50%; }

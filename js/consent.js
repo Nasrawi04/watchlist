@@ -33,7 +33,7 @@ const MSSConsent = (() => {
     [/^msf_pub_/, 'necessary'], [/^mss_age_/, 'necessary'], ['msf_pending_deletes', 'necessary'], ['mss_data_at', 'necessary'],
     // necessary — settings you change on purpose
     ['wl-theme', 'necessary'], ['mss_lang', 'necessary'], ['mss_notif_popups', 'necessary'], ['mss_wtw_region', 'necessary'],
-    ['msf_ep_spoilers', 'necessary'], ['mss_screensaver', 'necessary'],
+    ['msf_ep_spoilers', 'necessary'], ['mss_screensaver', 'necessary'], [/^msf_not_interested_/, 'necessary'] /* until sql/136 runs */,
     // necessary — one-time messages you've already seen, and checks that run at most every few minutes / once a day
     ['msf_guest_intro', 'necessary'], [/^mss_welcomed_/, 'necessary'], [/^mss_member_seen_/, 'necessary'], ['mss_pick_asked', 'necessary'],
     [/^msf_otd_n:/, 'necessary'], ['mss_notif_popped', 'necessary'], ['msf_msg_tip_hidden', 'necessary'], [/^msf_pf_make_/, 'necessary'],
@@ -45,7 +45,7 @@ const MSSConsent = (() => {
     ['mss_card_prefs', 'prefs'], ['mss_card_priv', 'prefs'], [/^msf_diary_/, 'prefs'], [/^mss_onboarding_/, 'prefs'],
     [/^msf_home_layout_/, 'prefs'], [/^msf_pinned_note_/, 'prefs'], ['mss_spot_turn', 'prefs'], ['mss_browse_q_v2', 'prefs'],
     // speed — copies kept so pages open faster
-    ['mss_ep_seasons_v3', 'speed'], ['mss_browse_prov_v3', 'speed'], ['mss_taste_v1', 'speed'], ['mss_top_eps_v2', 'speed'], ['mss_recs_v3', 'speed'],
+    ['mss_ep_seasons_v3', 'speed'], ['mss_browse_prov_v3', 'speed'], ['mss_top_eps_v2', 'speed'], ['mss_recs_v4', 'speed'],
     ['mss_tmdb_posters_v1', 'speed'], ['mss_explore_posters_v1', 'speed'], ['mss_anilist_genres_v1', 'speed'], ['mss_cast_v3', 'speed'],
     [/^mss_skel_/, 'speed'], ['msf_showcase', 'speed'], ['msf_wall', 'speed'], [/^msf_bd_/, 'speed'], [/^mss_ys_html_/, 'speed'],
     [/^msf_home_snap_/, 'speed'], ['msf_export_thumbs', 'speed'], ['mss_tv_season_v1', 'speed'], ['mss_movie_release_v1', 'speed'],

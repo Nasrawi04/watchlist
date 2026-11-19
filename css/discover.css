@@ -511,3 +511,14 @@ button.dh-prog-next:hover b { text-decoration:underline; text-underline-offset:3
 .bx-load-t { min-width:0; font:600 13px/1.4 'Manrope',var(--sans); color:var(--text-2); }
 @media (max-width:640px) { .bx-load { gap:10px; padding:10px 12px; } .bx-load-bar { width:56px; } .bx-load-t { font-size:12.5px; } }
 @media (prefers-reduced-motion:reduce) { .bx-load-bar i { animation:none; width:100%; opacity:.5; } }
+
+/* A recommendation (owner, 19 Nov 2026): the reason under the title and Wild card on a wild card's poster. Not interested is in
+   the title's ⋯ (side panel / full page), not on the card */
+.dz-why { color:var(--text-2); font-weight:600; }
+.dz-why:empty { display:none; }
+.dz-wild { position:absolute; top:8px; inset-inline-start:8px; z-index:2; display:inline-flex; align-items:center; gap:4px; max-width:calc(100% - 16px); padding:3px 7px; border-radius:6px;
+  background:rgba(4,19,10,.78); color:var(--p-brass-300); font:800 10px/1.2 'Manrope',var(--sans); letter-spacing:.06em; text-transform:uppercase; white-space:nowrap; overflow:hidden; pointer-events:none; }
+.dz-wild > span { overflow:hidden; text-overflow:ellipsis; }
+.dz-wild svg { flex:none; width:11px; height:11px; }
+@media (max-width:640px) { .dz-wild { padding:3px 6px; letter-spacing:.02em; font-size:10.5px; } }
+

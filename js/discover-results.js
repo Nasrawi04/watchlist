@@ -10,6 +10,7 @@
 
      MSSResults.ready()                 → your library (signed in), for the marks; resolves false for guests
      MSSResults.card(it, { rank, type, cls })      a grid card
+     MSSResults.recCard(it, where)      a recommendation's card (reason, Wild card); recHooks(where, { gone, empty, undo }); recGone / recBack (title-view's Not interested)
      MSSResults.row(it, { rank, mss, type, cls })  a list row (inside .dx-list)
      MSSResults.wrap(view, html)        → the grid / list container's class + content
      MSSResults.toggleHTML(view, fn)    the List / Grid switch (fn: a global function name, called with 'list' | 'grid')
@@ -60,8 +61,10 @@ const MSSResults = (() => {
     const extra = [];
     const s = signedIn() ? stateOf(it) : null;
     if (s && s.score != null) extra.push(`your score ${Number(s.score).toFixed(2)}`); else if (s) extra.push(s.label.toLowerCase());
-    return MSSCard.tmdb(_discCardItem(it), { attrs: _discClickAttr(it), rank: o.rank || 0, sub: _discSubHTML(it), cls: ('dx-card ' + (o.cls || '')).trim(),
-      labelExtra: extra.join(', '), ...(o.type === false || it.href ? { type: null } : {}) });
+    if (o.why) extra.push(o.why);
+    // o.sub / o.over / o.controls: a line under the title, something on the poster, buttons beside the card (Picked for your taste)
+    return MSSCard.tmdb(_discCardItem(it), { attrs: _discClickAttr(it), rank: o.rank || 0, sub: o.sub ?? _discSubHTML(it), over: o.over, controls: o.controls,
+      cls: ('dx-card ' + (o.cls || '')).trim(), labelExtra: extra.join(', '), ...(o.type === false || it.href ? { type: null } : {}) });
   }
 
   /* ── List: the ranked row ── */
@@ -248,5 +251,43 @@ const MSSResults = (() => {
     return { stop() { alive = false; clearTimeout(timer); io?.disconnect(); layers.forEach(l => l.remove()); } };
   }
 
-  return { ready, refresh, entries: () => lib, card, row, add, wrap, toggleHTML, rotate, stateOf, mine, actHTML };
+  /* ── A recommendation (MSSRecs) — Discover's Picked for your taste, Home's Recommended for you, See all (owner, 19 Nov 2026):
+     its reason under the title and Wild card on a wild card's poster. Not interested lives in the title's ⋯ (the side panel,
+     the full page on phones) — not on the card, to keep the cards clean (owner, 19 Nov 2026). Hiding one there removes its card
+     here (recGone), and Undo puts it back (recBack). Each page says what to do through recHooks(where, …):
+       gone(it) — after a card is removed · empty() — when its row has no cards left · undo(it) — after Undo ── */
+  const REC = new Map(), HOOKS = {};
+  const recHooks = (where, h) => { HOOKS[where] = h; };
+  const recKey = (type, id) => `${type === 'movie' ? 'movie' : 'tv'}:${Number(id)}`;
+  function recCard(it, where) {
+    const k = recKey(it.media_type, it.id);
+    REC.set(k, it);
+    return card(it, { cls: 'dz-rec', why: it.why, sub: `<span class="dz-why" data-rec="${esc(k)}" data-where="${esc(where)}">${esc(it.why || '')}</span>`,
+      over: it.kind === 'wild' ? `<span class="dz-wild">${icon('sparkles', 11)}<span>Wild card</span></span>` : '' });
+  }
+  // the title was hidden (Not interested): its cards go from every row on this page → [where…] for recBack
+  function recGone(type, id) {
+    const k = recKey(type, id), it = REC.get(k), wheres = [];
+    document.querySelectorAll(`.dz-why[data-rec="${CSS.escape(k)}"]`).forEach(m => {
+      const card = m.closest('.msf-card'), box = card?.parentElement, h = HOOKS[m.dataset.where] || {};
+      wheres.push(m.dataset.where);
+      card?.remove();
+      if (it) h.gone?.(it);
+      if (box && !box.querySelector('.msf-card')) h.empty?.();
+      else if (box?.classList.contains('msf-rail')) mssRailEdges(box);
+    });
+    return wheres;
+  }
+  function recBack(type, id, wheres) {
+    const it = REC.get(recKey(type, id));
+    if (it) [...new Set(wheres)].forEach(w => HOOKS[w]?.undo?.(it));
+  }
+  // Back from a title's full page (phones) that hid one — a page from the bfcache still shows its card
+  addEventListener('pageshow', async ev => {
+    if (!ev.persisted || !REC.size || typeof MSSNotInterested === 'undefined') return;
+    await MSSNotInterested.load(true);
+    REC.forEach((it, k) => { if (MSSNotInterested.has(it.media_type, it.id)) recGone(it.media_type, it.id); });
+  });
+
+  return { ready, refresh, entries: () => lib, card, row, add, wrap, toggleHTML, rotate, stateOf, mine, actHTML, recCard, recHooks, recGone, recBack };
 })();

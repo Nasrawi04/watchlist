@@ -318,6 +318,11 @@
               <div class="set-txt"><div class="set-name" id="regionL">Region</div><div class="set-desc" id="regionHint">Where to watch and release dates. Just for this device.</div></div>
               <div class="set-ctl set-ctl-dd"><div id="setRegionPick"></div></div>
             </div>
+            <a class="set-row is-door" id="setNotInt" href="#preferences/recommendations">
+              <span class="set-ic" data-ic="eyeOff"></span>
+              <div class="set-txt"><div class="set-name">Recommendations</div><div class="set-desc">Titles you marked Not interested — they’re never recommended to you.</div></div>
+              <div class="set-ctl"><span class="set-val" id="notIntVal"></span><span class="set-go" data-ic="chevright"></span></div>
+            </a>
             <div class="set-row" id="setScreensaver">
               <span class="set-ic" data-ic="image"></span>
               <div class="set-txt"><div class="set-name" id="ssLabel">Screensaver</div><div class="set-desc" id="ssDesc">The logo bounces around after a few idle minutes (1 on a phone). Just for this device.</div></div>
@@ -339,6 +344,17 @@
         <section class="set-pane" aria-labelledby="pgT-blocked">
           <ul class="set-card set-list-card" id="blockList" aria-live="polite"></ul>
           <div id="blockEmpty" hidden></div>
+        </section>
+      </div>
+
+      <div class="set-page set-door-page" id="page-notint" data-door="preferences/recommendations" hidden>
+        <header class="set-head">
+          <a class="set-back" href="#preferences" aria-label="Back to Preferences"><span data-ic="chevleft"></span></a>
+          <div><p class="set-trail"><a href="#preferences">Preferences</a></p><h1 class="set-title" id="pgT-notint" tabindex="-1">Not interested</h1><p class="set-lede">Titles you hid from Picked for your taste and Recommended for you. Show one again and it can come back.</p></div>
+        </header>
+        <section class="set-pane" aria-labelledby="pgT-notint">
+          <ul class="set-card set-list-card" id="notIntList" aria-live="polite"></ul>
+          <div id="notIntEmpty" hidden></div>
         </section>
       </div>
 
@@ -438,8 +454,10 @@ document.addEventListener('DOMContentLoaded', () => {
     _paintConnections(profile?.connections_visible || 'everyone');
     document.getElementById('blockEmpty').innerHTML = mssEmpty({ compact: true, art: 'friends', title: 'Nobody’s blocked', text: 'To block someone, open their profile and choose Block from ⋯.' });
     document.getElementById('uploadsEmpty').innerHTML = mssEmpty({ compact: true, art: 'search', title: 'No uploads', text: 'Titles use their normal posters until you upload your own.' });
+    document.getElementById('notIntEmpty').innerHTML = mssEmpty({ compact: true, art: 'watchlist', title: 'Nothing hidden', text: 'On Discover, open ⋯ on a title in Picked for your taste and choose Not interested — it shows up here.' });
     _sessLoad();
     _blocksLoad();
+    _notIntLoad();
     _lockPaint();
     _usernamePaint();
     _bannerPaint();
@@ -545,6 +563,8 @@ function settingsValues() {
   const n = document.querySelectorAll('#blockList .sess-row').length;
   document.getElementById('blockVal').textContent = n === 1 ? '1 person' : n ? `${n} people` : 'None';
   document.getElementById('uploadsVal').textContent = MSSUploads.value();
+  const ni = document.querySelectorAll('#notIntList .sess-row').length;
+  document.getElementById('notIntVal').textContent = ni === 1 ? '1 title' : ni ? `${ni} titles` : 'None';
   const d = document.querySelectorAll('#sessList .set-dev').length;
   document.querySelectorAll('.sess-count').forEach(e => { e.textContent = d === 1 ? '1 device' : d ? `${d} devices` : ''; });
   document.getElementById('cookiesVal').textContent = MSSConsent.summary();
@@ -910,6 +930,26 @@ async function _blockUndo(btn, id) {
   btn.disabled = true;
   try { await unblockUser(id); showToast('Unblocked'); _blocksLoad(); }
   catch (err) { btn.disabled = false; showToast(err?.hint || 'Couldn’t unblock them — try again.', 'err'); }
+}
+
+/* ── Not interested (136): titles hidden from your recommendations — Show again brings one back ── */
+async function _notIntLoad() {
+  const box = document.getElementById('notIntList'), empty = document.getElementById('notIntEmpty');
+  try { await MSSNotInterested.load(); }
+  catch { box.innerHTML = '<li class="sess-note">Couldn’t load this list — try again in a moment.</li>'; document.getElementById('notIntVal').textContent = ''; return; }
+  const rows = MSSNotInterested.list();
+  empty.hidden = rows.length > 0;
+  box.innerHTML = rows.map(r => `<li class="sess-row">
+      <span class="ni-poster" aria-hidden="true">${r.poster ? `<img src="https://image.tmdb.org/t/p/w92${escHTML(r.poster)}" alt="" loading="lazy">` : ''}</span>
+      <span class="sess-info"><span class="sess-name" translate="no">${escHTML(r.title)}</span><span class="sess-when">${r.type === 'movie' ? 'Movie' : 'TV Show'} · Hidden ${escHTML(_sessDate(r.at))}</span></span>
+      <button type="button" class="sess-out ni-again" aria-label="Show ${escHTML(r.title)} in recommendations again" onclick="_notIntUndo(this, ${attrJSON(r.type)}, ${Number(r.id)}, ${attrJSON(r.title)})">Show again</button>
+    </li>`).join('');
+  MSSSettingsNav.refresh();
+}
+async function _notIntUndo(btn, type, id, title) {
+  btn.disabled = true;
+  try { await MSSNotInterested.remove(type, id); showToast(`“${title}” can be recommended again`); _notIntLoad(); }
+  catch { btn.disabled = false; showToast('Couldn’t change that — try again.', 'err'); }
 }
 
 /* ── Signed-in devices (091): every device this account is signed in on ── */

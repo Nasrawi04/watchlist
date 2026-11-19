@@ -53,6 +53,7 @@ initPageGuest(async () => {
     tab: ['info', 'ratings', 'review', 'comments'].includes(tab) ? tab : null,
     edit: q.get('edit') === '1',
     note: q.get('note') === '1',
+    rec: q.get('rec') === '1',        // opened from a recommendation: ⋯ has Not interested
   }).catch(err => { console.error(err); return false; });
   document.getElementById('tvLoading').remove();
   if (!ok) document.getElementById('tvRoot').innerHTML = mssEmpty({ art: 'search', title: 'This title isn’t available',

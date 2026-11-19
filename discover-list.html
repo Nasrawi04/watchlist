@@ -82,7 +82,9 @@ const $dl = id => document.getElementById(id);
 const _dlType = () => _dlMeta.kind === 'mixed' ? undefined : false;
 const _dlItemHTML = (it, rank) => _dlView === 'list'
   ? MSSResults.row(it, { rank, mss: _dlIsMss, type: _dlType() })
+  : it.why ? MSSResults.recCard(it, 'all')                          // Recommended for You: its reason, Wild card, ⋯ → Not interested
   : MSSResults.card(it, { rank, type: _dlType() });
+MSSResults.recHooks('all', { gone: it => { _dlAllItems = _dlAllItems.filter(x => x !== it); }, undo: () => location.reload() });
 
 /* Loading skeleton: this list's own rows (or cards) with sample text, masked (mssSkeleton, config.js) */
 mssSkeleton.define('dl-page', () => {

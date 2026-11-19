@@ -20,11 +20,11 @@ const MSSSettingsNav = (() => {
     ['privacy', 'Privacy', 'Private account, blocked people', 'eye', 'safety'],
     ['security', 'Security', 'Password, devices, message lock', 'lock', 'safety'],
     ['notifications', 'Notifications', 'What you get and what you share', 'bell', 'notifications'],
-    ['preferences', 'Preferences', 'Language, episodes, region, screensaver', 'settings', 'look'],
+    ['preferences', 'Preferences', 'Language, episodes, region, recommendations', 'settings', 'look'],
     ['appearance', 'Appearance', 'Light, Dark or System', 'brush', 'look'],
   ];
   const GROUPS = [['You', ['profile', 'account', 'data']], ['Safety', ['privacy', 'security']], ['App', ['notifications', 'preferences', 'appearance']]];
-  const DOORS = { 'privacy/blocked': 'blocked', 'data/uploads': 'uploads', 'security/lock': 'lock', 'security/devices': 'devices' };
+  const DOORS = { 'privacy/blocked': 'blocked', 'data/uploads': 'uploads', 'security/lock': 'lock', 'security/devices': 'devices', 'preferences/recommendations': 'notint' };
   const TABS = ['get', 'who', 'hear'];
   // older links (the one-setting-per-screen Settings, Messages' link to the lock)
   const ALIAS = { msgCard: 'security/lock', 'security/setMessages': 'security/lock', 'privacy/setBlocked': 'privacy/blocked', 'data/setUploads': 'data/uploads',
@@ -39,7 +39,7 @@ const MSSSettingsNav = (() => {
     setBlocked: 'block unblock users', setPassword: 'change new reset', setSessions: 'devices sessions logins sign out log out everywhere others',
     setMessages: 'passcode pin chats messages recovery code', setLang: 'translate english', setEpisodes: 'rate prompt ask always never',
     setWeekStart: 'diary calendar monday sunday saturday first day', setRegion: 'country where to watch streaming release dates',
-    setScreensaver: 'bouncing logo idle preview', setTheme: 'dark mode light mode system colour color night', nsAlerts: 'pop-up alerts bell sound',
+    setScreensaver: 'bouncing logo idle preview', setNotInt: 'not interested hidden hide recommend recommendations discover picked for your taste show again', setTheme: 'dark mode light mode system colour color night', nsAlerts: 'pop-up alerts bell sound',
   };
 
   let shell, shown = null;

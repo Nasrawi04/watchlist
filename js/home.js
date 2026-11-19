@@ -54,7 +54,7 @@ const MSSHome = (() => {
     goal:      { t: 'Year goal',               d: 'Titles finished this year against your target' },
     favs:      { t: 'Top Favorites',           d: 'Your profile’s Top Favorites — S: your #1 · M: top 3 · L: all 5', def: 'M' },
     notes:     { t: 'Recent notes',            d: 'Your latest reviews and notes' },
-    recs:      { t: 'Recommended for you',     d: 'Picked from your favourites' },
+    recs:      { t: 'Recommended for you',     d: 'Picked from your favourites, top scores and favourite people' },
     viewed:    { t: 'Recently viewed',         d: 'Titles you opened lately' },
     otd:       { t: 'On this day',             d: 'What you finished on this date in earlier years' },
   };
@@ -530,20 +530,18 @@ const MSSHome = (() => {
   }
 
   /* ── Recommended for you · Recently viewed · On this day (the rows from before, as widgets) ── */
-  async function loadRecs() {
-    const top = (await MSSRecs.pool(all(), window._navUserProfile)).sort((a, b) => b.w - a.w).slice(0, 40), picks = [];
-    while (picks.length < 12 && top.length) {
-      let r = Math.random() * top.reduce((a, p) => a + p.w * p.w, 0), j = 0;
-      while (j < top.length - 1 && (r -= top[j].w * top[j].w) > 0) j++;
-      picks.push(top.splice(j, 1)[0].it);
-    }
-    return picks;
-  }
+  // the one recommendation engine (MSSRecs) — the same picks, reasons and Not interested as Discover (owner, 19 Nov 2026)
+  async function loadRecs() { return (await MSSRecs.build(all(), window._navUserProfile || {})).items.slice(0, 16); }
+  MSSResults.recHooks('home', {
+    gone: it => { D.recs = (D.recs || []).filter(x => x !== it); },
+    empty: () => draw('recs'),
+    undo: () => loadRecs().then(r => { D.recs = r; draw('recs'); }).catch(() => {}),
+  });
   function wRecs() {
     const h = head('recs', '', more(MSSRecs.category.href, 'See all'));
     if (D.recs == null) return h + skel('recs');
-    if (!D.recs.length) return h + empty('search', 'No recommendations yet', 'Add favourites to your profile and we’ll suggest titles like them.');
-    return h + rail('mhRecsRail', D.recs.map(it => MSSCard.tmdb(_discCardItem(it), { attrs: _discClickAttr(it) })).join(''));
+    if (!D.recs.length) return h + empty('search', 'No recommendations yet', 'Rate what you watch and pick favourites on your profile, and we’ll suggest titles you’ll like.');
+    return h + rail('mhRecsRail', D.recs.map(it => MSSResults.recCard(it, 'home')).join(''));
   }
   function wViewed() {
     const h = head('viewed');

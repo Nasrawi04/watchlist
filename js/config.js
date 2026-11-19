@@ -2632,6 +2632,87 @@ if (_mssRailRO) new MutationObserver(() => document.querySelectorAll('.msf-rail:
   .observe(document.documentElement, { childList: true, subtree: true });
 
 /* ══════════════════════════════════════════
+   NOT INTERESTED — MSSNotInterested (owner, 19 Nov 2026)
+   Titles you never want recommended again (Discover's Picked for your taste, Home's Recommended for you,
+   its See all), listed in Settings › Appearance & Preferences › Recommendations with Show again.
+   Kept on your account (public.not_interested, sql/136 — only you can read it); until that SQL has run,
+   on this device (msf_not_interested_<your id>), moved to your account the first time the table is there.
+   Guests: nothing is kept.
+     await MSSNotInterested.load()          → loads once per page (later calls reuse it)
+     MSSNotInterested.has(type, id)         → true / false (after load)
+     MSSNotInterested.add({ type, id, title, poster })   (poster: TMDB path "/abc.jpg" or a full TMDB URL)
+     MSSNotInterested.remove(type, id)
+     MSSNotInterested.list()                → [{ type, id, title, poster, at }] newest first
+   Each change fires 'mss:not-interested' on document.
+══════════════════════════════════════════ */
+const MSSNotInterested = (() => {
+  const T = 'not_interested', k = (type, id) => `${type === 'movie' ? 'movie' : 'tv'}:${Number(id)}`;
+  let rows = new Map(), loading = null, remote = null;   // remote: true (the table is there) / false (not yet) / null (unknown)
+  const uid = () => window._navUser?.id || null;
+  const LKEY = () => 'msf_not_interested_' + uid();
+  const missing = err => !!err && (['42P01', 'PGRST205', 'PGRST202'].includes(err.code) || err.status === 404 || /not_interested/.test(err.message || '') && /does not exist|schema cache/.test(err.message || ''));
+  const pathOf = p => { const m = String(p || '').match(/\/[A-Za-z0-9_-]{5,64}\.(jpg|jpeg|png)$/); return m ? m[0] : null; };
+  const readLocal = () => { try { return JSON.parse(localStorage.getItem(LKEY()) || '[]'); } catch { return []; } };
+  const writeLocal = () => { try { localStorage.setItem(LKEY(), JSON.stringify([...rows.values()])); } catch {} };
+  const fire = () => document.dispatchEvent(new CustomEvent('mss:not-interested'));
+  const put = r => rows.set(k(r.type, r.id), { type: r.type === 'movie' ? 'movie' : 'tv', id: Number(r.id), title: String(r.title || '').slice(0, 300) || 'Untitled', poster: pathOf(r.poster), at: r.at || new Date().toISOString() });
+  function load(fresh) {
+    if (loading && !fresh) return loading;      // fresh: ask again (a page back from the bfcache, where another page may have changed it)
+    return (loading = (async () => {
+      rows = new Map();
+      if (!uid() || typeof sb === 'undefined' || !sb) return rows;
+      const local = readLocal();
+      const { data, error } = await sb.from(T).select('tmdb_type, tmdb_id, title, poster_path, created_at').eq('user_id', uid()).order('created_at', { ascending: false });
+      if (error) {
+        remote = missing(error) ? false : null;
+        if (!remote) console.warn('Not interested:', error.message || error);
+        local.forEach(put);                                       // the device's list meanwhile
+        return rows;
+      }
+      remote = true;
+      (data || []).forEach(r => put({ type: r.tmdb_type, id: r.tmdb_id, title: r.title, poster: r.poster_path, at: r.created_at }));
+      // a list kept on this device before the table existed: onto your account, then off the device
+      const move = local.filter(r => !rows.has(k(r.type, r.id)));
+      if (move.length) {
+        const { error: e2 } = await sb.from(T).upsert(move.map(r => ({ user_id: uid(), tmdb_type: r.type, tmdb_id: r.id, title: r.title, poster_path: pathOf(r.poster), created_at: r.at })), { onConflict: 'user_id,tmdb_type,tmdb_id', ignoreDuplicates: true });
+        if (!e2) { move.forEach(put); try { localStorage.removeItem(LKEY()); } catch {} }
+      } else if (local.length) { try { localStorage.removeItem(LKEY()); } catch {} }
+      return rows;
+    })());
+  }
+  const has = (type, id) => rows.has(k(type, id));
+  const list = () => [...rows.values()].sort((a, b) => String(b.at).localeCompare(String(a.at)));
+  async function add(t) {
+    if (!uid() || !t || !Number(t.id)) return false;
+    await load();
+    put(t); fire();
+    const r = rows.get(k(t.type, t.id));
+    if (remote === false) { writeLocal(); return true; }
+    const { error } = await sb.from(T).upsert({ user_id: uid(), tmdb_type: r.type, tmdb_id: r.id, title: r.title, poster_path: r.poster }, { onConflict: 'user_id,tmdb_type,tmdb_id', ignoreDuplicates: true });
+    if (error) {
+      if (missing(error)) { remote = false; writeLocal(); return true; }
+      rows.delete(k(t.type, t.id)); fire(); throw error;
+    }
+    return true;
+  }
+  async function remove(type, id) {
+    if (!uid()) return false;
+    await load();
+    const key = k(type, id), was = rows.get(key);
+    if (!was) return false;
+    rows.delete(key); fire();
+    if (remote === false) { writeLocal(); return true; }
+    const { error } = await sb.from(T).delete().eq('user_id', uid()).eq('tmdb_type', was.type).eq('tmdb_id', was.id);
+    if (error) {
+      if (missing(error)) { remote = false; writeLocal(); return true; }
+      rows.set(key, was); fire(); throw error;
+    }
+    return true;
+  }
+  return { load, has, add, remove, list };
+})();
+
+/* ══════════════════════════════════════════
    LOADING SKELETONS — mssSkeleton(kind)
    While a page loads, every .page-loading box is filled with a shimmering
    copy of what the page will look like. The placeholders are built from the
