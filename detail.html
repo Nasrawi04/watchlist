@@ -368,9 +368,17 @@ let _detUser   = null;
 mssSkeleton.define('det-page', () => {
   const box = document.getElementById('detailLayout').cloneNode(true);
   box.style.display = '';
+  box.classList.toggle('is-phone', matchMedia('(max-width: 767px)').matches);   // the phone layout is set by the page's script, which hasn't run yet
   box.querySelectorAll('.de-label, .de-eyebrow, .tv-tab, .de-badge').forEach(el => el.setAttribute('data-skel-keep', ''));
-  box.querySelector('#deTitle').textContent = 'Sample title name';
-  box.querySelectorAll('.de-bar, .tv-mini, #dePanel-ratings, #dePanel-review, #dePanel-progress').forEach(el => el.remove());
+  box.querySelector('#deTitle').textContent = 'Sample title';
+  // what the script draws later, so the shapes are there while loading: the chips, the empty ring,
+  // and the Type / Status choices (their names kept — they never change)
+  box.querySelector('#deChips').innerHTML = '<span class="tv-chip is-status"><i></i>Watchlist</span><span class="tv-chip">Movie</span><span class="tv-chip">2000</span><span class="tv-chip">1h 30m</span>';
+  box.querySelector('#deRing').innerHTML = '<div class="tv-ring is-s is-empty" data-skel-keep><svg viewBox="0 0 100 100" aria-hidden="true"><circle class="tv-ring-track" cx="50" cy="50" r="44"></circle></svg></div>';
+  const seg = sel => `<div class="lyr-seg is-strong" data-skel-keep>${[...box.querySelectorAll(`${sel} option`)].map((o, i) => `<button type="button" class="lyr-seg-opt" tabindex="-1" aria-checked="${!i}">${o.textContent}</button>`).join('')}</div>`;
+  box.querySelector('#dCatDD').innerHTML = seg('#dCat');
+  box.querySelector('#dStatusDD').innerHTML = seg('#dStatus');
+  box.querySelectorAll('.de-bar, .tv-mini, #dTypeGroup, #dePanel-ratings, #dePanel-review, #dePanel-progress').forEach(el => el.remove());
   return box.outerHTML.replace(/ (id|onclick|oninput|onchange|style)="[^"]*"/g, '');
 });
 let _detId     = sessionStorage.getItem('detailId') || null;
