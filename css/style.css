@@ -9072,7 +9072,11 @@ body:has(.tv-page.is-phone:not(.de-page)) #mainNav, body:has(.tv-page.is-phone:n
   .lp-card.is-main { padding:14px; gap:14px; min-height:0; border-radius:18px; }
   .lp-card.is-main .lp-poster { width:94px; }
   .lp-title { font-size:17px; }
-  .lp-card.is-main .lp-title { font-size:22px; }
+  .lp-card.is-main .lp-title, .lp-card.is-main .lp-head .lp-title { font-size:17px; }   /* the big card's title and year: the same size as the other cards (owner, 19 Nov 2026) */
+  .lp-card.is-main .lp-year { font-size:12px; }
+  /* a show you're watching (progress bar + buttons make the card tall): the poster keeps its own size, centred like the big
+     card's, instead of stretching to the card's height (owner, 19 Nov 2026) */
+  .lp-card:not(.is-main):has(.lp-bar) .lp-poster { align-self:center; width:94px; min-width:94px; max-width:94px; }
   .lp-card .lp-art { inset-inline-start:45%; }
   .lc-btn, .lc-ep { height:38px; }
   .lc-btn.lc-ic, .lc-btn.lc-more { width:38px; }
