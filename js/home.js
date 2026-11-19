@@ -23,6 +23,10 @@
    Saved on the device straight away and on your account (profiles.home_layout, sql/132) — before
    that SQL has run, on the device only.
 
+   Guests (owner, 19 Nov 2026): the same page with the default layout, filled with an example library of well-known
+   titles (js/home-guest.js) — so they see what their home will look like. Nothing is saved; the buttons that would
+   change a library say Get started instead, links into the private pages go to sign-up, and titles open their info.
+
    Requires config.js, db.js, nav.js, title-view.js, episode-ratings.js, pick.js, note-popup.js,
    discover-categories.js. Loads tv-schedule.js, panel.js, on-this-day.js when they're needed.
 ═══════════════════════════════════════════════════════════════ */
@@ -74,7 +78,10 @@ const MSSHome = (() => {
   const DEF_SIZE = id => PRESETS.default.w.find(x => x[0] === id)?.[1] || W[id].def || (sizesOf(id).includes('S') ? 'S' : sizesOf(id)[0]);
 
   /* ══ Your layout: this device first (instant), your account wins once it's here ══ */
-  let uid = null, L = null, editing = false, before = null;
+  let uid = null, L = null, editing = false, before = null, guest = false;
+  // a guest's links into the private pages (Library, Profile, Activity) go to sign-up; Discover stays Discover
+  const to = href => guest && !/^discover/.test(href) ? 'login.html#signup' : href;
+  const join = (label, primary) => `<a class="lc-btn${primary ? ' is-primary mh-main' : ''}" href="login.html#signup" onclick="event.stopPropagation()">${icon('sparkles', 15)}<span>${esc(label)}</span></a>`;
   const LKEY = () => 'msf_home_layout_' + uid;
   function clean(x) {
     if (!x || typeof x !== 'object' || !Array.isArray(x.order)) return null;
@@ -137,6 +144,7 @@ const MSSHome = (() => {
   function open(id, start) {
     const e = all().find(x => x.id === id);
     if (!e) return;
+    if (guest) return MSSInfo.fromDiscover({ id: Number(e.tmdb_id), media_type: e.tmdb_type, title: e.title, poster_url: e.poster_url });
     MSSViews.open(e, { own: true, start: start || 'info', from: 'index.html', ...(start === 'note' ? { note: true } : {}),
       onChange: changed, onDelete: x => { D.entries = all().filter(y => y.id !== x.id); changed(); } });
   }
@@ -159,6 +167,7 @@ const MSSHome = (() => {
   const btn = (cls, label, aria, fn, ic) => `<button type="button" class="lc-btn${cls ? ' ' + cls : ''}" onclick="event.stopPropagation();${fn}" aria-label="${esc(aria)}" title="${esc(aria)}">${ic ? icon(ic, 15) : ''}${label ? `<span>${esc(label)}</span>` : ''}</button>`;
   // The Library's buttons for a title in progress (library-view.js _libCtrls): − S·E + for a show you're watching
   function ctrls(e, compact) {
+    if (guest) return '';
     const id = attrJSON(e.id), t = e.title || 'this title', st = e.status, movie = isMovie(e);
     if (st === 'watching' && !movie) return `<div class="lc-row">${btn('lc-ic', '', 'Remove one episode, ' + t, `MSSHome.act.step(${id},-1)`, 'minus')}`
       + `<button type="button" class="lc-ep" onclick="event.stopPropagation();MSSHome.act.ep(${id})" aria-label="${esc(SE(e) + ', open the episode panel for ' + t)}" title="Open the episode">${esc(SE(e))}</button>`
@@ -168,7 +177,7 @@ const MSSHome = (() => {
     return `<div class="lc-row">${btn('is-primary', 'Start', 'Start watching ' + t, `MSSHome.act.start(${id})`, 'play')}</div>`;
   }
   const head = (id, extra = '', link = '') => `<header class="mh-wh"><h2 class="lg-kicker mh-wt" id="mhwt-${id}">${esc(W[id].t)}</h2>${extra}${link}</header>`;
-  const more = (href, label) => `<a class="mh-more" href="${esc(href)}">${esc(label)} ${ARROW}</a>`;
+  const more = (href, label) => `<a class="mh-more" href="${esc(to(href))}">${esc(label)} ${ARROW}</a>`;
   const count = n => n ? `<span class="mh-n" aria-label="${n} in all">${Number(n).toLocaleString(loc())}</span>` : '';
   const empty = (art, title, text, actions) => mssEmpty({ compact: true, art, title, text, actions, cls: 'mh-empty' });
   const rail = (id, cards) => mssRail(id, cards, 'mh-rail');
@@ -190,7 +199,8 @@ const MSSHome = (() => {
     const bar = pct != null ? `<div class="mh-prog"><div class="lp-bar" aria-hidden="true"><i style="width:${pct}%"></i></div>
         <div class="lp-count">${w} of ${total} episodes · ${pct}%${left ? ` · ≈ ${left >= 60 ? Math.round(left / 60) + 'h' : left + 'm'} left` : ''}</div></div>` : '';
     let acts;
-    if (st === 'watching' && !movie) acts = `${btn('is-primary mh-main', `Watched S${nx.s} E${nx.n}`, `Mark S${nx.s} E${nx.n} of ${e.title} watched`, `MSSHome.act.step(${id},1)`, 'check')}`
+    if (guest) acts = join('Get started', true);
+    else if (st === 'watching' && !movie) acts = `${btn('is-primary mh-main', `Watched S${nx.s} E${nx.n}`, `Mark S${nx.s} E${nx.n} of ${e.title} watched`, `MSSHome.act.step(${id},1)`, 'check')}`
       + btn('lc-ic', '', 'Remove one episode, ' + e.title, `MSSHome.act.step(${id},-1)`, 'minus')
       + btn('', `Rate S${e.season || 1} E${Math.max(1, e.episode || 1)}`, `Rate S${e.season || 1} E${Math.max(1, e.episode || 1)} of ${e.title}`, `MSSHome.act.rate(${id})`, 'ratingStar')
       + btn('', 'Edit', 'Edit ' + e.title, `MSSHome.act.edit(${id})`, 'edit');
@@ -254,7 +264,7 @@ const MSSHome = (() => {
     const g = glance(), n = v => Number(v).toLocaleString(loc());
     const kpi = (l, v, sub) => `<div class="lg-kpi"><dt>${l}</dt><dd><b>${esc(v)}</b>${sub ? `<small>${esc(sub)}</small>` : ''}</dd></div>`;
     return head('glance', '', '<span class="mh-more" aria-hidden="true">Profile →</span>')
-      + `<a class="mh-glance" href="profile.html" aria-label="${esc(`At a glance: average score ${g.avg == null ? 'none yet' : g.avg.toFixed(2)}, ${g.done} watched, ${g.eps} episodes, ${g.queue} on your watchlist, ${g.month} finished this month. Open your profile`)}">
+      + `<a class="mh-glance" href="${to('profile.html')}" aria-label="${esc(`At a glance: average score ${g.avg == null ? 'none yet' : g.avg.toFixed(2)}, ${g.done} watched, ${g.eps} episodes, ${g.queue} on your watchlist, ${g.month} finished this month. Open your profile`)}">
         <div class="mh-avg"><span class="mh-ring">${ring(g.avg, 96)}<span class="mh-ring-v"><b class="msf-score${mssTierCls(g.avg)}${g.avg != null && mssIsGold(g.avg) ? ' is-gold' : ''}">${g.avg == null ? '—' : g.avg.toFixed(2)}</b><small>Avg score</small></span></span>
           <small class="mh-avg-n">${n(g.rated)} rated</small></div>
         <dl class="lg-kpis mh-kpis">${kpi('Watched', n(g.done))}${kpi('Episodes', n(g.eps))}${kpi('Watchlist', n(g.queue))}${kpi('This month', n(g.month), `of ${n(g.done)} watched`)}</dl>
@@ -291,6 +301,7 @@ const MSSHome = (() => {
   function wFriends() {
     const h = head('friends', '', more('activity.html', 'See all'));
     if (D.friends == null) return h + skel('friends');
+    if (guest) { const g = MSS_GUEST.activity; return h + empty(g.art, g.title, g.text, [{ label: 'Get started', icon: 'users', href: 'login.html#signup' }]); }
     if (!D.friends.length) return h + empty('friends', 'No friend activity yet', 'When your friends finish something, it shows up here.', [{ label: 'Find friends', icon: 'users', href: 'friends.html' }]);
     return h + rail('mhFriendsRail', D.friends.map(friendCard).join(''));
   }
@@ -305,7 +316,7 @@ const MSSHome = (() => {
   }
   function wPick() {
     const h = `<header class="mh-wh"><h2 class="lg-kicker mh-wt" id="mhwt-pick">Pick for me</h2>
-      <button type="button" class="mh-pick-more" onclick="MSSHome.pickPanel()" aria-label="More choices: open Pick for me" title="More choices">${icon('settings', 15)}</button></header>`;
+      ${guest ? '' : `<button type="button" class="mh-pick-more" onclick="MSSHome.pickPanel()" aria-label="More choices: open Pick for me" title="More choices">${icon('settings', 15)}</button>`}</header>`;
     if (!D.pick || !entry(D.pick)) rollPick();
     const e = entry(D.pick);
     if (!e) return h + `<div class="mh-pick-none"><p>Add titles to your watchlist and we’ll pick one for tonight.</p><a class="lc-btn" href="discover.html">${icon('compass', 15)}<span>Browse Discover</span></a></div>`;
@@ -316,7 +327,7 @@ const MSSHome = (() => {
         <div class="mh-pick-body"><small class="mh-pick-k">Tonight’s pick</small><h3 class="mh-pick-t" translate="no">${esc(e.title)}</h3>
           <p class="mh-pick-sub">${esc([e.year ? String(e.year).slice(0, 4) : '', t.label, mssMetaOf(e).long].filter(Boolean).join(' · '))}</p>
           ${why.length ? `<ul class="mh-pick-why">${why.map(r => `<li>${icon(r[0], 13)}<span>${esc(r[1])}</span></li>`).join('')}</ul>` : ''}</div></div>
-      <div class="mh-pick-acts">${btn('is-primary', 'Start', 'Start watching ' + e.title, `MSSHome.act.start(${id})`, 'play')}${btn('', 'Again', 'Pick another title', 'MSSHome.again()', 'refresh-cw')}</div>`;
+      <div class="mh-pick-acts">${guest ? join('Get started') : btn('is-primary', 'Start', 'Start watching ' + e.title, `MSSHome.act.start(${id})`, 'play')}${btn('', 'Again', 'Pick another title', 'MSSHome.again()', 'refresh-cw')}</div>`;
   }
   function again() { rollPick(); draw('pick'); const b = document.querySelector('#mhw-pick .mh-pick-acts .lc-btn:last-child'); b?.focus(); }
   async function pickPanel() {
@@ -369,7 +380,7 @@ const MSSHome = (() => {
     const max = Math.max(1, ...keys.map(k => b[k].n));
     const label = `Score spread: ${keys.filter(k => b[k].n).map(k => `${b[k].n} at ${k === 10 ? '10' : k}`).join(', ') || 'no scores yet'}. Open your profile`;
     return head('spread', `<span class="lf-sub">${g.rated} rated</span>`)
-      + `<a class="mh-spread" href="profile.html#ratings" aria-label="${esc(label)}"><span class="mh-bars" aria-hidden="true">${keys.map(k => {
+      + `<a class="mh-spread" href="${to('profile.html#ratings')}" aria-label="${esc(label)}"><span class="mh-bars" aria-hidden="true">${keys.map(k => {
         const x = b[k], hgt = x.n ? Math.max(4, Math.round(x.n / max * 100)) : 0, gp = x.n ? Math.round(x.gold / x.n * 100) : 0;
         return `<span class="mh-sb${mssTierCls(k)}"><small>${x.n || ''}</small><i style="height:calc((100% - 38px) * ${(hgt / 100).toFixed(3)})">${gp ? `<em style="height:${gp}%"></em>` : ''}</i><b>${k}</b></span>`;
       }).join('')}</span><span class="mh-spread-key" aria-hidden="true"><i></i>Your scores<i class="is-gold"></i>Masterpiece 9.90+</span></a>`;
@@ -655,6 +666,13 @@ const MSSHome = (() => {
   }
   function greet() { if (firstVisit()) return 'Welcome'; const h = new Date().getHours(); return h >= 5 && h < 12 ? 'Good morning' : h >= 12 && h < 17 ? 'Good afternoon' : h >= 17 && h < 22 ? 'Good evening' : 'Good night'; }
   function updateGreeting() {
+    if (guest) {   // no name yet, so no signature font: Oswald all through (owner, 19 Nov 2026)
+      $('mhDate').textContent = new Date().toLocaleDateString(loc(), { weekday: 'long', day: 'numeric', month: 'long' });
+      $('mhHello').classList.add('is-simple');
+      $('mhHello').textContent = 'Welcome to your future home';
+      $('mhSum').innerHTML = 'A preview with a few example titles. <a href="login.html#signup">Create a free account</a> and it fills with everything <b>you</b> watch.';
+      return;
+    }
     const p = window._navUserProfile || {}, name = p.display_name || p.username || '';
     $('mhHello').classList.toggle('is-simple', L?.name === 'simple');   // your name: Signature (Damion) or Simple (Oswald) — Customize
     $('mhDate').textContent = new Date().toLocaleDateString(loc(), { weekday: 'long', day: 'numeric', month: 'long' });
@@ -895,6 +913,10 @@ const MSSHome = (() => {
 
   /* ══ Start ══ */
   async function start(user) {
+    if (guest) {   // the guest preview was up (signed in after all): back to a real home
+      guest = false; document.documentElement.classList.remove('mh-guest');
+      Object.assign(D, { entries: null, friends: null, sched: null, newEps: {}, recs: null, viewed: null, medals: null, otd: null, pick: null, wl: null, wlRail: null });
+    }
     uid = user.id;
     L = readLocal() || fromPreset('default');
     defineSkeletons();
@@ -935,13 +957,29 @@ const MSSHome = (() => {
     getRecentlyViewed(user.id, 12).then(r => { D.viewed = r || []; }).catch(() => { D.viewed = []; }).finally(() => draw('viewed'));
     mssLoadScript('js/on-this-day.js').then(() => MSSOtd.list()).then(r => { D.otd = r || []; }).catch(() => { D.otd = []; }).finally(() => draw('otd'));
   }
+  /* ══ A guest: the default layout, the example library (js/home-guest.js), nothing saved ══ */
+  async function startGuest() {
+    if (guest || uid) return;
+    guest = true;
+    document.documentElement.classList.add('mh-guest');
+    updateGreeting();
+    await mssLoadScript('js/home-guest.js');
+    D.entries = mssGuestLibrary();
+    D.friends = []; D.medals = []; D.recs = []; D.viewed = []; D.otd = [];
+    D.sched = {}; MSS_GUEST_HOME.forEach((r, i) => { const nx = r[10].next; if (nx) D.sched['guest-' + i] = { next: { s: nx[0], n: nx[1], air: nx[2] } }; });
+    L = fromPreset('default');
+    defineSkeletons();
+    if (typeof ResizeObserver === 'function') { let lastC = 0; new ResizeObserver(() => { const c = cols(); if (c !== lastC) { lastC = c; pack(); } }).observe($('mhGrid')); }
+    build();
+    newEpisodes();   // the shows' next dates (Harry Potter's premiere…)
+  }
   // To Be Continued shows with a new episode out go to Also in progress; the others get their next date (MSSSchedule)
   async function newEpisodes() {
     try {
       if (typeof mssNewEpisodes === 'function') D.newEps = (await mssNewEpisodes(all())) || {};
       if (typeof MSSSchedule === 'undefined') await mssLoadScript('js/tv-schedule.js');
       const shows = all().filter(e => ['ongoing', 'watching', 'up_next', 'paused'].includes(e.status) && e.tmdb_id && e.tmdb_type === 'tv' && !isMovie(e));
-      const sched = {};
+      const sched = { ...(D.sched || {}) };   // a show whose schedule doesn't answer keeps what was known
       for (let i = 0; i < shows.length; i += 6) {
         const part = shows.slice(i, i + 6), ds = await Promise.all(part.map(e => MSSSchedule.details(e.tmdb_id).catch(() => null)));
         part.forEach((e, j) => { if (ds[j]) sched[e.id] = { next: ds[j].next || null, status: ds[j].status || '' }; });
@@ -961,5 +999,5 @@ const MSSHome = (() => {
   async function otdOpen() { if (D.otd?.length) MSSOtd.open(D.otd); }
   document.addEventListener('mss:library-changed', () => { if (uid) refresh().catch(() => {}); });
 
-  return { start, act, again, pickPanel, openFriend, otdOpen, customize, done, cancel, applyPreset, setName, restore, resize, toggle, widgets, setGoal, saveGoal, moveBy, refresh, _L: () => L, _pack: pack };
+  return { start, guest: startGuest, act, again, pickPanel, openFriend, otdOpen, customize, done, cancel, applyPreset, setName, restore, resize, toggle, widgets, setGoal, saveGoal, moveBy, refresh, _L: () => L, _pack: pack };
 })();

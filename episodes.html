@@ -365,6 +365,18 @@ async function renderHome() {
   document.getElementById('egSearch').addEventListener('input', ev => _egFind(ev.target.value));
   document.getElementById('egSearch').addEventListener('keydown', ev => { if (ev.key === 'Escape' && ev.target.value) { ev.stopPropagation(); _egFind('', true); } });
 }
+// A guest: the search (any show → its episodes) over what Episodes does once you join
+function renderGuestHome() {
+  const g = MSS_GUEST.episodes, page = document.getElementById('egPage');
+  page.innerHTML = `${_egHeadHTML()}<div id="egHome">${mssEmpty({ art: g.art, title: g.title, text: 'Search any show above to see every episode, with TMDB’s and the community’s scores. With a free account you rate them too.',
+    perks: g.perks, actions: [{ label: 'Create a free account', icon: 'sparkles', href: 'login.html#signup', primary: true }, { label: 'Sign in', href: 'login.html' }] })}</div><div id="egResults" hidden aria-live="polite"></div>`;
+  page.querySelector('.cat-page-sub').textContent = 'Search any show to see all its episodes and how they score.';
+  page.querySelector('.lib-kicker').textContent = 'Episode ratings';
+  const inp = document.getElementById('egSearch');
+  inp.placeholder = 'Search a show…';
+  inp.addEventListener('input', ev => _egFind(ev.target.value));
+  inp.addEventListener('keydown', ev => { if (ev.key === 'Escape' && ev.target.value) { ev.stopPropagation(); _egFind('', true); } });
+}
 // Typing 2+ letters swaps the page for the results; clearing brings it back
 let _egFindT = null;
 function _egFind(v, now) {
@@ -426,7 +438,7 @@ const seasonsLabel = sel => {
 const vis = () => seasonsIn(S2 ? null : S.sel);
 const selLabel = () => seasonsLabel(S2 ? null : S.sel);
 
-const loadState = (tmdbId, userId) => MSSEpChart.load(tmdbId, userId, _egUser.id);   // ep-chart.js
+const loadState = (tmdbId, userId) => MSSEpChart.load(tmdbId, userId, _egUser?.id || null);   // ep-chart.js
 let S2 = null;   // compared show
 // Back: to the page you came from (the browser's own Back when it's this site), and where that was for the trail
 // "Episodes › Game of Thrones" — a title page or a profile, else Episodes
@@ -445,12 +457,14 @@ function _egGoBack() { if (_egBack.hist && history.length > 1) { history.back();
 async function renderShow() {
   if (!(await MSSAge.page('tv', _egShowId))) return;              // age-restricted for this account (088)
   if (_egVsId && !(await MSSAge.page('tv', _egVsId))) return;
-  const userId = _egUserQ || _egUser.id;
+  const userId = _egUserQ || _egUser?.id || null;
   let X;
   try { X = await loadState(_egShowId, userId); }
   catch (e) { mssErrorPage(mssTmdbErrorKind(e, 'title'), { error: e }); return; }
   if (!X) { mssErrorPage('title'); return; }
-  if (X.readOnly) {
+  // a guest (owner, 19 Nov 2026): every episode with TMDB's and the community's scores, view only; rating asks them to join
+  if (!_egUser && !_egUserQ) { X.readOnly = X.guest = true; X.whoName = 'Your'; X.source = Object.keys(X.comm).length ? 'community' : 'tmdb'; }
+  else if (X.readOnly) {
     const { data: p } = await sb.from('profiles').select('username,display_name').eq('id', userId).maybeSingle();
     X.whoName = p?.display_name || p?.username || 'Their';
     X.source = Object.keys(X.mine).length ? 'mine' : 'tmdb';
@@ -493,7 +507,8 @@ async function loadMine() {
 }
 
 // Whose-ratings options: in view mode (someone else's page) theirs first, no "vs TMDB"
-const sourceOpts = () => S.readOnly ? [['mine', esc(S.whoName) + '’s'], ['tmdb', 'TMDB'], ['community', 'Community']]
+const sourceOpts = () => S.guest ? [['tmdb', 'TMDB'], ['community', 'Community']]
+  : S.readOnly ? [['mine', esc(S.whoName) + '’s'], ['tmdb', 'TMDB'], ['community', 'Community']]
   : [['tmdb', 'TMDB'], ['mine', 'Mine'], ['community', 'Community'], ['diff', 'Mine vs TMDB']];
 function draw() { const page = document.getElementById('egPage'); mssKeepScroll(page, () => { page.innerHTML = _egShowHTML(); }); }
 // the show's backdrop: the entry's chosen one (yours, or theirs when it's someone else's), else TMDB's — MSSBackdrop
@@ -549,7 +564,8 @@ function _egShowHTML() {
           <div class="tv-chips egs-chips">${[years, `${S.seasons.length} season${S.seasons.length === 1 ? '' : 's'}`, `${all.length} episode${all.length === 1 ? '' : 's'}`, S.entry?.status ? esc(MSSEp.statusLabel(S.entry.status)) : ''].filter(Boolean).map(x => `<span class="tv-chip">${x}</span>`).join('')}</div>
           <div class="egs-acts">
             ${next ? `<button type="button" class="egs-btn is-next" onclick="egRate(${next.s},${next.ep.n})">${icon('star', 15)}<span>Rate next: ${_egSE(next.s, next.ep.n)}${next.ep.name ? ` · <span translate="no">${esc(next.ep.name)}</span>` : ''}</span></button>` : ''}
-            ${S.readOnly ? `<span class="egs-btn is-tag">${icon('eye', 15)}<span>View only</span></span>` : `
+            ${S.guest ? `<button type="button" class="egs-btn is-next" onclick="mssJoin('rate episodes')">${icon('star', 15)}<span>Rate episodes</span></button>`
+              : S.readOnly ? `<span class="egs-btn is-tag">${icon('eye', 15)}<span>View only</span></span>` : `
             <button type="button" class="egs-btn" onclick="egComparePick()" aria-haspopup="dialog">${icon('compare', 15)}<span>Compare</span></button>
             <button type="button" class="egs-btn" onclick="egExport()" aria-haspopup="dialog">${icon('download', 15)}<span>Export</span></button>`}
             <button type="button" class="egs-btn is-icon" onclick="egMore(this)" aria-haspopup="menu" aria-expanded="false" aria-label="More actions">${icon('moreV', 16)}</button>
@@ -1100,8 +1116,7 @@ function egCSV() {
 document.addEventListener('DOMContentLoaded', () => {
   initPage(async user => {
     _egUser = user;
-    if (!user) { document.getElementById('egPage').innerHTML = mssGuestEmpty('episodes'); return; }
-    try { if (_egShowId) await renderShow(); else await renderHome(); }
+    try { if (_egShowId) await renderShow(); else if (!user) renderGuestHome(); else await renderHome(); }
     catch (err) {
       console.error('Episodes:', err);
       mssErrorPage(mssErrorKind(err), { error: err });

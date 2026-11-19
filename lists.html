@@ -146,12 +146,8 @@ document.addEventListener('DOMContentLoaded', () => {
   _listsTools(); _listsViews();
   initPage(async (user) => {
     const q = new URLSearchParams(location.search);
-    // Guests can look through Community lists; their own lists need an account
-    if (!user && _listsMode !== 'community') {
-      document.querySelector('.page-wrap').innerHTML = mssGuestEmpty('lists');
-      return;
-    }
-    if (!user) { setListsMode('community'); return; }
+    // Guests: Community lists only — no Mine / Friends switch (owner, 19 Nov 2026)
+    if (!user) { document.getElementById('listsModeWrap').style.display = 'none'; document.getElementById('listsViews').style.display = 'none'; setListsMode('community'); return; }
     _listsUser = user;
     if (q.get('new')) { location.replace(MSSListActions.newURL()); return; }   // (+) → New list, from another page: the editor
     if (_listsMode !== 'mine') setListsMode(_listsMode);
@@ -169,7 +165,8 @@ function _listsTools() {
     ? `<div id="listsSearchWrap"><div class="sf-search" id="listsSearchWrapInner" role="search">
         <span class="sf-search-ic" aria-hidden="true">${icon('search', 16)}</span>
         <input type="search" id="listsSearchInput" class="sf-search-input" placeholder="Search lists, people or titles…" aria-label="Search lists, people or titles"
-          autocomplete="off" spellcheck="false" enterkeyhint="search" oninput="_llSearch(this.value)" onkeydown="_llKeydown(event)"></div></div>`
+          autocomplete="off" spellcheck="false" enterkeyhint="search" oninput="_llSearch(this.value)" onkeydown="_llKeydown(event)">
+        <button type="button" class="sf-search-go" tabindex="-1" aria-hidden="true" onclick="this.parentElement.querySelector('input').focus()">${icon('search', 16)}<span>Search</span></button></div></div>`
     : SF.searchHTML(scope, _listsMode === 'friends' ? 'Search your friends’ lists…' : 'Search your lists…');
   _listsBar(SF.bar(scope, 'all'));
 }

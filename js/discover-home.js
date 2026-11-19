@@ -277,7 +277,7 @@ const MSSDiscoverHome = (() => {
   const MORE = ['upcoming_movies', 'upcoming_tv', 'upcoming_anime', 'upcoming_cartoons'];
   const XP_STORE = 'mss_explore_posters_v1', XP_FRESH = 6 * 3600e3;
   const xpAll = () => { try { return JSON.parse(localStorage.getItem(XP_STORE) || '{}'); } catch { return {}; } };
-  // the Home page's Explore cards (index.html .xp-card): the list's #1 poster blurred under its colours, a big faint
+  // the old Home page's Explore cards: the list's #1 poster blurred under its colours, a big faint
   // number, a badge, the name and a line, Explore, and its top three posters fanned on the right
   const NUM = { top_rated_mss: 'MSF', trending_week: '#1', popular: 'HOT', airing_today: 'NEW', top250_movies: '250', top250_shows: '250',
     top250_anime: '250', top250_cartoons: '250', niche_movies: 'GEM', niche_shows: 'GEM', upcoming_movies: 'SOON', upcoming_tv: 'SOON',
@@ -326,11 +326,22 @@ const MSSDiscoverHome = (() => {
       setTimeout(() => firstPage(key).then(use).catch(() => {}), (delay += 260));
     });
   }
+  // phones: the More lists tiles join the one swipe row and the button hides (CSS) — owner, 19 Nov 2026
+  const PHONE = matchMedia('(max-width:640px)');
+  let listsSeen = false;
+  function placeMore() {
+    const box = PHONE.matches ? $('dzTiles') : $('dzTilesMore');
+    MORE.forEach(key => { const t = document.querySelector(`.dk-tile[data-tile="${key}"]`); if (t && t.parentNode !== box) box.appendChild(t); });
+    if (PHONE.matches && listsSeen) postersFor(MORE);
+  }
   function renderLists() {
     $('dzTiles').innerHTML = MAIN.map(tileHTML).join('');
     $('dzTilesMore').innerHTML = MORE.map(tileHTML).join('');
-    const io = 'IntersectionObserver' in window ? new IntersectionObserver(es => { if (es.some(e => e.isIntersecting)) { io.disconnect(); postersFor(MAIN); } }, { rootMargin: '300px 0px' }) : null;
-    io ? io.observe($('dzLists')) : postersFor(MAIN);
+    placeMore();
+    PHONE.addEventListener('change', placeMore);
+    const seen = () => { listsSeen = true; postersFor(PHONE.matches ? MAIN.concat(MORE) : MAIN); };
+    const io = 'IntersectionObserver' in window ? new IntersectionObserver(es => { if (es.some(e => e.isIntersecting)) { io.disconnect(); seen(); } }, { rootMargin: '300px 0px' }) : null;
+    io ? io.observe($('dzLists')) : seen();
   }
   function toggleMore(btn) {
     const box = $('dzTilesMore'), open = box.hidden;

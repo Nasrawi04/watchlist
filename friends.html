@@ -481,12 +481,8 @@ async function _udSearch(val) {
   _udLock();
   _udTimer = setTimeout(async () => {
     try {
-      const { data } = await sb.from('profiles')
-        .select('id, username, display_name, avatar_url')
-        .ilike('username', q + '%')
-        .neq('id', _fUser?.id || '')
-        .limit(10);
-      _udResults = data || [];
+      // the header search's (sql/135): @username or display name, blocks left out, and it works for guests too
+      _udResults = await searchUsers(q, 10);
       if (!_udResults.length) {
         drop.innerHTML = '<div class="ud-empty">No users found</div>';
         return;
@@ -529,8 +525,8 @@ async function _udEnter() {
   if (hit) { _udOpen(hit); return; }
   if (q.length < 2) return;
   try {   // pressed before the results arrived
-    const { data } = await sb.from('profiles').select('id, username').ilike('username', q).neq('id', _fUser?.id || '').limit(1);
-    if (data?.length) _udOpen(data[0]); else showToast('User not found.', 'err');
+    const data = (await searchUsers(q, 5)).filter(p => p.username.toLowerCase() === q);
+    if (data.length) _udOpen(data[0]); else showToast('User not found.', 'err');
   } catch { showToast('Error finding user.', 'err'); }
 }
 

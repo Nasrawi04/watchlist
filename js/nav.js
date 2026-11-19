@@ -532,7 +532,7 @@ function _navRenamePopup(uid, name) {
   MSSDialog.open(el, { focus: input });
 }
 
-// Signed out: Library / Social / You locked, Sign in + Create account in the header (mssGuestGate, config.js)
+// Signed out: Sign in + Create account in the header; the pages that need an account open the Join panel (mssJoin, config.js)
 const _isGuest = () => !!window._navGuest || document.documentElement.classList.contains('mss-guest');
 function _shellGuest() {
   MSSAge.setGroup(null, null);   // guests see every title (088)
@@ -664,7 +664,8 @@ async function initPageGuest(onReady) {
      Account (avatar): a menu on desktop, a full page on phones (shellAccountHTML).
      Phones / tablets: the top bar (wayfinding · search · bell · avatar), the bottom bar (Home · Discover ·
        Library · Social · You — the last three open their section sheet), the round Create button.
-     Guests: Library / Social / You are locked — one promo per section (_shellPromo*).
+     Guests (owner, 19 Nov 2026): every menu opens as usual; the few pages that need an account (MSS_JOIN_PAGES,
+       config.js) wear a small lock, and their links open the Join panel instead (_navJoinClick).
      Footer: link columns, the Light / Dark switch, credits and the TMDB notice.
 ══════════════════════════════════════════════════════════════════════ */
 // The Library menu (owner, 14 Nov 2026): the four kinds in one group, your Library, Episodes and Diary in the other (Episodes moved from You, 16 Nov 2026) —
@@ -853,12 +854,29 @@ function injectChrome() {
 // Search: the header field (desktop), the full-page search (phones) — shell-search.js
 function mssOpenSearch(q) { mssLoadScript('js/shell-search.js').then(() => { if (typeof MSSSearch !== 'undefined') MSSSearch.open(q); }); }
 
+// A guest's lock on a page that needs an account (its link opens the Join panel — _navJoinClick)
+const _navLockHTML = (href, cls) => typeof MSS_JOIN_PAGES !== 'undefined' && MSS_JOIN_PAGES[href.split('?')[0]]
+  ? `<span class="${cls} guest-only" aria-hidden="true">${icon('lock', 12)}</span><span class="sr-only guest-only">, needs an account</span>` : '';
+function _navJoinClick(ev) {
+  if (!_isGuest() || ev.defaultPrevented || ev.button > 0 || ev.metaKey || ev.ctrlKey || ev.shiftKey) return;
+  const a = ev.target.closest('a[href]');
+  if (!a || a.target === '_blank') return;
+  let url; try { url = new URL(a.getAttribute('href'), location.href); } catch { return; }
+  const file = url.pathname.split('/').pop(), topic = url.origin === location.origin && MSS_JOIN_PAGES[file];
+  if (!topic) return;
+  ev.preventDefault(); ev.stopPropagation();
+  if (typeof _dmHide === 'function' && _dmCur) _dmHide();
+  if (typeof _ntopDropHide === 'function') _ntopDropHide();
+  const sheet = !!_nsh; if (sheet) shellSheetClose();
+  setTimeout(() => mssJoin({ topic, href: file }), sheet ? 220 : 0);   // the sheet goes first, so the panel lands on the page
+}
+document.addEventListener('click', _navJoinClick, true);
 function _shellTabsHTML(w) {
   return SHELL_TABS.map(t => {
     const on = t.k === w.tab;
     if (!t.groups) return `<li><a class="dnav-tab${on ? ' active' : ''}" href="${t.href}"${on ? ` aria-current="${location.pathname.endsWith('/' + t.href) || (t.k === 'home' && /\/$/.test(location.pathname)) ? 'page' : 'true'}"` : ''}>${t.label}</a></li>`;
     return `<li><button type="button" class="dnav-tab${on ? ' active' : ''}" id="dnavTab-${t.k}" data-tab="${t.k}" aria-expanded="false" aria-controls="dnavMega"${on ? ' aria-current="true"' : ''}>
-      <span>${t.label}</span><span class="dnav-lock guest-only" aria-hidden="true">${icon('lock', 12)}</span><span class="sr-only guest-only">, needs an account</span><span class="dnav-chev" aria-hidden="true">${icon('chevdown', 12)}</span></button></li>`;
+      <span>${t.label}</span><span class="dnav-chev" aria-hidden="true">${icon('chevdown', 12)}</span></button></li>`;
   }).join('');
 }
 
@@ -987,8 +1005,8 @@ function _dmShow(k) {
   mega.setAttribute('aria-labelledby', 'dnavTab-' + k);
   mega.setAttribute('role', 'region');
   mega.dataset.tab = k;
-  document.getElementById('dnavMegaIn').innerHTML = _isGuest() ? _shellPromoHTML(k) : _dmHTML(t);
-  if (_isGuest()) _shellPromoPosters(document.getElementById('dnavMegaIn'), k);
+  document.getElementById('dnavMegaIn').innerHTML = _dmHTML(t);
+  if (_isGuest()) document.getElementById('dmCard').innerHTML = _dmGuestCard(k);
   else { _dmPick = null; _dmCard(_DM_FIRST[k]); if (!_shellSum) _shellSummary(); }
   mega.hidden = false;
   _dmPlace();
@@ -1021,7 +1039,7 @@ function _dmColsHTML(t, pre) {
       <ul class="dm-list">${items.map(it => {
         const here = w.href === it.href;
         return `<li${it.sep ? ' class="dm-sep"' : ''}><a class="dm-link${it.msg ? ' nav-msg-btn' : ''}${here ? ' here' : ''}" href="${it.href}" data-card="${it.card || t.k}"${here ? ' aria-current="page"' : ''}>
-          <span class="dm-ic" aria-hidden="true">${icon(it.icon, 16)}</span><span class="dm-name"><b>${it.label}</b><small>${it.info}</small></span>
+          <span class="dm-ic" aria-hidden="true">${icon(it.icon, 16)}</span><span class="dm-name"><b>${it.label}${_isGuest() ? _navLockHTML(it.href, 'dm-lock') : ''}</b><small>${it.info}</small></span>
           ${it.count ? `<span class="dm-n" data-count="${it.count}">${_dmCount(it.count)}</span>` : ''}${it.msg ? '<span class="notif-badge dm-badge" data-msg-badge></span>' : ''}
           ${it.req ? '<span class="nav-badge dm-req" data-req-badge hidden></span>' : ''}${here ? `<span class="dm-here" aria-hidden="true">${icon('check', 16)}</span>` : ''}</a></li>`;
       }).join('')}</ul></div>`).join('');
@@ -1467,50 +1485,16 @@ async function _dmMovieDone(btn, id) {
   } catch (err) { console.error(err); showToast('Error marking complete.', 'err'); btn.disabled = false; }
 }
 
-/* ═════════ Guests: one promo per locked section (desktop panel · phone sheet) ═════════ */
-const SHELL_PROMO = {
-  lib: { eyebrow: 'Your library lives here', h: 'Movies, shows, anime and cartoons, all tracked.',
-    p: 'Make a free account to tick off every episode, see your progress at a glance, and keep a Diary of every watch.' },
-  social: { eyebrow: 'Better with friends', h: 'Compare, blend and watch together.',
-    p: 'Make a free account to follow friends, compare and blend your taste, and plan movie nights, challenges and polls.' },
-  you: { eyebrow: 'Your folio lives here', h: 'Profile, lists, notes and medals, all yours.',
-    p: 'Make a free account to track what you watch, rate it, and share your top picks.' },
+/* ═════════ Guests: the menus' card — what this area does for you once you join ═════════ */
+const SHELL_GUEST_CARD = {
+  lib: ['Your library', 'Look around freely. With a free account it fills with everything you watch, down to the episode, and Diary keeps every watch by day.'],
+  social: ['Social', 'Search people and open their profiles from Friends. Following, Activity, Compare and the rest come with a free account.'],
+  you: ['You', 'Read Community lists and notes, and preview your profile. Medals and Export come with a free account.'],
 };
-function _shellPromoHTML(k, sheet) {
-  const P = SHELL_PROMO[k];
-  return `<div class="shp${sheet ? ' is-sheet' : ''}">
-      <div class="shp-tx">
-        <div class="dm-eyebrow">${P.eyebrow}</div>
-        <div class="shp-h"${sheet ? ' id="shellPromoT"' : ''}>${P.h}</div>
-        <p class="shp-p">${P.p}</p>
-        <div class="shp-acts"><a class="dm-btn is-main" href="login.html#signup">Create your folio</a><a class="dm-btn" href="login.html">Sign in</a></div>
-      </div>
-      <div class="shp-posters" aria-hidden="true"></div>
-    </div>`;
-}
-function _shellPromoPosters(root, k) {
-  mssLoadScript('js/folio-cards.js').then(() => {
-    const box = root.querySelector('.shp-posters');
-    if (!box || typeof MSSFolio === 'undefined') return;
-    box.innerHTML = MSSFolio.promo(k).slice(0, 4).map(p => `<span class="shp-poster"><img src="https://image.tmdb.org/t/p/w342${escHTML(p.poster)}" alt="" loading="lazy"></span>`).join('');
-  });
-}
-function shellPromoSheet(k) {
-  let ov = document.getElementById('shellPromo');
-  if (!ov) {
-    ov = document.createElement('div');
-    ov.id = 'shellPromo'; ov.className = 'soc-overlay shell-sheet-ov';
-    ov.innerHTML = `<div class="soc-card shell-sheet" role="dialog" aria-modal="true" aria-labelledby="shellPromoT">
-        <div class="sf-header"><span></span><button type="button" class="sf-close" aria-label="Close">${icon('x', 18)}</button></div>
-        <div class="sf-body" id="shellPromoBody"></div></div>`;
-    ov.querySelector('.sf-close').onclick = () => MSSDialog.close(ov);
-    MSSDialog.bind(ov, () => MSSDialog.close(ov));
-    document.body.appendChild(ov);
-  }
-  const body = document.getElementById('shellPromoBody');
-  body.innerHTML = _shellPromoHTML(k, true);
-  _shellPromoPosters(body, k);
-  MSSDialog.open(ov, { focus: '.shp-acts a' });
+function _dmGuestCard(k) {
+  const [h, p] = SHELL_GUEST_CARD[k] || SHELL_GUEST_CARD.lib;
+  return `<div class="dm-card-in dm-guest"><div class="dm-eyebrow">${h}</div><p class="dm-guest-p">${p}</p>
+    <div class="dm-guest-acts"><a class="dm-btn is-main" href="login.html#signup">Create a free account</a><a class="dm-btn" href="login.html">Sign in</a></div></div>`;
 }
 
 /* ═════════ Account: a menu under the avatar (desktop), a full page (phones) ═════════ */
@@ -1628,7 +1612,7 @@ function _bnavEl(where) {
   el.style.setProperty('--x', (i * 20 + 10) + '%');
   el.innerHTML = `<div class="bnav-bg" aria-hidden="true"></div><div class="bnav-ring" aria-hidden="true"></div><span class="bnav-orb" aria-hidden="true"></span>
     ${SHELL_TABS.map(t => `<a class="bnav-item${t.k === where.tab ? ' on' : ''}" href="${t.href}" data-tab="${t.k}"${t.k === where.tab ? ' aria-current="page"' : ''}${t.groups ? ` onclick="return _bnavTap(event, '${t.k}')" aria-haspopup="dialog" aria-expanded="false"` : ''}>
-      <span class="bnav-ic">${icon(t.icon, 23)}</span><span class="bnav-lb">${t.label}${t.groups ? '<span class="sr-only guest-only">, needs an account</span>' : ''}</span>${t.groups ? `<span class="bnav-lock guest-only" aria-hidden="true">${icon('lock', 11)}</span>` : ''}</a>`).join('')}`;
+      <span class="bnav-ic">${icon(t.icon, 23)}</span><span class="bnav-lb">${t.label}</span></a>`).join('')}`;
   return el;
 }
 /* Red dot on Social (bar + desktop tab) and a count on Friends while follow requests or messages wait */
@@ -1674,10 +1658,8 @@ const _ntopMoreEl = () => { const all = [...document.querySelectorAll('[data-top
 function _ntopMore() { _ntopMoreEl()?.click(); }
 
 /* The page name's ▾: the area's menu drops down from under the bar (the desktop menu's rows, in one column),
-   over a dimmed page. Tap a row → go there; tap ▾ again, the dim page or Esc → closed. Guests get the area's
-   promo sheet, as from the bottom bar. */
+   over a dimmed page. Tap a row → go there; tap ▾ again, the dim page or Esc → closed. */
 function _ntopDrop(k, ev) {
-  if (_isGuest()) return shellSheet(k, ev.currentTarget, ev.detail === 0);
   const btn = document.getElementById('ntopArea');
   let el = document.getElementById('ntopDrop');
   if (el && !el.hidden) { _ntopDropHide(true); return; }
@@ -1755,7 +1737,6 @@ function _nshEl() {
 }
 // kb: opened from the keyboard — focus goes to the current row (else the first); a tap focuses the sheet itself (no ring on a row)
 function shellSheet(k, opener, kb) {
-  if (k !== 'create' && _isGuest()) return shellPromoSheet(k);
   if (_nsh?.k === k) return shellSheetClose();
   const ov = _nshEl(), bar = document.getElementById('bnav'), wasOpen = !!_nsh;
   _nsh = { k, opener: _nsh?.opener || opener || null };
@@ -1789,14 +1770,17 @@ function _nshRow(it, kind, w) {
   const here = it.href === w.href;
   return `<li><a class="nsh-row" href="${it.href}"${here ? ' aria-current="page"' : ''}>
       <span class="nsh-ic" aria-hidden="true">${icon(it.icon, 18)}</span>
-      <span class="nsh-tx"><b>${it.label}</b>${kind !== 'grid' && it.desc ? `<small>${it.desc}</small>` : ''}</span>
+      <span class="nsh-tx"><b>${it.label}${_isGuest() ? _navLockHTML(it.href, 'nsh-lock') : ''}</b>${kind !== 'grid' && it.desc ? `<small>${it.desc}</small>` : ''}</span>
       <span class="nsh-cnt" data-nsh-n="${it.href}" data-kind="${kind}">${_nshNum(it, kind)}</span>
       ${here ? `<span class="nsh-tick" aria-hidden="true">${icon('check', 16)}</span>` : ''}</a></li>`;
 }
 function _nshHTML(k) {
   const t = SHELL_TABS.find(x => x.k === k), S = t.sheet, w = shellWhere(), items = _shellItems(t);
   const p = window._navUserProfile || {}, name = p.username || '', av = safeURL(p.avatar_url);
-  const head = S.account
+  const guest = _isGuest();
+  const head = S.account && guest
+    ? `<div class="nsh-acct is-guest"><span class="nsh-av" aria-hidden="true">${icon('user', 20)}</span><span class="nsh-who"><b class="nsh-t" id="nshT">Browsing as a guest</b><small>Your profile preview, lists and notes</small></span></div>`
+    : S.account
     ? `<a class="nsh-acct" href="profile.html"${w.href === 'profile.html' ? ' aria-current="page"' : ''}><span class="nsh-av" aria-hidden="true">${av ? `<img src="${av}" alt="">` : escHTML((name || '?')[0].toUpperCase())}</span>
         <span class="nsh-who"><b class="nsh-t" id="nshT" translate="no">${escHTML(p.display_name || name || 'You')}</b><small translate="no">@${escHTML(name)}</small></span></a>`
     : `<h2 class="nsh-t" id="nshT">${t.label}</h2><p class="nsh-sub">${S.sub}</p>`;
@@ -1805,7 +1789,9 @@ function _nshHTML(k) {
     return `<div class="nsh-grp">${label ? `<p class="nsh-gl" id="nshG-${k}-${label.replace(/\W/g, '')}">${label}</p>` : ''}
       <ul class="nsh-list is-${kind}"${label ? ` aria-labelledby="nshG-${k}-${label.replace(/\W/g, '')}"` : ''}>${list.map(it => _nshRow(it, kind, w)).join('')}</ul></div>`;
   }).join('');
-  const foot = S.account ? `<div class="nsh-foot"><a class="nsh-fbtn nsh-row" href="settings.html"${_navFile(location) === 'settings.html' ? ' aria-current="page"' : ''}>${icon('settings', 16)}<span>Settings</span></a>
+  const foot = S.account && guest ? `<div class="nsh-foot"><a class="nsh-fbtn nsh-row is-main" href="login.html#signup">${icon('sparkles', 16)}<span>Create account</span></a>
+      <a class="nsh-fbtn nsh-row" href="login.html">${icon('user', 16)}<span>Sign in</span></a></div>`
+    : S.account ? `<div class="nsh-foot"><a class="nsh-fbtn nsh-row" href="settings.html"${_navFile(location) === 'settings.html' ? ' aria-current="page"' : ''}>${icon('settings', 16)}<span>Settings</span></a>
       <button type="button" class="nsh-fbtn nsh-row is-out" onclick="shellSheetClose();handleLogout()">${icon('logout', 16)}<span>Sign out</span></button></div>` : '';
   return `<div class="nsh-head">${head}</div><div class="nsh-nav" role="navigation" aria-label="${t.label}">${groups}</div>${foot}`;
 }
@@ -1880,16 +1866,9 @@ function _nshSwipe(card) {
 
 /* The bottom bar's Library / Social / You: tap → the sheet, long-press → the area's main page */
 let _bnavLong = 0;
-function _bnavGo(e, k) {                       // a link to a locked area (the footer): a guest gets the promo instead
-  if (!_isGuest()) return true;
-  e.preventDefault();
-  shellPromoSheet(k);
-  return false;
-}
 function _bnavTap(e, k) {
   e.preventDefault();
   if (Date.now() - _bnavLong < 800) return false;        // the long-press already went there
-  if (_isGuest()) { shellPromoSheet(k); return false; }   // a guest on a locked tab: the promo instead
   shellSheet(k, e.currentTarget, e.detail === 0);
   return false;
 }
@@ -1898,7 +1877,7 @@ function _bnavLongInit(bar) {
   const stop = () => clearTimeout(timer);
   bar.addEventListener('pointerdown', ev => {
     const a = ev.target.closest('.bnav-item[aria-haspopup]');
-    if (!a || _isGuest() || ev.button) return;
+    if (!a || ev.button) return;
     x0 = ev.clientX; y0 = ev.clientY;
     timer = setTimeout(() => { _bnavLong = Date.now(); shellSheetClose(); location.href = a.getAttribute('href'); }, 500);
   });
@@ -1971,14 +1950,14 @@ const SHELL_FOOTER = [
     ['Top 250 Movies', 'discover-list.html?list=top250_movies'], ['Top 250 Shows', 'discover-list.html?list=top250_shows'],
     ['Top 250 Anime', 'discover-list.html?list=top250_anime'], ['Top Rated on MSF', 'discover-list.html?list=top_rated_mss'],
     ['Upcoming Movies', 'discover-list.html?list=upcoming_movies']]],
-  ['Your folio', [['Library', 'library.html', 'lib'], ['TV Shows', 'tv-shows.html', 'lib'], ['Movies', 'movies.html', 'lib'], ['Anime', 'anime.html', 'lib'],
-    ['Cartoons', 'cartoons.html', 'lib'], ['Diary', 'diary.html', 'lib'], ['Profile', 'profile.html', 'you']]],
-  ['Social', [['Friends', 'friends.html', 'social'], ['Activity', 'activity.html', 'social'], ['Messages', 'messages.html', 'social'], ['Compare', 'compare.html', 'social'],
-    ['Blend', 'blend.html', 'social'], ['Movie Night', 'movie-night.html', 'social'], ['Challenges', 'challenges.html', 'social'], ['Polls', 'polls.html', 'social'],
-    ['Episode Chat', 'episode-chat.html', 'social']]],
+  ['Your folio', [['Library', 'library.html'], ['TV Shows', 'tv-shows.html'], ['Movies', 'movies.html'], ['Anime', 'anime.html'],
+    ['Cartoons', 'cartoons.html'], ['Diary', 'diary.html'], ['Profile', 'profile.html']]],
+  ['Social', [['Friends', 'friends.html'], ['Activity', 'activity.html'], ['Messages', 'messages.html'], ['Compare', 'compare.html'],
+    ['Blend', 'blend.html'], ['Movie Night', 'movie-night.html'], ['Challenges', 'challenges.html'], ['Polls', 'polls.html'],
+    ['Episode Chat', 'episode-chat.html']]],
 ];
 // Phones: the footer stays short — these, the Light / Dark switch and "More links" for the rest
-const SHELL_FOOTER_QUICK = [['Discover', 'discover.html'], ['Library', 'library.html', 'lib'], ['Friends', 'friends.html', 'social'], ['Profile', 'profile.html', 'you'], ['Settings', 'settings.html', 'you']];
+const SHELL_FOOTER_QUICK = [['Discover', 'discover.html'], ['Library', 'library.html'], ['Friends', 'friends.html'], ['Profile', 'profile.html'], ['Settings', 'settings.html']];
 // Help & Guides (guide.js), Set up your folio and the welcome again (onboarding.js) — the footer's Help column and Settings › Help
 function mssHelp(what) {
   if (what === 'guide') mssLoadScript('js/guide.js').then(() => typeof MSSGuide !== 'undefined' && MSSGuide.open());
@@ -2007,11 +1986,11 @@ function _shellFooterEl() {
   f.className = 'site-footer';
   f.innerHTML = `<div class="ft-in">
       <div class="ft-brand">${mssLogoSVG('ft-logo', 'MyScreenFolio')}<p>Everything you watch, in one folio. Track it, rate it, rank it, share it.</p></div>
-      <div class="ft-quick" role="navigation" aria-label="Main links"><ul>${SHELL_FOOTER_QUICK.map(([l, href, lock]) =>
-          `<li><a href="${href}"${lock ? ` onclick="return _bnavGo(event, '${lock}')"` : ''}>${l}</a></li>`).join('')}<li><a href="#" onclick="return mssHelp('guide')">Help</a></li></ul>
+      <div class="ft-quick" role="navigation" aria-label="Main links"><ul>${SHELL_FOOTER_QUICK.map(([l, href]) =>
+          `<li><a href="${href}">${l}</a></li>`).join('')}<li><a href="#" onclick="return mssHelp('guide')">Help</a></li></ul>
         <div class="ft-quick-row">${mssThemeSwitch()}<button type="button" class="ft-more" aria-expanded="false" aria-controls="ftCols" onclick="_shellFooterMore(this)">More links ${icon('chevdown', 14)}</button></div></div>
       <div class="ft-cols" id="ftCols" role="navigation" aria-label="Footer">${SHELL_FOOTER.map(([h, links], i) => `<div class="ft-col"><div class="ft-h" id="ftH${i}">${h}</div>
-        <ul aria-labelledby="ftH${i}">${links.map(([l, href, lock]) => `<li><a href="${href}"${lock ? ` data-lock="${lock}" onclick="return _bnavGo(event, '${lock}')"` : ''}>${l}${lock ? `<span class="ft-lock guest-only" aria-hidden="true">${icon('lock', 11)}</span>` : ''}</a></li>`).join('')}</ul></div>`).join('')}
+        <ul aria-labelledby="ftH${i}">${links.map(([l, href]) => `<li><a href="${href}">${l}${_navLockHTML(href, 'ft-lock')}</a></li>`).join('')}</ul></div>`).join('')}
         <div class="ft-col"><div class="ft-h" id="ftH4">Help</div>
           <ul aria-labelledby="ftH4"><li><a href="#" onclick="return mssHelp('guide')">Help &amp; Guides</a></li><li class="nav-auth-only"><a href="#" onclick="return mssHelp('setup')">Set up your folio</a></li>
             <li class="nav-auth-only"><a href="#" onclick="return mssHelp('welcome')">Watch the welcome again</a></li></ul></div>
@@ -2021,7 +2000,7 @@ function _shellFooterEl() {
             <li><a href="#" onclick="MSSConsent.open(); return false">Cookie settings</a></li></ul></div>
         <div class="ft-col"><div class="ft-h" id="ftH3">Appearance</div>
           <div class="ft-theme">${mssThemeSwitch('ftH3')}</div>
-          <ul aria-labelledby="ftH3"><li><a href="settings.html" data-lock="you" onclick="return _bnavGo(event, 'you')">Settings</a></li><li><a href="export.html" data-lock="you" onclick="return _bnavGo(event, 'you')">Export</a></li></ul></div>
+          <ul aria-labelledby="ftH3"><li><a href="settings.html">Settings${_navLockHTML('settings.html', 'ft-lock')}</a></li><li><a href="export.html">Export${_navLockHTML('export.html', 'ft-lock')}</a></li></ul></div>
       </div>
     </div>
     <div class="ft-bottom"><span>Created by <b translate="no">Mohammad &amp; Narimaan</b> · © 2026 MyScreenFolio</span>

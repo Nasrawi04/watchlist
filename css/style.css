@@ -366,10 +366,9 @@ html.mss-guest .nav-auth-only { display:none !important; }
 .dnav-tab:hover, .dnav-tab.open { color:var(--text); background:var(--card); border-color:var(--border); }
 .dnav-tab.active, .dnav-tab.active:hover, .dnav-tab.active.open { background:var(--olive); border-color:var(--olive); color:var(--text-on-brand); }
 .dnav-tab:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
-.dnav-chev, .dnav-lock { display:inline-flex; }
+.dnav-chev { display:inline-flex; }
 .dnav-chev svg { width:12px; height:12px; opacity:.7; transition:transform .2s var(--ease); }
 .dnav-tab.open .dnav-chev svg { transform:rotate(180deg); }
-.dnav-lock svg { width:12px; height:12px; opacity:.8; }
 .dnav-tab .bnav-dot { top:6px; left:auto; inset-inline-end:4px; }
 
 /* right side: round icon buttons, the avatar, Sign in / Create account for guests */
@@ -625,19 +624,49 @@ html.mss-guest .nav-auth-only { display:none !important; }
 .dm-you-cta { display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:800; color:#fff; }
 @media (prefers-reduced-motion: reduce) { .dnav-mega, .dm-card-in { transition:none; animation:none; } }
 
-/* ── Guests: the promo (desktop panel and phone sheet) — the PDF's: words on the left, a 2 × 2 of posters on the right ── */
-.shp { grid-column:1 / -1; display:grid; grid-template-columns:minmax(0, 1fr) auto; gap:clamp(24px, 4vw, 56px); align-items:center; max-width:980px; margin:0 auto; width:100%; }
-.shp-h { font-family:var(--serif); font-size:clamp(28px, 2.6vw, 38px); font-weight:600; line-height:1.08; margin:10px 0 10px; color:var(--text-heading); max-width:16ch; }
-.shp-p { margin:0 0 20px; font-size:15px; line-height:1.55; color:var(--text-2); max-width:44ch; }
-.shp-acts { display:flex; flex-wrap:wrap; gap:10px; }
-.shp-acts .dm-btn { min-height:48px; padding:0 22px; font-size:14px; }
+/* ── Guests: the menu's card (desktop) — what this area does for you once you join ── */
+.dm-guest-p { margin:0; font-size:13.5px; line-height:1.55; color:var(--text-2); }
+.dm-guest-acts { display:flex; flex-wrap:wrap; gap:8px; margin-top:auto; }
+.dm-lock, .nsh-lock { display:inline-flex; margin-inline-start:6px; vertical-align:-1px; color:var(--text-3); }
+.dm-lock svg, .nsh-lock svg { width:12px; height:12px; }
+
+/* ── Join (mssJoin, config.js): the way in for a guest — the side panel (computers) or a sheet you drag (phones) ──
+   The posters are Admin → Guest showcase's (.shp-posters / .shp-poster, also the admin preview) */
 .shp-posters { display:grid; grid-template-columns:repeat(2, clamp(84px, 7.5vw, 112px)); gap:10px; }
 .shp-poster { aspect-ratio:2/3; border-radius:12px; overflow:hidden; border:0.5px solid var(--border-2); background:var(--bg-3); }
 .shp-poster img { width:100%; height:100%; object-fit:cover; display:block; }
-.shp.is-sheet { grid-template-columns:1fr; gap:18px; }
-.shp.is-sheet .shp-posters { order:-1; grid-template-columns:repeat(4, minmax(0, 1fr)); }
-.shp.is-sheet .shp-h { font-size:28px; }
-.shp.is-sheet .shp-acts .dm-btn { flex:1 1 140px; }
+.jn { display:flex; flex-direction:column; gap:14px; }
+.jn .jn-posters { grid-template-columns:repeat(4, minmax(0, 1fr)); gap:8px; min-height:0; }
+.jn .jn-posters .shp-poster { border-radius:var(--radius-sm); }
+.jn .jn-posters .shp-poster:nth-child(even) { transform:translateY(8px); }
+.jn .jn-posters .jn-art { grid-column:1 / -1; justify-self:center; width:150px; }
+.jn-p { margin:0; font-size:14.5px; line-height:1.6; color:var(--text-2); }
+.jn .jn-perks { max-width:none; margin:0; }
+.jn-rows { list-style:none; margin:0; padding:0; display:grid; gap:6px; }
+.jn-row { display:flex; align-items:center; gap:12px; padding:9px 12px; border:1px solid var(--border); border-radius:var(--radius-sm); }
+.jn-row.is-picked { border-color:var(--olive-light); background:var(--selected-bg); outline:1px solid var(--olive-light); }
+.jn-row-ic { flex-shrink:0; display:grid; place-items:center; width:34px; height:34px; border-radius:var(--radius-sm); background:var(--olive-faint); color:var(--olive-light); }
+[data-theme="light"] .jn-row-ic { color:var(--olive); }
+.jn-row-ic svg { width:17px; height:17px; }
+.jn-row-tx { display:flex; flex-direction:column; gap:2px; min-width:0; }
+.jn-row-tx b { display:flex; flex-wrap:wrap; align-items:center; gap:6px; font:700 14px/1.25 var(--sans); color:var(--text); }
+.jn-row-tx small { font-size:12.5px; line-height:1.4; color:var(--text-2); }
+.jn-row-tag { padding:2px 7px; border-radius:999px; background:var(--brand); color:var(--text-on-brand); font-size:10.5px; font-weight:800; letter-spacing:.3px; }
+.jn-fine { margin:0; font-size:12.5px; color:var(--text-supporting, var(--text-3)); }
+/* the phone sheet */
+.jn-sheet { padding:10px 18px calc(18px + env(safe-area-inset-bottom)); }
+.jn-x { position:absolute; top:12px; inset-inline-end:12px; }
+.jn-eyebrow { margin:2px 0 4px; font-size:10.5px; font-weight:800; letter-spacing:1.6px; text-transform:uppercase; color:var(--olive-light); }
+[data-theme="light"] .jn-eyebrow { color:var(--olive); }
+.jn-sheet .jn-t { margin:0 44px 14px 0; font-size:24px; line-height:1.15; }
+.jn-acts { position:sticky; bottom:calc(-18px - env(safe-area-inset-bottom)); display:grid; gap:8px; margin:16px -18px calc(-18px - env(safe-area-inset-bottom)); padding:12px 18px calc(18px + env(safe-area-inset-bottom));
+  border-top:1px solid var(--border); background:var(--surface-card); }
+.jn-btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:48px; padding:0 16px; border-radius:var(--radius-sm); border:1px solid var(--border-2);
+  background:transparent; color:var(--text); font:700 15px var(--sans); cursor:pointer; }
+.jn-btn.is-main { background:var(--action-primary-bg); border-color:var(--action-primary-bg); color:var(--text-on-primary); }
+.jn-btn.is-main:hover { background:var(--action-primary-hover); }
+.jn-btn:focus-visible { outline:2px solid var(--focus-ring); outline-offset:2px; }
+.jn-btn svg { width:16px; height:16px; }
 
 /* ── Search (shell-search.js): the field, the results ── */
 .shs-wrap { position:relative; display:flex; align-items:center; gap:8px; width:clamp(190px, 18vw, 280px); height:40px; padding:0 8px 0 12px; box-sizing:border-box;
@@ -755,7 +784,6 @@ a.acct-row:focus-visible, button.acct-row:focus-visible { outline:2px solid var(
 #shellAcctPage .acct-chev { display:flex; }
 #shellAcctPage .mss-theme-opt { min-height:38px; }
 
-.shell-sheet-ov .shell-sheet { max-width:480px; }
 
 .btn-add-entry[hidden] { display:none; }
 .hero-recent { position:absolute; z-index:300; box-sizing:border-box; overflow-y:auto; touch-action:pan-y; overscroll-behavior:contain; padding:6px; background:var(--bg-2); border:1px solid var(--border-olive); border-radius:var(--radius-sm); }
@@ -808,8 +836,6 @@ nav.bnav, [data-theme="light"] nav.bnav { top:auto; background:none; border:0; -
 .bnav-item:not(.on):hover { color:var(--text); }
 .bnav-item:focus-visible { outline:none; }
 .bnav-item:focus-visible .bnav-ic { outline:2px solid var(--olive-light); outline-offset:2px; border-radius:50%; }
-.bnav-lock { position:absolute; top:12px; left:calc(50% + 7px); display:flex; color:var(--text-2); }
-.bnav-item.on .bnav-lock { display:none; }
 .bnav-dot { position:absolute; top:13px; left:calc(50% + 8px); width:9px; height:9px; border-radius:50%; background:#e5484d; border:2px solid var(--bg-3); }
 .bnav-item.on .bnav-dot { top:-35px; left:calc(50% + 12px); border-color:var(--olive); }
 [data-theme="light"] .bnav-orb { background:linear-gradient(145deg, var(--p-forest-700), var(--olive)); }
@@ -874,6 +900,8 @@ nav.bnav, [data-theme="light"] nav.bnav { top:auto; background:none; border:0; -
 .nsh-fbtn { justify-content:center; gap:8px; min-height:44px; padding:0 12px; border-radius:var(--radius-sm); border-color:var(--border-2);
   background:none; cursor:pointer; font:700 13px var(--sans); }
 .nsh-fbtn.is-out { color:var(--danger); }
+.nsh-fbtn.is-main { background:var(--action-primary-bg); border-color:var(--action-primary-bg); color:var(--text-on-primary); }
+.nsh-acct.is-guest .nsh-av { color:var(--text-2); }
 /* Create */
 .nsh-chead { display:flex; align-items:center; justify-content:space-between; gap:12px; }
 .nsh-x { width:44px; height:44px; flex:none; display:grid; place-items:center; border-radius:var(--radius-sm); border:1px solid var(--border-2);
@@ -1011,17 +1039,7 @@ nav.bnav, [data-theme="light"] nav.bnav { top:auto; background:none; border:0; -
 /* ═════════════════════════════════════════════════════════════
    §05  Home Page
    ═════════════════════════════════════════════════════════════ */
-.home-hero { text-align:center; padding:2.5rem 0 4rem; }
-.home-eyebrow {
-  font-size:11px; letter-spacing:3px; text-transform:uppercase;
-  color:var(--olive-light); margin-bottom:1.25rem;
-}
-.home-title {
-  font-family:var(--serif); font-size:clamp(42px,7vw,72px);
-  font-weight:500; line-height:1.1; letter-spacing:-1px; margin-bottom:1rem;
-}
-.home-title em { color:var(--olive-light); font-style:normal; text-decoration:underline; text-decoration-thickness:3px; text-underline-offset:6px; }
-.home-sub { font-size:15px; color:var(--text-2); max-width:460px; margin:0 auto; }
+/* the guest Home's closing call to action (index.html .mh-join) */
 .guest-cta { display:flex; gap:12px; justify-content:center; margin-top:2.5rem; flex-wrap:wrap; }
 .guest-legal { margin:14px auto 0; max-width:520px; text-align:center; font-size:13px; line-height:1.9; color:var(--text-supporting); }
 .guest-legal a { color:var(--text-link); font-weight:700; text-decoration:underline; text-underline-offset:2px; }
@@ -3716,7 +3734,6 @@ body { font-size:15px; }
 
   .page-wrap { padding:74px 14px 96px; --page-px:14px; --page-pt:74px; }
 
-  .home-title   { font-size:clamp(32px,9vw,52px); }
   .cat-page-title { font-size:clamp(28px,8vw,38px); }
 
   .cat-page-sub { font-size:12px; margin-top:4px; }
@@ -3802,7 +3819,6 @@ body { font-size:15px; }
    ═════════════════════════════════════════════════════════════ */
 @media (max-width: 400px) {
   .page-wrap { padding:72px 12px 92px; --page-px:12px; --page-pt:72px; }
-  .home-title { font-size:clamp(28px,10vw,40px); }
   .cat-page-title { font-size:26px; }
 
   .cat-page-sub { font-size:11px; }
@@ -3839,7 +3855,6 @@ body { font-size:15px; }
    shared .genre-dot/.type-label classes, which have their own explicit
    clamp()-based font-size that doesn't inherit from a parent, so they need to
    be targeted directly here. */
-  .home-title    { font-size:clamp(40px,6vw,60px); }
   .cat-page-title { font-size:clamp(32px,5vw,42px); }
 
   .page-stats { grid-template-columns:repeat(2,1fr); }
@@ -3856,7 +3871,6 @@ body { font-size:15px; }
    §37  TV & Ultrawide — 1920px+
    ═════════════════════════════════════════════════════════════ */
 @media (min-width: 1920px) {
-  .home-title  { font-size:80px; }
 
 }
 
@@ -8650,6 +8664,14 @@ body:has(.tv-page.is-phone:not(.de-page)) #mainNav, body:has(.tv-page.is-phone:n
 
 /* header: kicker, title, count line · search + Pick for me (green) + Add */
 .lib-head { align-items:flex-end; flex-wrap:wrap; row-gap:12px; position:relative; top:auto; z-index:auto; }   /* scrolls away (V2): the tabs and cards get the screen */
+/* a guest: the example library's banner (library-view.js) */
+.lib-guest { display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin:0 0 18px; padding:14px 16px; border:1px solid var(--border); border-radius:var(--radius); background:var(--surface-card); }
+.lib-guest-ic { flex-shrink:0; display:grid; place-items:center; width:40px; height:40px; border-radius:var(--radius-sm); background:var(--selected-bg); color:var(--selected-fg); }
+.lib-guest-t { flex:1 1 280px; min-width:0; display:flex; flex-direction:column; gap:3px; }
+.lib-guest-t b { font:600 18px/1.2 var(--serif); color:var(--text-heading); }
+.lib-guest-t span { font-size:13.5px; line-height:1.5; color:var(--text-2); }
+.lib-guest-acts { display:flex; flex-wrap:wrap; gap:8px; }
+@media (max-width:560px) { .lib-guest-acts { width:100%; } .lib-guest-acts .lc-btn { flex:1; justify-content:center; } }
 .lib-head::before { content:none; }
 @media (max-width:1199px) { .lib-head { margin-top:0; } }
 .lib-head-l { min-width:0; }
@@ -9291,8 +9313,15 @@ button.eg-chip:focus-visible { outline:2px solid var(--text); outline-offset:2px
    Widgets are the Library's boxes (--lib-card, --lib-line): borders, no shadows. Inside: the
    standard cards, MSF scores, the Library's buttons (lc-btn) and At a glance pieces (lg-*).
    ═════════════════════════════════════════════════════════════ */
-html.mh-on .home-guest { display:none; }
-html:not(.mh-on) .mh { display:none; }
+/* Guests (owner, 19 Nov 2026): the same page as a preview with example titles — no Customize, a way in at the end */
+html.mh-guest .mh-custom { display:none; }
+.mh-join { display:none; }
+html.mh-guest .mh-join { display:block; margin:clamp(28px, 3vw + 12px, 56px) auto 0; max-width:640px; padding:clamp(20px, 2vw + 10px, 32px); text-align:center;
+  border:1px solid var(--border); border-radius:var(--mh-r); background:var(--surface-card); }
+.mh-join-t { font:600 clamp(24px, 1vw + 18px, 32px)/1.1 var(--serif); color:var(--text-heading); }
+.mh-join-p { margin:8px auto 0; max-width:480px; font-size:14px; line-height:1.6; color:var(--text-2); }
+.mh-join .guest-cta { margin-top:18px; }
+.mh-sum a { color:var(--text-link); font-weight:700; text-decoration:underline; text-underline-offset:2px; }
 .mh { --mh-r:18px; --mh-gap:clamp(12px, 1.1vw + 6px, 20px); --mh-pad:clamp(14px, .8vw + 9px, 20px); }
 
 /* ── Greeting · search · Customize ── */

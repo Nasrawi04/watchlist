@@ -36,6 +36,7 @@ var LIB_OWN_PAGE = LIB_SCOPE === 'lib' || LIB_SCOPE === 'cat';     // the five p
 var LIB_CTRL     = LIB_OWN_PAGE && !LIB_READONLY;                    // card buttons (progress, Start, Resume, ⋯)
 var LIB_TYPES    = !LIB_CAT;                                         // the Type filter: the Library and both profile tabs (not a category page)
 var LIB_FULL     = LIB_OWN_PAGE;                                     // + permanent buttons on Watchlist / Dropped cards (Library and category pages)
+var LIB_GUEST    = false;                                           // a guest: the example library (js/home-guest.js), read-only
 var LIB_CAT_META = { tv:{ label:'TV Shows', one:'TV show', add:'+ Add TV Show' }, movies:{ label:'Movies', one:'movie', add:'+ Add Movie' },
   anime:{ label:'Anime', one:'anime', add:'+ Add Anime' }, cartoons:{ label:'Cartoons', one:'cartoon', add:'+ Add Cartoon' } };
 var _LIB_DOTS = '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="19" cy="12" r="1.9"/></svg>';
@@ -73,6 +74,7 @@ function _libOpen(id, start) {
   if (!e) return;
   var rated = e.status === 'completed' || e.status === 'ongoing' || e.status === 'dropped' || liveScore(e) != null;
   start = start || (rated ? 'rate' : 'info');
+  if (LIB_GUEST) { MSSInfo.fromDiscover({ id: Number(e.tmdb_id), media_type: e.tmdb_type, title: e.title, poster_url: e.poster_url }); return; }
   if (LIB_READONLY) { MSSViews.open(e, { start: start, profile: (window.LIB_PROFILE && window.LIB_PROFILE()) || {} }); return; }
   MSSViews.open(e, {
     start: start, own: true, from: (location.pathname.split('/').pop() || 'library.html') + location.search,
@@ -485,13 +487,13 @@ function _libFingerHTML(f){
   var head = '<header class="lf-head"><h2 class="lg-kicker" id="libFingerH">Rating fingerprint</h2><span class="lf-sub">avg by category group</span></header>';
   if (!f) return '<section class="lib-finger is-empty" aria-labelledby="libFingerH">'+head
     + '<div class="lf-empty"><svg viewBox="0 0 120 110" aria-hidden="true"><polygon class="lf-ring is-outer" points="60,8 112,46 92,104 28,104 8,46"/><polygon class="lf-ring" points="60,34 87,54 77,84 43,84 33,54"/></svg>'
-    + '<p>'+(LIB_READONLY ? 'Not enough ratings yet to show where their scores lean.' : 'Rate a few more titles to see where your scores lean — which parts of a story you reward, and where you’re toughest.')+'</p></div></section>';
+    + '<p>'+((LIB_READONLY && !LIB_GUEST) ? 'Not enough ratings yet to show where their scores lean.' : 'Rate a few more titles to see where your scores lean — which parts of a story you reward, and where you’re toughest.')+'</p></div></section>';
   var tile = function(k, a){ return '<div class="lf-tile"><small>'+k+'</small><b>'+_libEsc(a.name)+'</b><span>'+a.avg.toFixed(2)+' average · '+a.n+' titles</span></div>'; };
   return '<section class="lib-finger" aria-labelledby="libFingerH">'+head
     + '<div class="lf-body"><div class="lf-chart">'+_libRadar(f.axes)+'</div>'
     + '<div class="lf-tiles">'+(f.best.avg - f.worst.avg < 0.01
         ? '<div class="lf-tile"><small>Your spread</small><b>Even</b><span>every group at '+f.best.avg.toFixed(2)+'</span></div><div class="lf-tile"><small>Groups</small><b>'+f.axes.length+'</b><span>rated on 2+ titles</span></div>'
-        : tile(LIB_READONLY ? 'They reward' : 'You reward', f.best)+tile('Toughest on', f.worst))+'</div></div></section>';
+        : tile((LIB_READONLY && !LIB_GUEST) ? 'They reward' : 'You reward', f.best)+tile('Toughest on', f.worst))+'</div></div></section>';
 }
 
 function _libRing(avg, size){
@@ -515,7 +517,7 @@ function _libGlanceBody(g){
   return '<dl class="lg-kpis">'+avgTile+tiles+'</dl>'
     + '<div class="lg-cols">'
     + '<div class="lg-col">'
-      + '<h3 class="lg-h">'+(LIB_READONLY ? 'Their scores' : 'Your scores')+' <span>'+g.rated+' rated</span></h3>'
+      + '<h3 class="lg-h">'+((LIB_READONLY && !LIB_GUEST) ? 'Their scores' : 'Your scores')+' <span>'+g.rated+' rated</span></h3>'
       + '<ul class="lg-bands">'+g.bands.map(function(b){ var pct = g.rated ? Math.round(b[1] / g.rated * 100) : 0;
           return '<li><span>'+b[0]+'</span><span class="lg-band-bar" aria-hidden="true"><i class="'+b[2]+'" style="width:'+Math.round(b[1]/maxB*100)+'%"></i></span><b>'+b[1]+'</b><small>'+pct+'%</small></li>'; }).join('')+'</ul>'
       + (g.types && typeTotal ? '<h3 class="lg-h">By type <span>'+typeTotal+' titles</span></h3><div class="lg-type-bar" aria-hidden="true">'+g.types.map(function(t){ return t[1] ? '<i class="is-'+t[2]+'" style="flex:'+t[1]+'"></i>' : ''; }).join('')+'</div>'
@@ -806,7 +808,7 @@ function _libHeader(lists){
   var pick = tools && tools.querySelector('.qp-trigger');
   if (pick) pick.disabled = !lists.queue.length;
   var all = LIB_ENTRIES().length, k = document.getElementById('libKicker'), sub = document.getElementById('libPageSub');
-  if (k) k.textContent = 'Your collection · ' + all.toLocaleString(MSSI18n.locale) + ' title' + (all === 1 ? '' : 's');
+  if (k) k.textContent = (LIB_GUEST ? 'Example library · ' : 'Your collection · ') + all.toLocaleString(MSSI18n.locale) + ' title' + (all === 1 ? '' : 's');
   if (sub) sub.textContent = lists.watching.length + ' in progress · ' + lists.queue.length + ' queued · ' + lists.completed.length + ' watched';
 }
 
@@ -892,8 +894,17 @@ function _libInitPage(){
   window.addEventListener('pageshow', function(ev){ if (ev.persisted && mssDataChangedSince(window._mssPageAt)) location.reload(); });
   document.addEventListener('DOMContentLoaded', function(){
     initPage(async function(user, profile){
+      // A guest (owner, 19 Nov 2026): the page as it will look, with the example library (the Home preview's titles), read-only
       if (!user) {
-        document.querySelector('.page-wrap').innerHTML = mssGuestEmpty(LIB_CAT || 'library');
+        await mssLoadScript('js/home-guest.js');
+        LIB_GUEST = LIB_READONLY = true; LIB_CTRL = false;
+        _pEntries = mssGuestLibrary().filter(function(e){ return !LIB_CAT || e.cat === LIB_CAT; });
+        var g = MSS_GUEST[LIB_CAT || 'library'], head = document.querySelector('.lib-head');
+        if (head) head.insertAdjacentHTML('afterend', '<section class="lib-guest" aria-label="About this example">'
+          + '<span class="lib-guest-ic" aria-hidden="true">' + icon('sparkles', 18) + '</span>'
+          + '<div class="lib-guest-t"><b>' + escHTML(g.title) + '</b><span>This is an example ' + (LIB_CAT ? LIB_CAT_META[LIB_CAT].label.toLowerCase() : 'library') + '. Yours fills up as you track what you watch.</span></div>'
+          + '<div class="lib-guest-acts"><a class="lc-btn is-primary" href="login.html#signup">' + icon('sparkles', 15) + '<span>Create a free account</span></a><a class="lc-btn" href="login.html"><span>Sign in</span></a></div></section>');
+        renderLibrary();
         return;
       }
       _pUser = user; _pProfile = profile;

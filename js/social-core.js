@@ -153,8 +153,12 @@ function _frEmptyHTML(ic, title, text) {
   const ART = { users: 'friends', activity: 'friends', layers: 'lists', edit: 'notes', compare: 'compare', search: 'search', shuffle: 'blend' };
   return mssEmpty({ art: ART[ic] || 'friends', title, text });
 }
+// A guest: Friends is open to them (owner, 19 Nov 2026) — search people, open profiles; the other social pages explain themselves
 function _frGuestHTML() {
-  return mssGuestEmpty(location.pathname.split('/').pop().replace('.html', '') || 'friends');
+  const page = location.pathname.split('/').pop().replace('.html', '') || 'friends';
+  if (page !== 'friends') return mssGuestEmpty(page);
+  return mssEmpty({ art: 'search', title: 'Find people worth following', text: 'Search above by @username to open anyone’s profile: their library, favourites, lists and notes. Following them comes with a free account.',
+    actions: [{ label: 'Create a free account', icon: 'sparkles', href: 'login.html#signup', primary: true }, { label: 'Sign in', href: 'login.html' }] });
 }
 
 // Friend card cover: their Top Favorites (profile dashboard), then — if they

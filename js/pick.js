@@ -305,7 +305,8 @@ const MSSPick = (() => {
 
   // (the panel shows a spinner in the button meanwhile)
   async function start() {
-    if (!cur || !o.user) return;
+    if (!cur) return;
+    if (!o.user) { close(); mssJoin('start watching'); return; }   // a guest (the example library)
     try {
       const e = cur;
       await updateProgress(e.id, o.user.id, { status: 'watching' });

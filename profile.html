@@ -111,10 +111,7 @@ window.addEventListener('pageshow', (event) => {
 
 document.addEventListener('DOMContentLoaded', function() {
   initPage(async function(user, profile) {
-    if (!user) {
-      document.querySelector('.page-wrap').innerHTML = mssGuestEmpty('profile');
-      return;
-    }
+    if (!user) { await _profGuest(); return; }
     _pUser = user;
     _pProfile = profile;
     // Entries and custom lists load together (was one after the other)
@@ -140,6 +137,42 @@ document.addEventListener('DOMContentLoaded', function() {
     mssFillEpRuntimes(_pEntries, user.id, 200).then(function(n){ if (n) { MSSProfile.refreshStats({}); if (typeof _dmYouDrop === 'function') _dmYouDrop(); } });
   });
 });
+
+/* ── A guest (owner, 19 Nov 2026): a preview of the profile they'd have — the example library (js/home-guest.js), read-only.
+   Lists / Notes / Episodes / Showcase say what they'll hold and point to what a guest can already open. ── */
+var _pfGuest = false;
+async function _profGuest() {
+  await mssLoadScript('js/home-guest.js');
+  _pfGuest = true;
+  LIB_GUEST = LIB_READONLY = true; LIB_CTRL = false;
+  _pUser = { id: 'guest' };
+  _pEntries = mssGuestLibrary();
+  // Top Favorites: the five highest scores
+  var top = _pEntries.filter(function(e){ return e.final_score != null; }).sort(function(a, b){ return b.final_score - a.final_score; }).slice(0, 5).map(function(e){ return e.id; });
+  _pProfile = { username: '', display_name: 'Your name here', quote: 'Your favourite quote, right under your name.', bio: 'A line or two about you and what you love to watch.', top_picks: top };
+  _profFavLists = [];
+  _pEntriesLoaded();
+  MSSProfile.header(document.getElementById('profHeader'), { profile: _pProfile, entries: _pEntries, own: false, lists: 0, diary: null,
+    actions: '<a class="tv-btn is-main" href="login.html#signup">' + icon('sparkles', 16) + '<span>Create your profile</span></a><a class="tv-btn" href="login.html"><span>Sign in</span></a>' });
+  _profTabCounts();
+  var c = document.getElementById('pfCounts'); if (c) c.textContent = 'Followers, following and friends show here';
+  document.getElementById('pfPrompts').innerHTML = '<section class="lib-guest" aria-label="About this preview"><span class="lib-guest-ic" aria-hidden="true">' + icon('sparkles', 18) + '</span>'
+    + '<div class="lib-guest-t"><b>' + escHTML(MSS_GUEST.profile.title) + '</b><span>A preview with example titles. Your own stats, favourites and top picks fill in as you watch.</span></div></section>';
+  renderTab0();
+  var tab = parseInt(new URLSearchParams(location.search).get('tab'), 10);
+  if (tab > 0 && tab <= 6) switchTab(tab);
+}
+function _profGuestTab(n) {
+  var E = {
+    2: ['lists', 'lists.html', 'Your lists live here', 'Top 10s, comfort rewatches, guilty pleasures. Until you make your own, browse the community’s.', 'Browse Community lists', 'lists.html?view=community'],
+    3: ['notes', 'notes.html', 'Your notes live here', 'What you really thought of that finale. Until you write your own, read the community’s.', 'Read Community notes', 'notes.html?view=community'],
+    5: ['episodes', 'episodes.html', 'Your episode ratings live here', 'Rate every episode and see each show on one chart. You can already look up any show’s episodes.', 'Look up a show', 'episodes.html'],
+    6: ['medal', '', 'Your showcase lives here', 'Medals, top picks and the cards you make, arranged the way you like. It fills up as you watch.', '', ''],
+  }[n];
+  var id = { 2: 'listsTabContent', 3: 'notesTabContent', 5: 'episodesTabContent', 6: 'profShowcase' }[n];
+  document.getElementById(id).innerHTML = mssEmpty({ art: E[0], title: E[2], text: E[3],
+    actions: [E[4] ? { label: E[4], icon: 'arrowRight', href: E[5] } : null, { label: 'Create a free account', icon: 'sparkles', href: 'login.html#signup', primary: true }] });
+}
 
 /* ── Lists + Notes tabs: the Personal sections of the Notes / Lists pages
    (profile-tabs.js). They wait for your library, which their cards use. ── */
@@ -197,6 +230,7 @@ function switchTab(n, byPerson) {
   MSSProfile.setTab(n, byPerson);
   _PF_TABS.forEach(function(x) { var p = document.getElementById('pfPanel-' + x[0]); if (p) p.classList.toggle('active', x[0] === n); });
   if (n===1) renderLibrary();
+  if (_pfGuest && n > 1) { _profGuestTab(n); return; }
   if (n===2 || n===3) _renderPersonalTab(n);
   if (n===5) MSSTabs.episodes(document.getElementById('episodesTabContent'), { userId: _pUser.id, owner: true });
   if (n===6) MSSShowcase.mount(document.getElementById('profShowcase'), _pUser.id, { own: true });
@@ -219,7 +253,7 @@ function renderTab0() {
   }
   if (!_pProfile) _pProfile = {};
   MSSProfile.overview(el, {
-    entries: _pEntries, profile: _pProfile, editable: true,
+    entries: _pEntries, profile: _pProfile, editable: !_pfGuest,
     openEntry: _libOpen,
     save: function(key, val){ var u = {}; u[key] = val; return updateProfile(_pUser.id, u); }
   });

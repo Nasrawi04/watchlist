@@ -4,7 +4,7 @@
        1. currently watching (poster, next S/E + episode name, progress, +1 episode)
        2. a rating (MSF score band + category bars)
        3. a taste match between two people (%)
-     and the posters on the locked Library / Social / You promos (nav.js).
+     and the posters on top of the Join panel for a guest (mssJoin, config.js — Library / Social / You).
    Admins set it in Admin → Guest showcase (admin.html), which previews with these same cards.
 
    Every visitor sees the same showcase. It's kept on the device (localStorage 'msf_showcase'), so the

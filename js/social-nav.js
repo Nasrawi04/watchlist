@@ -31,7 +31,7 @@ const MSSSocial = (() => {
     const page = here();
     el.innerHTML = groups().map(g => `<div class="soc-bar-group">${g.map(it => {
       const on = it.href === page;
-      return `<a class="soc-bar-btn${on ? ' active' : ''}${it.msg ? ' nav-msg-btn' : ''}" href="${it.href}"${on ? ' aria-current="page"' : ''}>${icon(it.icon, 14)}<span>${it.label}</span>${badge(it)}</a>`;
+      return `<a class="soc-bar-btn${on ? ' active' : ''}${it.msg ? ' nav-msg-btn' : ''}" href="${it.href}"${on ? ' aria-current="page"' : ''}>${icon(it.icon, 14)}<span>${it.label}</span>${badge(it)}${_navLockHTML(it.href, 'dm-lock')}</a>`;
     }).join('')}</div>`).join('<span class="soc-bar-sep" aria-hidden="true"></span>');
     if (typeof _navMsgBadge === 'function') _navMsgBadge(_navMsgCount);
   }

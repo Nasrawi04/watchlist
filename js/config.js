@@ -3644,16 +3644,8 @@ const MSS_GUEST = {
     perks: ['Cartoon movies and shows, side by side', 'Rewatches count. Obviously.', 'Rate them like the classics they are'] },
   library: { art: 'watchlist', title: 'Your whole watching life, on one page', text: 'Movies, shows, anime and cartoons in one folio. Way better than that note on your phone from 2019.', starter: 'all',
     perks: ['See what you’re watching, finished, paused or dropped', 'Search and filter everything you’ve ever added', 'Your stats build up as you go'] },
-  completed: { art: 'watched', title: 'Finished it? It deserves a trophy shelf', text: 'Everything you’ve watched, rated and ranked, instead of forgotten by next Tuesday.',
-    perks: ['One shelf for everything you’ve finished', 'Rank your best from first to last', 'Add the date you watched it'] },
   ratings: { art: 'medal', title: 'You already have opinions. Give them numbers.', text: 'Rate everything you finish and see exactly how harsh you really are.',
     perks: ['Your ratings, sorted and filtered your way', 'See TMDB’s score beside yours', 'Discover how often you hand out a Masterpiece'] },
-  lists: { art: 'lists', title: 'Top 10s now. Arguments later.', text: 'Rank your comfort rewatches, guilty pleasures and all-time greats, then watch your friends disagree.',
-    link: { label: 'Browse Community lists →', href: 'lists.html?view=community' },
-    perks: ['Mix movies, shows, anime and cartoons', 'Build lists together with friends', 'Like and save lists from anyone'] },
-  notes: { art: 'notes', title: 'Hot takes need somewhere to live', text: 'Write what you really thought of that finale. Keep it to yourself, or start something.',
-    link: { label: 'Browse Community notes →', href: 'notes.html?view=community' },
-    perks: ['Notes on anything in your library', 'Keep them private or share them', 'Read what everyone else thought'] },
   episodes: { art: 'episodes', title: 'Was that finale really that bad?', text: 'Rate every episode and see the whole show on one chart. Now you’ll have proof.',
     perks: ['Score episodes one by one, or all in a run', 'Spot a season’s best and worst at a glance', 'Compare your scores with TMDB’s'] },
   profile: { art: 'person', title: 'This could be your folio', text: 'Your stats, favourites and top picks on one page. Like a CV, but for everything you watched instead of working.',
@@ -3662,8 +3654,6 @@ const MSS_GUEST = {
     perks: ['Earn medals as you watch', 'Win gold in challenges with friends', 'Display them on your profile'] },
   export: { art: 'inbox', title: 'Your taste, ready to take anywhere', text: 'All that watching deserves more than a screenshot.',
     perks: ['Export as a PDF, image or spreadsheet', 'Keep a backup of your library', 'It’s your data, take it with you'] },
-  friends: { art: 'friends', title: 'Watching alone is overrated', text: 'Follow your friends and finally see who’s been recommending you rubbish.',
-    perks: ['See what your friends are watching', 'Compare your taste side by side', 'Send each other recommendations'] },
   activity: { art: 'friends', title: 'See what your friends are really watching', text: 'Their ratings, their finishes and their questionable choices, all in one feed.',
     perks: ['A live feed of what friends watch and rate', 'React and join the conversation', 'Find your next show from people you trust'] },
   compare: { art: 'compare', title: 'Find out who has the bad taste', text: 'Line your taste up against a friend’s, side by side. No more guessing who’s wrong.',
@@ -3867,15 +3857,91 @@ const MSSPass = (() => {
   return { MIN, MAX, error, score, mount };
 })();
 
-// Signed out and trying to do something that needs an account: the shared confirm (Create account · Sign in · Not now).
-// Signing in remembers this page, so you come back to it (like every Sign in link).
-async function mssJoin(what = 'do that') {
-  const a = await showConfirm({ title: 'Sign up to ' + what, message: 'It’s free — track what you watch, rate it, write notes, make lists and join the conversation.',
-    confirmText: 'Create account', altText: 'Sign in', cancelText: 'Not now', iconName: 'user', danger: false });
-  if (!a) return;
-  const page = location.pathname.split('/').pop() || 'index.html';
-  try { if (page !== 'login.html') sessionStorage.setItem('mss_next', page + location.search); } catch {}
-  location.href = a === 'alt' ? 'login.html' : 'login.html#signup';
+/* ══════════════════════════════════════════
+   JOIN — the way in for a guest (owner, 19 Nov 2026): a side panel on a computer, a sheet that slides up
+   on a phone (drag it down, tap outside or Esc to close). Never a pop-up in the middle of the page.
+     mssJoin('like notes')        → "Sign up to like notes" (any action that needs an account — mssGuestGate)
+     mssJoin({ topic, href })     → a part of MSF that needs an account (MSS_JOIN_PAGES: Diary, the social
+                                    pages, Medals, Export, Settings); href = the page that was picked, so it's marked
+   Create account / Sign in remember this page, so you come back to it (like every Sign in link).
+══════════════════════════════════════════ */
+// The pages a guest can't open, and which explanation each one gets (nav.js sends their links here)
+const MSS_JOIN_PAGES = { 'diary.html': 'diary', 'activity.html': 'social', 'compare.html': 'social', 'blend.html': 'social', 'movie-night.html': 'social',
+  'challenges.html': 'social', 'polls.html': 'social', 'episode-chat.html': 'social', 'messages.html': 'social', 'cabinet.html': 'medals', 'export.html': 'export',
+  'settings.html': 'settings', 'notifications.html': 'social' };
+const MSS_JOIN = {
+  diary: { eyebrow: 'Library · Diary', art: 'episodes', ...MSS_GUEST.diary },
+  social: { eyebrow: 'Social', art: 'friends', title: 'Better with friends',
+    text: 'Friends is open to everyone: search people and look around their profiles. Everything else here is for members.',
+    rows: [['activity', 'activity.html', 'Activity', 'What friends just watched and rated'], ['compare', 'compare.html', 'Compare', 'Your taste side by side, scores and all'],
+      ['shuffle', 'blend.html', 'Blend', 'Picks you’ll both actually like'], ['film', 'movie-night.html', 'Movie Night', 'Invite friends, vote, settle on one'],
+      ['trophy', 'challenges.html', 'Challenges', 'Race to a watching goal for a medal'], ['poll', 'polls.html', 'Polls', 'Let everyone pick tonight’s movie'],
+      ['comment', 'episode-chat.html', 'Episode Chat', 'Talk about an episode, spoiler-free'], ['inbox', 'messages.html', 'Messages', 'Chats and recommendations'],
+      ['bell', 'notifications.html', 'Notifications', 'New releases, likes and replies']] },
+  medals: { eyebrow: 'You · Medals', ...MSS_GUEST.cabinet },
+  export: { eyebrow: 'You · Export', ...MSS_GUEST.export },
+  settings: { eyebrow: 'Settings', art: 'person', title: 'Settings come with your folio', text: 'Your profile, privacy, notifications and how MSF looks for you. The Light / Dark switch in the footer works for everyone.',
+    perks: ['Choose who sees your profile', 'Pick the notifications you want', 'Your folio follows you to every device'] },
+  action: { eyebrow: 'Free account', art: 'watchlist', text: 'It’s free: track what you watch, rate it, write notes, make lists and join the conversation.',
+    perks: ['Track movies, shows, anime and cartoons', 'Rate every episode and see your stats', 'No ads, and your data is never sold'] },
+};
+function _mssJoinBody(J, href) {
+  const rows = J.rows ? `<ul class="jn-rows">${J.rows.map(([ic, h, label, line]) => `<li class="jn-row${h === href ? ' is-picked' : ''}"${h === href ? ' aria-current="true"' : ''}>
+      <span class="jn-row-ic" aria-hidden="true">${icon(ic, 17)}</span><span class="jn-row-tx"><b>${label}${h === href ? '<span class="jn-row-tag">You picked this</span>' : ''}</b><small>${line}</small></span></li>`).join('')}</ul>` : '';
+  return `<div class="jn"><div class="shp-posters jn-posters" aria-hidden="true">${mssArt(J.art, 'jn-art')}</div>
+      ${J.rows ? '' : `<p class="jn-p">${escHTML(J.text)}</p>`}
+      ${J.rows ? `<p class="jn-p">${escHTML(J.text)}</p>${rows}` : ''}
+      ${J.perks ? `<ul class="mss-es-perks jn-perks">${J.perks.map(x => `<li>${icon('check', 15)}<span>${escHTML(x)}</span></li>`).join('')}</ul>` : ''}
+      <p class="jn-fine">Free, no ads, and your data is never sold.</p></div>`;
+}
+// The posters on top: Admin → Guest showcase's promo posters for that area (MSSFolio.promo), the drawing until they're in
+const _MSS_JOIN_POSTERS = { diary: 'lib', social: 'social' };
+function _mssJoinPosters(root, topic) {
+  mssLoadScript('js/folio-cards.js').then(() => {
+    const box = root.querySelector('.jn-posters');
+    if (!box || typeof MSSFolio === 'undefined') return;
+    const list = MSSFolio.promo(_MSS_JOIN_POSTERS[topic] || 'you').slice(0, 4);
+    if (list.length) box.innerHTML = list.map(p => `<span class="shp-poster"><img src="https://image.tmdb.org/t/p/w342${escHTML(p.poster)}" alt="" loading="lazy"></span>`).join('');
+  }).catch(() => {});
+}
+let _mssJoinOpen = null;
+async function mssJoin(o = 'do that') {
+  if (typeof o === 'string') o = { what: o };
+  const J = o.what ? { ...MSS_JOIN.action, title: 'Sign up to ' + o.what } : MSS_JOIN[o.topic] || MSS_JOIN.action;
+  const go = signup => {
+    const page = location.pathname.split('/').pop() || 'index.html';
+    try { if (page !== 'login.html') sessionStorage.setItem('mss_next', page + location.search); } catch {}
+    location.href = signup ? 'login.html#signup' : 'login.html';
+  };
+  _mssJoinOpen?.();
+  // a phone (the narrow screens where the site's sheets slide up): a sheet you can drag down
+  if (matchMedia(MSS_CF_SHEET).matches) {
+    const ov = document.createElement('div');
+    ov.className = 'lyr-sheet-ov jn-ov';
+    ov.innerHTML = `<section class="lyr-sheet jn-sheet" role="dialog" aria-modal="true" aria-labelledby="jnT" tabindex="-1">
+        <span class="lyr-sheet-grab" aria-hidden="true"></span>
+        <button type="button" class="dp-close jn-x" aria-label="Close">${icon('x', 18)}</button>
+        <p class="jn-eyebrow">${escHTML(J.eyebrow)}</p><h2 class="lyr-title jn-t" id="jnT">${escHTML(J.title)}</h2>
+        ${_mssJoinBody(J, o.href)}
+        <div class="jn-acts"><button type="button" class="jn-btn is-main" data-go="up">${icon('sparkles', 16)}<span>Create a free account</span></button><button type="button" class="jn-btn" data-go="in"><span>Sign in</span></button></div></section>`;
+    const close = () => { if (!ov.isConnected) return; _mssJoinOpen = null; MSSDialog.close(ov); setTimeout(() => ov.remove(), 250); };
+    ov.querySelector('.jn-x').onclick = close;
+    ov.querySelectorAll('[data-go]').forEach(b => b.onclick = () => go(b.dataset.go === 'up'));
+    MSSDialog.bind(ov, close);
+    mssSheetDrag(ov.firstElementChild, close);
+    document.body.appendChild(ov);
+    MSSDialog.open(ov, { focus: '.jn-btn.is-main' });
+    _mssJoinPosters(ov, o.topic);
+    _mssJoinOpen = close;
+    return;
+  }
+  // a computer / tablet: the site's side panel
+  await mssLoadScript('js/panel.js');
+  const h = MSSPanel.open({ kind: 'generic', size: 'S', title: J.title, subtitle: J.eyebrow, label: J.title, body: _mssJoinBody(J, o.href),
+    footer: { secondary: [{ label: 'Sign in', onClick: () => go(false) }], primary: { label: 'Create a free account', lead: icon('sparkles', 16), onClick: () => go(true) } },
+    onClose: () => { _mssJoinOpen = null; } });
+  _mssJoinPosters(h.body, o.topic);
+  _mssJoinOpen = () => h.closeNow();
 }
 /* ══════════════════════════════════════════
    JUST WATCHED — mssWatchedPopup(entry, { onRate, onLater })

@@ -84,15 +84,10 @@ document.addEventListener('DOMContentLoaded', () => {
   _notesTools();
   initPage(async (user) => {
     const q = new URLSearchParams(location.search);
-    // Guests can read Community notes; their own notes need an account
-    if (!user && _notesMode !== 'community') {
-      document.querySelector('.page-wrap').innerHTML = mssGuestEmpty('notes');
-      _notesOpenLink();
-      return;
-    }
+    // Guests: Community notes only — no Mine / Friends switch (owner, 19 Nov 2026)
+    if (!user) { document.getElementById('notesModeWrap').style.display = 'none'; document.getElementById('notesViews').style.display = 'none'; setNotesMode('community'); _notesOpenLink(); return; }
     _notesUser = user;
     if (_notesMode !== 'mine') setNotesMode(_notesMode);
-    if (!user) { _notesOpenLink(); return; }
     await loadNotesPage();
     _notesOpenLink();
     if (q.get('add')) { // (+) → Write a note, from another page
@@ -154,7 +149,8 @@ function _notesTools() {
         <span class="sf-search-ic" aria-hidden="true">${icon('search', 16)}</span>
         <input id="notesUserSearchInput" class="sf-search-input" placeholder="Search people or titles…" aria-label="Search people or titles"
           type="search" name="mss-notes-search" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" enterkeyhint="search" data-1p-ignore data-lpignore="true" data-form-type="other"
-          oninput="this.value=this.value.replace(/[^a-zA-Z0-9_ ]/g,'');_nuSearch(this.value);" onkeydown="_nuKeydown(event)"></div></div>`
+          oninput="this.value=this.value.replace(/[^a-zA-Z0-9_ ]/g,'');_nuSearch(this.value);" onkeydown="_nuKeydown(event)">
+        <button type="button" class="sf-search-go" tabindex="-1" aria-hidden="true" onclick="this.parentElement.querySelector('input').focus()">${icon('search', 16)}<span>Search</span></button></div></div>`
     : SF.searchHTML(scope, _notesMode === 'friends' ? 'Search your friends’ notes…' : 'Search your notes…');
   document.getElementById('notesBar').innerHTML = SF.bar(scope, 'all');
 }
