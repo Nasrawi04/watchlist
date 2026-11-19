@@ -101,12 +101,15 @@
   .egs-btn:not(.is-next) { flex:none; }
 }
 @media(max-width:640px) {
-  .egs-hero { min-height:300px; padding:14px 14px 16px; }
+  .egs-hero { min-height:0; padding:14px 14px 16px; }
+  /* the backdrop as a clear band across the top, as every big header on a phone (owner, 19 Nov 2026) */
+  .egs-hero .tv-hero-bg { bottom:auto; height:300px; -webkit-mask-image:linear-gradient(180deg, black 55%, transparent 100%); mask-image:linear-gradient(180deg, black 55%, transparent 100%); }
+  .egs-hero .tv-hero-shade, [dir=rtl] .egs-hero .tv-hero-shade { background:linear-gradient(180deg, rgba(0,0,0,.22) 0%, rgba(0,0,0,.04) 16%, rgba(0,0,0,.42) 32%, rgba(0,0,0,.66) 46%, rgba(0,0,0,.74) 100%); }
   .egs-crumb, .eg-crumb { flex-wrap:nowrap; margin-bottom:8px; }
   /* poster beside the status, title and chips; then the four numbers; then the actions (Rate next full width) */
-  .egs-hero-in { display:grid; grid-template-columns:88px minmax(0, 1fr); align-items:end; gap:8px 14px; margin-top:96px; }
+  .egs-hero-in { display:grid; grid-template-columns:96px minmax(0, 1fr); align-items:end; gap:8px 14px; margin-top:132px; }
   .egs-hero .tv-hero-txt { display:contents; }
-  .egs-hero .tv-poster { width:88px; grid-column:1; grid-row:1 / span 3; align-self:end; }
+  .egs-hero .tv-poster { width:96px; grid-column:1; grid-row:1 / span 3; align-self:end; }
   .egs-hero .tv-status, .egs-hero .tv-title, .egs-chips { grid-column:2; justify-self:start; }
   .egs-hero .tv-title { font-size:28px; }
   .egs-nums { grid-column:1 / -1; grid-row:4; gap:6px; margin-top:6px; }

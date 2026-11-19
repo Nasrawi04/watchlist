@@ -7486,8 +7486,8 @@ a.nc-author:hover span:last-child { color:var(--text); text-decoration:underline
 .lyr.is-page .tv-otd-back { display:inline-grid; }
 .lyr.is-page .tv-hero { padding:14px 16px 18px; }
 .lyr.is-page .tv-top { inset:calc(12px + env(safe-area-inset-top)) 16px auto; }
-.lyr.is-page .tv-hero-main { gap:14px; margin-top:56px; }
-.lyr.is-page .tv-poster { width:88px; }
+.lyr.is-page .tv-hero-main { gap:14px; margin-top:132px; }
+.lyr.is-page .tv-poster { width:96px; }
 .lyr.is-page .tv-title { font-size:28px; }
 .lyr.is-page .tv-ring { width:74px; align-self:flex-end; } .lyr.is-page .tv-ring circle { stroke-width:8; } .lyr.is-page .tv-ring b { font-size:26px; }
 .lyr.is-page .tv-otd { font-size:11.5px; padding:4px 10px; }
@@ -8333,10 +8333,15 @@ a.tv-favc:focus-visible { outline:2px solid var(--olive-light); outline-offset:2
 
 /* ── phones: the boxed header, a sticky tab bar, one column, the bar at the bottom ── */
 .page-wrap.tv-wrap:has(.tv-page.is-phone) { padding:calc(8px + env(safe-area-inset-top)) 10px 0; }
-.tv-page.is-phone .tv-hero { min-height:300px; margin:0; padding:12px 14px 16px; border-radius:var(--radius-lg); gap:10px; }
+.tv-page.is-phone .tv-hero { min-height:0; margin:0; padding:12px 14px 16px; border-radius:var(--radius-lg); gap:10px; }
 .tv-page.is-phone .tv-top { inset:12px 12px auto; }
-.tv-page.is-phone .tv-hero-main { gap:14px; margin-top:56px; align-items:flex-end; }
-.tv-page.is-phone .tv-poster { width:88px; }
+.tv-page.is-phone .tv-hero-main { gap:14px; margin-top:132px; align-items:flex-end; }
+.tv-page.is-phone .tv-poster { width:96px; }
+/* phones, every big header — title, season, episode, person, Edit, a title's page, the profile, Episodes (owner, 19 Nov 2026,
+   as the profile header 18 Nov and Home's Continue watching): the backdrop is a clear band across the top, fading into the
+   dark under the poster and title — not one picture stretched over the whole card and darkened everywhere */
+:is(.tv-page.is-phone, .lyr.is-page) .tv-hero .tv-hero-bg { bottom:auto; height:300px; -webkit-mask-image:linear-gradient(180deg, black 55%, transparent 100%); mask-image:linear-gradient(180deg, black 55%, transparent 100%); }
+:is(.tv-page.is-phone, .lyr.is-page) .tv-hero .tv-hero-shade { background:linear-gradient(180deg, rgba(0,0,0,.22) 0%, rgba(0,0,0,.04) 16%, rgba(0,0,0,.42) 32%, rgba(0,0,0,.66) 46%, rgba(0,0,0,.74) 100%); }   /* the title and facts ≥ 4.5:1 */
 .tv-page.is-phone .tv-title { font-size:28px; }
 .tv-page.is-phone .tv-facts { font-size:12.5px; }
 .tv-page.is-phone .tv-ring { align-self:flex-end; }
@@ -8678,10 +8683,8 @@ body:has(.tv-page.is-phone:not(.de-page)) #mainNav, body:has(.tv-page.is-phone:n
 .de-save.is-dirty::after { content:''; position:absolute; top:-4px; inset-inline-end:-4px; width:10px; height:10px; border-radius:50%; background:var(--tv-green, var(--olive-light)); border:2px solid #121613; }
 .de-page.is-phone { padding-bottom:110px; }
 .de-page.is-phone .de-acts { display:none; }
-.de-page.is-phone .de-score { align-self:flex-start; position:absolute; top:12px; inset-inline-end:14px; }
+.de-page.is-phone .de-score { align-self:flex-end; }   /* where the view page has its ring: beside the title, at the bottom — not up in the corner (owner, 19 Nov 2026) */
 .de-page.is-phone .de-score .de-delta { display:none; }
-.de-page.is-phone .de-hero .tv-hero-main { margin-top:96px; }
-.de-page.is-phone .de-top { inset-inline-end:110px; }
 .de-page.is-phone .de-bd-btn span:last-child { display:none; }
 .de-page.is-phone .de-bd-btn { padding:0; width:36px; justify-content:center; }
 
