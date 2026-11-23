@@ -101,27 +101,59 @@ function _discIsAnimeOrigin(it) {
 // the same one is never re-checked twice in a session.
 const _discMaturityCache = {};
 
-async function _discIsMatureAnimation(id, mediaType) {
-  const cacheKey = mediaType + ':' + id;
-  if (cacheKey in _discMaturityCache) return _discMaturityCache[cacheKey];
+// One title at a time from TMDB — only for titles the batch below couldn't answer
+async function _discMatureOne(id, mediaType) {
   try {
-    let mature = false;
     if (mediaType === 'tv') {
       const data = await _discFetchJSON(`${TMDB_BASE}/tv/${id}/content_ratings`);
       const us = (data.results || []).find(r => r.iso_3166_1 === 'US');
-      mature = us ? (us.rating === 'TV-MA' || us.rating === 'TV-14') : false;
-    } else {
-      const data = await _discFetchJSON(`${TMDB_BASE}/movie/${id}/release_dates`);
-      const us = (data.results || []).find(r => r.iso_3166_1 === 'US');
-      const cert = us?.release_dates?.find(rd => rd.certification)?.certification || '';
-      mature = ['PG-13', 'R', 'NC-17'].includes(cert);
+      return us ? (us.rating === 'TV-MA' || us.rating === 'TV-14') : false;
     }
-    _discMaturityCache[cacheKey] = mature;
-    return mature;
-  } catch (e) {
-    _discMaturityCache[cacheKey] = false;
-    return false;
+    const data = await _discFetchJSON(`${TMDB_BASE}/movie/${id}/release_dates`);
+    const us = (data.results || []).find(r => r.iso_3166_1 === 'US');
+    const cert = us?.release_dates?.find(rd => rd.certification)?.certification || '';
+    return ['PG-13', 'R', 'NC-17'].includes(cert);
+  } catch { return false; }
+}
+/* Batched (perf audit, 23 Nov 2026): the checks a list asks for at once are answered together — first from the age
+   levels everyone shares (public.title_ratings, one request), then the tmdb function's /age (40 a request, which
+   fills that table) — instead of one TMDB request per title. Same rule as before: mature when the US rating is
+   13+ (TV-14 / PG-13 and up = level 3+, country US); no US rating → not mature. */
+const _discMatWait = new Map();
+let _discMatTimer = null;
+function _discIsMatureAnimation(id, mediaType) {
+  const k = (mediaType === 'movie' ? 'movie' : 'tv') + ':' + Number(id);
+  if (k in _discMaturityCache) return Promise.resolve(_discMaturityCache[k]);
+  if (_discMatWait.has(k)) return _discMatWait.get(k).p;
+  let done; const p = new Promise(r => { done = r; });
+  _discMatWait.set(k, { p, done });
+  clearTimeout(_discMatTimer); _discMatTimer = setTimeout(_discMatRun, 25);
+  return p;
+}
+async function _discMatRun() {
+  const batch = [..._discMatWait.entries()]; _discMatWait.clear();
+  const known = new Map();   // 'tv:1' → { level, country }
+  const keys = batch.map(([k]) => k);
+  try {
+    for (let i = 0; i < keys.length; i += 60) {
+      const or = keys.slice(i, i + 60).map(k => { const [t, n] = k.split(':'); return `and(tmdb_type.eq.${t},tmdb_id.eq.${n})`; }).join(',');
+      const { data } = await sb.from('title_ratings').select('tmdb_type, tmdb_id, level, country').or(or);
+      (data || []).forEach(r => known.set(`${r.tmdb_type}:${r.tmdb_id}`, r));
+    }
+  } catch { /* the function below */ }
+  const rest = keys.filter(k => !known.has(k));
+  for (let i = 0; i < rest.length; i += 40) {
+    try {
+      const res = await fetch(`${TMDB_BASE}/age?ids=${rest.slice(i, i + 40).join(',')}`, { headers: { apikey: SUPABASE_ANON_KEY } });
+      if (res.ok) Object.entries(await res.json()).forEach(([k, v]) => { if (v && v.level) known.set(k, v); });
+    } catch { /* one by one below */ }
   }
+  await Promise.all(batch.map(async ([k, w]) => {
+    const r = known.get(k);
+    const mature = r ? (r.country === 'US' && Number(r.level) >= 3) : await _discMatureOne(k.split(':')[1], k.split(':')[0]);
+    _discMaturityCache[k] = mature;
+    w.done(mature);
+  }));
 }
 
 // Wraps _discNormalize with the maturity check. Only computed for
@@ -755,9 +787,10 @@ const _SEE_ALL_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
        items: TMDB items + { why: 'Because you love Arcane', kind: 'close' | 'near' | 'wild' | 'start' }
        genres: the genres you score highest (names) · basis: { favs, rated, people } · newbie: true while it's thin
      MSSRecs.category                              (discover-list.html "See all")
-     MSSRecs.last()                                → this device's last result (or null)
-   TMDB lists are kept a day on the device (mss_recs_v4); the result 12 hours, or until your library, favourites
-   or Not interested list change. */
+     MSSRecs.last(entries?)                        → this device's last result for the signed-in account (or null), minus your titles
+   TMDB lists come in one request (the tmdb function's /recs, shared with everyone) and are kept a day on the device
+   (mss_recs_v4); the result 12 hours, or until your taste changes (sigOf) — new titles and Not interested are just
+   left out of it. Home and Discover show the last result at once (last()) while it's checked. */
 const MSSRecs = (() => {
   const STORE = 'mss_recs_v4', TTL_LIST = 864e5, TTL_RESULT = 12 * 3600e3, MAX_SEEDS = 16, MAX_PEOPLE = 6, OUT = 60;
   const FAVS = [['top_picks', 3], ['fav_movies', 2.2], ['fav_tv', 2.2], ['fav_anime', 2.2], ['fav_cartoons', 2.2]];
@@ -775,23 +808,52 @@ const MSSRecs = (() => {
   const slim = it => ({ id: it.id, media_type: it.media_type, title: it.title, poster_url: it.poster_url, year: it.year, score: it.score, votes: it.votes,
     genre_ids: it.genre_ids, genres: it.genres, origin_country: it.origin_country, original_language: it.original_language, backdrop_path: it.backdrop_path, overview: it.overview.slice(0, 240) });
   const norm = (r, type) => { if (type !== 'movie' && type !== 'tv') return null; const it = _discNormalize(r, type); return it.poster_url && it.title ? slim(it) : null; };
+  const fresh = key => { const hit = store().lists[key]; return hit && Date.now() - hit.t < TTL_LIST ? hit : null; };
+  const keep = (key, items) => { store().lists[key] = { t: Date.now(), items: items.filter(Boolean) }; return S.lists[key].items; };
   async function list(key, url, pick) {
-    const hit = store().lists[key];
-    if (hit && Date.now() - hit.t < TTL_LIST) return hit.items;
-    const items = pick(await _discFetchJSON(url)).filter(Boolean);
-    S.lists[key] = { t: Date.now(), items };
-    return items;
+    const hit = fresh(key);
+    if (hit) return hit.items;
+    return keep(key, pick(await _discFetchJSON(url)));
   }
-  const recsOf = s => list(`r:${s.k}`, `${TMDB_BASE}/${s.type}/${s.id}/recommendations?language=en-US&page=1`, d => (d.results || []).map(r => norm(r, r.media_type)));
+  const recsKey = s => `r:${s.k}`, worksKey = p => `p2:${p.role}:${p.id}`;
+  const recsPick = d => (d.results || []).map(r => norm(r, r.media_type));
   // a person's best-rated work: directing for directors; for actors and actresses only real roles — top-billed in a film,
   // or in 5+ episodes of a show (not a cameo, not as themselves); enough votes to trust
-  const worksOf = p => list(`p2:${p.role}:${p.id}`, `${TMDB_BASE}/person/${p.id}/combined_credits?language=en-US`, d => {
+  const worksPick = p => d => {
     const raw = p.role === 'Director' ? (d.crew || []).filter(c => c.job === 'Director')
       : (d.cast || []).filter(c => !/\b(himself|herself|themselves|self)\b/i.test(c.character || '') && (c.media_type === 'movie' ? (c.order ?? 99) <= 4 : (c.episode_count || 0) >= 5));
     const seen = new Set();
     return raw.filter(c => (c.vote_count || 0) >= (c.media_type === 'movie' ? 300 : 150) && !seen.has(keyOf(c.media_type, c.id)) && seen.add(keyOf(c.media_type, c.id)))
       .sort((a, b) => (b.vote_average || 0) - (a.vote_average || 0)).slice(0, 12).map(c => norm(c, c.media_type));
-  });
+  };
+  const recsOf = s => list(recsKey(s), `${TMDB_BASE}/${s.type}/${s.id}/recommendations?language=en-US&page=1`, recsPick);
+  const worksOf = p => list(worksKey(p), `${TMDB_BASE}/person/${p.id}/combined_credits?language=en-US`, worksPick(p));
+  /* Everything not kept yet, in ONE request (perf audit §2.4 · the tmdb function's /recs): TMDB is asked for all of
+     them at once on the server, and each answer is shared with everyone. Anything it doesn't return (or an older
+     function without /recs) is then asked for on its own, as before. */
+  async function prime(T) {
+    let seeds = T.seeds.filter(s => !fresh(recsKey(s))), people = T.people.filter(p => !fresh(worksKey(p)));
+    if (!seeds.length && !people.length) return;
+    // first the copies already shared by everyone (public.tmdb_cache "recs:…" / "credits:…", 2 days), read straight
+    // from the database in one request (~0.4 s); the tmdb function (~1.3 s, more when it has to ask TMDB) only for the rest
+    try {
+      const keys = [...seeds.map(s => 'recs:' + s.k), ...new Set(people.map(p => 'credits:' + p.id))];
+      const { data } = await sb.from('tmdb_cache').select('key, body, saved_at').in('key', keys);
+      const got = new Map((data || []).filter(r => Date.now() - Date.parse(r.saved_at) < 2 * TTL_LIST).map(r => [r.key, r.body]));
+      seeds.forEach(s => { const b = got.get('recs:' + s.k); if (Array.isArray(b)) keep(recsKey(s), recsPick({ results: b })); });
+      people.forEach(p => { const b = got.get('credits:' + p.id); if (b) keep(worksKey(p), worksPick(p)(b)); });
+      seeds = seeds.filter(s => !fresh(recsKey(s))); people = people.filter(p => !fresh(worksKey(p)));
+      if (!seeds.length && !people.length) return;
+    } catch { /* the tmdb function below */ }
+    try {
+      const url = `${TMDB_BASE}/recs?seeds=${seeds.map(s => s.k).join(',')}&people=${[...new Set(people.map(p => p.id))].join(',')}`;
+      const res = await tmdbFetch(url);
+      if (!res.ok) return;
+      const d = await res.json();
+      seeds.forEach(s => { if (Array.isArray(d.recs?.[s.k])) keep(recsKey(s), recsPick({ results: d.recs[s.k] })); });
+      people.forEach(p => { const c = d.people?.[p.id]; if (c) keep(worksKey(p), worksPick(p)(c)); });
+    } catch { /* each one is asked for on its own below */ }
+  }
   // a new account's starting point: well-rated popular titles in its genres, else MSF-wide well-rated popular ones
   const startOf = (type, gIds) => list(`s:${type}:${gIds.join('|')}`,
     `${TMDB_BASE}/discover/${type}?language=en-US&sort_by=vote_average.desc&vote_count.gte=${type === 'movie' ? 3000 : 1000}${gIds.length ? `&with_genres=${gIds.join('|')}` : ''}&page=1`,
@@ -837,11 +899,14 @@ const MSSRecs = (() => {
       favs: FAVS.reduce((n, [key]) => n + (Array.isArray(profile?.[key]) ? profile[key].length : 0), 0) };
   }
 
-  /* ── one cheap fingerprint of everything the result depends on ── */
-  function sigOf(entries, profile) {
-    const parts = [entries.map(e => `${e.tmdb_id}:${e.status}:${Math.round((liveScore(e) || 0) * 10)}`).sort().join(','),
-      JSON.stringify(FAVS.map(([k]) => profile?.[k] || [])), JSON.stringify(PEOPLE.map(([k]) => (profile?.[k] || []).map(x => x?.id))),
-      MSSNotInterested.list().map(x => `${x.type}:${x.id}`).sort().join(',')];
+  /* ── one cheap fingerprint of your TASTE (owner, 23 Nov 2026: rebuild only when it changes) ──
+     the starting points and their weights, favourite people, the genres you score highly and how much, the rating
+     group you reward. Adding a title, a new status or an episode doesn't change it: those titles are just left out
+     of the saved result when it's shown (out()). */
+  function sigOf(T) {
+    const r1 = v => Math.round(v * 10) / 10;
+    const parts = [T.seeds.map(x => `${x.k}:${r1(x.w)}`).join(','), T.people.map(p => `${p.role}:${p.id}`).join(','),
+      Object.entries(T.fit).sort().map(([g, v]) => `${g}:${r1(v)}`).join(','), T.genres.join(','), T.reward || '', T.rated.length >= 5 ? 'n' : 'b'];
     let h = 5381; const str = parts.join('|');
     for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) | 0;
     return String(h >>> 0);
@@ -850,11 +915,12 @@ const MSSRecs = (() => {
   async function build(entries, profile) {
     entries = entries || []; profile = profile || {};
     await MSSNotInterested.load();
-    const uid = window._navUser?.id || '', sig = sigOf(entries, profile), st = store();
-    const out = keep => ({ ...keep, items: keep.items.filter(it => !MSSNotInterested.has(it.media_type, it.id)) });
-    if (st.result && st.result.uid === uid && st.result.sig === sig && Date.now() - st.result.t < TTL_RESULT) return out(st.result.data);
-    const T = taste(entries, profile);
+    const uid = window._navUser?.id || '', st = store();
+    const T = taste(entries, profile), sig = sigOf(T);
     const have = new Set(entries.filter(e => e.tmdb_id).map(e => keyOf(typeOf(e), e.tmdb_id)));
+    const out = res => ({ ...res, items: res.items.filter(it => !MSSNotInterested.has(it.media_type, it.id) && !have.has(keyOf(it.media_type, it.id))) });
+    if (st.result && st.result.uid === uid && st.result.sig === sig && Date.now() - st.result.t < TTL_RESULT) return out(st.result.data);
+    mssPerfMark('Recommendations: working out');
     // left out: what you have, what you hid, anything not out yet, and anything TMDB's members don't rate well or enough to trust
     const year = new Date().getFullYear();
     const skip = it => have.has(keyOf(it.media_type, it.id)) || MSSNotInterested.has(it.media_type, it.id) || !it.year || Number(it.year) > year
@@ -880,7 +946,9 @@ const MSSRecs = (() => {
         jobs.push(() => startOf(type, ids).then(items => items.forEach((it, i) => add(it, .9 * (1 - i / 30), { name: why(it), start: true }))).catch(() => {}));
       });
     }
-    for (let i = 0; i < jobs.length; i += 4) await Promise.all(jobs.slice(i, i + 4).map(f => f()));
+    await prime(T);
+    // (all at once: tmdbFetch's own queue already keeps it to a few at a time — no waiting for the slowest of each four)
+    await Promise.all(jobs.map(f => f()));
     save();
     // one score for each title: who points to it, how it fits the genres you score highly, how well rated it is
     const fitOf = it => { const v = (it.genres || []).filter(g => g in T.fit).map(g => T.fit[g]); return v.length ? mean(v) : 0; };
@@ -915,7 +983,8 @@ const MSSRecs = (() => {
     const data = { items, genres: T.genres, basis: { favs: T.favs, rated: T.rated.length, people: T.people.length }, newbie };
     st.result = { uid, sig, t: Date.now(), data };
     save();
-    return data;
+    mssPerfMark('Recommendations: ready');
+    return out(data);
   }
   let ranked = null;
   const category = {
@@ -928,14 +997,24 @@ const MSSRecs = (() => {
       if (!ranked) {
         const user = await getCurrentUser();
         if (!user) return [];
-        const [entries, profile] = await Promise.all([getEntries(user.id), getProfile(user.id)]);
+        const [entries, profile] = await Promise.all([getEntries(user.id), window._navUserProfile || getProfile(user.id)]);
         ranked = (await build(entries, profile)).items;
       }
       return ranked.filter(it => !MSSNotInterested.has(it.media_type, it.id)).slice((page - 1) * 20, page * 20);   // hidden since: left out
     },
   };
-  // the last result on this device, for holding Discover's row in place while the new one is worked out
-  const last = () => store().result?.data || null;
+  // the last result on this device — only the signed-in account's (several accounts can share a device) — shown at
+  // once while the new one is checked; entries: your library, whose titles are left out
+  const who = () => {
+    if (window._navUser?.id) return window._navUser.id;
+    try { return JSON.parse(localStorage.getItem(sb.auth.storageKey) || 'null')?.user?.id || null; } catch { return null; }
+  };
+  function last(entries) {
+    const r = store().result;
+    if (!r?.data || !r.uid || r.uid !== who()) return null;
+    const have = new Set((entries || []).filter(e => e.tmdb_id).map(e => keyOf(typeOf(e), e.tmdb_id)));
+    return { ...r.data, items: r.data.items.filter(it => !MSSNotInterested.has(it.media_type, it.id) && !have.has(keyOf(it.media_type, it.id))) };
+  }
   return { build, category, last };
 })();
 
@@ -1127,11 +1206,14 @@ function initInlineSearch(inputId, opts = {}) {
     setSearching(true);
     box.innerHTML = `<div class="inline-search-head"><div class="section-eyebrow">Search</div><div class="section-title" style="margin-bottom:0">Results for “${esc(q)}”</div></div>
       <div class="page-loading" style="padding:2rem"><div class="spinner"></div></div>`;
-    const [results, , users] = await Promise.all([_tmdbSearch(q, 20, opts.includePersons !== false), hideValue() ? MSSHide.load().catch(() => {}) : null,
-      opts.users && typeof searchUsers === 'function' ? searchUsers(q, 12).catch(() => []) : []]);
+    // titles first, members added when they answer — neither waits for the other (perf audit §2.3)
+    const usersP = opts.users && typeof searchUsers === 'function' ? searchUsers(q, 12).catch(() => []) : Promise.resolve([]);
+    const [results] = await Promise.all([_tmdbSearch(q, 20, opts.includePersons !== false), hideValue() ? MSSHide.load().catch(() => {}) : null]);
     if (my !== seq) return;               // a newer search is already on the way
-    shown = { q, results, users };
+    shown = { q, results, users: [] };
     drawResults();
+    mssPerfMark(`Discover search “${q}” titles`);
+    usersP.then(users => { if (my !== seq || !users.length || shown?.q !== q) return; shown.users = users; drawResults(); });
     if (rememberNext && results.length) remember(q);
     rememberNext = false;
   }

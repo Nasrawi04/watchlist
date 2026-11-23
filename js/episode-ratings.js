@@ -10,6 +10,7 @@
        Opens Rate episodes directly (info popup "Rate Episodes", Episodes page): a side panel L,
        or a full page on phones (js/panel.js), with Prev / Next to move between episodes.
    • MSSEp.seasonEpisodes(tmdbId, season) — TMDB episode details (cached).
+   • MSSEp.warm(entries) — the episode pictures of the in-progress shows on screen, loaded ahead (see warm()).
    • episode 0 = the whole season: MSSEp.rate(entry, season, 0) rates a
      season. Pressing "+" again while the popup is open queues the next
      episode ("Episode 2 of 3"); finishing a season shows a summary card.
@@ -85,6 +86,40 @@ const MSSEp = (() => {
   function seasonSizes(e) {
     const bd = Array.isArray(e.ratings?._season_breakdown) ? e.ratings._season_breakdown.map(Number).filter(n => n > 0) : [];
     return bd;
+  }
+
+  /* ── Pictures ready before you open them (owner, 23 Nov 2026 · perf audit) ──
+     warm(entries): for the in-progress shows on screen (Library, Home), the stills of the episode you're on and the
+     next one — or the show's backdrop when TMDB has no still — start loading quietly in the background, with the
+     panel's code, so + (MSSEp.afterWatch) and the S·E label open with the picture already there. The same address
+     the panel uses, so the browser simply has it. Skipped on Data Saver / 2G; at most 12 shows a call, each spot once. */
+  const warmed = new Set();
+  const slowNet = () => { const c = navigator.connection; return !!c && (c.saveData || /2g$/.test(c.effectiveType || '')); };
+  function nextSpot(e) {
+    const sizes = seasonSizes(e);
+    let s = Number(e.season) || 1, n = (Number(e.episode) || 0) + 1;
+    if (sizes[s - 1] && n > sizes[s - 1] && sizes[s]) { s++; n = 1; }
+    return [s, n];
+  }
+  function warm(list) {
+    if (slowNet() || typeof tmdbFetch !== 'function') return;
+    const shows = (list || []).filter(e => e?.tmdb_id && isShow(e)).slice(0, 12);
+    if (!shows.length) return;
+    const go = async () => {
+      mssLoadScript('js/panel.js');
+      for (const e of shows) {
+        for (const [s, n] of [[Number(e.season) || 1, Math.max(1, Number(e.episode) || 1)], nextSpot(e)]) {
+          const k = `${e.id}:${s}:${n}`;
+          if (warmed.has(k)) continue;
+          warmed.add(k);
+          try {
+            const url = await stillOf(e, (await seasonEpisodes(e.tmdb_id, s)).find(x => x.n === n) || {});
+            if (url) { const im = new Image(); im.decoding = 'async'; im.src = url; }
+          } catch { /* the panel loads it when opened, as before */ }
+        }
+      }
+    };
+    'requestIdleCallback' in window ? requestIdleCallback(go, { timeout: 2500 }) : setTimeout(go, 1200);
   }
 
   async function existing(e, s, n) {
@@ -585,7 +620,7 @@ const MSSEp = (() => {
     _noteVis: v => { if (st) { st.noteVis = v; st.changed = true; } },
     _slide: setScore, _typed: typed, _typedDone: typedDone, _step: d => st && setScore(st.score + d), _tag: toggleTag, _note: onNote,
     _toggle: () => { if (!st) return; st.showTags = !st.showTags; render(st.eps?.find(x => x.n === st.n)); },
-    remove, removeAll, quick,
+    remove, removeAll, quick, warm,
     _go: go, _stop: stop,
   };
 })();

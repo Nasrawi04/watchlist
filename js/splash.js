@@ -16,7 +16,7 @@
    Not shown: inside a frame, the offline and 404 pages, password-reset or email links.
 ══════════════════════════════════════════════════════════════════════ */
 (() => {
-  const LAUNCH_MS = 7000;           // how long the signed-in launch screen stays — the one place to change it
+  const LAUNCH_MS = 3000;           // how long the signed-in launch screen stays — the one place to change it (owner, 23 Nov 2026: was 7000)
   const LAUNCH_DEEP_MS = 1200;      // …when the app opens straight onto another page (a link, a notification)
   const page = location.pathname.split('/').pop() || 'index.html', params = new URLSearchParams(location.search);
   const signedIn = (() => {

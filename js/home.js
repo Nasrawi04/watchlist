@@ -148,7 +148,7 @@ const MSSHome = (() => {
     MSSViews.open(e, { own: true, start: start || 'info', from: 'index.html', ...(start === 'note' ? { note: true } : {}),
       onChange: changed, onDelete: x => { D.entries = all().filter(y => y.id !== x.id); changed(); } });
   }
-  function changed() { drawEntryWidgets(); snapshot(); }
+  function changed() { drawEntryWidgets(); }
   const entry = id => all().find(x => x.id === id);
   const act = {
     step: (id, d) => { const e = entry(id); if (e) MSSProgress.step(e, d, changed); },
@@ -614,8 +614,8 @@ const MSSHome = (() => {
     if (!w || w.hidden) return;
     w.dataset.size = L.size[id];
     let html;
-    // before your library is in (or while only this device's small copy is), only the first screen draws for real
-    const notYet = ENTRY_W.includes(id) && (D.entries == null || (D.fromSnap && id !== 'continue' && !(id === 'progress' && inProgress().length > 1)));
+    // before your library is in, the widgets that need it show their skeletons
+    const notYet = ENTRY_W.includes(id) && D.entries == null;
     if (notYet) html = id === 'continue' ? skel('continue') : head(id) + skel(id);
     else { try { html = RENDER[id](); } catch (err) { console.warn('Home widget', id, err); html = head(id) + empty('search', 'Couldn’t load this', 'Try again in a moment.'); } }
     const b = w.querySelector('.mh-wb');
@@ -678,7 +678,7 @@ const MSSHome = (() => {
     if (D.entries == null) return;
     const e = heroEntry(), g = glance(), bits = [];
     if (e) bits.push(isMovie(e) || e.status === 'up_next' ? `<b>${esc(e.title)}</b> is up next` : `You’re on <b>${esc(`S${e.season || 1} E${e.episode || 0}`)}</b> of <span translate="no">${esc(e.title)}</span>`);
-    if (!D.fromSnap) bits.push(`<b>${g.month}</b> ${g.month === 1 ? 'title' : 'titles'} finished this month`, `<b>${g.queue.toLocaleString(loc())}</b> on your watchlist`);   // the counts need your whole library
+    bits.push(`<b>${g.month}</b> ${g.month === 1 ? 'title' : 'titles'} finished this month`, `<b>${g.queue.toLocaleString(loc())}</b> on your watchlist`);   // the counts need your whole library
     $('mhSum').innerHTML = bits.join(' · ');
   }
 
@@ -890,25 +890,6 @@ const MSSHome = (() => {
   }
   function say(t) { const r = $('mhLive'); if (r) { r.textContent = ''; setTimeout(() => { r.textContent = t; }, 30); } }
 
-  /* ══ First screen fast: a small copy of what it needs, kept on the device ══ */
-  const SNAP = () => 'msf_home_snap_' + uid;
-  const SNAP_KEYS = ['id', 'title', 'year', 'cat', 'status', 'season', 'episode', 'watched', 'total_eps', 'total_seasons', 'poster_url', 'tmdb_id', 'tmdb_type', 'updated_at', 'created_at', 'completed_at', 'completed_date', 'runtime_h', 'runtime_m', 'final_score', 'genres'];
-  function snapshot() {
-    const keep = all().filter(e => ['watching', 'up_next', 'paused', 'ongoing'].includes(e.status)).map(e => {
-      const x = {}; SNAP_KEYS.forEach(k => { if (e[k] != null) x[k] = e[k]; });
-      x.ratings = { _season_breakdown: e.ratings?._season_breakdown, _ep_runtime: e.ratings?._ep_runtime, _backdrop: e.ratings?._backdrop, _backdrop_pos: e.ratings?._backdrop_pos, _media_type: e.ratings?._media_type };
-      return x; });
-    try { localStorage.setItem(SNAP(), JSON.stringify({ t: Date.now(), keep })); } catch {}
-  }
-  function fromSnapshot() {
-    try {
-      const s = JSON.parse(localStorage.getItem(SNAP()) || 'null');
-      if (!s || Date.now() - s.t > 7 * 864e5) return false;
-      D.entries = s.keep; D.fromSnap = true;
-      return true;
-    } catch { return false; }
-  }
-
   /* ══ Start ══ */
   async function start(user) {
     if (guest) {   // the guest preview was up (signed in after all): back to a real home
@@ -931,7 +912,8 @@ const MSSHome = (() => {
     updateGreeting();
 
     // the first screen from what this device kept (hero, Also in progress), skeletons for the rest
-    const snap = fromSnapshot();
+    // (Home's old 7-day copy of your in-progress titles is gone: the library's own copy, msf-store.js, is quicker and never behind)
+    try { localStorage.removeItem('msf_home_snap_' + uid); } catch {}
     build();
 
     // your account's layout (when it differs from this device's) — the nav's profile
@@ -940,18 +922,25 @@ const MSSHome = (() => {
     prof.then(p => { updateGreeting(); if (!editing && adopt(p)) { build(); } else draw('favs'); }).catch(() => {});
 
     const entries = await getEntries(user.id);
-    D.entries = entries; D.fromSnap = false;
+    D.entries = entries;
     window._homeEntries = entries;
     MSSMine.set(entries);
     drawEntryWidgets();
     pack();
-    snapshot();
+    mssPerfMark('Home drawn');
+    if (typeof MSSEp !== 'undefined' && MSSEp.warm) MSSEp.warm(inProgress().sort(byUpdated));   // episode pictures ready before + / an episode opens
 
     // the rest, side by side
     loadFriends().then(r => { D.friends = r; }).catch(e => { console.warn('Friends activity:', e); D.friends = []; }).finally(() => draw('friends'));
     newEpisodes();
     loadMedals().then(r => { D.medals = r; }).catch(() => { D.medals = []; }).finally(() => draw('medals'));
-    prof.then(() => loadRecs()).then(r => { D.recs = r; }).catch(e => { console.warn('Recommendations:', e); D.recs = []; }).finally(() => draw('recs'));
+    // your last recommendations at once (this device, this account), then checked — redrawn only if they changed
+    const lastRecs = MSSRecs.last(entries);
+    if (lastRecs?.items.length) { D.recs = lastRecs.items.slice(0, 16); draw('recs'); }
+    prof.then(() => loadRecs()).then(r => {
+      const same = D.recs && r.length === D.recs.length && r.every((x, i) => x.id === D.recs[i].id && x.media_type === D.recs[i].media_type);
+      D.recs = r; if (!same) draw('recs');
+    }).catch(e => { console.warn('Recommendations:', e); if (D.recs == null) { D.recs = []; draw('recs'); } });
     getRecentlyViewed(user.id, 12).then(r => { D.viewed = r || []; }).catch(() => { D.viewed = []; }).finally(() => draw('viewed'));
     mssLoadScript('js/on-this-day.js').then(() => MSSOtd.list()).then(r => { D.otd = r || []; }).catch(() => { D.otd = []; }).finally(() => draw('otd'));
   }

@@ -7,7 +7,7 @@
      necessary  always on: signing in, security, age checks, finishing what you asked for,
                 settings you change on purpose (theme, language…), messages you've already closed
      prefs      optional "Remember my choices": recent searches, views, sorts, drafts, layouts
-     speed      optional "Faster pages": copies of TMDB answers, posters and summaries on this device
+     speed      optional "Faster pages": copies of TMDB answers, posters and summaries on this device, and your library (msf-store.js, IndexedDB)
      outside    optional "Extra sources": AniList when you search, the wsrv.nl image helper for exports
    sessionStorage (gone when the tab closes) is always necessary: it carries what you opened between pages.
 
@@ -48,7 +48,7 @@ const MSSConsent = (() => {
     ['mss_ep_seasons_v3', 'speed'], ['mss_browse_prov_v3', 'speed'], ['mss_top_eps_v2', 'speed'], ['mss_recs_v4', 'speed'],
     ['mss_tmdb_posters_v1', 'speed'], ['mss_explore_posters_v1', 'speed'], ['mss_anilist_genres_v1', 'speed'], ['mss_cast_v3', 'speed'],
     [/^mss_skel_/, 'speed'], ['msf_showcase', 'speed'], ['msf_wall', 'speed'], [/^msf_bd_/, 'speed'], [/^mss_ys_html_/, 'speed'],
-    [/^msf_home_snap_/, 'speed'], ['msf_export_thumbs', 'speed'], ['mss_tv_season_v1', 'speed'], ['mss_movie_release_v1', 'speed'],
+    ['msf_export_thumbs', 'speed'], ['mss_tv_season_v1', 'speed'], ['mss_movie_release_v1', 'speed'],
     [/^mss_medals_/, 'speed'],
   ];
   const warned = new Set();
@@ -79,6 +79,8 @@ const MSSConsent = (() => {
     if (!ls) return;
     try { Object.keys(ls).forEach(k => { if (!allowsKey(k)) ls.removeItem(k); }); } catch {}
     if (!allows('speed') && 'caches' in window) caches.delete('tmdb-data-v1').catch(() => {});
+    // …and every account's copy of its library (msf-store.js)
+    if (!allows('speed') && indexedDB?.databases) indexedDB.databases().then(l => l.forEach(d => { if (/^msf-data-/.test(d.name || '')) indexedDB.deleteDatabase(d.name); })).catch(() => {});
   }
 
   function set(c) {
@@ -120,7 +122,7 @@ const MSSConsent = (() => {
   const ROWS = [
     ['necessary', 'Necessary', 'Keeps you signed in, keeps your account and messages secure, checks your age group, and remembers settings you change on purpose (Light / Dark, language) and messages you’ve already closed. MSF can’t work without it.', 'lock'],
     ['prefs', 'Remember my choices', 'Recent searches, the views and sorts you pick, unsent note drafts, your Home layout and where you were in setup — on this device.', 'bookmark'],
-    ['speed', 'Faster pages', 'Copies of title details, posters and summaries kept on this device, so pages open without asking TMDB again.', 'zap'],
+    ['speed', 'Faster pages', 'Copies of title details, posters and summaries — and of your own library — kept on this device, so pages open without asking again.', 'zap'],
     ['outside', 'Extra sources', 'Searching also asks AniList (an anime database) for more anime, and exported images can fetch posters through wsrv.nl. Your search words and IP address reach them.', 'globe'],
   ];
   let ov = null;

@@ -869,6 +869,9 @@ function _libRender(){
     if (typeof mssPaintLogo === 'function') el.querySelectorAll('.lib-pod-in[data-id]').forEach(function(p){ mssPaintLogo(p.querySelector('.lib-pod-title'), LIB_ENTRIES().find(function(x){ return x.id === p.dataset.id; })); });
   });
   _libEpNames(el);
+  // the episode pictures of what you're watching, ready before you press + or open an episode (MSSEp.warm)
+  if (LIB_CTRL && typeof MSSEp !== 'undefined' && MSSEp.warm) MSSEp.warm(LIB_ENTRIES().filter(function(e){ return ['watching','paused','up_next'].indexOf(e.status) >= 0; })
+    .sort(function(a, b){ return String(b.updated_at || '').localeCompare(String(a.updated_at || '')); }));
   mssScrollReturn(el);
   _libBackN=0;
   _libRememberTab();

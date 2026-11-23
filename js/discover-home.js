@@ -185,18 +185,28 @@ const MSSDiscoverHome = (() => {
     $('dzTasteRail').innerHTML = MSSCard.skel(8);
     $('dzTaste').hidden = false;
   }
+  let tasteShown = '';
+  function paintTaste(t) {
+    const ids = t.items.slice(0, 20).map(it => it.media_type + it.id).join();
+    if (ids === tasteShown) return;                   // the same picks: nothing redrawn
+    tasteShown = ids;
+    tasteHead(t);
+    $('dzTasteRail').innerHTML = t.items.slice(0, 20).map(it => MSSResults.recCard(it, 'discover')).join('');
+    $('dzTaste').hidden = false;
+    mssRailEdges($('dzTasteRail'));
+  }
   async function renderTaste() {
     const sec = $('dzTaste');
     if (!window._navUser) { sec.hidden = true; return; }
+    // your last picks at once (this device, this account), then checked
+    const was = MSSRecs.last(MSSResults.entries());
+    if (was?.items.length) paintTaste(was);
     for (let i = 0; i < 40 && !window._navUserProfile; i++) await new Promise(r => setTimeout(r, 100));   // your favourites come with your profile
     const t = await MSSRecs.build(MSSResults.entries(), window._navUserProfile || {}).catch(e => { console.warn('Picked for your taste:', e); return null; });
-    if (!t || !t.items.length) { sec.hidden = true; return; }
-    tasteHead(t);
-    $('dzTasteRail').innerHTML = t.items.slice(0, 20).map(it => MSSResults.recCard(it, 'discover')).join('');
-    sec.hidden = false;
-    mssRailEdges($('dzTasteRail'));
+    if (!t || !t.items.length) { if (!was?.items.length) sec.hidden = true; return; }
+    paintTaste(t);
   }
-  MSSResults.recHooks('discover', { empty: () => { $('dzTaste').hidden = true; }, undo: () => renderTaste() });
+  MSSResults.recHooks('discover', { empty: () => { $('dzTaste').hidden = true; }, undo: () => { tasteShown = ''; renderTaste(); } });
 
   /* ══ 4. Browse by list ══ */
   // the four Upcoming lists are the bottom row (owner, 16 Nov 2026)
@@ -269,6 +279,13 @@ const MSSDiscoverHome = (() => {
     const seen = () => { listsSeen = true; postersFor(PHONE.matches ? MAIN.concat(MORE) : MAIN); };
     const io = 'IntersectionObserver' in window ? new IntersectionObserver(es => { if (es.some(e => e.isIntersecting)) { io.disconnect(); seen(); } }, { rootMargin: '300px 0px' }) : null;
     io ? io.observe($('dzLists')) : seen();
+    // …and quietly in the background once the page has settled (owner, 23 Nov 2026): every list's first page and
+    // tile posters, so scrolling down — or opening a list — has them ready. Not on Data Saver / 2G.
+    const c = navigator.connection;
+    if (c && (c.saveData || /2g$/.test(c.effectiveType || ''))) return;
+    const later = () => { if (!listsSeen) { io?.disconnect(); seen(); } postersFor(MORE); };
+    const soon = () => setTimeout(() => ('requestIdleCallback' in window ? requestIdleCallback(later, { timeout: 4000 }) : later()), 1500);
+    document.readyState === 'complete' ? soon() : addEventListener('load', soon, { once: true });
   }
   function toggleMore(btn) {
     const box = $('dzTilesMore'), open = box.hidden;

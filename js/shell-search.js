@@ -16,13 +16,12 @@
      MSSSearch.close()
 
    Requires config.js (icon, escHTML, safeURL, MSSDialog, MSSAge, showToast, MSS_SEARCH_MS),
-   nav.js (_tmdbSearch, _shellPage, _navCloseAll), db.js (searchEntries, searchUsers).
+   nav.js (_tmdbSearch, _shellPage, _navCloseAll), db.js (getEntries — your library from this device's copy, msf-store.js — searchUsers).
 ══════════════════════════════════════════════════════════════════════ */
 const MSSSearch = (() => {
   const IMG = 'https://image.tmdb.org/t/p/w92';
   const FILTERS = [['all', 'All'], ['titles', 'Titles'], ['people', 'People'], ['users', 'Users']];
   const STATUS = { watching: 'Watching', up_next: 'Up Next', paused: 'Taking a Break', queue: 'Watchlist', completed: 'Watched', ongoing: 'To Be Continued', dropped: 'Dropped' };
-  let lib = null;                       // your library, loaded once (searchEntries)
   const added = new Set();              // titles put on the Watchlist from here (the button shows ✓ Added)
   const views = {};                     // 'desk' | 'page' → { input, panel, list, filter, q, rows, active, seq, timer }
 
@@ -60,6 +59,7 @@ const MSSSearch = (() => {
     input.setAttribute('aria-expanded', 'false');
     input.setAttribute('aria-controls', v.list.id);
     input.addEventListener('input', () => { clearTimeout(v.timer); v.timer = setTimeout(() => run(v), MSS_SEARCH_MS); });
+    input.addEventListener('focus', () => { mine(); }, { once: true });   // your library's copy ready before the first letter
     input.addEventListener('keydown', ev => keys(v, ev));
     const fbox = panel.querySelector('.shs-filters');
     fbox.addEventListener('click', ev => { const b = ev.target.closest('.shs-f'); if (b) setFilter(v, b.dataset.f, true); });
@@ -103,32 +103,40 @@ const MSSSearch = (() => {
     v.input.removeAttribute('aria-activedescendant');
   }
 
+  // Each part is drawn the moment it arrives (perf audit §2.3): your library first (this device's copy, msf-store.js),
+  // then TMDB and members — nothing waits for the slowest. A newer search makes the older answers count for nothing.
+  const mine = () => window._navUser?.id ? getEntries(window._navUser.id).catch(() => []) : Promise.resolve([]);
   async function run(v) {
     const q = v.input.value.trim(), seq = ++v.seq;
     v.q = q;
-    if (q.length < 2) { v.rows = []; v.list.innerHTML = ''; v.panel.classList.remove('has-q'); if (v.k === 'desk') hide('desk'); else draw(v); return; }
+    if (q.length < 2) { v.rows = []; v.res = null; v.list.innerHTML = ''; v.panel.classList.remove('has-q'); if (v.k === 'desk') hide('desk'); else draw(v); return; }
     v.panel.classList.add('has-q');
     show(v.k);
     if (window._navUser && typeof MSSInfo === 'undefined') mssLoadScript('js/info-popup.js');   // ready before a + Watchlist tap
+    const ql = q.toLowerCase(), R = v.res = { lib: [], titles: [], people: [], users: [] };
+    let tmdb = null, ownIds = new Set();
+    v.pending = 3;
     v.list.innerHTML = `<div class="shs-state" role="presentation">${icon('search', 15)} Searching…</div>`;
-    const me = window._navUser?.id;
-    const [mine, tmdb, users] = await Promise.all([
-      me ? (lib ? Promise.resolve(lib) : searchEntries(me, '').then(r => (lib = r || [])).catch(() => [])) : Promise.resolve([]),
-      _tmdbSearch(q, 20, true),
-      typeof searchUsers === 'function' ? searchUsers(q, 10).catch(() => []) : Promise.resolve([]),
-    ]);
-    if (seq !== v.seq) return;                      // a newer search started
-    const ql = q.toLowerCase();
-    const own = mine.filter(e => (e.title || '').toLowerCase().includes(ql))
-      .sort((a, b) => ((b.title || '').toLowerCase().startsWith(ql) - (a.title || '').toLowerCase().startsWith(ql)) || (a.title || '').localeCompare(b.title || ''));
-    const ownIds = new Set(own.map(e => e.tmdb_type + ':' + e.tmdb_id));
-    v.res = {
-      lib: own.map(e => ({ kind: 'lib', e })),
-      titles: tmdb.filter(r => r.media_type !== 'person' && !ownIds.has(r.media_type + ':' + r.id)).map(r => ({ kind: 'title', r })),
-      people: tmdb.filter(r => r.media_type === 'person').map(r => ({ kind: 'person', r })),
-      users: (users || []).map(u => ({ kind: 'user', u })),
+    const part = (p, use) => p.then(x => { if (seq !== v.seq) return; use(x || []); }).catch(() => {}).finally(() => {
+      if (seq !== v.seq) return;
+      v.pending--;
+      draw(v);
+      if (!v.pending) mssPerfMark(`Search “${q}” complete`);
+    });
+    const titles = () => {   // TMDB titles you don't already have (they show under In your library)
+      if (!tmdb) return;
+      R.titles = tmdb.filter(r => r.media_type !== 'person' && !ownIds.has(r.media_type + ':' + r.id)).map(r => ({ kind: 'title', r }));
+      R.people = tmdb.filter(r => r.media_type === 'person').map(r => ({ kind: 'person', r }));
     };
-    draw(v);
+    part(mine(), lib => {
+      const own = lib.filter(e => (e.title || '').toLowerCase().includes(ql))
+        .sort((a, b) => ((b.title || '').toLowerCase().startsWith(ql) - (a.title || '').toLowerCase().startsWith(ql)) || (a.title || '').localeCompare(b.title || ''));
+      ownIds = new Set(own.map(e => e.tmdb_type + ':' + e.tmdb_id));
+      R.lib = own.map(e => ({ kind: 'lib', e }));
+      titles();
+    });
+    part(_tmdbSearch(q, 20, true), r => { tmdb = r; titles(); });
+    part(typeof searchUsers === 'function' ? searchUsers(q, 10) : Promise.resolve([]), u => { R.users = u.map(x => ({ kind: 'user', u: x })); });
   }
 
   function draw(v) {
@@ -147,14 +155,20 @@ const MSSSearch = (() => {
       (f === 'all' || f === 'titles') && R.titles.length && ['Titles', R.titles.slice(0, f === 'all' ? 5 : 10)],
       (f === 'all' || f === 'people') && R.people.length && ['People', R.people.slice(0, f === 'all' ? 3 : 10)],
     ].filter(Boolean);
+    const was = v.rows[v.active];
     v.rows = groups.flatMap(([, rows]) => rows);
-    v.active = -1;
-    v.input.removeAttribute('aria-activedescendant');
-    if (!v.rows.length) { v.list.innerHTML = `<div class="shs-state" role="presentation">No matches for “${escHTML(v.q)}”. Try See all for more.</div>`; return; }
+    v.active = was ? v.rows.indexOf(was) : -1;
+    if (v.active < 0) v.input.removeAttribute('aria-activedescendant');
+    if (!v.rows.length) {
+      v.list.innerHTML = v.pending ? `<div class="shs-state" role="presentation">${icon('search', 15)} Searching…</div>`
+        : `<div class="shs-state" role="presentation">No matches for “${escHTML(v.q)}”. Try See all for more.</div>`;
+      return;
+    }
     let i = 0;
     v.list.innerHTML = groups.map(([h, rows], g) => `<div role="group" aria-labelledby="shs-${v.k}-g${g}">
         <div class="shs-gh" id="shs-${v.k}-g${g}" role="presentation">${h}</div>
         ${rows.map(x => row(v, x, i++)).join('')}</div>`).join('');
+    if (v.active >= 0) setActive(v, v.active, false);
   }
 
   function row(v, x, i) {
@@ -235,9 +249,8 @@ const MSSSearch = (() => {
       const entry = await MSSInfo.quickAdd({ tmdb_id: r.id, media_type: r.media_type, title, year: (r.release_date || r.first_air_date || '').slice(0, 4),
         poster_url: r.poster_path ? 'https://image.tmdb.org/t/p/w500' + r.poster_path : null });
       if (!entry) { added.delete(key); paintAdd(v, i, false); return; }
-      lib = null;
       document.dispatchEvent(new CustomEvent('mss:library-changed', { detail: { entry } }));
-      showUndoToast(`Added “${title}” to your Watchlist`, async () => { await deleteEntry(entry.id, window._navUser.id); lib = null; added.delete(key); paintAdd(v, i, false); });
+      showUndoToast(`Added “${title}” to your Watchlist`, async () => { await deleteEntry(entry.id, window._navUser.id); added.delete(key); paintAdd(v, i, false); });
     } catch (err) {
       const dup = String(err?.message || '').startsWith('DUPLICATE:');
       if (!dup) { added.delete(key); paintAdd(v, i, false); }

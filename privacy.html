@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<link rel="preconnect" href="https://yqbfjtkcsgyvnablmuzp.supabase.co" crossorigin>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="color-scheme" content="light dark">
 <meta name="theme-color" content="#F3EEDC">
@@ -26,7 +27,7 @@
     <p class="lg-eyebrow">MyScreenFolio · Legal</p>
     <h1 class="lg-title">Privacy Policy</h1>
     <p class="lg-lede">What we collect when you use MyScreenFolio, why we need it, who else handles it, how long we keep it, and how you stay in control. Written to be read, not skimmed past.</p>
-    <ul class="lg-meta"><li><span data-ic="calendar" data-size="14"></span>Last updated 19 November 2026</li><li><span data-ic="layers" data-size="14"></span>Version 1.3</li><li><span data-ic="clock" data-size="14"></span>About 20 minutes to read</li></ul>
+    <ul class="lg-meta"><li><span data-ic="calendar" data-size="14"></span>Last updated 23 November 2026</li><li><span data-ic="layers" data-size="14"></span>Version 1.4</li><li><span data-ic="clock" data-size="14"></span>About 20 minutes to read</li></ul>
   </header>
   <div class="lg-tabs" role="navigation" data-lg-tabs aria-label="About and legal pages"></div>
 
@@ -82,7 +83,7 @@
         <p><b>Profile photos are checked on your own device</b> before they’re uploaded: a small image-safety model runs in your browser and refuses pictures that look sexual. The picture itself is never sent to us for this check. If a picture is refused, we record that a picture was refused (not the picture) so admins can spot repeated attempts.</p>
 
         <h3 id="c-library">3.3 Your library and ratings</h3>
-        <p>The titles you add and everything about them: status (Watchlist, Watching, Watched…), category, progress through seasons and episodes, scores and the MSF rating breakdown, episode and season ratings, rewatches, the dates you watched (your Diary), notes and spoiler marks, pinned notes, lists you make or join, posters you upload yourself, and which import a title came from. We also keep a short list of titles you’ve recently opened, and the titles you’ve marked <b>Not interested</b> so they’re never recommended to you again — only you can see either (you can bring them back in <b>Settings › Appearance &amp; Preferences › Recommendations</b>).</p>
+        <p>The titles you add and everything about them: status (Watchlist, Watching, Watched…), category, progress through seasons and episodes, scores and the MSF rating breakdown, episode and season ratings, rewatches, the dates you watched (your Diary), notes and spoiler marks, pinned notes, lists you make or join, posters you upload yourself, and which import a title came from. When you delete a title we note its id and the time for 90 days, so your other devices can remove it too. We also keep a short list of titles you’ve recently opened, and the titles you’ve marked <b>Not interested</b> so they’re never recommended to you again — only you can see either (you can bring them back in <b>Settings › Appearance &amp; Preferences › Recommendations</b>).</p>
         <p><b>Why:</b> this <em>is</em> MSF — it’s what lets us show your library, your stats, your Year in Review, your taste profile and recommendations “For your taste”. Recommendations and taste matches are worked out from your own library, ratings and favourites (including your favourite actors and directors), in your browser; we don’t profile you for anything else.</p>
 
         <h3 id="c-social">3.4 Social features</h3>
@@ -118,7 +119,7 @@
         </ul>
 
         <h3 id="c-device">3.8 What’s kept on your device</h3>
-        <p>MSF uses one small cookie and your browser’s storage — for signing in, remembering your settings and, if you allow it, making pages faster. None of it is used for tracking or advertising. The full list, with what each one does and how long it lasts, is in the <a href="cookies.html">Cookie Policy</a>, and you can change your choices at any time:</p>
+        <p>MSF uses one small cookie and your browser’s storage — for signing in, remembering your settings and, if you allow it, making pages faster (including a copy of your own library, deleted when you sign out). None of it is used for tracking or advertising. The full list, with what each one does and how long it lasts, is in the <a href="cookies.html">Cookie Policy</a>, and you can change your choices at any time:</p>
         <p class="lg-acts"><button type="button" class="lg-btn" data-ck-open><span data-ic="settings" data-size="16"></span>Cookie settings</button></p>
 
         <h3 id="c-imports">3.9 Imports and exports</h3>
@@ -195,6 +196,7 @@
             <tr><td>Your account, profile, library, ratings, lists, notes and social activity</td><td data-label="How long">Until you delete them or your account.</td></tr>
             <tr><td>Messages</td><td data-label="How long">30 days if unopened; the end of the 7th day after being opened; starred ones until nobody stars them. Deleting a chat hides it for you; it’s gone once both people have deleted it.</td></tr>
             <tr><td>Signed-in device records</td><td data-label="How long">Until that device signs out, you sign it out, or the session expires.</td></tr>
+            <tr><td>Notes of deleted titles (so your other devices can remove them too)</td><td data-label="How long">90 days.</td></tr>
             <tr><td>Rate-limit records</td><td data-label="How long">1 day.</td></tr>
             <tr><td>Shared TMDB lists (the same for everyone, no personal data)</td><td data-label="How long">Refreshed every 6 hours; old copies cleared after 2 days.</td></tr>
             <tr><td>Reports, flags and moderation records</td><td data-label="How long">As long as needed to keep MSF safe (for example to spot repeated abuse), reviewed at least once a year. Reports you filed are deleted with your account.</td></tr>
@@ -273,6 +275,7 @@
 <script src="js/vendor/supabase-2.118.0.js"></script>
 <script src="js/config.js"></script>
 <script src="js/db.js"></script>
+<script src="js/msf-store.js"></script>
 <script src="js/nav.js"></script>
 <script src="js/legal.js"></script>
 <script>document.addEventListener('DOMContentLoaded', () => { lgInit(); initPageGuest(); });</script>

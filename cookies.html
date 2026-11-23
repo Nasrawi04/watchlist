@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<link rel="preconnect" href="https://yqbfjtkcsgyvnablmuzp.supabase.co" crossorigin>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="color-scheme" content="light dark">
 <meta name="theme-color" content="#F3EEDC">
@@ -26,7 +27,7 @@
     <p class="lg-eyebrow">MyScreenFolio · Legal</p>
     <h1 class="lg-title">Cookie Policy</h1>
     <p class="lg-lede">Every cookie and piece of browser storage MSF uses, what it does, how long it lasts, and what changes if you say no.</p>
-    <ul class="lg-meta"><li><span data-ic="calendar" data-size="14"></span>Last updated 19 November 2026</li><li><span data-ic="layers" data-size="14"></span>Version 1.2</li><li><span data-ic="clock" data-size="14"></span>About 10 minutes to read</li></ul>
+    <ul class="lg-meta"><li><span data-ic="calendar" data-size="14"></span>Last updated 23 November 2026</li><li><span data-ic="layers" data-size="14"></span>Version 1.3</li><li><span data-ic="clock" data-size="14"></span>About 10 minutes to read</li></ul>
   </header>
   <div class="lg-tabs" role="navigation" data-lg-tabs aria-label="About and legal pages"></div>
 
@@ -64,7 +65,7 @@
           <tbody>
             <tr><td>Necessary</td><td data-label="What it’s for">Signing in, keeping your account and messages secure, age checks, finishing what you asked for, settings you change on purpose, and remembering messages you’ve already closed.</td><td data-label="Your choice">Always on — MSF can’t work without it. The law allows this without consent because it’s strictly needed for the service you asked for.</td></tr>
             <tr><td>Remember my choices</td><td data-label="What it’s for">Recent searches, the views and sorts you pick, unsent drafts, your Home layout, where you were in setup.</td><td data-label="Your choice">Optional. Off until you say yes.</td></tr>
-            <tr><td>Faster pages</td><td data-label="What it’s for">Copies of title details, posters and summaries kept on your device so pages open without asking again.</td><td data-label="Your choice">Optional. Off until you say yes.</td></tr>
+            <tr><td>Faster pages</td><td data-label="What it’s for">Copies of title details, posters and summaries — and of your own library — kept on your device so pages open without asking again.</td><td data-label="Your choice">Optional. Off until you say yes.</td></tr>
             <tr><td>Extra sources</td><td data-label="What it’s for">Lets MSF contact AniList for more anime results when you search, and wsrv.nl to include posters in some exported images. Nothing is saved, but these services see your IP address and what’s asked for.</td><td data-label="Your choice">Optional. Off until you say yes.</td></tr>
           </tbody></table></div>
         <p>The first time you visit, MSF shows a banner where you can <b>Accept all</b>, <b>Reject optional</b> or <b>Choose</b>. Rejecting is just as easy as accepting. If your browser sends <b>Global Privacy Control</b>, we treat it as “Reject optional” and don’t show the banner. Your choice is saved on this device, so each browser and device asks once.</p>
@@ -99,7 +100,7 @@
           <thead><tr><th scope="col">Item</th><th scope="col">What it does</th><th scope="col">How long</th></tr></thead>
           <tbody>
             <tr><td>Deletes in progress</td><td data-label="What it does">Something you deleted while its 6-second Undo is showing, so the delete still finishes if you leave the page.</td><td data-label="How long">Seconds — until the delete is done.</td></tr>
-            <tr><td>Freshness check</td><td data-label="What it does">When you last changed something, so a page you come back to shows your latest data rather than an old copy.</td><td data-label="How long">Until you clear site data.</td></tr>
+            <tr><td>Freshness check</td><td data-label="What it does">When you last changed something — and, for the open tab, whether your library’s copy needs checking and when your sign-in was last checked — so a page shows your latest data rather than an old copy.</td><td data-label="How long">Until you clear site data.</td></tr>
             <tr><td>Moving between pages</td><td data-label="What it does">What you opened from one page to the next (the title, the profile, where to go back to, your scroll position, the tab you were on), a sign-up you haven’t finished — including the password you typed — so reading the Terms doesn’t lose it, and short-lived copies so moving between pages is quick.</td><td data-label="How long">Until you close the tab.</td></tr>
           </tbody></table></div>
         <h3>Settings you change on purpose</h3>
@@ -153,7 +154,8 @@
             <tr><td>Seasons and releases</td><td data-label="What it does">Season lists, release dates and top episodes.</td><td data-label="How long">6 hours to 7 days.</td></tr>
             <tr><td>Recommendations</td><td data-label="What it does">Your recommendations, taste results and streaming services for Browse.</td><td data-label="How long">12 hours to 7 days.</td></tr>
             <tr><td>Pictures to show</td><td data-label="What it does">Which posters, backdrops, cast and anime genres to show.</td><td data-label="How long">Up to 7 days.</td></tr>
-            <tr><td>Instant previews</td><td data-label="What it does">The shape of a page while it loads, a snapshot of your Home, Year in Review and medal count, the public showcase and export previews — shown instantly while the latest loads.</td><td data-label="How long">Replaced each visit or when they change.</td></tr>
+            <tr><td>Your library</td><td data-label="What it does">A copy of your own titles (status, progress, scores, notes) for the account signed in on this device, so Home, your Library and search open at once. Only what changed is fetched again, and if the copy is more than a minute old it’s checked with your account before it’s shown, so it never shows an older episode or score. Each account on the device has its own copy; nobody else can see it.</td><td data-label="How long">Until you sign out, remove the account from this device, or turn Faster pages off — then it’s deleted.</td></tr>
+            <tr><td>Instant previews</td><td data-label="What it does">The shape of a page while it loads, Year in Review and medal count, the public showcase and export previews — shown instantly while the latest loads.</td><td data-label="How long">Replaced each visit or when they change.</td></tr>
           </tbody></table></div>
         <p><b>If you say no:</b> everything still works; pages ask TMDB and our database each time, so they can take a moment longer to fill in.</p>
       </section>
@@ -195,6 +197,7 @@
 <script src="js/vendor/supabase-2.118.0.js"></script>
 <script src="js/config.js"></script>
 <script src="js/db.js"></script>
+<script src="js/msf-store.js"></script>
 <script src="js/nav.js"></script>
 <script src="js/legal.js"></script>
 <script>document.addEventListener('DOMContentLoaded', () => { lgInit(); initPageGuest(); });</script>

@@ -33,6 +33,12 @@ async function mssWithEpNotes(rows) {
 }
 
 async function getEntries(userId, filters = {}) {
+  // your own library: from this device's copy, brought up to date in the background (msf-store.js)
+  const mine = typeof MSFStore !== 'undefined' ? await MSFStore.entries(userId).catch(err => { console.warn('Library copy:', err); return null; }) : null;
+  if (mine) {
+    const gone = MSSPendingDelete.ids();
+    return mine.filter(e => !gone.has(e.id) && (!filters.cat || e.cat === filters.cat) && (!filters.status || e.status === filters.status));
+  }
   let q = sb.from('entries').select('*').eq('user_id', userId);
   if (filters.cat)    q = q.eq('cat', filters.cat);
   if (filters.status) q = q.eq('status', filters.status);
@@ -49,16 +55,6 @@ async function getPublicEntries(userId) {
     .order('final_score', { ascending: false });
   if (error) { console.error('getPublicEntries:', error); return []; }
   return mssWithPrivateNotes(data || []);
-}
-
-async function searchEntries(userId, query) {
-  const q = query.toLowerCase().trim();
-  const { data, error } = await sb.from('entries')
-    .select('*')
-    .eq('user_id', userId);
-  if (error) { console.error('searchEntries:', error); return []; }
-  if (!data) return [];
-  return data.filter(e => (e.title || '').toLowerCase().includes(q));
 }
 
 /* ── Upsert entry ── */

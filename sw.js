@@ -1,9 +1,9 @@
 /* ══════════════════════════════════════════
    sw.js — MyScreenFolio Service Worker
-   Cache strategy: stale-while-revalidate
+   Cache strategy: the site's own files from this version's cache (siteFirst); see each route below
 ══════════════════════════════════════════ */
 
-const CACHE_VERSION = 'msf-v54';     // MyScreenFolio — restarted at v1 for the redesign launch on 18 Nov 2026 (was msf-v520; before that mss-v787)
+const CACHE_VERSION = 'msf-v58';     // MyScreenFolio — restarted at v1 for the redesign launch on 18 Nov 2026 (was msf-v520; before that mss-v787)
 const STATIC_CACHE  = `${CACHE_VERSION}-site`;   // a new suffix: an old "msf-v1-static" left on a device from the first v1 is never reused
 
 /* Long-lived caches — deliberately NOT tied to CACHE_VERSION. Every deploy
@@ -79,6 +79,7 @@ const STATIC_ASSETS = [
   'js/config.js',
   'js/emoji-data.js',
   'js/db.js',
+  'js/msf-store.js',
   'js/nav.js',
   'js/notif-settings.js',
   'js/settings-nav.js',
@@ -183,22 +184,29 @@ const STATIC_ASSETS = [
   'icons/icon-maskable-dark-512.png',
 ];
 
-/* ── Install: pre-cache static assets ── */
+/* ── Install: pre-cache static assets ──
+   Each version's files go into its own cache, all fetched before it takes over, so a version's pages and code always
+   come together. Files that didn't change since the last version aren't downloaded again (perf audit, 23 Nov 2026):
+   the server is asked "still this one?" (If-None-Match with the saved copy's ETag) and a 304 keeps the saved copy —
+   a deploy that changes three files costs a device three files, not the whole site (~7 MB). */
 self.addEventListener('install', event => {
-  event.waitUntil(
-    // Cached one-by-one (not cache.addAll) — addAll is all-or-nothing,
-    // so a single missing/renamed file would silently leave NOTHING
-    // precached, including offline.html.
-    caches.open(STATIC_CACHE).then(cache =>
-      // cache:'reload' skips the browser's HTTP cache — GitHub Pages lets files
-      // sit there for 10 minutes, so right after a deploy the new version could
-      // otherwise get precached with OLD copies of some files (mixed versions:
-      // new pages calling code that isn't there yet).
-      Promise.allSettled(STATIC_ASSETS.map(asset =>
-        cache.add(new Request(asset, { cache: 'reload' })).catch(err => console.warn('SW: failed to cache', asset, err))
-      ))
-    )
-  );
+  event.waitUntil((async () => {
+    const cache = await caches.open(STATIC_CACHE);
+    const oldName = (await caches.keys()).filter(k => /^msf-v\d+-site$/.test(k) && k !== STATIC_CACHE).sort((a, b) => parseInt(b.slice(5)) - parseInt(a.slice(5)))[0];
+    const old = oldName ? await caches.open(oldName) : null;
+    // One by one (not cache.addAll, which is all-or-nothing: one missing file would leave NOTHING precached).
+    // 'no-store' skips the browser's HTTP cache — GitHub Pages keeps files there for 10 minutes, so right after a
+    // deploy the new version could otherwise be precached with OLD copies of some files.
+    await Promise.allSettled(STATIC_ASSETS.map(async asset => {
+      try {
+        const prev = old && await old.match(asset), tag = prev?.headers.get('etag');
+        const res = await fetch(new Request(asset, { cache: 'no-store', headers: tag ? { 'If-None-Match': tag } : {} }));
+        if (res.status === 304 && prev) return cache.put(asset, prev);
+        if (res.ok) return cache.put(asset, res);
+        throw new Error(res.status);
+      } catch (err) { console.warn('SW: failed to cache', asset, err); }
+    }));
+  })());
   self.skipWaiting();
 });
 
@@ -292,17 +300,18 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // The site's own pages, JS and CSS — network first, so you always get the
-  // version that's live (stale-while-revalidate kept serving the PREVIOUS
-  // copy, so new pages could load next to old scripts). The cached copy is
-  // used when offline, or if the network takes longer than 3.5s.
+  // The site's own pages, JS and CSS — from this version's cache at once (perf audit, 23 Nov 2026). It used to ask
+  // the network first and wait up to 3.5 s on every file, so a weak phone signal slowed every page. Mixed versions
+  // can't happen: each version's files are all fetched at install, into that version's own cache (above), and a
+  // new version takes over only once its files are in. Every deploy bumps CACHE_VERSION — without it nobody gets
+  // the changed files. A page's address with ?… uses the one saved copy of that page.
   if (url.origin === self.location.origin && (
       request.destination === 'document' ||
       request.destination === 'script'   ||
       request.destination === 'style'    ||
       url.pathname.includes('/css/')     ||
       url.pathname.includes('/js/'))) {
-    event.respondWith(networkFirstFresh(request, STATIC_CACHE, 3500));
+    event.respondWith(siteFirst(request));
     return;
   }
 
@@ -331,23 +340,18 @@ async function cacheFirst(request, cacheName, maxEntries) {
 }
 
 
-async function networkFirstFresh(request, cacheName, timeoutMs) {
-  const cache = await caches.open(cacheName);
-  // (A page navigation can't be re-created with options, so it's fetched by URL.)
-  const net = (request.mode === 'navigate'
-      ? fetch(request.url, { cache: 'no-cache', credentials: 'same-origin' })
-      : fetch(request, { cache: 'no-cache' }))
-    .then(response => { if (response.ok) cache.put(request, response.clone()); return response; });
-  const timeout = new Promise(res => setTimeout(res, timeoutMs, null));
+// This version's saved copy at once; a file it doesn't have (never precached, or wiped by a hard refresh) from the
+// network, saved for next time. Offline with nothing saved → the offline page.
+async function siteFirst(request) {
+  const cache = await caches.open(STATIC_CACHE), page = request.mode === 'navigate';
+  const hit = await cache.match(request, { ignoreSearch: page });
+  if (hit) return hit;
   try {
-    const first = await Promise.race([net, timeout]);
-    if (first) return first;
-    // Slow network: show the saved copy now, the fresh one is saved for next time
-    const cached = await cache.match(request);
-    return cached || await net;
+    const res = page ? await fetch(request.url, { cache: 'no-cache', credentials: 'same-origin' }) : await fetch(request, { cache: 'no-cache' });
+    if (res.ok) { const u = new URL(request.url); if (page) u.search = ''; cache.put(page ? u.href : request, res.clone()); }
+    return res;
   } catch {
-    const cached = await cache.match(request);
-    return cached || (request.mode === 'navigate' ? caches.match('offline.html') : Response.error());
+    return page ? (await caches.match('offline.html')) || Response.error() : Response.error();
   }
 }
 

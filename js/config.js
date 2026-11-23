@@ -48,8 +48,41 @@ let _mssLeaving = false;
 addEventListener('pagehide', () => { _mssLeaving = true; });
 addEventListener('beforeunload', () => { _mssLeaving = true; });
 addEventListener('pageshow', () => { _mssLeaving = false; });
+/* ── Speed log (owner tool, 23 Nov 2026 — docs/performance-audit.md Phase 0) ──
+   Off unless the address has ?perf=1 (then on for that tab, sessionStorage 'msf_perf'; ?perf=0 turns it off).
+   Prints to the browser console: the page's own timings, each Supabase / TMDB request (how long, how big) and
+   the moments pages mark with mssPerfMark('Home drawn'). Nothing is sent anywhere. */
+const MSS_PERF = (() => {
+  try {
+    const p = new URLSearchParams(location.search).get('perf');
+    if (p === '1') sessionStorage.setItem('msf_perf', '1');
+    if (p === '0') sessionStorage.removeItem('msf_perf');
+    return sessionStorage.getItem('msf_perf') === '1';
+  } catch { return false; }
+})();
+function mssPerfMark(label) {
+  if (!MSS_PERF) return;
+  try { console.log(`[perf] ★ ${label}: ${Math.round(performance.now())} ms`); } catch {}
+}
+if (MSS_PERF) {
+  try {
+    new PerformanceObserver(list => list.getEntries().forEach(r => {
+      if (!/supabase\.co|themoviedb|tmdb/.test(r.name) || r.initiatorType === 'img') return;
+      const u = r.name.replace(/^https:\/\/[^/]+/, '').replace(/apikey=[^&]+/, '').slice(0, 110);
+      console.log(`[perf] ${Math.round(r.startTime)}→${Math.round(r.responseEnd)} ms (${Math.round(r.duration)} ms, ${Math.round((r.transferSize || r.encodedBodySize || 0) / 1024)} KB) ${u}`);
+    })).observe({ type: 'resource', buffered: true });
+    addEventListener('load', () => setTimeout(() => {
+      const n = performance.getEntriesByType('navigation')[0], fcp = performance.getEntriesByName('first-contentful-paint')[0];
+      const res = performance.getEntriesByType('resource');
+      console.log(`[perf] page ${location.pathname.split('/').pop() || 'index.html'} · first byte ${Math.round(n?.responseStart || 0)} ms · first paint ${Math.round(fcp?.startTime || 0)} ms · ready ${Math.round(n?.domContentLoadedEventEnd || 0)} ms · load ${Math.round(n?.loadEventEnd || 0)} ms · ${res.length} requests, ${res.filter(r => /supabase\.co/.test(r.name)).length} to Supabase`);
+    }, 0));
+  } catch {}
+}
 function mssDataChangedSince(t) { try { return Number(localStorage.getItem('mss_data_at') || 0) > t; } catch { return true; } }
-const _MSS_READ_RPC = /\/rest\/v1\/rpc\/(get_|is_|search|check|list_|count_|admin_(find|overview|user_detail|recent|flagged|picture_queue|unstarred|language_requests|title))/;
+const _MSS_READ_RPC = /\/rest\/v1\/rpc\/(get_|is_|search|check|list_|count_|admin_(find|overview|user_detail|recent|flagged|picture_queue|unstarred|language_requests|title)|(session_alive|mss_my_status|my_age|member_medal|shell_summary|nav_counts|msg_unread_count|challenge_finishes|challenge_pick_options)\b)/;
+// Writes that can change your titles → MSFStore catches up: those tables (directly, or through their diary / episode
+// triggers) and the only database functions that change them (found in sql/: imports, linking to TMDB, two admin tools)
+const _MSS_LIB_WRITE = /\/rest\/v1\/(entries|entry_private_notes|diary_watches|episode_ratings)\b|\/rest\/v1\/rpc\/(import_|link_entries_to_tmdb|admin_delete_content|admin_censor_existing)/;
 async function _mssFetch(input, init = {}) {
   const url = typeof input === 'string' ? input : input?.url || String(input);
   const method = String(init.method || input?.method || 'GET').toUpperCase();
@@ -58,6 +91,7 @@ async function _mssFetch(input, init = {}) {
   for (let i = 0; ; i++) {
     try {
       const res = await fetch(input, init);
+      if (!read && res.ok && _MSS_LIB_WRITE.test(url) && typeof MSFStore !== 'undefined') MSFStore.dirty();   // your library's copy (msf-store.js)
       if (res.status === 401 && url.includes('/rest/v1/')) res.clone().json().then(b => { if (b?.code === 'SESSION_ENDED') mssSessionEnded(); }).catch(() => {});
       return res;
     } catch (err) {
@@ -159,6 +193,12 @@ function mssForgetKeys(id) {
       r.onsuccess = () => { const d = r.result, t = d.transaction('keys', 'readwrite'); if (id) t.objectStore('keys').delete(id); else t.objectStore('keys').clear(); t.oncomplete = t.onerror = () => { d.close(); ok(); }; };
     } catch { ok(); }
   });
+}
+// …and its copies of your library (msf-store.js, home.js's snapshot) — signing out, removing the account, a session ended elsewhere
+function mssForgetData(id) {
+  if (!id) return;
+  try { if (typeof MSFStore !== 'undefined') MSFStore.forget(id); else indexedDB.deleteDatabase('msf-data-' + id); } catch {}
+  try { localStorage.removeItem('msf_home_snap_' + id); } catch {}
 }
 const MSSRemember = {
   set(on) {
@@ -628,7 +668,7 @@ const MSSAccounts = (() => {
   // every new token goes straight in, so the saved one is never stale
   if (sb) sb.auth.onAuthStateChange((ev, session) => { if (session) keep(session); });
   const pub = x => ({ id: x.id, username: x.username, display_name: x.display_name || '', avatar_url: x.avatar_url || '' });
-  function forget(id) { write(read().filter(x => x.id !== id)); mssForgetKeys(id); }
+  function forget(id) { write(read().filter(x => x.id !== id)); mssForgetKeys(id); mssForgetData(id); }
   async function switchTo(id) {
     const t = read().find(x => x.id === id); if (!t) return false;
     const { data, error } = await sb.auth.setSession({ access_token: t.at, refresh_token: t.rt });

@@ -251,7 +251,7 @@ const MSS_GUIDE = [
   { id: 'for-your-taste', s: 'discover', t: 'For Your Taste',
     what: 'Recommendations picked from what you love.',
     why: 'Suggestions that fit you, not everyone.',
-    how: ['Rate titles and pick your Top 5 — the more MSF knows, the better it gets.', 'Find them on Discover and Home’s Recommended for you.'],
+    how: ['Rate titles and pick your Top 5 — the more MSF knows, the better it gets.', 'Find them on Discover and Home’s Recommended for you.', 'Your last picks show straight away and are checked in the background. They’re worked out again when your taste changes (new favourites, top scores, favourite people); a title you add is simply taken off the list.'],
     where: [['Discover', 'discover.html'], ['Home › Recommended for you', 'index.html']], k: 'for your taste recommendations recommended suggestions personal', rel: ['discover', 'top-favorites'] },
   { id: 'browse', s: 'discover', t: 'Browse',
     what: 'Every title on TMDB, filtered any way you like.',
@@ -601,6 +601,6 @@ const MSS_GUIDE = [
   { id: 'cookie-choices', s: 'legal', t: 'Cookies and storage choices',
     what: 'What MSF may keep on this device: necessary storage (always on) and three optional kinds you choose.',
     why: 'Turn on Remember my choices, Faster pages or Extra sources only if you want them — nothing optional is saved until you say yes.',
-    how: ['The first time you visit, choose Accept all, Reject optional or Choose….', 'Change it any time: the footer’s Cookie settings, or Settings › Privacy › Cookies & storage.', 'Turning a kind off deletes what it had saved straight away. Each device asks once.'],
-    where: [['Cookie Policy', 'cookies.html'], ['Settings › Privacy › Cookies & storage', 'settings.html#privacy'], ['Footer › Cookie settings', '']], k: 'cookies cookie banner storage consent local storage accept reject optional anilist cache tracking', rel: ['privacy-policy'] },
+    how: ['The first time you visit, choose Accept all, Reject optional or Choose….', 'Change it any time: the footer’s Cookie settings, or Settings › Privacy › Cookies & storage.', 'Turning a kind off deletes what it had saved straight away. Each device asks once.', 'Faster pages also keeps a copy of your own library on this device, so Home, your Library and search open at once. Only changes are fetched, it’s checked with your account if it’s more than a minute old (so another device’s progress always shows), and it’s deleted when you sign out.'],
+    where: [['Cookie Policy', 'cookies.html'], ['Settings › Privacy › Cookies & storage', 'settings.html#privacy'], ['Footer › Cookie settings', '']], k: 'cookies cookie banner storage consent local storage accept reject optional anilist cache tracking faster pages speed slow loading offline library copy sync devices', rel: ['privacy-policy'] },
 ];

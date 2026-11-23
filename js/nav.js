@@ -378,7 +378,10 @@ async function _navAdminCheck() {
 //    added since) → must pick a new one. Neither popup can be dismissed.
 // Active Sessions (091): checked on every page, so a signed-out device leaves on its next page load.
 // If the check can't run, nothing happens (never signs anyone out by mistake).
+// every 5 minutes at most per tab (perf audit): in between, any request made after a sign-out elsewhere answers
+// SESSION_ENDED and _mssFetch (config.js) leaves the same way
 async function _navSessionCheck() {
+  try { if (Date.now() - Number(sessionStorage.getItem('mss_alive_at') || 0) < 5 * 60000) return; sessionStorage.setItem('mss_alive_at', String(Date.now())); } catch {}
   try { const { data } = await sb.rpc('session_alive'); if (data === false) mssSessionEnded(); } catch {}
 }
 
@@ -398,7 +401,13 @@ async function _navAccountCheck(profile) {
    Accounts made before birth dates were asked for give theirs once; an
    under-13 date locks the account (MyScreenFolio is for 13 and up). ── */
 async function _navAgeCheck(uid) {
+  // a known age group is remembered for this tab for 6 hours (perf audit); a missing date or under 13 is asked every page
+  try {
+    const c = JSON.parse(sessionStorage.getItem('mss_age') || 'null');
+    if (c && c.uid === uid && Date.now() - c.t < 6 * 36e5) { MSSAge.setGroup(uid, c.g); return; }
+  } catch {}
   const { data, error } = await sb.rpc('my_age');
+  if (!error && data && data !== 'child') { try { sessionStorage.setItem('mss_age', JSON.stringify({ uid, g: data, t: Date.now() })); } catch {} }
   if (error) { MSSAge.setGroup(null, null); return; }   // 088 not run yet — no limits
   MSSAge.setGroup(uid, data || 'unknown');              // no date yet → limited like 13–15 until they give it
   if (data === 'child') _navAgeLocked();
@@ -3287,8 +3296,8 @@ function _notifInit(user) {
       sb.rpc('movie_night_reminders').then(r => { if (r.data > 0) _notifLoad(); }, () => {});
     }
   } catch {}
-  // Safety net if the live connection drops (and when coming back to the tab)
-  setInterval(() => _notifLoad(), 60000);
+  // Safety net if the live connection drops (and when coming back to the tab): only while it's down and you're here
+  setInterval(() => { if (!_notifLiveOn && !document.hidden) _notifLoad(); }, 60000);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) { _notifLoad(); _navMsgRefresh(); } });
 }
 
@@ -3296,7 +3305,7 @@ function _notifInit(user) {
    moment it's created (needs 026_notifications_realtime.sql), so the bell,
    sheet and alert update without refreshing. RLS still applies — you only
    ever receive your own rows. */
-let _notifLiveTimer = null;
+let _notifLiveTimer = null, _notifLiveOn = false;
 function _notifLive(user) {
   if (!sb || typeof sb.channel !== 'function') return;
   const reload = () => { clearTimeout(_notifLiveTimer); _notifLiveTimer = setTimeout(() => { _notifLoad(); _navMsgRefresh(); }, 300); };
@@ -3304,7 +3313,7 @@ function _notifLive(user) {
     sb.channel('mss-notif-' + user.id)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` }, reload)
       .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` }, reload)
-      .subscribe();
+      .subscribe(status => { _notifLiveOn = status === 'SUBSCRIBED'; });
   } catch (e) { console.warn('Live notifications unavailable:', e); }
 }
 
@@ -3424,6 +3433,8 @@ function _nfDisplayGet() {
 }
 const _nfGroupOn = () => _nfDisplayGet().group_watchlist !== false;
 async function _nfDisplayLoad() {
+  const p = window._navUserProfile;   // the profile the nav just loaded has it — no second request (perf audit)
+  if (p && p.id === _notifUser.id && 'notif_display' in p) { _nfDisplay = Object.assign(_nfDisplayGet(), p.notif_display || {}); return; }
   const { data, error } = await sb.from('profiles').select('notif_display').eq('id', _notifUser.id).maybeSingle();
   if (error) return;                                   // 126 not run yet: the device's choice
   _nfDisplay = Object.assign(_nfDisplayGet(), data?.notif_display || {});
