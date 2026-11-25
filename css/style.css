@@ -3248,7 +3248,7 @@ html:has(.lyr.is-page.open .lyr-foot:not([hidden])) .toast { bottom:calc(96px + 
 .lyr-menu.is-page { position:static; width:auto; padding:0; border:0; border-radius:0; background:none; animation:none; margin:-16px; }
 .lyr-menu.is-page .lyr-menu-item { min-height:56px; padding:0 16px; border-radius:0; border-bottom:1px solid var(--border); font-size:15.5px; gap:14px; }
 .lyr-menu.is-page .lyr-menu-item svg { width:20px; height:20px; }
-.lyr-menu.is-page .lyr-menu-sep { display:none; }
+.lyr-menu.is-page .lyr-menu-sep, .lyr-menu.is-sheet .lyr-menu-sep { display:none; }   /* rows already have a line each (owner: no extra lines before Delete) */
 .lyr-menu-ic { flex:none; display:grid; place-items:center; }
 .lyr-menu-txt { display:flex; flex-direction:column; gap:2px; min-width:0; }
 .lyr-menu-txt small { font:500 12px/1.3 'Manrope',var(--sans); color:var(--text-3); }

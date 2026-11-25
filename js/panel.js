@@ -379,7 +379,7 @@ const MSSPanel = (() => {
   const vh = P => Number(P.ov.style.getPropertyValue('--lyr-vh').replace('px', '')) || innerHeight;
   const SHEET_GAP = 56;                // full height still leaves this much of the screen above it: the handle never leaves the screen
   const SHEET_HALF = .52;              // a long sheet opens at about half the screen
-  const SETTLE = 'transform .38s cubic-bezier(.2,.9,.25,1)';
+  const SETTLE = 'transform .38s cubic-bezier(.2,.9,.25,1), height .38s cubic-bezier(.2,.9,.25,1)';
   function sheetMeasure(P) {
     const card = P.ov.firstElementChild, S = P.sh;
     const room = vh(P) - SHEET_GAP, cap = Math.round(vh(P) * SHEET_HALF);
@@ -395,7 +395,10 @@ const MSSPanel = (() => {
     const card = P.ov.firstElementChild, foot = card.querySelector('.lyr-foot'), S = P.sh;
     S.off = off;
     const t = animate && !mssReducedMotion() ? SETTLE : 'none';
-    card.style.transition = t; card.style.transform = `translateY(${off}px)`;
+    card.style.transition = t;
+    // pulled past its top: it grows taller from the bottom edge (stays on it), so nothing behind it ever shows below
+    card.style.transform = `translateY(${Math.max(0, off)}px)`;
+    card.style.height = (S.H + Math.max(0, -off)) + 'px';
     // the bar stays on the screen's edge down to half; below that it goes with the sheet
     const keep = Math.max(0, Math.min(off, S.stops.half ?? 0));
     foot.style.transition = t; foot.style.transform = keep ? `translateY(${-keep}px)` : '';
