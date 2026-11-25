@@ -3479,7 +3479,10 @@ function _nfListHTML(rows, opts) {
   return h;
 }
 
-const _nfPoster = (url, title) => `<span class="ntf-poster">${safeURL(url) ? `<img src="${safeURL(url)}" alt="" loading="lazy" onerror="mssImgError(this)" data-letter="${escHTML((title || '?')[0])}">` : escHTML((title || '?')[0].toUpperCase())}</span>`;
+// a 34px poster: TMDB's small size (w92, w185 on sharp screens) — not the full w500 picture, which is slow to show
+// every time the sheet opens (owner, 25 Nov 2026). The same address each time, so the browser has it after once.
+const _nfThumb = u => { u = safeURL(u); const m = u && /^(https:\/\/image\.tmdb\.org\/t\/p\/)(?:w\d+|original)(\/.+)$/.exec(u); return m ? { src: m[1] + 'w92' + m[2], set: ` srcset="${m[1]}w92${m[2]} 1x, ${m[1]}w185${m[2]} 2x"` } : (u ? { src: u, set: '' } : null); };
+const _nfPoster = (url, title) => { const t = _nfThumb(url); return `<span class="ntf-poster">${t ? `<img src="${t.src}"${t.set} alt="" decoding="async" onerror="mssImgError(this)" data-letter="${escHTML((title || '?')[0])}">` : escHTML((title || '?')[0].toUpperCase())}</span>`; };
 
 // The pieces of one notification's row: photo, badge icon, sentence, quote, buttons, link, posters
 function _nfParts(n) {
@@ -3490,7 +3493,7 @@ function _nfParts(n) {
   const av = n.type === 'on_this_day' ? `<span class="notif-av-otd">${(m.posters || []).slice(0, 3).map(u => safeURL(u) ? `<img src="${safeURL(u)}" alt="">` : '').join('') || icon('calendar', 18)}</span>`
     : n.type === 'achievement' ? `<span class="notif-av-ach">${icon('trophy', 18)}</span>`
     : n.type === 'report_actioned' || n.type === 'moderation_notice' ? `<span class="notif-av-ach notif-av-mod">${icon('flag', 17)}</span>`
-    : (n.type === 'new_episode' || n.type === 'new_release') && safeURL(m.poster_url) ? `<img src="${safeURL(m.poster_url)}" alt="" loading="lazy">`
+    : (n.type === 'new_episode' || n.type === 'new_release') && safeURL(m.poster_url) ? (t => `<img src="${t.src}"${t.set} alt="" decoding="async">`)(_nfThumb(m.poster_url))
     : n.actor && safeURL(n.actor.avatar_url) ? `<img src="${safeURL(n.actor.avatar_url)}" alt="" loading="lazy">`
     : escHTML(((n.actor && n.actor.username) || '?')[0].toUpperCase());
   let text = '', actions = '', quote = '', href = '', ic = '', posters = [];
@@ -3721,8 +3724,11 @@ function _notifRenderPanel() {
   if (sub) sub.textContent = fresh ? `${fresh} new` : 'You’re all caught up';
   const rb = document.getElementById('notifReadAll');
   if (rb) rb.disabled = !_notifItems.some(n => !n.read_at || _notifSheetNew.has(n.id));
-  listEl.innerHTML = !rows.length ? _notifEmptyHTML(_nfFilter)
+  const html = !rows.length ? _notifEmptyHTML(_nfFilter)
     : `<div class="ntf-list">${_nfListHTML(rows.slice(0, _nfPanelShown), { fresh: _notifSheetNew })}</div>${rows.length > _nfPanelShown ? '<div class="ntf-more" aria-hidden="true"></div>' : ''}`;
+  if (listEl._html === html) return;               // the same rows as last time: nothing redrawn, nothing reloads
+  listEl._html = html;
+  listEl.innerHTML = html;
   mssFillEpNames(listEl);
 }
 function _notifSheetReadAll() {

@@ -45,7 +45,7 @@ const MSSConsent = (() => {
     ['mss_card_prefs', 'prefs'], ['mss_card_priv', 'prefs'], [/^msf_diary_/, 'prefs'], [/^mss_onboarding_/, 'prefs'],
     [/^msf_home_layout_/, 'prefs'], [/^msf_pinned_note_/, 'prefs'], ['mss_spot_turn', 'prefs'], ['mss_browse_q_v2', 'prefs'],
     // speed — copies kept so pages open faster
-    ['mss_ep_seasons_v3', 'speed'], ['mss_browse_prov_v3', 'speed'], ['mss_top_eps_v2', 'speed'], ['mss_recs_v4', 'speed'],
+    [/^msf_home_friends_/, 'speed'], ['mss_ep_seasons_v3', 'speed'], ['mss_browse_prov_v3', 'speed'], ['mss_top_eps_v2', 'speed'], ['mss_recs_v4', 'speed'],
     ['mss_tmdb_posters_v1', 'speed'], ['mss_explore_posters_v1', 'speed'], ['mss_anilist_genres_v1', 'speed'], ['mss_cast_v3', 'speed'],
     [/^mss_skel_/, 'speed'], ['msf_showcase', 'speed'], ['msf_wall', 'speed'], [/^msf_bd_/, 'speed'], [/^mss_ys_html_/, 'speed'],
     ['msf_export_thumbs', 'speed'], ['mss_tv_season_v1', 'speed'], ['mss_movie_release_v1', 'speed'],

@@ -301,12 +301,15 @@ const MSSEp = (() => {
   async function open(e, s, n, opts = {}) {
     if (!e || !isShow(e) || !uid()) return;
     s = Math.max(1, s || 1); n = n === 0 ? 0 : Math.max(1, n || 1);   // n = 0 → rate the whole season
-    const prev = await existing(e, s, n).catch(() => null);
+    // your earlier rating and the season's episodes at the same time (owner, 25 Nov 2026: the header came late);
+    // the episodes are usually kept already (MSSEp.warm), so the panel opens once, with its picture
+    const epsP = seasonEpisodes(e.tmdb_id, s).catch(() => []);
+    const [prev, eps0] = await Promise.all([existing(e, s, n).catch(() => null), n === 0 ? null : Promise.race([epsP, new Promise(r => setTimeout(r, 700, null))])]);
     st = { e, s, n, prev, score: prev ? Number(prev.score) : 8.0, tags: new Set(prev?.tags || []), note: prev?.note || '', rewatch: !!opts.rewatch, onSaved: opts.onSaved, prompted: !!opts.prompted,
            noteVis: prev?.note_visibility || 'anyone', noteSpoiler: !!prev?.note_spoiler,
            queue: opts.queue || null, qi: opts.qi || 0, showTags: false, focusNote: !!opts.note };
-    render(null);
-    const eps = await seasonEpisodes(e.tmdb_id, s);
+    if (!eps0) render(null);                                // the episodes are slow today: the panel first, the details after
+    const eps = eps0 || await epsP;
     if (!st || st.e !== e || st.s !== s || st.n !== n) return;
     st.eps = eps;
     if (n === 0) {                                          // season: start from your episode average

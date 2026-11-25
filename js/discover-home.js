@@ -197,6 +197,9 @@ const MSSDiscoverHome = (() => {
   }
   async function renderTaste() {
     const sec = $('dzTaste');
+    // your library now comes from this device in a few ms (msf-store.js) — often before the header has finished
+    // signing you in, so wait for it rather than hiding the row (owner, 25 Nov 2026: the row had vanished)
+    for (let i = 0; i < 50 && !window._navUser; i++) await new Promise(r => setTimeout(r, 100));
     if (!window._navUser) { sec.hidden = true; return; }
     // your last picks at once (this device, this account), then checked
     const was = MSSRecs.last(MSSResults.entries());

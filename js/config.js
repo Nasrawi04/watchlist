@@ -198,7 +198,7 @@ function mssForgetKeys(id) {
 function mssForgetData(id) {
   if (!id) return;
   try { if (typeof MSFStore !== 'undefined') MSFStore.forget(id); else indexedDB.deleteDatabase('msf-data-' + id); } catch {}
-  try { localStorage.removeItem('msf_home_snap_' + id); } catch {}
+  try { localStorage.removeItem('msf_home_snap_' + id); localStorage.removeItem('msf_home_friends_' + id); } catch {}
 }
 const MSSRemember = {
   set(on) {

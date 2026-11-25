@@ -31,6 +31,9 @@ const MSSResults = (() => {
       if (!u) return false;
       lib = await getEntries(u.id);
       MSSMine.set(lib);
+      // the library now comes from this device in a few ms (msf-store.js), often before the header has finished
+      // signing you in (window._navUser): wait for it, so marks, + buttons and rows meant for members draw
+      for (let i = 0; i < 50 && !window._navUser; i++) await new Promise(r => setTimeout(r, 100));
       return true;
     })().catch(() => false);
   }

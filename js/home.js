@@ -288,8 +288,26 @@ const MSSHome = (() => {
     const at = e => new Date(e.status === 'dropped' ? (e.progress_at || e.updated_at) : (e.completed_at || e.created_at || e.updated_at));
     const rows = (data || []).filter(e => !isNaN(at(e))).sort((a, b) => at(b) - at(a)).slice(0, 12);
     rows.forEach(e => { FE[e.id] = e; e._at = at(e); });
+    friendsSave(rows);
     return rows;
   }
+  /* Friend activity at once (owner, 25 Nov 2026): the last 12 shown are kept on this device (Faster pages only;
+     one copy per account, deleted on sign-out — config.js mssForgetData) and drawn straight away; the fresh list
+     follows, and the row is redrawn only when something changed. */
+  const FKEY = () => 'msf_home_friends_' + uid;
+  function friendsSave(rows) {
+    try { localStorage.setItem(FKEY(), JSON.stringify({ t: Date.now(), rows, profiles: Object.fromEntries(rows.map(e => [e.user_id, FP[e.user_id] || {}])) })); } catch {}
+  }
+  function friendsLast() {
+    try {
+      const c = JSON.parse(localStorage.getItem(FKEY()) || 'null');
+      if (!c || !Array.isArray(c.rows) || Date.now() - c.t > 7 * 864e5) return null;
+      Object.assign(FP, c.profiles || {});
+      c.rows.forEach(e => { e._at = new Date(e._at); FE[e.id] = e; });
+      return c.rows;
+    } catch { return null; }
+  }
+  const friendsSig = rows => (rows || []).map(e => `${e.id}:${e.updated_at}`).join();
   function friendCard(e) {
     const p = FP[e.user_id] || {}, u = safeURL(p.avatar_url), name = p.username || 'friend', sc = liveScore(e), drop = e.status === 'dropped';
     const who = `<a class="mh-who" href="profile-view.html?id=${encodeURIComponent(e.user_id)}" aria-label="${esc('@' + name + '’s profile')}"><span class="mh-who-av" aria-hidden="true">${u ? `<img src="${u}" alt="" loading="lazy">` : esc(name[0].toUpperCase())}</span><span class="mh-who-t"><b translate="no">@${esc(name)}</b><small>${drop ? 'dropped · ' : ''}${esc(_notifTimeAgo(e._at))}</small></span></a>`;
@@ -931,7 +949,10 @@ const MSSHome = (() => {
     if (typeof MSSEp !== 'undefined' && MSSEp.warm) MSSEp.warm(inProgress().sort(byUpdated));   // episode pictures ready before + / an episode opens
 
     // the rest, side by side
-    loadFriends().then(r => { D.friends = r; }).catch(e => { console.warn('Friends activity:', e); D.friends = []; }).finally(() => draw('friends'));
+    const lastFriends = friendsLast();
+    if (lastFriends) { D.friends = lastFriends; draw('friends'); }
+    loadFriends().then(r => { const same = friendsSig(r) === friendsSig(D.friends); D.friends = r; if (!same) draw('friends'); })
+      .catch(e => { console.warn('Friends activity:', e); if (D.friends == null) { D.friends = []; draw('friends'); } });
     newEpisodes();
     loadMedals().then(r => { D.medals = r; }).catch(() => { D.medals = []; }).finally(() => draw('medals'));
     // your last recommendations at once (this device, this account), then checked — redrawn only if they changed
