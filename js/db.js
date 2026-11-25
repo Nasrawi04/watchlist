@@ -601,7 +601,8 @@ async function uploadPoster(file, userId, entryId) {
   if (sigErr || !sig?.signature) throw new Error('Couldn’t start the upload — try again.');
   const formData = new FormData();
   formData.append('file', compressed);
-  ['api_key', 'timestamp', 'signature', 'folder', 'allowed_formats'].forEach(k => formData.append(k, sig[k]));
+  // public_id: the file's signed name (each signature makes one file) — sent only when the function gives one
+  ['api_key', 'timestamp', 'signature', 'folder', 'public_id', 'allowed_formats'].forEach(k => { if (sig[k] != null) formData.append(k, sig[k]); });
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 30000);

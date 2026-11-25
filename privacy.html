@@ -2,6 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<!-- Content-Security-Policy (security audit, 25 Nov 2026): the same on every page. unsafe-eval is only for the photo safety check, whose library (tfjs) needs it; Login and Messages don't allow it. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'; worker-src 'self' blob:; media-src 'self' blob:; img-src 'self' data: blob: https://image.tmdb.org https://res.cloudinary.com https://yqbfjtkcsgyvnablmuzp.supabase.co https://s4.anilist.co https://wsrv.nl; connect-src 'self' https://yqbfjtkcsgyvnablmuzp.supabase.co wss://yqbfjtkcsgyvnablmuzp.supabase.co https://api.cloudinary.com https://graphql.anilist.co; upgrade-insecure-requests">
 <link rel="preconnect" href="https://yqbfjtkcsgyvnablmuzp.supabase.co" crossorigin>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="color-scheme" content="light dark">
@@ -27,7 +29,7 @@
     <p class="lg-eyebrow">MyScreenFolio · Legal</p>
     <h1 class="lg-title">Privacy Policy</h1>
     <p class="lg-lede">What we collect when you use MyScreenFolio, why we need it, who else handles it, how long we keep it, and how you stay in control. Written to be read, not skimmed past.</p>
-    <ul class="lg-meta"><li><span data-ic="calendar" data-size="14"></span>Last updated 25 November 2026</li><li><span data-ic="layers" data-size="14"></span>Version 1.5</li><li><span data-ic="clock" data-size="14"></span>About 20 minutes to read</li></ul>
+    <ul class="lg-meta"><li><span data-ic="calendar" data-size="14"></span>Last updated 25 November 2026</li><li><span data-ic="layers" data-size="14"></span>Version 1.6</li><li><span data-ic="clock" data-size="14"></span>About 20 minutes to read</li></ul>
   </header>
   <div class="lg-tabs" role="navigation" data-lg-tabs aria-label="About and legal pages"></div>
 
@@ -113,6 +115,8 @@
         <h3 id="c-devices">3.7 Devices, sign-ins and technical data</h3>
         <ul>
           <li><b>Signed-in devices.</b> Our sign-in provider (Supabase) keeps a record of each signed-in session: when it started, when it was last used, a description of the browser and device (the “user agent”, e.g. “Safari on iPhone”) and the <b>IP address</b> it signed in from. You can see your devices — without IP addresses, which we never send to the website — and sign any of them out in <b>Settings › Security › Signed-in devices</b>.</li>
+          <li><b>Sign-in protection.</b> When you sign in on MSF, we note each try: which account, whether the password was right, the time, and a scrambled code made from the IP address (never the address itself — the code can’t be turned back into it). This lets us stop anyone guessing passwords — after too many wrong tries, <i>their</i> connection has to wait, not yours. We also keep the scrambled codes of the connections each account has signed in from, so your own connections still get in while someone else is being blocked, and so we can tell you about a sign-in from somewhere new.</li>
+          <li><b>Sign-in alerts.</b> If someone gets your password wrong 5 times, or your account is signed in from a new connection, you get a notification with the device and browser it came from (e.g. “Windows PC · Chrome”). These alerts can’t be switched off. Choosing <b>Not me</b> signs that device out.</li>
           <li><b>Server logs.</b> Like every website, the services that host MSF (see <a href="#share">section 6</a>) automatically log requests: your IP address, the page or file asked for, the time, and your browser’s user agent. They use these logs for security, fixing faults and stopping abuse. We don’t combine them with your account.</li>
           <li><b>Our TMDB helper</b> counts requests per IP address, for a minute at a time and only in memory, to stop anyone abusing it. It isn’t stored.</li>
           <li><b>Errors.</b> MSF doesn’t send crash reports or error logs anywhere. If something breaks, it stays in your browser.</li>
@@ -198,6 +202,8 @@
             <tr><td>Signed-in device records</td><td data-label="How long">Until that device signs out, you sign it out, or the session expires.</td></tr>
             <tr><td>Notes of deleted titles (so your other devices can remove them too)</td><td data-label="How long">90 days.</td></tr>
             <tr><td>Rate-limit records</td><td data-label="How long">1 day.</td></tr>
+            <tr><td>Sign-in tries (account, right or wrong, time, scrambled connection code)</td><td data-label="How long">1 day.</td></tr>
+            <tr><td>Connections you’ve signed in from (scrambled codes only)</td><td data-label="How long">90 days after you last signed in from it, or until you choose “Not me” on its alert. Deleted with your account.</td></tr>
             <tr><td>Shared TMDB lists (the same for everyone, no personal data)</td><td data-label="How long">Refreshed every 6 hours; old copies cleared after 2 days.</td></tr>
             <tr><td>Reports, flags and moderation records</td><td data-label="How long">As long as needed to keep MSF safe (for example to spot repeated abuse), reviewed at least once a year. Reports you filed are deleted with your account.</td></tr>
             <tr><td>Emails with us</td><td data-label="How long">Up to 2 years after the conversation ends, unless we need them longer for a legal reason.</td></tr>
@@ -247,6 +253,7 @@
           <li>Everything travels over encrypted connections (HTTPS).</li>
           <li>Database rules check every request, so each member can only read and change what they’re allowed to.</li>
           <li>Passwords are hashed by Supabase; messages are end-to-end encrypted; the TMDB and Cloudinary keys stay on the server, never in your browser.</li>
+          <li>Too many wrong passwords block whoever is guessing (not you), and you’re told about wrong passwords and sign-ins from new connections.</li>
           <li>You can see and sign out your devices, and set a Message Lock.</li>
           <li>The site only runs its own code and talks only to the services listed above (a “Content Security Policy”).</li>
         </ul>

@@ -3338,10 +3338,20 @@ function _notifLive(user) {
 let _notifLimit = 60;
 const _notifKnown = new Set();
 let _notifLoadedOnce = false;
+// This device's sign-in (the session id inside its token), so a "New sign-in" alert can say "That's this device"
+let _nfSid;
+async function _notifSessionId() {
+  if (_nfSid !== undefined) return;
+  try {
+    const t = (await sb.auth.getSession()).data.session.access_token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+    _nfSid = JSON.parse(atob(t)).session_id || null;
+  } catch { _nfSid = null; }
+}
 async function _notifLoad(limit) {
   if (limit) _notifLimit = limit;   // the full page asks for more; polling keeps that
   if (!_notifUser) return;
   try {
+    await _notifSessionId();
     const { data: rows, error } = await sb.from('notifications')
       .select('id, type, actor_id, list_id, friendship_id, entry_id, meta, read_at, created_at')
       .eq('user_id', _notifUser.id).order('created_at', { ascending: false }).limit(_notifLimit);
@@ -3418,7 +3428,7 @@ function _notifTimeAgo(d) {
 const _NF_KIND = { friend_started: 'watched', friend_episode: 'watched', friend_finished: 'watched', friend_dropped: 'watched',
   friend_watchlist: 'watchlist', friend_queued: 'watchlist', friend_note: 'notes', friend_rated: 'ratings', friend_list: 'lists', friend_poll: '' };
 const _NF_KINDS = [['watched', 'Watched'], ['watchlist', 'Watchlist'], ['notes', 'Notes'], ['ratings', 'Ratings'], ['lists', 'Lists']];
-const _NF_SYSTEM = new Set(['new_episode', 'new_release', 'on_this_day', 'achievement', 'report_actioned', 'moderation_notice']);
+const _NF_SYSTEM = new Set(['new_episode', 'new_release', 'on_this_day', 'achievement', 'report_actioned', 'moderation_notice', 'new_sign_in', 'sign_in_failed']);
 const _nfFriends = n => n.type in _NF_KIND;
 function _nfMatch(n, f) {
   return f === 'all' || (f === 'you' ? !_nfFriends(n) : f === 'friends' ? _nfFriends(n) : _NF_KIND[n.type] === f);
@@ -3523,6 +3533,7 @@ function _nfParts(n) {
   const av = n.type === 'on_this_day' ? `<span class="notif-av-otd">${(m.posters || []).slice(0, 3).map(u => safeURL(u) ? `<img src="${safeURL(u)}" alt="">` : '').join('') || icon('calendar', 18)}</span>`
     : n.type === 'achievement' ? `<span class="notif-av-ach">${icon('trophy', 18)}</span>`
     : n.type === 'report_actioned' || n.type === 'moderation_notice' ? `<span class="notif-av-ach notif-av-mod">${icon('flag', 17)}</span>`
+    : n.type === 'new_sign_in' || n.type === 'sign_in_failed' ? `<span class="notif-av-ach notif-av-mod">${icon('lock', 17)}</span>`
     : (n.type === 'new_episode' || n.type === 'new_release') && safeURL(m.poster_url) ? (t => `<img src="${t.src}"${t.set} alt="" decoding="async">`)(_nfThumb(m.poster_url))
     : n.actor && safeURL(n.actor.avatar_url) ? `<img src="${safeURL(n.actor.avatar_url)}" alt="" loading="lazy">`
     : escHTML(((n.actor && n.actor.username) || '?')[0].toUpperCase());
@@ -3647,6 +3658,22 @@ function _nfParts(n) {
     // Reports (087): the admins acted on something — never says who reported it
     text = _notifModText(n); ic = n.type === 'report_actioned' ? 'check' : 'info';
     if (m.excerpt && m.kind !== 'user') quote = q(m.excerpt);
+  } else if (n.type === 'new_sign_in' || n.type === 'sign_in_failed') {
+    // Sign-in alerts (143): always on. "Not me" signs that device out, then Change password.
+    const dev = `<b translate="no">${escHTML(mssDeviceName(m.ua))}</b>`;
+    ic = 'lock'; href = 'settings.html#security';
+    if (n.type === 'sign_in_failed') {
+      text = `<b>Someone tried to sign in to your account</b> with ${escHTML(m.count || 5)} wrong passwords, on ${dev}. They didn’t get in. If that wasn’t you, nothing’s needed — a long password nobody can guess keeps it that way.`;
+    } else {
+      text = `<b>New sign-in to your account</b> on ${dev}. Was this you?` + (m.answer ? ''
+        : ` <span class="ntf-sub">It was me changes nothing. Not me signs that device out straight away, then takes you to change your password.</span>`);
+      const id = attrJSON(n.id);
+      actions = m.answer === 'me' ? `<span class="notif-state">${icon('check', 13)} You said it was you</span>`
+        : m.answer === 'not_me' ? `<span class="notif-state">Signed out</span>`
+        : m.session_id && m.session_id === _nfSid ? `<span class="notif-state">That’s this device</span>`
+        : `<button type="button" class="notif-act notif-act-yes" onclick="_notifSignIn(event, ${id}, true)">It was me</button>
+           <button type="button" class="notif-act" onclick="_notifSignIn(event, ${id}, false)">Not me</button>`;
+    }
   } else if (n.type === 'friend_queued') {
     text = `${who} added something from your library to their watchlist`; ic = 'plus';
     poster();
@@ -3866,6 +3893,19 @@ function _nfDelete(ev, ids) {
   }, 5000);
 }
 
+// Sign-in alerts (143): "It was me" just answers it; "Not me" signs that device out and opens Settings › Security to change the password
+async function _notifSignIn(ev, id, wasMe) {
+  ev.stopPropagation(); ev.preventDefault();
+  const btns = ev.currentTarget?.parentElement?.querySelectorAll('button') || [];
+  if (!wasMe && !await showConfirm({ title: 'Sign that device out?', iconName: 'logout', confirmText: 'Sign It Out',
+    message: 'It’ll be signed out of MyScreenFolio straight away. Then change your password, so whoever it was can’t sign in again.' })) return;
+  btns.forEach(b => b.disabled = true);
+  const { data, error } = await sb.rpc('answer_sign_in_alert', { p_id: id, p_was_me: wasMe });
+  if (error) { btns.forEach(b => b.disabled = false); showToast('Couldn’t save that — try again.', 'err'); return; }
+  if (wasMe) { showToast('Thanks — nothing else to do'); _notifLoad(); return; }
+  showToast(data?.signed_out ? 'That device is signed out — now change your password' : 'That device is already signed out — now change your password');
+  setTimeout(() => { location.href = 'settings.html#security'; }, 900);
+}
 // Follow notifications (083): accept / decline a request, or follow back
 async function _notifFollow(ev, userId, what) {
   ev.stopPropagation();
@@ -4000,6 +4040,8 @@ function _notifShortText(n) {
     case 'episode_chat':         return `${who} commented on S${escHTML(n.meta?.season)} · E${escHTML(n.meta?.episode)} of ${t}`;
     case 'comment': case 'like': return _notifSocialText(n, who);
     case 'report_actioned': case 'moderation_notice': return _notifModText(n);
+    case 'new_sign_in':          return `New sign-in on ${escHTML(mssDeviceName(n.meta?.ua))} — was this you?`;
+    case 'sign_in_failed':       return 'Someone tried to sign in to your account';
   }
   return 'New notification';
 }

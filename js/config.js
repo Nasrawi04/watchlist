@@ -974,6 +974,15 @@ function mssFontsReady() {
     .map(f => document.fonts.load(f))).catch(() => {});
 }
 
+// A browser's own description (Settings › Signed-in devices, sign-in alerts) → 'iPhone · Safari' (a best guess: browsers can say anything)
+function mssDeviceName(ua) {
+  ua = ua || '';
+  const device = /iPhone/.test(ua) ? 'iPhone' : /iPad/.test(ua) ? 'iPad' : /Android/.test(ua) ? (/Mobile/.test(ua) ? 'Android phone' : 'Android tablet')
+    : /Macintosh|Mac OS X/.test(ua) ? 'Mac' : /Windows/.test(ua) ? 'Windows PC' : /CrOS/.test(ua) ? 'Chromebook' : /Linux/.test(ua) ? 'Linux PC' : '';
+  const browser = /Edg(e|A|iOS)?\//.test(ua) ? 'Edge' : /OPR\/|Opera/.test(ua) ? 'Opera' : /SamsungBrowser/.test(ua) ? 'Samsung Internet' : /Firefox\/|FxiOS/.test(ua) ? 'Firefox'
+    : /Chrome\/|CriOS/.test(ua) ? 'Chrome' : /Safari\//.test(ua) ? 'Safari' : '';
+  return [device, browser].filter(Boolean).join(' · ') || 'Unknown device';
+}
 function safeURL(u) {
   return (typeof u === 'string' && /^https?:\/\//i.test(u.trim())) ? escHTML(u.trim()) : '';
 }

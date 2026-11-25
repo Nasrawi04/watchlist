@@ -6854,6 +6854,8 @@ a.fl-count:focus-visible, button.fl-count:focus-visible { outline:2px solid var(
 .mss-birth-row .mss-pick-menu { min-width:150px; }
 
 .notif-mod-note { font-style:italic; color:var(--text-2); }
+/* Sign-in alerts (143): what It was me / Not me do, under the question */
+.ntf-sub { display:block; margin-top:2px; font-size:.88em; color:var(--text-2); }
 
 /* Discover search: the Filter button beside the results count */
 .inline-search-filter { margin-top:10px; }

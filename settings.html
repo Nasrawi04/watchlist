@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <link rel="preconnect" href="https://yqbfjtkcsgyvnablmuzp.supabase.co" crossorigin>
 <link rel="preconnect" href="https://image.tmdb.org">
-<!-- unsafe-eval: only for the photo safety check, whose library (tfjs) needs it. Messages and Login don't allow it. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; img-src 'self' data: blob: https://image.tmdb.org https://res.cloudinary.com https://yqbfjtkcsgyvnablmuzp.supabase.co; connect-src 'self' https://yqbfjtkcsgyvnablmuzp.supabase.co wss://yqbfjtkcsgyvnablmuzp.supabase.co https://api.cloudinary.com https://graphql.anilist.co">
+<!-- Content-Security-Policy (security audit, 25 Nov 2026): the same on every page. unsafe-eval is only for the photo safety check, whose library (tfjs) needs it; Login and Messages don't allow it. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'; worker-src 'self' blob:; media-src 'self' blob:; img-src 'self' data: blob: https://image.tmdb.org https://res.cloudinary.com https://yqbfjtkcsgyvnablmuzp.supabase.co https://s4.anilist.co https://wsrv.nl; connect-src 'self' https://yqbfjtkcsgyvnablmuzp.supabase.co wss://yqbfjtkcsgyvnablmuzp.supabase.co https://api.cloudinary.com https://graphql.anilist.co; upgrade-insecure-requests">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#F3EEDC">
 <meta name="color-scheme" content="light dark">
@@ -955,15 +955,6 @@ async function _notIntUndo(btn, type, id, title) {
 }
 
 /* ── Signed-in devices (091): every device this account is signed in on ── */
-// The browser's own description → 'iPhone · Safari' (a best guess: browsers can say anything)
-function _sessDevice(ua) {
-  ua = ua || '';
-  const device = /iPhone/.test(ua) ? 'iPhone' : /iPad/.test(ua) ? 'iPad' : /Android/.test(ua) ? (/Mobile/.test(ua) ? 'Android phone' : 'Android tablet')
-    : /Macintosh|Mac OS X/.test(ua) ? 'Mac' : /Windows/.test(ua) ? 'Windows PC' : /CrOS/.test(ua) ? 'Chromebook' : /Linux/.test(ua) ? 'Linux PC' : '';
-  const browser = /Edg(e|A|iOS)?\//.test(ua) ? 'Edge' : /OPR\/|Opera/.test(ua) ? 'Opera' : /SamsungBrowser/.test(ua) ? 'Samsung Internet' : /Firefox\/|FxiOS/.test(ua) ? 'Firefox'
-    : /Chrome\/|CriOS/.test(ua) ? 'Chrome' : /Safari\//.test(ua) ? 'Safari' : '';
-  return [device, browser].filter(Boolean).join(' · ') || 'Unknown device';
-}
 function _sessDate(d) { return new Date(d).toLocaleDateString(MSSI18n.locale, { day: 'numeric', month: 'short', year: 'numeric' }); }
 async function _sessLoad() {
   const box = document.getElementById('sessList');
@@ -973,7 +964,7 @@ async function _sessLoad() {
   // this device first, then the most recently used
   const rows = [...data].sort((a, b) => (b.is_current - a.is_current) || (new Date(b.last_active || 0) - new Date(a.last_active || 0)));
   box.innerHTML = rows.map(s => {
-    const name = _sessDevice(s.user_agent);
+    const name = mssDeviceName(s.user_agent);
     return `<li class="set-dev">
       <div class="set-dev-t"><div class="set-dev-name"><span translate="no">${escHTML(name)}</span>${s.is_current ? '<span class="set-dev-tag">This one</span>' : ''}</div>
         <div class="set-dev-when">${s.is_current ? `This device · signed in ${escHTML(_sessDate(s.created_at))}` : `Last active ${escHTML(_notifTimeAgo(s.last_active))} · signed in ${escHTML(_sessDate(s.created_at))}`}</div></div>
@@ -987,7 +978,7 @@ async function _sessRevoke(btn, id) {
   const row = (window._sessRows || []).find(s => s.id === id);
   const ok = await showConfirm({
     title: 'Sign out this device?',
-    message: `${_sessDevice(row?.user_agent)} will be signed out of MyScreenFolio. It’ll need the password to get back in.`,
+    message: `${mssDeviceName(row?.user_agent)} will be signed out of MyScreenFolio. It’ll need the password to get back in.`,
     confirmText: 'Sign Out',
     iconName: 'logout',
     danger: false,

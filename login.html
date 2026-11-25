@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <link rel="preconnect" href="https://yqbfjtkcsgyvnablmuzp.supabase.co" crossorigin>
 <link rel="preconnect" href="https://image.tmdb.org">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; img-src 'self' data: blob: https://image.tmdb.org https://res.cloudinary.com https://yqbfjtkcsgyvnablmuzp.supabase.co; connect-src 'self' https://yqbfjtkcsgyvnablmuzp.supabase.co wss://yqbfjtkcsgyvnablmuzp.supabase.co">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'; worker-src 'self' blob:; media-src 'self' blob:; img-src 'self' data: blob: https://image.tmdb.org https://res.cloudinary.com https://yqbfjtkcsgyvnablmuzp.supabase.co https://s4.anilist.co https://wsrv.nl; connect-src 'self' https://yqbfjtkcsgyvnablmuzp.supabase.co wss://yqbfjtkcsgyvnablmuzp.supabase.co https://api.cloudinary.com https://graphql.anilist.co; upgrade-insecure-requests">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <script src="js/consent.js"></script>
 <script src="js/i18n.js"></script>
@@ -535,18 +535,17 @@ async function doSignIn(e) {
   _auBtn('btnSignIn', 'Signing in…', true);
   const again = () => _auBtn('btnSignIn', 'Sign in', false);
 
-  let email = byEmail ? identifier.toLowerCase() : identifier;
-  // Username → the email, only if the password is right (014 SQL) — wrong password and
-  // unknown username get the same NULL answer.
-  if (!byEmail) {
-    try {
-      const { data: lookedUpEmail, error } = await sb.rpc('get_email_for_login', { p_username: identifier.replace(/^@/, '').toLowerCase(), p_password: pass });
-      if (error) { showErr('siError', isRateLimitError(error) ? 'Too many attempts — please wait a minute and try again.' : 'Could not sign in — please try again.'); again(); return; }
-      if (!lookedUpEmail) { showErr('siError', 'That username and password don’t match.'); again(); return; }
-      email = lookedUpEmail;
-    } catch {
-      showErr('siError', 'Couldn’t reach MyScreenFolio — check your connection and try again.'); again(); return;
-    }
+  // Every sign-in is checked by the database first (143 SQL), with a username or an email: the limits
+  // that stop password guessing, then the password. The email comes back only if the password is right —
+  // a wrong password and an unknown account get the same empty answer.
+  let email;
+  try {
+    const { data, error } = await sb.rpc('msf_sign_in', { p_login: byEmail ? identifier.toLowerCase() : identifier.replace(/^@/, '').toLowerCase(), p_password: pass });
+    if (error) { showErr('siError', isRateLimitError(error) ? _auLimitText(error) : 'Could not sign in — please try again.'); again(); return; }
+    if (!data) { showErr('siError', byEmail ? 'That email and password don’t match.' : 'That username and password don’t match.'); again(); return; }
+    email = data;
+  } catch {
+    showErr('siError', 'Couldn’t reach MyScreenFolio — check your connection and try again.'); again(); return;
   }
 
   MSSRemember.set($('siRemember').checked);          // Keep me signed in unticked → signed out when the browser closes
@@ -558,6 +557,14 @@ async function doSignIn(e) {
     await _auSetupMessages(pass);
     window.location.href = mssAfterLogin();
   }
+}
+// Which sign-in limit was hit (143 SQL) → what to tell the person
+function _auLimitText(error) {
+  const t = [error.message, error.details, error.hint].filter(Boolean).join(' ');
+  if (/sign_in_hour/.test(t)) return 'Too many wrong passwords for this account from here. For your security, wait an hour, or use Forgot password.';
+  if (/sign_in_paused/.test(t)) return 'Sign-in to this account is paused for a few minutes after a lot of wrong passwords. Try again soon, or use Forgot password.';
+  if (/sign_in_connection/.test(t)) return 'Too many sign-in attempts from this connection — please wait a minute and try again.';
+  return 'Too many attempts — please wait a minute and try again.';
 }
 // Messages: open this account's key on this device while the password is at hand. Never holds up signing in.
 function _auSetupMessages(pass) {
