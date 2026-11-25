@@ -18,6 +18,7 @@
 
      // OPTIONAL — omit any of these to get the default
      sorts:   section => ['alpha','added','release','episode','ratings','runtime','seasons','episodes'],
+              // 'priority': your Watchlist's Must Watch / Eventually first (MSSPriority)
               // length sorts: movies by 'runtime', shows by 'seasons' / 'episodes'
               // (on a mixed page the other kind goes last)
      filters: section => ['genre','year','score','length','person'],
@@ -28,6 +29,7 @@
                                        // picks: an entry passes if any picked one passes test(entry, value),
                                        // and the choice is stored comma-joined ('tv,anime'). single: true → one only.
                                        // multi: true (no "All" row) → test(entry, 'a,b') gets them all at once.
+                                       // afterGenre: true → shown after Genre instead of at the top.
        { key: 'status', label: 'Status', options: [['', 'All'], ['completed', 'Watched']],
          test: (entry, value) => entry.status === value },   // test optional
        SF.typeChoice(),                // the shared Type section (below)
@@ -102,6 +104,8 @@ const SF = (() => {
     runtime: { header: 'Runtime',      opts: [['runtime_longest', 'Longest'], ['runtime_shortest', 'Shortest']] },
     seasons: { header: 'Season Count', opts: [['seasons_most', 'Most'], ['seasons_least', 'Fewest']] },
     episodes:{ header: 'Episode Count',opts: [['eps_most', 'Most'], ['eps_least', 'Fewest']] },
+    // Watchlist priority (MSSPriority, config.js): Must Watch · Want to Watch · Eventually; newest added first within a level
+    priority:{ header: 'Priority',     opts: [['priorityHigh', 'Must Watch first'], ['priorityLow', 'Eventually first']] },
     // Original list position (items carry _rank) — for ranked lists like Top 250
     rank:    { header: 'Rank',         opts: [['rank', 'Top First'], ['rankRev', 'Bottom First']] },
   };
@@ -231,6 +235,8 @@ const SF = (() => {
       }
       case 'episodeNewest': out = a.sort((x, y) => new Date(y.ratings?._last_episode_date || 0) - new Date(x.ratings?._last_episode_date || 0)); break;
       case 'episodeOldest': out = a.sort((x, y) => new Date(x.ratings?._last_episode_date || 0) - new Date(y.ratings?._last_episode_date || 0)); break;
+      case 'priorityHigh':  out = a.sort((x, y) => (MSSPriority.rank(x) - MSSPriority.rank(y)) || byCreated(x, y)); break;
+      case 'priorityLow':   out = a.sort((x, y) => (MSSPriority.rank(y) - MSSPriority.rank(x)) || byCreated(x, y)); break;
       case 'rank':          out = a.sort((x, y) => (x._rank ?? 1e9) - (y._rank ?? 1e9)); break;
       case 'rankRev':       out = a.sort((x, y) => (y._rank ?? -1) - (x._rank ?? -1)); break;
       default:
@@ -520,7 +526,7 @@ const SF = (() => {
   }
   const rowOn = (r, v) => r.rating ? v.startsWith('rating:') : r.opts.some(([x]) => x === v);
   // each sort's icon on its tile
-  const SORT_ICON = { Alphabetical: 'list', Added: 'bookmark', 'Release Date': 'calendar', Episode: 'tv', Ratings: 'ratingStar', Runtime: 'clock',
+  const SORT_ICON = { Alphabetical: 'list', Priority: 'flame', Added: 'bookmark', 'Release Date': 'calendar', Episode: 'tv', Ratings: 'ratingStar', Runtime: 'clock',
     'Season Count': 'layers', 'Episode Count': 'episodes', Rank: 'trophy', 'Specific Rating': 'star' };
   function sortBodyHTML() {
     const s = S(cur.scope), staged = stagedSort;
@@ -608,11 +614,10 @@ const SF = (() => {
     const s = S(cur.scope), section = cur.section, f = stagedFilter;
     const on = new Set(filtersFor(s, section));
     let html = '';
-    choicesFor(s, section).forEach(c => {
-      html += c.multi || pickMany(c)
-        ? choiceHTML(c.label, c.hint || '', c.options, (f.choice[c.key] || '').split(','), v => `SF._stageChoiceToggle(${attrJSON(c.key)}, ${attrJSON(v)})`)
-        : choiceHTML(c.label, '', c.options, f.choice[c.key] || '', v => `SF._stageChoice(${attrJSON(c.key)}, ${attrJSON(v)})`);
-    });
+    const choice = c => c.multi || pickMany(c)
+      ? choiceHTML(c.label, c.hint || '', c.options, (f.choice[c.key] || '').split(','), v => `SF._stageChoiceToggle(${attrJSON(c.key)}, ${attrJSON(v)})`)
+      : choiceHTML(c.label, '', c.options, f.choice[c.key] || '', v => `SF._stageChoice(${attrJSON(c.key)}, ${attrJSON(v)})`);
+    choicesFor(s, section).filter(c => !c.afterGenre).forEach(c => { html += choice(c); });
     if (on.has('genre')) {
       const menu = GENRES.map(g => `
         <label class="sf-check-row" onclick="event.stopPropagation();">
@@ -622,6 +627,7 @@ const SF = (() => {
         </label>`).join('');
       html += sec('Genre', '', ddHTML('sfGenreDD', f.genres.length ? escHTML(f.genres.join(', ')) : 'Any Genre', f.genres.length > 0, ddSearch('Search genres…') + menu, ' sf-check-menu'));
     }
+    choicesFor(s, section).filter(c => c.afterGenre).forEach(c => { html += choice(c); });   // e.g. the Watchlist's Priority
     if (on.has('year')) html += sec('Release Year', '', rangeRow('Release year', 'sfYearMin', 'sfYearMax', f.yearMin, f.yearMax, 'From', 'To', 'inputmode="numeric"'));
     if (on.has('watched')) html += sec('Year Watched', '', rangeRow('Year watched', 'sfWatchedMin', 'sfWatchedMax', f.watchedMin, f.watchedMax, 'From', 'To', 'inputmode="numeric"'));
     if (on.has('score')) html += sec(s.cfg.scoreLabel || 'MyScreenFolio', '(rated items only)', rangeRow(`${s.cfg.scoreLabel || 'MyScreenFolio'} score`, 'sfScoreMin', 'sfScoreMax', f.scoreMin, f.scoreMax, 'Min', 'Max', 'step="0.1" min="0" max="10" inputmode="decimal"'));

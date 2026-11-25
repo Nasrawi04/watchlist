@@ -232,6 +232,7 @@ const MSSViews = (() => {
   /* ── the header ── */
   function heroHTML(t, m) {
     const rd = ratingDesign(t), label = statusLabel(t), poster = posterURL(t);
+    const prio = t.own && t.e?.status === 'queue' && !!MSSPriority.of(t.e);   // your Watchlist priority, as a tag beside "On your watchlist" (only you see it)
     const facts = [years(t), typeName(t), genres(t)[0], runtime(t)].filter(Boolean);
     const tmdb = tmdbScore(t);
     const favFull = rd ? String(t.e.ratings?._favorites?.character || '').trim() : '';
@@ -277,7 +278,7 @@ const MSSViews = (() => {
       <div class="tv-hero-main">
         <div class="tv-poster">${poster ? `<img src="${poster}" alt="" onerror="mssImgError(this)" data-letter="${esc((t.it.title || '?')[0])}">` : `<span>${esc((t.it.title || '?')[0].toUpperCase())}</span>`}</div>
         <div class="tv-hero-txt">
-          ${otd ? `<span class="tv-status is-otd">On This Day · ${otd.years === 1 ? '1 year ago' : `${otd.years} years ago`}</span>` : label ? `<span class="tv-status">${esc(label)}</span>` : ''}
+          ${otd ? `<span class="tv-status is-otd">On This Day · ${otd.years === 1 ? '1 year ago' : `${otd.years} years ago`}</span>` : label && prio ? `<span class="tv-status-row"><span class="tv-status">${esc(label)}</span>${MSSPriority.pillHTML(t.e)}</span>` : label ? `<span class="tv-status">${esc(label)}</span>` : ''}
           ${tmdbTitleHTML(t.d, t.it.title || '', 'tv-title', H)}
           ${tagline}${chips}${otd ? otdLineHTML(otd) : favChip}
           ${m === 'page' && !t.editing ? heroActsHTML(t) : ''}
@@ -384,6 +385,7 @@ const MSSViews = (() => {
     if (e) {
       let st = SECTION[e.status] || '';
       if (!isMovie(t) && ['watching', 'paused', 'dropped'].includes(e.status) && e.total_eps) st += ` · ${e.watched || 0} / ${e.total_eps} eps`;
+      if (t.own && e.status === 'queue') st = MSSPriority.level(MSSPriority.of(e))?.label || st;   // your Watchlist priority, else "Watchlist" (owner)
       tiles.push(['Status', st]);
     } else if (tmdbScore(t)) tiles.push(['TMDB', mssR1(Number(tmdbScore(t)))]);
     const best = m === 'panel' && t.dir?.items[0];
@@ -411,10 +413,12 @@ const MSSViews = (() => {
     const cards = d.items.map(({ x }) => MSSCard.poster(mssEntryCard(x, { attrs: `onclick="MSSViews._openEntry(this.dataset.id)" data-id="${esc(x.id)}"` }))).join('');
     return sec(`More from ${esc(d.name)} in your library`, mssRail('tvDir', cards), 'is-coll');
   }
-  // Who can see this title: under Details (full page, phone), the last thing in the side panel's Title Info
+  // Who can see this title: under Details (full page, phone), the last thing in the side panel's Title Info.
+  // On your Watchlist, its Priority just above it — the one place to change it (owner, 26 Nov 2026); tap the chosen one again to clear it
   function visHTML(t) {
     if (!t.e || !t.own) return '';
-    return `<section class="tv-sec tv-vis">${mssTitleVisHTML('tvVis', t.e.visibility, '_tvVisPick')}</section>`;
+    const prio = t.e.status === 'queue' ? `<section class="tv-sec tv-vis">${MSSPriority.pickerHTML('tvPrio', MSSPriority.of(t.e), '_tvPrioPick')}</section>` : '';
+    return `${prio}<section class="tv-sec tv-vis">${mssTitleVisHTML('tvVis', t.e.visibility, '_tvVisPick')}</section>`;
   }
   // Who can view this note: under At a glance, above the favourite character (saved straight away, saveNoteVis)
   const noteVisHTML = t => t.e && t.own ? `<section class="tv-sec tv-vis">${_mssVisHTML('note', 'tvRevVis', t.e.note_visibility, { entryId: t.e.id, label: 'Who can view this note' })}</section>` : '';
@@ -1450,6 +1454,27 @@ const MSSViews = (() => {
     }
   }
 
+  // Watchlist priority (sql/144) — saved straight away; '' = no priority (the chosen one tapped again)
+  async function savePrio(v) {
+    const t = T, e = t?.e; if (!e || !t.own) return;
+    const key = v || null, prev = MSSPriority.of(e);
+    if (prev === key) return;
+    try {
+      await MSSPriority.set(e, key);
+      changed();
+      showToast(key ? `“${e.title}” is now ${MSSPriority.level(key).label}.` : `“${e.title}” has no priority now.`);
+      // the tag and At a glance change too: redraw, staying where you were (the page or the panel's body)
+      const box = document.getElementById('tvPrioBox')?.closest('.lyr-body'), y = scrollY, by = box?.scrollTop;
+      paint();
+      scrollTo(0, y); const nb = document.getElementById('tvPrioBox')?.closest('.lyr-body'); if (nb && by != null) nb.scrollTop = by;
+      document.querySelector(`#tvPrioBox [data-v="${key || ''}"]`)?.focus({ preventScroll: true });
+    } catch (err) {
+      console.error('Watchlist priority:', err);
+      showToast('Couldn’t save that — try again.', 'err');
+      mssVisSet('tvPrio', prev || '');
+    }
+  }
+
   // Not interested (a recommendation's ⋯): never recommend it again. The side panel closes and its card leaves the row;
   // the full page stays, its ⋯ then offers Recommend it again. Undo either way.
   async function notInterested(t) {
@@ -1504,7 +1529,7 @@ const MSSViews = (() => {
     entry: id => (T?.e?.id === id ? T.e : null),
     refresh: e => { if (!T?.e || (e && e.id !== T.e.id)) return; if (e && e !== T.e) Object.assign(T.e, e); if (!tabsOf(T).includes(T.tab)) start(T); paint(); },
     has: v => !!T && (v === 'note' ? hasReview(T.e) : v === 'info' || tabsOf(T).includes(v === 'rate' ? 'ratings' : v)),
-    _act: k => act(k), _vis: saveVis,
+    _act: k => act(k), _vis: saveVis, _prio: savePrio,
     _openEntry: id => { const x = T?.dir?.items.find(i => i.x.id === id)?.x; if (!x) return; if (page) return goPage(`item.html?id=${encodeURIComponent(id)}`); open(x, { own: true }); },
     _openTmdb: (id, type = 'movie') => {
       const p = [...(T?.coll?.parts || []), ...(T?.d?.recommendations?.results || [])].find(x => x.id === id);
@@ -1515,3 +1540,4 @@ const MSSViews = (() => {
 })();
 // the title-visibility control calls this by name (mssTitleVisHTML onPick)
 function _tvVisPick(v) { MSSViews._vis(v); }
+function _tvPrioPick(v) { MSSViews._prio(v); }

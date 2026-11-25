@@ -3,7 +3,7 @@
    Can't decide? It picks one title from your watchlist, with a little shuffle, and
    tells you why it's a good one for tonight: how long it takes, what it's about,
    how much you like the genre, how long it's been waiting. Narrow it down first
-   (Quick ones · any mix of types · any mix of genres), skip one ("Not tonight"), roll again,
+   (any mix of priorities · Quick ones · any mix of types · any mix of genres), skip one ("Not tonight"), roll again,
    or start watching it right there.
      MSSPick.open({ pool: () => [entries on the watchlist], all: () => [your whole library],
                     user, onStarted(entry) })
@@ -12,7 +12,7 @@
    Styles: "§28 Pick for me" in css/style.css.
    ════════════════════════════════════════════════════════════ */
 const MSSPick = (() => {
-  const blankMood = () => ({ len: 'any', types: new Set(), genres: new Set() });
+  const blankMood = () => ({ len: 'any', types: new Set(), genres: new Set(), prios: new Set() });
   // Each title's type. A title matches when it's any ticked type AND any ticked genre.
   const TYPES = [['tv', 'TV Show'], ['movies', 'Movie'], ['cartoons:movie', 'Cartoon: Movie'], ['cartoons:show', 'Cartoon: TV Show'], ['anime:movie', 'Anime: Movie'], ['anime:show', 'Anime: Show']];
   let o = null, cur = null, skip = new Set(), mood = blankMood(), rolling = 0, detailsFor = null;
@@ -35,7 +35,8 @@ const MSSPick = (() => {
     return o.pool().filter(e => !skip.has(e.id)
       && (mood.len !== 'quick' || quick(e))
       && (!mood.types.size || mood.types.has(typeOf(e)))
-      && (!mood.genres.size || (e.genres || []).some(g => mood.genres.has(g))));
+      && (!mood.genres.size || (e.genres || []).some(g => mood.genres.has(g)))
+      && (!mood.prios.size || mood.prios.has(MSSPriority.of(e) || 'none')));
   }
   // The genres on this watchlist, most common first (for the chips)
   function genres() {
@@ -47,6 +48,7 @@ const MSSPick = (() => {
   // list: your whole library (the home page's Pick for me passes it; inside the panel it's o.all())
   function reasons(e, list) {
     const out = [], all = list || (o && o.all ? o.all() : []);
+    if (e.status === 'queue' && MSSPriority.of(e) === 'must') out.push(['flame', 'You marked it Must Watch — it’s been waiting for this.']);
     if (e.created_at) {
       const d = Math.floor((Date.now() - new Date(e.created_at)) / 864e5);
       out.push(['clock', d < 1 ? 'You only just added it — strike while you’re curious.'
@@ -123,10 +125,13 @@ const MSSPick = (() => {
     const box = document.getElementById('qpMoods'); if (!box) return;
     const inPool = new Set(o.pool().map(typeOf)), types = TYPES.filter(([k]) => inPool.has(k));
     const chip = (on, label, fn) => `<button type="button" class="qp-chip${on ? ' on' : ''}" aria-pressed="${on}" onclick="${fn}">${label}</button>`;
-    const gs = genres(), any = mood.genres.size > 0, label = genreLabel(), set = mood.len !== 'any' || mood.types.size || any;
+    const gs = genres(), any = mood.genres.size > 0, label = genreLabel(), set = mood.len !== 'any' || mood.types.size || any || mood.prios.size;
+    // Priority (Watchlist priority, MSSPriority): any mix, No priority included; none ticked = any. Your own watchlist only (not the example library)
+    const prios = o.user ? [...MSSPriority.LEVELS, { ...MSSPriority.NONE, key: 'none' }].map(l => [l, o.pool().filter(e => (MSSPriority.of(e) || 'none') === l.key).length]) : [];
     box.innerHTML = `<div class="qp-moods-top"><h3 class="lyr-sec-h">In the mood for</h3>${set ? `<button type="button" class="qp-link qp-reset" onclick="MSSPick.mood('reset')">Reset</button>` : ''}</div>
       <div class="qp-row"><span class="qp-row-h" id="qpLenH">Length</span>${mssSegHTML({ labelledby: 'qpLenH', value: mood.len, options: [['any', 'Any length'], ['quick', 'Something quick']], data: { qplen: '1' } })}</div>
       ${types.length > 1 ? `<div class="qp-row"><span class="qp-row-h" id="qpTypeH">Type</span><div class="qp-chips" role="group" aria-labelledby="qpTypeH">${types.map(([k, l]) => chip(mood.types.has(k), l, `MSSPick.mood('type','${k}')`)).join('')}</div></div>` : ''}
+      ${prios.length ? `<div class="qp-row"><span class="qp-row-h" id="qpPrioH">Priority</span><div class="qp-chips" role="group" aria-labelledby="qpPrioH">${prios.map(([l, n]) => chip(mood.prios.has(l.key), `${icon(l.icon, 14)}<span>${esc(l.label)}</span><small class="qp-chip-n">${n}</small>`, `MSSPick.mood('prio','${l.key}')`)).join('')}</div></div>` : ''}
       ${gs.length ? `<div class="qp-row"><span class="qp-row-h" id="qpGenreH">Genre</span><div class="qp-genre"><div class="td-dd sf-dd sf-dd-wide" id="qpGenreDD">
           <input type="text" class="sf-dd-trigger qp-genre-in${any ? ' active' : ''}" id="qpGenreIn" value="${esc(label)}" placeholder="Any genre"
             role="combobox" aria-label="Genres — type to search, pick any" aria-autocomplete="list" aria-expanded="false" aria-controls="qpGenreMenu"
@@ -216,6 +221,7 @@ const MSSPick = (() => {
     if (k === 'reset') mood = blankMood();
     else if (k === 'len') mood.len = v;
     else if (k === 'type' && !mood.types.delete(v)) mood.types.add(v);
+    else if (k === 'prio' && !mood.prios.delete(v)) mood.prios.add(v);
     drawMoods();
     roll();
   }

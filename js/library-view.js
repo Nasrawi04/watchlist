@@ -197,6 +197,7 @@ function _libBaseEntries(sec, src){
 function _libBand(e,v){ var s=liveScore(e); if(s==null) return false; s=Number(Number(s).toFixed(2)); return v==='9'?s>=9:s>=8&&s<9; }
 var _libSort = {};                                   // the sort you picked while here (else your saved default, else Latest added)
 var _libMovieCat = LIB_CAT === 'movies', _libMixedCat = LIB_CAT === 'anime' || LIB_CAT === 'cartoons';
+function _libPrio(){ return !LIB_READONLY && typeof MSSPriority !== 'undefined'; }   // Watchlist priority: Sort & Filter on your own Watchlist (guests / others: never)
 SF.register(LIB_SCOPE, {
   watched: function(sec){ return sec === 'completed'; },   // Year Watched filter
   base: _libBaseEntries,
@@ -204,14 +205,17 @@ SF.register(LIB_SCOPE, {
   onSearch: function(){ renderLibrary(); },
   sortState: _libSort,
   sorts: function(sec){
-    if (!LIB_CAT) return ['alpha','added','release','ratings','runtime','seasons','episodes'];
-    return ['alpha','added','release', !_libMovieCat && 'episode', sec !== 'queue' && 'ratings'].concat(_libMovieCat ? ['runtime'] : LIB_CAT === 'tv' ? ['seasons','episodes'] : ['runtime','seasons','episodes']);
+    var prio = sec === 'queue' && _libPrio() && 'priority';   // your own Watchlist only, after Release Date (owner) — a priority is never shown to anyone else
+    if (!LIB_CAT) return ['alpha','added','release',prio,'ratings','runtime','seasons','episodes'];
+    return ['alpha','added','release',prio, !_libMovieCat && 'episode', sec !== 'queue' && 'ratings'].concat(_libMovieCat ? ['runtime'] : LIB_CAT === 'tv' ? ['seasons','episodes'] : ['runtime','seasons','episodes']);
   },
   lengthKind: function(){ return _libMovieCat ? 'movie' : LIB_CAT === 'tv' ? 'show' : 'mixed'; },
   choiceFilters: function(sec){
     var out = [];
     // Type — the Library's types live here now (no type toggle); Anime / Cartoons: movies or shows
     if (_libMixedCat) out.push({ key:'mt', label:'Type', single:true, options:[['','All Types'],['movie','Movies'],['tv','TV Shows']], test:function(e,v){ return mssIsMovieEntry(e) === (v === 'movie'); } });
+    if (sec === 'queue' && _libPrio()) out.push({ key:'pri', label:'Priority', afterGenre:true, options:[['','All']].concat(MSSPriority.LEVELS.map(function(l){ return [l.key, l.label]; }), [['none','No priority']]),
+      test:function(e,v){ return (MSSPriority.of(e) || 'none') === v; } });
     if (sec === 'watching') out.push({ key:'st', label:'Status', options:[['','All'],['watching','Watching'],['up_next','Up next'],['paused','Taking a break']],
       test:function(e,v){ var g = _libGroup(e); return v === 'watching' ? g === 0 : v === 'up_next' ? g === 1 : g === 2; } });
     if (sec === 'completed') out.push(

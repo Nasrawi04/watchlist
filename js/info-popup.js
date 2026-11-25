@@ -8,7 +8,7 @@
 
    What lives here:
      MSSInfo.addToLibrary(item, { status, extra, details, onAdded(entry) })
-       the Add to Library panel: where it goes, what it is, who can see it
+       the Add to Library panel: where it goes, what it is, its priority (Watchlist only), who can see it
      MSSInfo.quickAdd(item, { status }) → straight into your library: your Watchlist (Social → Recommendations),
                                    or Watched (Set up your folio's Top 5)
      MSSInfo.discover(entryOrItem, btn)
@@ -128,7 +128,7 @@ const MSSInfo = (() => {
     const year = it.year || ((movie ? d?.release_date : d?.first_air_date) || '').slice(0, 4);
     addPanel.setTitle(it.title || d?.title || d?.name || '', ['Add to Library', movie ? 'Movie' : 'TV Show', year].filter(Boolean).join(' · '));
     addPanel.setPoster(d?.poster_path ? TMDB_IMG + d.poster_path : it.poster_url || it.entry?.poster_url || null);
-    const vis = $('mssAddVis')?.value || 'anyone';
+    const vis = $('mssAddVis')?.value || 'anyone', prio = $('mssAddPrio') ? $('mssAddPrio').value : MSSPriority.DEFAULT;   // '' = cleared
     // where: the tiles of Add new entry (one per line, icon + hint); what it is: a segmented choice
     const where = ADD_WHERE.filter(w => !w[4] || !movie).map(([v, ic, l, h]) => { const on = addSt.status === v;
       return `<div class="lyr-choice${on ? ' is-on' : ''}"><button type="button" role="radio" class="lyr-choice-main" aria-checked="${on}" tabindex="${on ? 0 : -1}" data-g="status" data-v="${v}">
@@ -138,6 +138,7 @@ const MSSInfo = (() => {
         <div class="lyr-choices is-tiles is-compact" role="radiogroup" aria-labelledby="mssAddWhereL">${where}</div></div>
       <div class="lyr-sec"><h3 class="lyr-sec-h" id="mssAddCatL">What it is</h3>
         ${mssSegHTML({ labelledby: 'mssAddCatL', strong: true, value: addSt.cat, data: { g: 'cat' }, options: [[movie ? 'movies' : 'tv', movie ? 'Movie' : 'TV Show'], ['anime', 'Anime'], ['cartoons', 'Cartoon']] })}</div>
+      <div class="lyr-sec" id="mssAddPrioSec"${addSt.status === 'queue' ? '' : ' hidden'}>${MSSPriority.pickerHTML('mssAddPrio', prio)}</div>
       <div class="lyr-sec">${mssTitleVisHTML('mssAddVis', vis)}</div>`;
     $('mssAddBody').onclick = ev => { const b = ev.target.closest('[data-g][data-v]'); if (b) addPick(b.dataset.g, b.dataset.v); };
   }
@@ -148,6 +149,7 @@ const MSSInfo = (() => {
       const on = b.dataset.v === v;
       b.setAttribute('aria-checked', on); b.tabIndex = on ? 0 : -1; b.closest('.lyr-choice')?.classList.toggle('is-on', on);
     });
+    if (group === 'status') { const p = document.getElementById('mssAddPrioSec'); if (p) p.hidden = v !== 'queue'; }   // a priority only on the Watchlist
   }
   function addClose() { addPanel?.closeNow(); }
   async function addGo() {
@@ -166,7 +168,9 @@ const MSSInfo = (() => {
     }
     try {
       const entry = await quickCreate(payload, c.user.id);
+      const prio = c.status === 'queue' ? document.getElementById('mssAddPrio')?.value : null;
       addClose();
+      if (prio) await MSSPriority.set(entry, prio).catch(err => { console.error('Watchlist priority:', err); showToast('Added — but its priority didn’t save. Set it from ⋯ Actions.', 'err'); });
       c.o.onAdded?.(entry);
       showUndoToast(`Added “${payload.title}” to ${where}`, async () => {
         await deleteEntry(entry.id, c.user.id);

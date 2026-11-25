@@ -2037,7 +2037,7 @@ function _shellFooterEl() {
 }
 
 /* ── Add new entry (+ Add, the + menu, empty states, N): a side panel S, or a full page that slides up.
-   Search TMDB first, then Category and Status as one-tap choices; the Year fills in from the title.
+   Search TMDB first, then Category and Status as one-tap choices (Watchlist adds its Priority); the Year fills in from the title.
    Add → stays here (toast with Open) · Add & edit → → the full edit page. Same checks as always:
    category + status required, the duplicate check (quickCreate). ── */
 const ADD_CATS = [['tv', 'TV Show'], ['movies', 'Movie'], ['anime', 'Anime'], ['cartoons', 'Cartoon']];
@@ -2068,6 +2068,7 @@ function _addBuild() {
         <input class="lyr-field" id="mTitle" placeholder="Search or type a title…" autocomplete="off" enterkeyhint="search"></div></div>
     <div class="lyr-sec"><h3 class="lyr-sec-h" id="mCatH">Category</h3><div id="mCatWrap"></div></div>
     <div class="lyr-sec"><h3 class="lyr-sec-h" id="mStatusH">Status</h3><div id="mStatusWrap"></div></div>
+    <div class="lyr-sec" id="mPrioSec" hidden></div>
     <div class="lyr-sec"><label class="lyr-sec-h" for="mYear">Year</label>
       <input class="lyr-field" id="mYear" type="number" inputmode="numeric" min="1900" max="2030" placeholder="e.g. 2024" aria-describedby="mYearHint">
       <p class="lyr-hint" id="mYearHint" hidden>Filled in from the title you picked</p></div>`;
@@ -2076,6 +2077,7 @@ function _addBuild() {
     if (st) {
       _add.status = st.dataset.status;
       _addBody.querySelectorAll('[data-status]').forEach(x => { const on = x === st; x.setAttribute('aria-checked', on); x.tabIndex = on ? 0 : -1; x.parentElement.classList.toggle('is-on', on); });
+      _addBody.querySelector('#mPrioSec').hidden = _add.status !== 'queue';   // Watchlist priority (sql/144), Watchlist only
     }
     const b = ev.target.closest('#mCatWrap .lyr-seg-opt');
     if (b) { _add.cat = mssSegPick(b); _addPaintStatus(); }
@@ -2110,6 +2112,8 @@ async function openAddModal(cat, tmdb) {
   _addBody.querySelector('#mYearHint').hidden = true;
   _addBody.querySelector('#mCatWrap').innerHTML = mssSegHTML({ labelledby: 'mCatH', options: ADD_CATS, value: _add.cat });
   _addBody.querySelector('#mStatusWrap').innerHTML = _addStatusHTML();
+  const prio = _addBody.querySelector('#mPrioSec');
+  prio.innerHTML = MSSPriority.pickerHTML('mPrio', MSSPriority.DEFAULT); prio.hidden = true;
   const h = MSSPanel.open({ size: 'S', kind: 'generic', create: true, title: 'Add new entry', subtitle: 'Search, then choose where it goes', body: _addBody,
     footer: { secondary: [{ label: 'Cancel', only: 'page', onClick: x => x.close() }, { label: 'Add', end: true, onClick: () => modalQuickCreate(false) }],
               primary: { label: 'Add & edit →', disabled: true, onClick: () => modalQuickCreate(true) } },
@@ -2190,6 +2194,7 @@ async function modalQuickCreate(edit) {
       tmdb_type:     prefill.tmdb_type     || null,
       ratings:       Object.keys(ratings).length ? ratings : null,
     }, user.id);
+    if (statusVal === 'queue') await MSSPriority.set(entry, document.getElementById('mPrio')?.value).catch(err => console.error('Watchlist priority:', err));
 
     h.closeNow();
     const page = CAT_META[entry.cat]?.page || 'index.html';

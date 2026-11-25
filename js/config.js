@@ -365,6 +365,10 @@ const ICONS = {
   animeFace: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="9" cy="10" r="1.3" fill="currentColor" stroke="none"/><circle cx="15" cy="10" r="1.3" fill="currentColor" stroke="none"/><path d="M9 15c1 1 5 1 6 0"/></svg>`,
   grip:     `<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>`,
   chart:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="12" width="3" height="6" rx="1"/><rect x="12" y="8" width="3" height="10" rx="1"/><rect x="17" y="5" width="3" height="13" rx="1"/></svg>`,
+  // Watchlist priority (sql/144): Must Watch · Want to Watch · Eventually
+  flame:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>`,
+  ticket:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M13 5v2"/><path d="M13 17v2"/><path d="M13 11v2"/></svg>`,
+  hourglass:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 22h14"/><path d="M5 2h14"/><path d="M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22"/><path d="M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2"/></svg>`,
 };
 
 function icon(name, size = 18) {
@@ -2154,13 +2158,13 @@ const _MSS_VIS_SETS = { note: MSS_NOTE_VIS, title: MSS_TITLE_VIS, epnote: MSS_EP
 // (read it with .value). kind 'note' (069) adds the private-link buttons; o.onPick names a
 // global function called with the new value (e.g. to save straight away).
 function _mssVisHTML(kind, id, value, o = {}) {
-  const set = _MSS_VIS_SETS[kind], v = set.some(x => x[0] === value) ? value : 'anyone';
-  return `<div class="mss-vis-box" id="${id}Box" data-kind="${kind}"${o.onPick ? ` data-pick="${o.onPick}"` : ''}>
+  const set = _MSS_VIS_SETS[kind], v = set.some(x => x[0] === value) ? value : (o.fallback || 'anyone');
+  return `<div class="mss-vis-box" id="${id}Box" data-kind="${kind}"${o.onPick ? ` data-pick="${o.onPick}"` : ''}${o.toggle ? ` data-toggle="1" data-empty="${escHTML(o.empty || '')}"` : ''}>
       <div class="mss-vis-head"><span class="mss-vis-l" id="${id}L">${o.label || 'Who can view'}</span></div>
       <div class="mss-vis-seg" role="radiogroup" aria-labelledby="${id}L" onkeydown="mssVisKey(event, '${id}')">${set.map(([k, ic, l]) =>
         `<button type="button" role="radio" class="mss-vis-opt${v === k ? ' on' : ''}" aria-checked="${v === k}" tabindex="${v === k ? 0 : -1}" data-v="${k}" onclick="mssVisSet('${id}', '${k}')">${icon(ic, 14)}<span>${l}</span></button>`).join('')}</div>
       <input type="hidden" id="${id}" value="${v}">
-      <p class="mss-vis-hint" id="${id}Hint">${set.find(x => x[0] === v)[3]}</p>
+      <p class="mss-vis-hint" id="${id}Hint">${(set.find(x => x[0] === v) || [])[3] || escHTML(o.empty || '')}</p>
       ${o.entryId !== undefined ? `<div class="mss-vis-links" id="${id}Link" data-entry="${escHTML(o.entryId || '')}"${v === 'anyone' || !o.entryId ? ' hidden' : ''}>
         <button type="button" class="mss-vis-link" onclick="mssCopyShareLink('note', ${attrJSON(o.entryId || '')})">${icon('link', 13)} Copy private link</button>
         <button type="button" class="mss-vis-link mss-vis-new" aria-label="Make a new link" title="Make a new link — the old one stops working" onclick="mssCopyShareLink('note', ${attrJSON(o.entryId || '')}, true)">${icon('refresh', 13)}<span>New link</span></button>
@@ -2172,14 +2176,14 @@ function mssTitleVisHTML(id, value, onPick) { return _mssVisHTML('title', id, va
 function mssEpNoteVisHTML(id, value, onPick) { return _mssVisHTML('epnote', id, value, { onPick }); }
 function mssVisSet(id, v, focus) {
   const box = document.getElementById(id + 'Box'), set = _MSS_VIS_SETS[box.dataset.kind];
-  if (document.getElementById(id).value === v && !focus) return;
+  if (document.getElementById(id).value === v && !focus) { if (!box.dataset.toggle || !v) return; v = ''; }   // a toggle (Priority): the chosen one again → none
   document.getElementById(id).value = v;
   box.querySelectorAll('.mss-vis-opt').forEach(b => {
     const on = b.dataset.v === v;
     b.classList.toggle('on', on); b.setAttribute('aria-checked', on); b.tabIndex = on ? 0 : -1;
     if (on && focus) b.focus();
   });
-  document.getElementById(id + 'Hint').textContent = set.find(x => x[0] === v)[3];
+  document.getElementById(id + 'Hint').textContent = (set.find(x => x[0] === v) || [])[3] || box.dataset.empty || '';
   const links = document.getElementById(id + 'Link');
   if (links) links.hidden = v === 'anyone' || !links.dataset.entry;
   if (box.dataset.pick) window[box.dataset.pick]?.(v);
@@ -2768,6 +2772,82 @@ const MSSNotInterested = (() => {
   }
   return { load, has, add, remove, list };
 })();
+
+/* ══════════════════════════════════════════
+   WATCHLIST PRIORITY — MSSPriority (member's survey idea, owner-approved names 26 Nov 2026)
+   A title on your Watchlist (status 'queue') can have a priority: Must Watch · Want to Watch · Eventually.
+   Not every title needs one (owner): no priority = no tag anywhere; it sorts between Want to Watch and
+   Eventually, and Sort & Filter / Pick for me can pick "No priority". Every title added before this has none.
+   The Add to Library panel starts on Want to Watch (owner).
+   Kept on the title (entries.priority, sql/144; NULL = no priority). Until that SQL has run, on this device
+   (msf_watch_priority_<your id>: { entryId: level }), moved onto your account the first time the column is
+   there. Only ever shown to you (the title panel / page, Sort & Filter, Pick for me).
+     MSSPriority.LEVELS                 → [{ key, label, icon, line }] highest first
+     MSSPriority.of(e)                  → 'must' | 'want' | 'eventually' | null (none)
+     MSSPriority.rank(e)                → 1 Must Watch · 2 Want to Watch · 2.5 none · 3 Eventually
+     MSSPriority.level(key)             → its { key, label, icon, line } (null for none)
+     await MSSPriority.set(e, key)      → saves it (null clears it; updates e); throws if it couldn't
+     MSSPriority.pillHTML(e)            → the tag for the title panel / page ('' when none)
+     MSSPriority.pickerHTML(id, value, onPick) → the choice in the add flows and Title Info (read #id.value; '' = none)
+   Each change fires 'mss:priority' { id, key } on document.
+══════════════════════════════════════════ */
+const MSSPriority = (() => {
+  const LEVELS = [
+    { key: 'must', label: 'Must Watch', icon: 'flame', line: 'Can’t wait — these come first.' },
+    { key: 'want', label: 'Want to Watch', icon: 'ticket', line: 'On the list, in good time.' },
+    { key: 'eventually', label: 'Eventually', icon: 'hourglass', line: 'Some day, when the mood strikes.' }];
+  const NONE = { key: null, label: 'No priority', icon: 'minus', line: 'No tag on it.' };
+  const DEFAULT = 'want', ok = k => LEVELS.some(l => l.key === k) ? k : null;
+  const uid = () => window._navUser?.id || null;
+  const LKEY = () => 'msf_watch_priority_' + uid();
+  let remote = null, moving = null;   // remote: true (the column is there) / false (not yet) / null (unknown)
+  const missing = err => !!err && (['PGRST204', '42703'].includes(err.code) || /priority/.test(err.message || '') && /column|schema cache/.test(err.message || ''));
+  let cache = null, cacheFor = null;   // this device's levels, read once per account (sorting asks often)
+  const readLocal = () => {
+    if (!cache || cacheFor !== uid()) { cacheFor = uid(); try { cache = uid() ? JSON.parse(localStorage.getItem(LKEY()) || '{}') || {} : {}; } catch { cache = {}; } }
+    return cache;
+  };
+  const writeLocal = m => { cache = { ...m }; cacheFor = uid(); try { Object.keys(m).length ? localStorage.setItem(LKEY(), JSON.stringify(m)) : localStorage.removeItem(LKEY()); } catch {} };
+  const fire = (id, key) => document.dispatchEvent(new CustomEvent('mss:priority', { detail: { id, key } }));
+  const level = k => LEVELS.find(l => l.key === k) || null;
+  function of(e) {
+    if (!e) return null;
+    // the column is on this row and this device still holds levels from before it was there → move them up (once)
+    if (e.priority !== undefined && !moving && uid() && Object.keys(readLocal()).length) moving = moveUp();
+    return ok(e.priority) || ok(readLocal()[e.id]);
+  }
+  const rank = e => ({ must: 1, want: 2, eventually: 3 })[of(e)] || 2.5;
+  async function save(id, key) {
+    const { error } = await sb.from('entries').update({ priority: key }).eq('id', id).eq('user_id', uid());
+    if (error) { if (missing(error)) { remote = false; return false; } throw error; }
+    remote = true; return true;
+  }
+  async function moveUp() {
+    const m = { ...readLocal() }, left = { ...m };
+    for (const [id, key] of Object.entries(m)) {
+      try { if (!(await save(id, ok(key)))) return; delete left[id]; } catch (err) { console.warn('Watchlist priority:', err); }
+    }
+    writeLocal(left);
+    if (typeof MSFStore !== 'undefined') MSFStore.dirty();
+  }
+  async function set(e, key) {
+    key = ok(key);
+    if (!e || !uid() || of(e) === key) return;
+    const m = { ...readLocal() };
+    if (remote !== false && await save(e.id, key)) { e.priority = key; delete m[e.id]; }
+    else if (key) m[e.id] = key; else delete m[e.id];
+    writeLocal(m);
+    fire(e.id, key);
+  }
+  const pillHTML = e => { const l = level(of(e)); if (!l) return '';
+    return `<span class="mss-prio is-${l.key}" title="Watchlist priority"><span class="mss-prio-ic" aria-hidden="true">${icon(l.icon, 13)}</span><span class="sr-only">Priority: </span>${escHTML(l.label)}</span>`; };
+  // The add flows and Title Info: the "Who can see this title" control's look, its own three choices (value in a hidden
+  // input #id, '' = none). Tapping the chosen one again clears it. onPick: a global function's name (saves straight away)
+  _MSS_VIS_SETS.prio = LEVELS.map(l => [l.key, l.icon, l.label, l.line]);
+  const pickerHTML = (id, value, onPick) => _mssVisHTML('prio', id, ok(value) || '', { label: 'Priority', fallback: '', empty: 'No priority — pick one if you like.', toggle: true, onPick });
+  return { LEVELS, NONE, DEFAULT, of, rank, level, set, pillHTML, pickerHTML };
+})();
+
 
 /* ══════════════════════════════════════════
    LOADING SKELETONS — mssSkeleton(kind)
