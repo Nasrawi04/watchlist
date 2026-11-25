@@ -799,8 +799,10 @@ function _libHeader(lists){
   var tools = document.getElementById('libHeadTools');
   if (tools && !tools.dataset.ready) {
     tools.dataset.ready = '1';
-    var label = LIB_CAT ? LIB_CAT_META[LIB_CAT].label : 'library';
-    tools.innerHTML = '<div class="lib-search">' + SF.searchHTML(LIB_SCOPE, 'Search your ' + (LIB_CAT ? label : 'library') + '… title, year') + '</div>'
+    // "Search your TV shows" / "Search your anime" — short, no list of fields (owner, 25 Nov 2026)
+    var label = LIB_CAT ? (LIB_CAT === 'tv' ? 'TV shows' : LIB_CAT_META[LIB_CAT].label.toLowerCase()) : 'library';
+    if (LIB_CAT) document.body.dataset.ownActions = '';   // phones: the page's own + Add (beside Pick for me) — no Create button over it
+    tools.innerHTML = '<div class="lib-search">' + SF.searchHTML(LIB_SCOPE, 'Search your ' + label) + '</div>'
       + (typeof MSSPick !== 'undefined' ? '<span class="lib-pick">' + MSSPick.buttonHTML('_libPick()', true) + '</span>' : '')
       + (LIB_CAT ? '<button type="button" class="btn-add-entry" onclick="openAddModal(\''+LIB_CAT+'\')" aria-label="Add ' + (/^[aeiou]/.test(LIB_CAT_META[LIB_CAT].one) ? 'an ' : 'a ') + LIB_CAT_META[LIB_CAT].one + '">'
         + '<span aria-hidden="true">+</span><span class="lib-add-l" aria-hidden="true">' + LIB_CAT_META[LIB_CAT].add.slice(2) + '</span></button>' : '');
@@ -809,10 +811,7 @@ function _libHeader(lists){
   if (pick) pick.disabled = !lists.queue.length;
   var all = LIB_ENTRIES().length, k = document.getElementById('libKicker'), sub = document.getElementById('libPageSub');
   if (k) k.textContent = (LIB_GUEST ? 'Example library · ' : 'Your collection · ') + all.toLocaleString(MSSI18n.locale) + ' title' + (all === 1 ? '' : 's');
-  var line = lists.watching.length + ' in progress · ' + lists.queue.length + ' watchlist · ' + lists.completed.length + ' watched';
-  if (sub) sub.textContent = line;
-  var top = document.getElementById('ntopSub');   // phones / tablets: under the page's name in the top bar (nav.js) — wraps only between its parts
-  if (top) top.textContent = line.split(' · ').map(function(p){ return p.replace(/ /g, '\u00a0'); }).join(' · ');
+  if (sub) sub.textContent = lists.watching.length + ' in progress · ' + lists.queue.length + ' watchlist · ' + lists.completed.length + ' watched';   // phones / tablets: shown under the page name in the top bar (nav.js)
 }
 
 function renderLibrary(){

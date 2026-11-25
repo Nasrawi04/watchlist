@@ -305,7 +305,7 @@ html.mss-guest .nav-auth-only { display:none !important; }
 .nav-top .nav-logo-img { height:40px; }
 .ntop-name { display:block; min-width:0; overflow:hidden; text-overflow:ellipsis; font:600 24px/1.15 var(--serif); color:var(--text-heading); letter-spacing:.2px; white-space:nowrap; }
 .ntop-titles { display:flex; flex-direction:column; justify-content:center; min-width:0; }
-.ntop-sub { font:500 11.5px/1.25 var(--sans); color:var(--text-muted); text-wrap:balance; overflow:hidden; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; }   /* Library's pages: "17 in progress · 180 watchlist · 180 watched", two lines at most */
+.ntop-sub { font:500 11.5px/1.25 var(--sans); color:var(--text-muted); text-wrap:balance; overflow:hidden; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; }   /* tab pages: their stats or what they're for ("17 in progress · 180 watchlist · 180 watched"), two lines at most */
 .ntop-titles:has(.ntop-sub:not(:empty)) .ntop-name { font-size:21px; line-height:1.1; }
 .ntop-sub:empty { display:none; }
 .ntop-dname { display:block; flex:1; font:700 17px/1.2 var(--sans); overflow:hidden; text-overflow:ellipsis; padding-inline-start:2px; }
@@ -364,8 +364,9 @@ html.mss-guest .nav-auth-only { display:none !important; }
   .atab .notif-badge, .apage .notif-badge { position:static; flex:none; border-color:transparent; }
   .apage .nav-badge, .atab .nav-badge { flex:none; margin:0; background:var(--error-solid); color:#fff; }   /* follow requests waiting */
   .apage.on .nav-badge { outline:1.5px solid var(--text-on-brand); }
-  /* the page row's own count line and the header the top bar replaces */
-  .lib-page .cat-page-sub { display:none; }
+  /* the line under the page's title: the top bar shows it under the page name (nav.js _NTOP_SUB_SRC) */
+  html.has-atabs :is(.cat-page-header .cat-page-sub, .cab-head .cab-sub, .dy-sub) { display:none; }
+  html.has-atabs .cat-page-header.ntop-empty { display:none; }   /* nothing left to show in it (nav.js): no gap */
 }
 @media (prefers-reduced-motion: reduce) { .atab, .apage { transition:none; } }
 

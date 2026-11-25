@@ -45,7 +45,6 @@
       <h1 class="cat-page-title">Friends</h1>
       <div class="cat-page-sub" id="friendsPageSub">&nbsp;</div>
     </div>
-    <div class="cat-page-header-right"><a class="btn-add-entry fr-req-btn nav-auth-only" id="frReqBtn" href="friends.html?view=requests" onclick="return _frGoRequests(event)">Requests <span class="fr-tab-dot" id="frReqN" hidden></span></a></div>
   </div>
   <!-- Search (friends by name, anyone by @username) · Friends / Following / Followers / Requests · Sort -->
   <div class="frs-bar" id="frBar">
@@ -96,7 +95,8 @@ function _frSkelCards() {
   const yours = _frPeople === 'friends' && !_frOf;
   const known = yours ? mssSkeleton.shape('fr')?.n : _frOf ? null : _frFollowState?.[_frPeople];
   const n = Math.min(Math.max(known ?? 4, 1), 8);
-  const card = _frMemberCard({ id: '', friendId: '', friendProfile: { username: 'username', display_name: 'Friend name' } });
+  // the photo shimmers as a round placeholder (not their initial on green)
+  const card = _frMemberCard({ id: '', friendId: '', friendProfile: { username: 'username', display_name: 'Friend name' } }).replace('class="fr-av"', 'class="fr-av skel-media-box"');
   return { n, yours, html: `<div class="fm-grid">${Array(n).fill(card).join('')}</div>` };
 }
 const _frSkelCount = n => `<div class="fr-people-count"><b>${n}</b> people</div>`;
@@ -111,7 +111,6 @@ mssSkeleton.define('fr-page', () => {
 });
 
 function _frRender() {
-  _frPaintReqBtn();
   if (_frGateAuth() || _frGateData()) return;
   if (_frRequests) return _frRenderRequests();
   _frRenderFriends();
@@ -150,7 +149,7 @@ function _frMemberCard(f) {
     <div class="fm-cover">
       ${cover.length ? cover.map(e => `<div class="fm-cover-tile">${_frPosterHTML(e, 'fm-cover-img')}</div>`).join('') : '<div class="fm-cover-empty"></div>'}
       <div class="fm-cover-shade"></div>
-      ${_frMatchPct(f.friendId) != null ? (m => `<span class="fm-match${m >= 80 ? ' hi' : m < 55 ? ' lo' : ''}" title="Taste match — based on ${_cmpMatch(f.friendId).rated} titles you've both rated">${icon('compare', 11)} ${m}% match</span>`)(_frMatchPct(f.friendId)) : ''}
+      ${_frMatchPct(f.friendId) != null ? (m => `<span class="fm-match${m >= 80 ? ' hi' : m < 55 ? ' lo' : ''}" title="Taste match — based on ${_frMatchRated(f.friendId)} titles you've both rated">${icon('compare', 11)} ${m}% match</span>`)(_frMatchPct(f.friendId)) : ''}
       ${(!somePinned || isPinned) ? `<button type="button" class="fm-pin${isPinned ? ' on' : ''}" title="${isPinned ? 'Unpin' : 'Pin to top'}" aria-label="${isPinned ? 'Unpin' : 'Pin to top'}" onclick="event.stopPropagation();togglePinFriend(${attrJSON(f.friendId)})">${isPinned ? _PIN_SVG_FILLED : _PIN_SVG}</button>` : ''}
     </div>
     <div class="fm-body">
@@ -170,15 +169,8 @@ function _frMemberCard(f) {
   </article>`;
 }
 
-/* ── Requests (?view=requests): reached from the Requests button, not mixed in with your friends ── */
+/* ── Requests (?view=requests): its own tab in the switch (the Requests button went, owner 25 Nov 2026) ── */
 let _frRequests = false;
-function _frPaintReqBtn() {
-  const n = _frIncoming.length, el = document.getElementById('frReqN'), btn = document.getElementById('frReqBtn');
-  if (!el) return;
-  el.hidden = !n; el.textContent = n;
-  btn.hidden = _frFixed;
-  if (_frRequests) btn.setAttribute('aria-current', 'page'); else btn.removeAttribute('aria-current');
-}
 function _frSetRequests(on) {
   _frRequests = on;
   const url = new URL(location.href);
@@ -186,11 +178,6 @@ function _frSetRequests(on) {
   history.replaceState(history.state, '', url.pathname + url.search);
   _frRender();
   window.scrollTo({ top: 0, behavior: 'instant' });
-}
-function _frGoRequests(e) {
-  if (e.ctrlKey || e.metaKey || e.shiftKey || e.button) return true;
-  _frSetRequests(!_frRequests);
-  return false;
 }
 function _frRenderRequests() {
   document.getElementById('frToolbar').style.display = 'none';
@@ -253,14 +240,17 @@ function _frRenderFriends() {
     const q = _frQuery.trim().replace(/^@/, '').toLowerCase();
     const list = SF.list('frFriends', 'all').filter(f => !q || [_frName(f.friendId), f.friendProfile?.username].some(t => (t || '').toLowerCase().includes(q)));
     mssSkeleton.shape('fr', { n: Math.min(_frAccepted.length, 8) });
-    const tb = document.getElementById('frToolbar');
-    tb.innerHTML = _frAccepted.length > 1 ? SF.bar('frFriends', 'all') : ''; tb.style.display = '';
+    // Sort sits on the Friends heading's line (owner, 25 Nov 2026), so the switch above gets the whole width
+    document.getElementById('frToolbar').style.display = 'none';
     const active = _frAccepted.filter(f => Date.now() - new Date(_frStats[f.friendId]?.recent || 0) < 30 * 864e5).length;
-    document.getElementById('frContent').innerHTML = (_frAccepted.length
-      ? _frSecHead('Friends', q ? `${list.length} of ${_frAccepted.length}` : active ? `${active} active` : '')
+    const html = (_frAccepted.length
+      ? `<div class="fr-sec-row">${_frSecHead('Friends', q ? `${list.length} of ${_frAccepted.length}` : active ? `${active} active` : '')}${_frAccepted.length > 1 ? SF.bar('frFriends', 'all') : ''}</div>`
         + (list.length ? `<div class="fm-grid">${list.map(_frMemberCard).join('')}</div>`
           : _frEmptyHTML('users', 'No friends match', 'Anyone else with that @username shows up under the search box.'))
       : _frEmptyHTML('users', 'Watching solo for now', 'Everything’s better with someone to argue about the ending with. Find people above and follow them — when they follow you back, you’re friends.'));
+    // the same cards again (the kept copy, then the check, then your taste match) → left as they are, no flicker
+    const c = document.getElementById('frContent');
+    if (c._frHTML !== html || !c.querySelector('.fr-sec-row, .fm-grid, .empty-state, .mss-empty')) { c.innerHTML = html; c._frHTML = html; }
     return;
   }
   _frRenderPeople();
@@ -414,6 +404,8 @@ document.addEventListener('DOMContentLoaded', () => {
     _frAuthKnown = true;
     _frRender();
     if (!user) { document.getElementById('friendsPageSub').textContent = 'Search for someone above to view their profile.'; return; }
+    _frKeepOn = true;
+    if (_frKeepRead()) _frRender();   // your friends from last time, at once — loadFriends checks them in the background
     await loadFriends();
     MSSSocial.paint();
   });

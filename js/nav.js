@@ -1758,13 +1758,15 @@ function _bnavDotPaint() {
    Switch account, Sign out). Scrolled: a 1px line under it. It always stays; the area tabs under it are part of the page
    and scroll away (Back to top brings them back). The page's own big title is hidden on phones (it stays for screen readers). */
 const _NTOP_SHARE = ['title.html', 'person.html', 'list-view.html', 'profile-view.html', 'season.html', 'episode.html', 'discover-list.html'];
+// the line under a tab page's title (Library's counts, Lists' stats, Activity's description, Diary's watches…)
+const _NTOP_SUB_SRC = '.cat-page-header .cat-page-sub, .cab-head .cab-sub, .dy-sub';
 const _ntopName = () => (document.title || '').replace(/\s*[—–|-]\s*MyScreenFolio\s*$/, '').trim() || 'MyScreenFolio';
 function _ntopLeftHTML(w) {
   const page = _navFile(location), t = SHELL_TABS.find(x => x.k === w.tab);
   if (page === 'index.html') return `<a class="nav-logo" href="index.html" aria-label="MyScreenFolio home">${mssLogoSVG('nav-logo-img')}</a>`;
   if (page === 'discover.html') return '<span class="ntop-name">Discover</span>';
   const a = _areaAt();
-  if (a) return `<span class="ntop-titles"><span class="ntop-name">${_areaItem(a.k, a.page).label}</span>${a.k === 'lib' && a.tab === 0 ? '<span class="ntop-sub" id="ntopSub"></span>' : ''}</span>`;
+  if (a) return `<span class="ntop-titles"><span class="ntop-name">${_areaItem(a.k, a.page).label}</span><span class="ntop-sub" id="ntopSub"></span></span>`;
   return `<a class="ntop-btn ntop-back" href="${t?.href || 'index.html'}" onclick="return mssGoBack()" aria-label="Back">${icon('back', 20)}</a>
     <span class="ntop-name ntop-dname" id="ntopName" translate="no">${escHTML(_ntopName())}</span>
     ${_NTOP_SHARE.includes(page) ? `<button type="button" class="ntop-btn" onclick="_ntopShare()" aria-label="Share">${icon('share', 17)}</button>` : ''}
@@ -1783,6 +1785,24 @@ function _ntopInit() {
   const root = document.documentElement;
   const line = () => { if (!root.classList.contains('mss-scroll-locked')) root.classList.toggle('ntop-line', window.scrollY > 2); };
   window.addEventListener('scroll', line, { passive: true }); line();
+  // tab pages: the page's own line under its title (its stats, or what it's for) shows under the name in the bar
+  // (owner, 25 Nov 2026); a list of stats only breaks between its parts
+  const sub = document.getElementById('ntopSub');
+  if (sub) {
+    let raf2 = 0;
+    const fill = () => {
+      raf2 = 0;
+      const el = document.querySelector(_NTOP_SUB_SRC), t = el && !el.querySelector('.skel-txt') ? el.textContent.trim() : '';
+      const v = t.includes(' · ') ? t.split(' · ').map(p => p.replace(/ /g, '\u00a0')).join(' · ') : t;
+      if (sub.textContent !== v) sub.textContent = v;
+      // its header has nothing else to show (no buttons, search…) → it goes, so no empty gap under the tabs
+      const head = el?.closest('.cat-page-header');
+      const shown = c => { for (let x = c; x && x !== head; x = x.parentElement) if (x.hidden || x.classList.contains('sr-only') || getComputedStyle(x).display === 'none') return false; return true; };
+      if (head) head.classList.toggle('ntop-empty', ![...head.querySelectorAll('a, button, input, select, img')].some(shown));
+    };
+    new MutationObserver(() => { if (!raf2) raf2 = requestAnimationFrame(fill); }).observe(document.body, { childList: true, subtree: true, characterData: true });
+    fill();
+  }
   const name = document.getElementById('ntopName'), more = document.getElementById('ntopMore');
   if (!name && !more) return;
   // a detail page fills its name and ⋯ in as it loads

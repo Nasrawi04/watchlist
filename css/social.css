@@ -58,8 +58,6 @@
 .fr-req-head { display:flex; align-items:center; gap:10px; padding:10px 0 6px; }
 .fr-req-title { display:inline-flex; align-items:center; gap:7px; font-weight:700; font-size:13.5px; color:var(--text); }
 .fr-req-title svg { width:14px; height:14px; color:var(--olive-light); }
-.fr-req-btn { display:inline-flex; align-items:center; gap:8px; text-decoration:none; white-space:nowrap; }
-.fr-req-btn[hidden], .fr-req-btn .fr-tab-dot[hidden] { display:none; }
 .fr-req-back { margin-bottom:12px; }
 
 /* Friend (member) cards */
@@ -73,6 +71,7 @@
 .fm-cover-img { position:absolute; inset:0; }
 .fm-cover-img img { filter:saturate(1.1); }
 .fm-cover-empty { grid-column:1/-1; aspect-ratio:10 / 3; }
+.fm-cover.skel { aspect-ratio:10 / 3; background-color:var(--skel-bg); background-image:var(--aw-sweep); border-radius:0; }   /* loading: the posters' strip keeps its height (5 posters at 2:3) */
 /* Loading cards: a plain shape that gently fades, one card after another (no light sweeping across) */
 .has-skel:has(.fm-grid) :is(.skel, .skel-txt, .skel-ghost) { animation:none !important; background:var(--skel-bg) !important; }
 .has-skel .fm-card { animation:mssBreathe 2.4s ease-in-out infinite; }
@@ -426,17 +425,23 @@
 /* Phones: no Today / Yesterday / date headers — the feed runs on */
 @media(max-width:760px) { .fa-day { display:none; } .fa-feed { gap:10px; } .fa-chips { gap:5px; } .fa-chip { padding:3px 7px; } .fa-mini-poster { width:34px; height:51px; } }
 
-/* Friends toolbar + grid on tablets and phones: search on its own line, the switch scrolls sideways */
+/* Friends: the heading and its Sort on one line */
+.fr-sec-row { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:0 0 14px; }
+.fr-sec-row .fr-sec-head { margin:0; min-width:0; }
+.fr-sec-row .sort-bar { flex:none; border-bottom:none; padding:0; margin:0; background:transparent; position:relative; backdrop-filter:none; -webkit-backdrop-filter:none; }
+.fr-sec-row .sort-bar::before { content:none; }
+/* Friends toolbar on tablets and phones: search on its own line, then Friends · Following · Followers · Requests across
+   the whole width — never sliding sideways (owner, 25 Nov 2026); the text grows with the screen */
 @media(max-width:1100px) {
   .frs-bar { flex-wrap:wrap; }
   .fr-find { flex-basis:100%; }
   .frs-tools { flex:1 1 100%; min-width:0; }
-  #frPeopleTabs { flex:1; min-width:0; overflow-x:auto; scrollbar-width:none; }
-  #frPeopleTabs::-webkit-scrollbar { display:none; }
-  #frPeopleTabs .fr-tabs { width:max-content; }
+  #frPeopleTabs { flex:1; min-width:0; }
+  #frPeopleTabs .fr-tabs { width:100%; box-sizing:border-box; }
+  #frPeopleTabs .fr-tab { flex:1 1 0; min-width:0; justify-content:center; gap:4px; padding:0 clamp(2px, 2vw - 4px, 12px); font-size:clamp(12px, 3.5vw, 14px); }
 }
 @media(max-width:1000px) and (min-width:761px) { .fm-grid { grid-template-columns:repeat(2, minmax(0, 1fr)); } }
-@media(max-width:640px) { .fr-tab { height:34px; padding:0 12px; } }
+@media(max-width:640px) { .fr-tab { height:34px; padding:0 12px; } #frPeopleTabs .fr-tab { height:38px; } }
 
 /* ══ Small screens — one sizing pass for the whole Friends page ══ */
 @media(max-width:760px) {
@@ -562,11 +567,53 @@
 .mn-host { align-items:center; }
 .mn-host-hint { font-size:12.5px; color:var(--text-3); }
 /* after the movie, per movie */
-.mn-after-movie + .mn-after-movie { margin-top:16px; padding-top:16px; border-top:0.5px solid var(--border); }
 .mn-after-title { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:10px 0 8px; }
-.mn-after-title img { width:28px; height:42px; border-radius:4px; object-fit:cover; }
-.mn-after-title > b { font:600 16px/1.2 'Oswald', var(--sans); color:var(--text-heading); }
-.mn-after-title small { font-size:12px; color:var(--text-3); }
+/* A night with several movies (movie-night.js afterMany): the movies on top, then one row per person with each movie's
+   score side by side in the lineup's order (2 → 2 columns, 3 → 3, 4 → 2 × 2, 5–6 → 3 a row) */
+.mn-am-movies, .mn-am-cells { display:grid; grid-template-columns:repeat(var(--cols), minmax(0, 1fr)); gap:8px; }
+.mn-am-movie { position:relative; display:grid; grid-template-columns:44px minmax(0, 1fr); gap:6px 10px; align-content:start; min-width:0; padding:10px;
+  border-radius:var(--radius-sm); border:1px solid var(--border-default); background:var(--surface-card); }
+.mn-am-movie > img, .mn-am-movie > .mn-am-ph { width:44px; height:66px; border-radius:6px; object-fit:cover; }
+.mn-am-ph { display:grid; place-items:center; background:var(--fill-subtle); color:var(--text-muted); }
+.mn-am-n { position:absolute; top:5px; inset-inline-start:5px; z-index:1; min-width:18px; height:18px; padding:0 4px; box-sizing:border-box; border-radius:6px;
+  display:grid; place-items:center; background:var(--brand); color:var(--text-on-brand); font:400 13px/1 var(--bebas); }
+.mn-am-mt { display:flex; flex-direction:column; gap:3px; min-width:0; }
+.mn-am-mt b { font:600 14px/1.2 'Oswald', var(--sans); color:var(--text-heading); display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; }
+.mn-am-mt small { font-size:11px; color:var(--text-muted); }
+.mn-am-mt .mn-group { font-size:11px; }
+.mn-am-cmp { grid-column:1 / -1; justify-self:start; display:inline-flex; align-items:center; gap:5px; min-height:32px; padding:0 10px; border-radius:var(--radius-sm);
+  border:1px solid var(--border-input); background:none; color:var(--text-body); font:700 12px var(--sans); cursor:pointer; }
+.mn-am-cmp[aria-expanded="true"] { background:var(--selected-bg); border-color:var(--border-selected); color:var(--selected-fg); }
+.mn-am-cmp:focus-visible, .mn-am-cell:focus-visible { outline:2px solid var(--focus-ring); outline-offset:2px; }
+.mn-am-rows { display:flex; flex-direction:column; gap:10px; }
+.mn-am-row { display:flex; flex-direction:column; gap:10px; padding:12px; border-radius:var(--radius-sm); border:1px solid var(--border-default); background:var(--surface-card); }
+.mn-am-row.me { border-color:var(--border-brand); }
+.mn-am-cell { display:flex; align-items:center; gap:6px; min-width:0; min-height:48px; padding:5px 8px; box-sizing:border-box; border-radius:8px;
+  border:1px solid var(--border-subtle); background:var(--fill-subtle); font:inherit; color:inherit; text-align:start; }
+button.mn-am-cell { cursor:pointer; transition:border-color .15s; }
+button.mn-am-cell:hover { border-color:var(--border-brand); }
+.mn-am-cell > img, .mn-am-cell > .mn-am-ph { width:24px; height:36px; flex:none; border-radius:4px; object-fit:cover; }
+.mn-am-cell > b { margin-inline-start:auto; font:400 21px/1 var(--bebas); letter-spacing:.3px; color:var(--text-heading); }
+.mn-am-cell.none > b { color:var(--text-muted); }
+.mn-am-cell.top { border-color:var(--gold-accent); }
+.mn-am-best { display:inline-flex; color:var(--gold-accent); }
+.mn-take-note small { display:block; margin-bottom:2px; font-size:10.5px; font-weight:800; letter-spacing:.4px; text-transform:uppercase; color:var(--text-muted); }
+.mn-cmp-t { margin:0 0 6px; font:600 14px/1.2 'Oswald', var(--sans); color:var(--text-heading); }
+/* two movies (any screen) and every night on wider screens: the person and their scores on one line — less to scroll */
+.mn-am-rows.is-compact .mn-am-row { display:grid; grid-template-columns:minmax(0, 1fr) minmax(0, 1.25fr); align-items:center; gap:10px 12px; }
+.mn-am-rows.is-compact .mn-am-row > :not(.mn-take-top):not(.mn-am-cells) { grid-column:1 / -1; }
+@media(min-width:641px) {
+  .mn-am-row { display:grid; grid-template-columns:minmax(150px, 1fr) minmax(0, 2.4fr); align-items:center; gap:10px 14px; }
+  .mn-am-row > :not(.mn-take-top):not(.mn-am-cells) { grid-column:1 / -1; }
+}
+/* five or six movies on a phone: each movie stacks (poster over its name) so three fit a row */
+@media(max-width:640px) {
+  .mn-am-movies.is-tight .mn-am-movie { grid-template-columns:minmax(0, 1fr); }
+  .mn-am-movies.is-tight .mn-am-movie > img, .mn-am-movies.is-tight .mn-am-movie > .mn-am-ph { width:36px; height:54px; }
+  .mn-am-cells { gap:6px; }
+  .mn-am-cell { padding:5px 6px; gap:4px; }
+}
+@media (prefers-reduced-motion: reduce) { button.mn-am-cell { transition:none; } }
 /* the form's lineup */
 .mn-lineup { list-style:none; margin:0 0 10px; padding:0; display:flex; flex-direction:column; gap:8px; }
 .mn-lineup-n { width:22px; flex:none; text-align:center; font-family:var(--bebas); font-size:18px; color:var(--olive-light); }

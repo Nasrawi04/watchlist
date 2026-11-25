@@ -46,8 +46,50 @@ function _frOpenEvent(id, type) {
 // A friend's list: its page (Lists redesign — no popup)
 function _frOpenList(id) { location.href = `list-view.html?list=${encodeURIComponent(id)}`; }
 // Loading skeletons: these stay readable while the rest is masked
-const _frSkelKeep = h => h.replace(/class="(fr-toolbar-title|sort-bar[^"]*|fm-btn[^"]*|pn-toggle-btn[^"]*|fr-people-title|ns-back)"/g, 'class="$1" data-skel-keep');
+// (a friend card's Compare / Message go blank like the rest — owner, 25 Nov 2026: the gold button in a grey card looked odd)
+const _frSkelKeep = h => h.replace(/class="(fr-toolbar-title|sort-bar[^"]*|pn-toggle-btn[^"]*|fr-people-title|ns-back)"/g, 'class="$1" data-skel-keep');
 function _frFriendOptions() { return [['', 'Everyone'], ..._frAccepted.map(f => [f.friendId, _frName(f.friendId)])]; }
+
+/* ── The Friends page's kept copy (owner, 25 Nov 2026) ──
+   Your friends' cards (who they are, their stats, posters, what they're watching, taste match) and your requests,
+   kept per account: shown at once on the next visit, checked in the background every time, and drawn again only
+   when something changed. Faster pages: kept on the device (deleted on sign-out, config.js mssForgetData); without
+   it, for this tab only. */
+let _frKeepOn = false, _frKeptJSON = '', _frKeptMatch = null;
+const _FR_KEEP = () => 'msf_friends_' + (_fUser?.id || '');
+const _frKeepStore = () => (typeof MSSConsent !== 'undefined' && MSSConsent.allows('speed')) ? localStorage : sessionStorage;
+// titles in the copy keep only what the cards show (the full ones arrive with the check a moment later)
+const _frSlim = e => e && { id: e.id, user_id: e.user_id, title: e.title, poster_url: e.poster_url, cat: e.cat, status: e.status, tmdb_id: e.tmdb_id, tmdb_type: e.tmdb_type, updated_at: e.updated_at };
+const _frKeepSnap = () => JSON.stringify({ accepted: _frAccepted, incoming: _frIncoming, outgoing: _frOutgoing, back: _frBack,
+  stats: Object.fromEntries(Object.entries(_frStats).map(([id, st]) => [id, { ...st, watchingNow: _frSlim(st.watchingNow), posters: (st.posters || []).map(_frSlim),
+    latest: st.latest && { ...st.latest, e: _frSlim(st.latest.e) } }])),
+  follow: _frFollowState, pinned: _fProfile?.pinned_friend_id || null });
+// → true when a kept copy is on the page now
+function _frKeepRead() {
+  try {
+    const c = JSON.parse(_frKeepStore().getItem(_FR_KEEP()) || 'null'), v = c?.v && JSON.parse(c.v);
+    if (!v) return false;
+    ({ accepted: _frAccepted, stats: _frStats, incoming: _frIncoming, outgoing: _frOutgoing, back: _frBack, follow: _frFollowState } = v);
+    _fProfile = { ...(_fProfile || {}), pinned_friend_id: v.pinned };
+    _frProfiles = Object.fromEntries(_frAccepted.map(f => [f.friendId, f.friendProfile || {}]));
+    Object.values(_frStats).forEach(st => [st.watchingNow, st.latest?.e, ...(st.posters || [])].forEach(e => { if (e?.id) window._frEntryMap[e.id] = e; }));
+    _frKeptJSON = c.v; _frKeptMatch = c.m || null; _frLoaded = true;
+    _frPaintSub();
+    return true;
+  } catch { return false; }
+}
+// saves the copy → true when nothing changed since the one on the page
+function _frKeepSave() {
+  const v = _frKeepSnap(), same = v === _frKeptJSON;
+  const m = _cmpMine ? Object.fromEntries(_frAccepted.map(f => { const x = _cmpMatch(f.friendId); return [f.friendId, { pct: x.pct, rated: x.rated }]; })) : _frKeptMatch;
+  _frKeptJSON = v;
+  try { _frKeepStore().setItem(_FR_KEEP(), JSON.stringify({ t: Date.now(), v, m })); } catch {}
+  return same;
+}
+function _frPaintSub() {
+  const sub = document.getElementById('friendsPageSub');
+  if (sub) sub.textContent = `${_frAccepted.length} friend${_frAccepted.length === 1 ? '' : 's'}${_frIncoming.length ? ` · ${_frIncoming.length} follow request${_frIncoming.length === 1 ? '' : 's'}` : ''}`;
+}
 
 /* ── Loading ── */
 async function loadFriends() {
@@ -95,13 +137,13 @@ async function loadFriends() {
     if (st && !st.latest && e) st.latest = { e, type: x._ev };
   });
   _frLoaded = true;
-  const sub = document.getElementById('friendsPageSub');
-  if (sub) sub.textContent = `${_frAccepted.length} friend${_frAccepted.length === 1 ? '' : 's'}${_frIncoming.length ? ` · ${_frIncoming.length} follow request${_frIncoming.length === 1 ? '' : 's'}` : ''}`;
+  _frPaintSub();
   ['frFriends', 'frActivity', 'frShared'].forEach(k => SF.invalidate && SF.invalidate(k));
   Object.keys(_frMatchMemo).forEach(k => delete _frMatchMemo[k]);
-  _frRender();
+  // the Friends page shows its kept copy first: drawn again only if something changed (a new Top 5, a new friend…)
+  if (!_frKeepOn || !_frKeepSave()) _frRender();
   // Your own titles, quietly — taste match % on the friend cards (and ready for Compare)
-  if (_frAccepted.length) _cmpLoad().then(() => { SF.invalidate && SF.invalidate('frFriends'); if (_frTab === 'friends') _frRender(); }).catch(() => {});
+  if (_frAccepted.length) _cmpLoad().then(() => { SF.invalidate && SF.invalidate('frFriends'); if (_frKeepOn) _frKeepSave(); if (_frTab === 'friends') _frRender(); }).catch(() => {});
   if (_frTab === 'night') MSSNight.redraw();       // watchlist suggestions need your friends' titles
 }
 
@@ -245,7 +287,9 @@ function _cmpMatch(uid) {
   return (_frMatchMemo[uid] = { shared: pairs.length, rated: rated.length, list: rated, pct, avgDiff, loved, split: split && Math.abs(split.a - split.b) >= 1 ? split : null });
 }
 // A friend's match % once your own titles are in (null: not enough rated by both yet)
-const _frMatchPct = uid => _cmpMine ? _cmpMatch(uid).pct : null;
+// until your own titles load: the kept copy's numbers
+const _frMatchPct = uid => _cmpMine ? _cmpMatch(uid).pct : (_frKeptMatch?.[uid]?.pct ?? null);
+const _frMatchRated = uid => _cmpMine ? _cmpMatch(uid).rated : (_frKeptMatch?.[uid]?.rated ?? 0);
 
 /* ══ BLEND ══
    Pick one friend — or a group (up to 8) — and get one list made for all of you:

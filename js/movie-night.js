@@ -149,13 +149,11 @@ const MSSNight = (() => {
     const wrap = (inner, sub = '') => `<section class="mn-after" id="mnA-${id}" aria-label="After the movie"><div class="mn-after-head">${icon('film', 14)} After the movie${sub}</div>${inner}</section>`;
     if (!R || R === 'loading') return wrap(`<div class="page-loading" style="padding:1rem"><div class="spinner"></div></div>`);
     if (R.error || !R.length) return wrap(`<div class="mn-hl"><span>${icon('ratingStar', 12)} Watched it? Rate it and add a note — everyone here sees each other’s take.</span></div>`);
-    const blocks = R.map((r, j) => movieTakes(n, r, j));
-    const many = R.length > 1;
-    return wrap(blocks.join(''), many ? '' : ` <small>${rateCount(R[0])}</small>`);
+    return R.length > 1 ? wrap(afterMany(n, R)) : wrap(movieTakes(n, R[0], 0), ` <small>${rateCount(R[0])}</small>`);
   }
   const rateCount = r => { const ppl = r.people || []; return `${ppl.filter(p => scoreOf(p.entry) != null).length} of ${ppl.length} rated`; };
   function movieTakes(n, r, j) {
-    const id = n.id, many = (reviews[id] || []).length > 1, key = `${id}:${j}`;
+    const id = n.id, key = `${id}:${j}`;   // one movie (several: afterMany)
     const people = (r.people || []).map(p => ({ ...p, score: scoreOf(p.entry) }));
     const rated = people.filter(p => p.score != null);
     const avg = rated.length ? rated.reduce((a, p) => a + p.score, 0) / rated.length : null;
@@ -177,16 +175,9 @@ const MSSNight = (() => {
           ${p.me && (!e || p.score == null) ? `<span class="mn-take-cta">${icon('ratingStar', 12)} ${e ? 'Rate it & add a note' : 'Log it & rate it'}</span>` : ''}
         </${open ? 'button' : 'div'}>`;
     };
-    const used = k => rated.some(p => p.entry.ratings?.[k] != null && p.entry.ratings[k] !== '');
-    const groups = MSS_RATING_GROUPS.map(g => ({ name: g.name, keys: [...new Set(g.items.map(x => x.key))].filter(used) })).filter(g => g.keys.length);
-    const table = cmpOpen[key] && rated.length ? `<div class="mn-cmp" role="region" aria-label="Ratings side by side" tabindex="0"><table>
-        <thead><tr><th></th>${rated.map(p => `<th>${av(p, 22)}<span translate="no">${who(p)}</span></th>`).join('')}</tr></thead>
-        <tbody>${groups.map(g => `<tr class="mn-cmp-grp"><th scope="rowgroup" colspan="${rated.length + 1}">${esc(g.name)}</th></tr>` + g.keys.map(k => { const vals = rated.map(p => Number(p.entry.ratings[k])).filter(v => !isNaN(v)); const mx = Math.max(...vals);
-          return `<tr><td>${esc(MSS_RATING_LABEL[k])}</td>${rated.map(p => { const v = p.entry.ratings[k]; return `<td class="${Number(v) === mx && vals.length > 1 ? 'best' : ''}">${v != null && v !== '' ? mssR1(Number(v)) : '—'}</td>`; }).join('')}</tr>`; }).join('')).join('')}
-        <tr class="mn-cmp-total"><td>Score</td>${rated.map(p => `<td>${mssR1(p.score)}</td>`).join('')}</tr></tbody></table></div>` : '';
+    const table = cmpOpen[key] ? cmpTable(rated) : '';
     return `<div class="mn-after-movie">
-      ${many ? `<div class="mn-after-title">${r.pick?.poster_path ? `<img src="${img(r.pick.poster_path, 'w92')}" alt="" loading="lazy">` : ''}<b translate="no">${esc(r.pick?.title)}</b><small>${rateCount(r)}</small>${avg != null ? `<span class="mn-group"><b>${mssR1(avg)}</b> group score</span>` : ''}</div>`
-        : avg != null ? `<div class="mn-after-title"><span class="mn-group"><b>${mssR1(avg)}</b> group score</span></div>` : ''}
+      ${avg != null ? `<div class="mn-after-title"><span class="mn-group"><b>${mssR1(avg)}</b> group score</span></div>` : ''}
       ${rated.length > 1 ? `<div class="mn-hl">
           <span>${icon('trophy', 12)} Loved it most: <b translate="no">${who(hi)}</b> ${mssR1(hi.score)}</span>
           <span>${spread < 1 ? `${icon('check', 12)} You all agree` : `${icon('zap', 12)} Split by <b>${mssR1(spread)}</b> — ${esc(who(lo))} ${mssR1(lo.score)}`}</span>
@@ -195,6 +186,63 @@ const MSSNight = (() => {
       <div class="mn-takes">${people.map(take).join('')}</div>
       ${rated.length ? `<button type="button" class="fm-btn mn-cmp-btn" aria-expanded="${!!cmpOpen[key]}" onclick="MSSNight._cmp(${attrJSON(id)}, ${j})">${icon('compare', 14)} ${cmpOpen[key] ? 'Hide' : 'Compare'} ratings</button>` : ''}
       ${table}</div>`;
+  }
+  // Everyone's ratings of one movie side by side, category by category (the Compare ratings button)
+  function cmpTable(rated, title) {
+    if (!rated.length) return '';
+    const who = p => p.me ? 'You' : esc(nameOf(p));
+    const used = k => rated.some(p => p.entry.ratings?.[k] != null && p.entry.ratings[k] !== '');
+    const groups = MSS_RATING_GROUPS.map(g => ({ name: g.name, keys: [...new Set(g.items.map(x => x.key))].filter(used) })).filter(g => g.keys.length);
+    return `<div class="mn-cmp" role="region" aria-label="${title ? `${esc(title)}: ratings` : 'Ratings'} side by side" tabindex="0">${title ? `<div class="mn-cmp-t" translate="no">${esc(title)}</div>` : ''}<table>
+        <thead><tr><th></th>${rated.map(p => `<th>${av(p, 22)}<span translate="no">${who(p)}</span></th>`).join('')}</tr></thead>
+        <tbody>${groups.map(g => `<tr class="mn-cmp-grp"><th scope="rowgroup" colspan="${rated.length + 1}">${esc(g.name)}</th></tr>` + g.keys.map(k => { const vals = rated.map(p => Number(p.entry.ratings[k])).filter(v => !isNaN(v)); const mx = Math.max(...vals);
+          return `<tr><td>${esc(MSS_RATING_LABEL[k])}</td>${rated.map(p => { const v = p.entry.ratings[k]; return `<td class="${Number(v) === mx && vals.length > 1 ? 'best' : ''}">${v != null && v !== '' ? mssR1(Number(v)) : '—'}</td>`; }).join('')}</tr>`; }).join('')).join('')}
+        <tr class="mn-cmp-total"><td>Score</td>${rated.map(p => `<td>${mssR1(p.score)}</td>`).join('')}</tr></tbody></table></div>`;
+  }
+  /* A night with several movies (up to 6): the movies along the top in the lineup's order (poster, group score, how many
+     rated, Compare), then one row per person with every movie's score side by side in that same order, and their notes
+     under it — instead of a block per movie you'd scroll through (owner, 25 Nov 2026). Tap a score → that take. */
+  function afterMany(n, R) {
+    const id = n.id, cols = R.length <= 3 ? R.length : R.length === 4 ? 2 : 3;
+    const keyOf = p => p.id || p.user_id || p.username;
+    const ppl = {}, order = [];
+    R.forEach((r, j) => (r.people || []).forEach((p, i) => {
+      const k = keyOf(p);
+      if (!ppl[k]) { ppl[k] = { p, at: {} }; order.push(k); }
+      ppl[k].at[j] = { ...p, i, score: scoreOf(p.entry) };
+    }));
+    const nRated = k => Object.values(ppl[k].at).filter(x => x.score != null).length;
+    order.sort((a, b) => (ppl[b].p.me ? 1 : 0) - (ppl[a].p.me ? 1 : 0) || nRated(b) - nRated(a));   // you first, then who rated the most
+    const poster = (r, size) => r.pick?.poster_path ? `<img src="${img(r.pick.poster_path, size)}" alt="" loading="lazy">` : `<span class="mn-am-ph" aria-hidden="true">${icon('film', 14)}</span>`;
+    const best = R.map(r => { const s = (r.people || []).map(p => scoreOf(p.entry)).filter(v => v != null); return s.length > 1 ? Math.max(...s) : null; });
+    const movies = R.map((r, j) => {
+      const s = (r.people || []).map(p => scoreOf(p.entry)).filter(v => v != null), avg = s.length ? s.reduce((a, b) => a + b, 0) / s.length : null, open = !!cmpOpen[`${id}:${j}`];
+      return `<div class="mn-am-movie"><span class="mn-am-n" aria-hidden="true">${j + 1}</span>${poster(r, 'w154')}
+        <span class="mn-am-mt"><b translate="no">${esc(r.pick?.title)}</b><small>${rateCount(r)}</small>${avg != null ? `<span class="mn-group"><b>${mssR1(avg)}</b> group</span>` : ''}</span>
+        ${s.length ? `<button type="button" class="mn-am-cmp" aria-expanded="${open}" onclick="MSSNight._cmp(${attrJSON(id)}, ${j})">${icon('compare', 12)} ${open ? 'Hide' : 'Compare'}</button>` : ''}</div>`;
+    }).join('');
+    const rows = order.map(k => {
+      const { p, at } = ppl[k], who = p.me ? 'You' : esc(nameOf(p)), done = nRated(k);
+      const cells = R.map((r, j) => {
+        const x = at[j], e = x?.entry, title = esc(r.pick?.title || 'Movie');
+        const open = e ? `MSSNight._take(${attrJSON(id)}, ${j}, ${x.i})` : (p.me ? `MSSNight._details(${attrJSON(r.pick?.id || n.pick_id)})` : '');
+        const label = `${title}: ${x?.score != null ? mssR1(x.score) + (x.score === best[j] ? ', highest score' : '') : p.me ? 'not rated yet — rate it' : 'not rated yet'}`;
+        return `<${open ? 'button type="button"' : 'div'} class="mn-am-cell${x?.score != null ? '' : ' none'}${x?.score != null && x.score === best[j] ? ' top' : ''}" aria-label="${label}"${open ? ` onclick="${open}"` : ''}>
+            ${poster(r, 'w92')}${x?.score != null && x.score === best[j] ? `<span class="mn-am-best" title="Highest score">${icon('trophy', 11)}</span>` : ''}<b>${x?.score != null ? mssR1(x.score) : '—'}</b></${open ? 'button' : 'div'}>`;
+      }).join('');
+      const notes = R.map((r, j) => {
+        const e = at[j]?.entry, note = e?.notes?.trim(); if (!note) return '';
+        const words = MSSRich.plain(note).trim().split(/\s+/);
+        const q = `<blockquote class="mn-take-note"><small translate="no">${esc(r.pick?.title)}</small>“${esc(words.slice(0, 40).join(' '))}${words.length > 40 ? '…' : ''}”</blockquote>`;
+        return mssIsSpoiler(e) && !p.me ? mssSpoilerHTML(q, { compact: true, id: e.id, e }) : q;
+      }).join('');
+      const cta = p.me && done < R.length ? `<span class="mn-take-cta">${icon('ratingStar', 12)} Tap a movie to rate it and add a note</span>` : '';
+      return `<div class="mn-am-row${p.me ? ' me' : ''}">
+          <span class="mn-take-top">${av(p, 30)}<span class="mn-take-who"><b translate="no">${who}</b><small>Rated ${done} of ${R.length}</small></span></span>
+          <div class="mn-am-cells" style="--cols:${cols}">${cells}</div>${notes}${cta}</div>`;
+    }).join('');
+    const tables = R.map((r, j) => cmpOpen[`${id}:${j}`] ? cmpTable((r.people || []).map(p => ({ ...p, score: scoreOf(p.entry) })).filter(p => p.score != null), r.pick?.title) : '').join('');
+    return `<div class="mn-am-movies${cols === 3 ? ' is-tight' : ''}" style="--cols:${cols}">${movies}</div><div class="mn-am-rows${R.length <= 2 ? ' is-compact' : ''}">${rows}</div>${tables}`;
   }
   function openTake(id, j, i) {
     const p = reviews[id]?.[j]?.people?.[i]; if (!p?.entry) return;
