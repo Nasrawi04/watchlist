@@ -785,19 +785,11 @@ function _areaAt(key = _mtabKey(new URL(location.href))) {
   }
   return null;
 }
-// Where you left each area and each of its tabs, on this device (owner: leave Library on Movies → it opens on Movies)
-const _AREA_LAST = 'msf_area_last';
-// the old You sheet's medal count (mss_medals_<id>) went with the sheets: cleared from devices that still have it
-try { Object.keys(localStorage).forEach(k => { if (k.startsWith('mss_medals_')) localStorage.removeItem(k); }); } catch {}
-const _areaLast = () => { try { return JSON.parse(localStorage.getItem(_AREA_LAST) || '{}') || {}; } catch { return {}; } };
-function _areaRemember(a, key) {
-  const last = _areaLast();
-  last[a.k] = key; last[`${a.k}:${a.tab}`] = key;
-  try { localStorage.setItem(_AREA_LAST, JSON.stringify(last)); } catch {}
-}
-// the page an area / one of its tabs opens: where you left it, else its first page
-const _areaHref = k => { const v = _areaLast()[k]; return v && _areaAt(v)?.k === k ? v : SHELL_AREA_TABS[k][0][1][0]; };
-const _areaTabHref = (k, i) => { const v = _areaLast()[`${k}:${i}`], pages = SHELL_AREA_TABS[k][i][1]; return v && pages.includes(v.split('?')[0]) ? v : pages[0]; };
+// An area and each of its tabs always open their first page (owner, 26 Nov 2026 — they used to reopen where you left them,
+// msf_area_last; that and the old You sheet's medal count, mss_medals_<id>, are cleared from devices that still have them)
+try { localStorage.removeItem('msf_area_last'); Object.keys(localStorage).forEach(k => { if (k.startsWith('mss_medals_')) localStorage.removeItem(k); }); } catch {}
+const _areaHref = k => SHELL_AREA_TABS[k][0][1][0];
+const _areaTabHref = (k, i) => SHELL_AREA_TABS[k][i][1][0];
 const _areaItem = (k, href) => _shellItems(SHELL_TABS.find(t => t.k === k)).find(it => it.href === href);
 // The rows: the area's tabs (the lit one goes back to its first page), then — when that tab has several pages — those pages
 function _atabsHTML(a) {
@@ -824,7 +816,6 @@ function injectChrome() {
   const ownSearch = ['index.html', 'discover.html'].includes(_mtabKey(new URL(location.href)));   // Home and Discover have their own search field: none in the bar
   try { if (where.tab) sessionStorage.setItem('mss_tab', where.tab); } catch {}
   const area = _areaAt(), root = document.documentElement;
-  if (area) _areaRemember(area, _mtabKey(new URL(location.href)));
   root.classList.toggle('has-atabs', !!area);
   root.classList.toggle('has-apage', !!area && SHELL_AREA_TABS[area.k][area.tab][1].length > 1);
   // signed in or not, as far as this device knows (splash.js) — corrected once auth answers (_shellGuest)
@@ -1717,8 +1708,7 @@ function _bnavDo(k) {
 /* ═════════ Phones / tablets (<1200px): the bottom bar ═════════
    Home · Discover · Library · Social · You. The tab you're on sits in the olive circle that rises out
    of the bar's cut-out — drawn there from the first paint (no slide from another tab). Every tab opens a page:
-   Library / Social / You the page you left them on (_areaHref), or — from one of their own tab pages — their first
-   page; already there, a tap scrolls back to the top. */
+   Library / Social / You always their first page (_areaHref); already there, a tap scrolls back to the top. */
 function _bnavEl(where) {
   const el = document.createElement('nav');
   el.className = 'bnav' + (where.tab ? '' : ' is-none'); el.id = 'bnav';   // is-none: a page with no tab of its own and no known way in — nothing lit

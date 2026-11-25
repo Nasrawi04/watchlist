@@ -45,7 +45,6 @@ const MSSConsent = (() => {
     ['mss_ep_mode', 'prefs'], [/^mss_notif_display_/, 'prefs'], ['msf_export_prefs', 'prefs'], ['msf_export_recent', 'prefs'],
     ['mss_card_prefs', 'prefs'], ['mss_card_priv', 'prefs'], [/^msf_diary_/, 'prefs'], [/^mss_onboarding_/, 'prefs'],
     [/^msf_home_layout_/, 'prefs'], [/^msf_pinned_note_/, 'prefs'], ['mss_spot_turn', 'prefs'], ['mss_browse_q_v2', 'prefs'],
-    ['msf_area_last', 'prefs'],
     // speed — copies kept so pages open faster
     [/^msf_home_friends_/, 'speed'], [/^msf_friends_/, 'speed'], [/^msf_you_card_/, 'speed'], [/^msf_notif_/, 'speed'], ['mss_shell_sum', 'speed'], ['mss_ep_seasons_v3', 'speed'], ['mss_browse_prov_v3', 'speed'], ['mss_top_eps_v2', 'speed'], ['mss_recs_v4', 'speed'],
     ['mss_tmdb_posters_v1', 'speed'], ['mss_explore_posters_v1', 'speed'], ['mss_anilist_genres_v1', 'speed'], ['mss_cast_v3', 'speed'],

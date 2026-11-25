@@ -355,7 +355,7 @@ async function _libMore(btn, id, skip){
   var e = _libEntry(id); if (!e) return;
   await mssLoadScript('js/panel.js');
   MSSPopover.open(btn, { title: e.title, label: 'Actions for ' + e.title, items: mssEntryActions(e, {
-    onChange: _libChanged, onDelete: _libRemove, newEp: !!_libNewEp(e), skip: (skip || '').split(',').filter(Boolean),
+    onChange: _libChanged, onDelete: _libRemove, newEp: !!_libNewEp(e), skip: (skip || '').split(',').filter(Boolean), btn: btn,
     open: function(x){ _libOpen(x.id); } }) });
 }
 

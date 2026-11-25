@@ -202,6 +202,8 @@ const MSSViews = (() => {
     const add = (label, ic, fn, danger) => items.push({ label, icon: ic, onSelect: fn, danger });
     if (e && t.own) {
       const rd = ratingDesign(t);
+      // Watchlist priority: here as well as Title Info (owner, 26 Nov 2026); its chooser opens from the same ⋯
+      if (e.status === 'queue') items.push({ ...MSSPriority.menuItem(null, e), onSelect: () => MSSPriority.choose(moreEl || document.querySelector('[data-a="more"]'), e, () => { changed(); paint(); }) });
       if (canRateEps(e) && (rd || ['watching', 'paused'].includes(e.status))) add('Rate episodes', 'ratingStar', () => act('rateEps'));
       if (!isMovie(t) && ['watching', 'paused'].includes(e.status)) add('−1 episode', 'minus', () => act('minus1'));
       if (rd && e.status === 'watching') add('Taking a break', 'pause', () => act('pause'));
@@ -1245,6 +1247,7 @@ const MSSViews = (() => {
   // pinned / unpinned (here or elsewhere) → the ⋯ label and the Pinned chip follow
   document.addEventListener('mss:notepin', ev => { if (T?.own && T.e) { T.pinned = ev.detail.id === T.e.id; repaint(T); } });
 
+  let moreEl = null;   // the ⋯ last opened (the Priority chooser opens from it)
   async function act(key, el) {
     const t = T; if (!t) return;
     const e = t.e, it = t.it;
@@ -1258,6 +1261,7 @@ const MSSViews = (() => {
       case 'next': return step(1);
       case 'back': return back();
       case 'more': {
+        moreEl = el;
         await mssLoadScript('js/panel.js');
         const moved = movedItems(el);
         return MSSPopover.open(el, { title: it.title, label: 'More actions', items: moved.length ? [...moved, { divider: true }, ...moreItems(t)] : moreItems(t) });

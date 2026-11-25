@@ -297,7 +297,8 @@ const MSSProgress = (() => {
 })();
 
 /* ── A title's ⋯ Actions on the Library / category page cards ──
-   mssEntryActions(e, { onChange, onDelete, open, newEp, skip }) → MSSPopover items (panel.js).
+   mssEntryActions(e, { onChange, onDelete, open, newEp, skip, btn }) → MSSPopover items (panel.js).
+   btn: the ⋯ button (a Watchlist title's Priority chooser opens from it).
    Every item runs an action that already exists (MSSProgress, MSSDrop, MSSEp, MSSList, rewatch,
    the shared delete with Undo) — nothing new happens here. skip: keys already on the card as
    buttons ('start', 'resume', 'done', 'pause', 'minus', 'pickup'), so nothing shows twice.
@@ -331,6 +332,7 @@ function mssEntryActions(e, o = {}) {
   } else if (st === 'queue') {
     add('start', 'Start watching', 'play', () => MSSProgress.start(e, ch));
     add('upnext', 'Up next', 'skipForward', () => MSSProgress.upNext(e, ch));
+    if (o.btn && !skip.has('priority')) items.push(MSSPriority.menuItem(o.btn, e, ch));   // Must Watch · Want to Watch · Eventually (sql/144)
   } else if (st === 'dropped') {
     add('pickup', 'Pick back up', 'play', () => MSSDrop.pickUp(e, { onChange: ch }));
   } else if (st === 'completed' && typeof rewatchEntry === 'function') {

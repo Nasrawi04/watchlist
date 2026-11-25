@@ -2789,6 +2789,7 @@ const MSSNotInterested = (() => {
      await MSSPriority.set(e, key)      → saves it (null clears it; updates e); throws if it couldn't
      MSSPriority.pillHTML(e)            → the tag for the title panel / page ('' when none)
      MSSPriority.pickerHTML(id, value, onPick) → the choice in the add flows and Title Info (read #id.value; '' = none)
+     MSSPriority.menuItem(btn, e, onDone) → the ⋯ Actions row; choose(btn, e, onDone) → its chooser (MSSPopover)
    Each change fires 'mss:priority' { id, key } on document.
 ══════════════════════════════════════════ */
 const MSSPriority = (() => {
@@ -2841,11 +2842,24 @@ const MSSPriority = (() => {
   }
   const pillHTML = e => { const l = level(of(e)); if (!l) return '';
     return `<span class="mss-prio is-${l.key}" title="Watchlist priority"><span class="mss-prio-ic" aria-hidden="true">${icon(l.icon, 13)}</span><span class="sr-only">Priority: </span>${escHTML(l.label)}</span>`; };
+  // ⋯ Actions › Priority (the card's and the title's ⋯) opens this: the three levels and No priority, the current one ticked
+  function choose(btn, e, onDone) {
+    const cur = of(e);
+    MSSPopover.open(btn, { title: 'Priority', subtitle: e.title, label: 'Priority for ' + (e.title || 'this title'),
+      items: [...LEVELS, NONE].map(l => ({ label: l.label, sub: l.line, icon: l.icon, on: l.key === cur, onSelect: async () => {
+        if (l.key === cur) return;
+        try { await set(e, l.key); showToast(l.key ? `“${e.title}” is now ${l.label}.` : `“${e.title}” has no priority now.`); onDone?.(e, l.key); }
+        catch (err) { console.error('Watchlist priority:', err); showToast('Couldn’t save that — try again.', 'err'); }
+      } })) });
+  }
+  // the Actions row: "Priority", the current level under it
+  const menuItem = (btn, e, onDone) => { const l = level(of(e)) || NONE;
+    return { label: 'Priority', sub: l.label, icon: l.icon, onSelect: () => choose(btn, e, onDone) }; };
   // The add flows and Title Info: the "Who can see this title" control's look, its own three choices (value in a hidden
   // input #id, '' = none). Tapping the chosen one again clears it. onPick: a global function's name (saves straight away)
   _MSS_VIS_SETS.prio = LEVELS.map(l => [l.key, l.icon, l.label, l.line]);
   const pickerHTML = (id, value, onPick) => _mssVisHTML('prio', id, ok(value) || '', { label: 'Priority', fallback: '', empty: 'No priority — pick one if you like.', toggle: true, onPick });
-  return { LEVELS, NONE, DEFAULT, of, rank, level, set, pillHTML, pickerHTML };
+  return { LEVELS, NONE, DEFAULT, of, rank, level, set, pillHTML, pickerHTML, choose, menuItem };
 })();
 
 
