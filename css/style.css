@@ -265,7 +265,7 @@ html::-webkit-scrollbar-thumb {
   flex:1; width:100%;
   --page-px: 48px; --page-pt: calc(var(--nav-h) + 32px);
 }
-@media(max-width:1199px) { .page-wrap { padding:80px 18px 110px; --page-px:18px; --page-pt:80px; } }
+@media(max-width:1199px) { .page-wrap { padding:calc(80px + var(--atabs-h)) 18px 110px; --page-px:18px; --page-pt:calc(var(--shell-b) + 20px); } }
 
 /* ═════════════════════════════════════════════════════════════
    §01  Top Navigation — the shell's header (js/nav.js)
@@ -296,20 +296,18 @@ html:not(.mss-guest) .guest-only { display:none !important; }
 html.mss-guest .nav-auth-only { display:none !important; }
 
 /* ── Phones / tablets: the top bar (Mobile nav v2 · _ntopLeftHTML, nav.js) — 60px, the page's colour,
-   a 1px line once you scroll. Left: the logo (Home) · the page's name (Discover) · the area in small green
-   capitals over the page name + ▾ (opens the area's sheet) · ‹ Back, name, Share, ⋯ (detail pages).
-   Right: Search · Notifications · your avatar. ── */
+   a 1px line once you scroll. Left: the logo (Home) · the page's name (Discover, an area's tab pages — Library's
+   with its counts under it) · ‹ Back, name, Share, ⋯ (detail pages). Right: Search · Notifications · your avatar. ── */
 .nav-top { display:none; align-items:center; gap:8px; height:60px; position:relative; padding:0 12px 0 14px; box-sizing:border-box; }   /* flex on phones / tablets (§20) */
 .ntop-l { flex:1; min-width:0; display:flex; align-items:center; gap:6px; }
 .nav-top .nav-logo { display:flex; line-height:0; }
 /* the MSF monogram (drawn inline by nav.js mssLogoSVG; colours --logo-* from css/theme.css) */
 .nav-top .nav-logo-img { height:40px; }
-.ntop-name { display:inline-flex; align-items:center; gap:4px; min-width:0; font:600 24px/1.15 var(--serif); color:var(--text-heading); letter-spacing:.2px; white-space:nowrap; }
-.ntop-name svg { flex:none; color:var(--text-2); margin-top:3px; }
-.ntop-area { display:flex; flex-direction:column; align-items:flex-start; justify-content:center; min-width:0; min-height:44px; padding:0; border:0; background:none;
-  cursor:pointer; color:inherit; text-align:start; border-radius:8px; }
-.ntop-kicker { font:800 10.5px/1 var(--sans); letter-spacing:.16em; text-transform:uppercase; color:var(--olive-light); margin-bottom:3px; }
-.ntop-area .ntop-name { max-width:100%; overflow:hidden; }
+.ntop-name { display:block; min-width:0; overflow:hidden; text-overflow:ellipsis; font:600 24px/1.15 var(--serif); color:var(--text-heading); letter-spacing:.2px; white-space:nowrap; }
+.ntop-titles { display:flex; flex-direction:column; justify-content:center; min-width:0; }
+.ntop-sub { font:500 11.5px/1.25 var(--sans); color:var(--text-muted); text-wrap:balance; overflow:hidden; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; }   /* Library's pages: "17 in progress · 180 watchlist · 180 watched", two lines at most */
+.ntop-titles:has(.ntop-sub:not(:empty)) .ntop-name { font-size:21px; line-height:1.1; }
+.ntop-sub:empty { display:none; }
 .ntop-dname { display:block; flex:1; font:700 17px/1.2 var(--sans); overflow:hidden; text-overflow:ellipsis; padding-inline-start:2px; }
 .ntop-back { margin-inline-start:-6px; }
 .nav-top-controls { flex-shrink:0; display:flex; align-items:center; gap:8px; }
@@ -323,7 +321,7 @@ html.mss-guest .nav-auth-only { display:none !important; }
 .ntop-btn .notif-badge { top:8px; inset-inline-end:9px; min-width:0; width:9px; height:9px; padding:0; font-size:0; line-height:0; border-width:2px; border-color:var(--card); }   /* unread: a dot */
 .nav-top-user { padding:0; border:0; background:none; cursor:pointer; border-radius:50%; }
 .nav-top-user .nav-user-avatar { width:44px; height:44px; font-size:15px; }
-:is(.nav-top-user, .ntop-btn, .ntop-area, .nav-top .nav-logo):focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
+:is(.nav-top-user, .ntop-btn, .nav-top .nav-logo):focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
 .nav-top-signin { display:inline-flex; align-items:center; min-height:44px; padding:0 12px; border-radius:var(--radius-sm); border:1px solid var(--border-olive);
   font-size:13px; font-weight:700; color:var(--olive-light); text-decoration:none; white-space:nowrap; }
 @media(max-width:1199px) {
@@ -333,21 +331,43 @@ html.mss-guest .nav-auth-only { display:none !important; }
   .cat-page-header :is(.cat-page-title, .lib-kicker, .soc-kicker), .cab-head :is(.cab-title, .cab-eyebrow), .ex-top :is(.ex-title, .ex-eyebrow), .dz-head-t {
     position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
 }
-/* The page name's ▾ menu (nav.js _ntopDrop): drops from under the bar over the dimmed page — the desktop menu's rows */
-.ntop-drop { position:fixed; inset-inline:0; bottom:0; z-index:5; background:var(--scrim); opacity:0; transition:opacity .16s var(--ease); }
-.ntop-drop.open { opacity:1; }
-.ntop-drop[hidden] { display:none; }
-.ntop-drop-in { max-height:calc(100% - 24px); overflow-y:auto; overscroll-behavior:contain;   /* full width, flush under the bar */
-  box-sizing:border-box; padding:12px max(8px, env(safe-area-inset-right)) 14px max(8px, env(safe-area-inset-left)); border-bottom:1px solid var(--border-2); border-radius:0 0 20px 20px; background:var(--card-solid);
-  transform:translateY(-8px); transition:transform .2s var(--ease); }
-.ntop-drop.open .ntop-drop-in { transform:none; }
-.ntop-drop .dm-cols { grid-template-columns:minmax(0, 1fr); gap:14px; }
-.ntop-drop .dm-col.is-split .dm-list { grid-template-columns:repeat(2, minmax(0, 1fr)); }
-.ntop-drop .dm-link.here { background:var(--card-2); border-color:var(--border-olive); }
-.ntop-area[aria-expanded="true"] .ntop-name svg { transform:rotate(180deg); }
-.ntop-name svg { transition:transform .16s var(--ease); }
-@media (prefers-reduced-motion: reduce) { .ntop-drop, .ntop-drop-in, .ntop-name svg { transition:none; } }
 @media(max-width:359px) { .nav-top-controls { gap:6px; } .ntop-name { font-size:22px; } }
+
+/* ── Phones / tablets: the area tabs under the top bar (nav.js _atabsHTML, owner 25 Nov 2026) — Library · Episodes ·
+   Diary, People · Together · Messages, Profile · Lists · Notes · Medals; under a tab with several pages, a second row
+   (Library · Movies · TV · Anime · Cartoons…). Up to 5 a row, sharing the width — never scrolling. Tablets: centred.
+   They're part of the page, not the fixed bar: scrolling down, they go up under the top bar (which stays, with the
+   page name and Library's counts); Back to top brings them back (owner, 25 Nov 2026). --atabs-h: their height, added
+   to the page's top padding; --shell-b: where the fixed bar ends, for sticky parts of the page. ── */
+.atabs { display:none; }
+@media(max-width:1199px) {
+  :root { --atabs-h:0px; --shell-b:60px; }
+  html.has-atabs { --atabs-h:44px; }
+  html.has-apage { --atabs-h:98px; }
+  .atabs { display:block; position:absolute; top:60px; inset-inline:0; z-index:5; background:var(--bg);
+    padding-inline:max(12px, env(safe-area-inset-left)) max(12px, env(safe-area-inset-right)); }
+  .atab-row, .apage-row { display:flex; max-width:560px; margin-inline:auto; }
+  .atab-row { height:44px; box-sizing:border-box; border-bottom:1px solid var(--border-default); }
+  .atab { flex:1 1 0; min-width:0; display:flex; align-items:center; justify-content:center; gap:5px; margin-bottom:-1px; padding:0 2px;
+    border-bottom:3px solid transparent; color:var(--text-muted); font:700 clamp(13px, 3.6vw, 14px)/1.1 var(--sans); text-decoration:none; text-align:center;
+    transition:color .15s, border-color .15s; }
+  .atab:hover { color:var(--text-heading); }
+  .atab.on { color:var(--text-heading); font-weight:800; border-bottom-color:var(--border-selected); }   /* not colour alone: weight + the line */
+  .apage-row { gap:2px; height:42px; margin-block:6px; padding:3px; box-sizing:border-box; border-radius:12px; border:1px solid var(--border-subtle); background:var(--fill-subtle); }
+  /* the text and padding grow with the screen: 5 to a row fit at 320px, and bigger phones get the full size */
+  .apage { flex:1 1 0; min-width:0; display:flex; align-items:center; justify-content:center; gap:4px; padding:0 clamp(0px, 2.5vw - 8px, 4px); border:1px solid transparent; border-radius:9px;
+    color:var(--text-supporting); font:700 clamp(11px, 3.4vw, 13px)/1.1 var(--sans); text-decoration:none; text-align:center; text-wrap:balance; transition:background .15s, color .15s; }
+  .apage:hover { color:var(--text-heading); }
+  .apage.on { background:var(--brand); border-color:var(--border-selected); color:var(--text-on-brand); }   /* the Forest fill + an outline */
+  :is(.atab, .apage):focus-visible { outline:2px solid var(--focus-ring); outline-offset:-2px; border-radius:9px; }
+  .atab-l { min-width:0; }
+  .atab .notif-badge, .apage .notif-badge { position:static; flex:none; border-color:transparent; }
+  .apage .nav-badge, .atab .nav-badge { flex:none; margin:0; background:var(--error-solid); color:#fff; }   /* follow requests waiting */
+  .apage.on .nav-badge { outline:1.5px solid var(--text-on-brand); }
+  /* the page row's own count line and the header the top bar replaces */
+  .lib-page .cat-page-sub { display:none; }
+}
+@media (prefers-reduced-motion: reduce) { .atab, .apage { transition:none; } }
 
 /* ── Desktop: the bar ── */
 .nav-inner { position:relative; height:var(--nav-h); padding:0 clamp(16px, 2.4vw, 40px); box-sizing:border-box; display:flex; align-items:center; gap:clamp(10px, 1.4vw, 22px); }
@@ -627,8 +647,8 @@ html.mss-guest .nav-auth-only { display:none !important; }
 /* ── Guests: the menu's card (desktop) — what this area does for you once you join ── */
 .dm-guest-p { margin:0; font-size:13.5px; line-height:1.55; color:var(--text-2); }
 .dm-guest-acts { display:flex; flex-wrap:wrap; gap:8px; margin-top:auto; }
-.dm-lock, .nsh-lock { display:inline-flex; margin-inline-start:6px; vertical-align:-1px; color:var(--text-3); }
-.dm-lock svg, .nsh-lock svg { width:12px; height:12px; }
+.dm-lock, .atab-lock { display:inline-flex; margin-inline-start:6px; vertical-align:-1px; color:var(--text-3); }
+.dm-lock svg, .atab-lock svg { width:12px; height:12px; }
 
 /* ── Join (mssJoin, config.js): the way in for a guest — the side panel (computers) or a sheet you drag (phones) ──
    The posters are Admin → Guest showcase's (.shp-posters / .shp-poster, also the admin preview) */
@@ -727,18 +747,36 @@ html.mss-guest .nav-auth-only { display:none !important; }
 .acct-menu { position:absolute; top:calc(100% + 14px); inset-inline-end:0; z-index:20; width:min(340px, calc(100vw - 24px)); padding:10px;
   border-radius:var(--radius); border:1px solid var(--border-2); background:var(--card-solid); color:var(--text); animation:dmIn .16s var(--ease); }
 .acct-menu[hidden] { display:none; }
-.acct-head { display:flex; align-items:center; gap:12px; padding:12px; margin-bottom:8px; border-radius:var(--radius-sm); background:var(--card-2); border:1px solid var(--border); color:var(--text); text-decoration:none; }
-.acct-head:hover { border-color:var(--border-olive); }
-.acct-head:hover .acct-who small, .acct-head:focus-visible .acct-who small { color:var(--olive-light); }
-.acct-head:focus-visible { outline:2px solid var(--olive-light); outline-offset:-2px; }
-.acct-av { width:48px; height:48px; flex:none; border-radius:50%; overflow:hidden; display:grid; place-items:center; border:1.5px solid var(--border-olive); background:var(--olive-faint);
-  font-family:var(--serif); font-size:19px; color:var(--olive-light); }
-.acct-av img { width:100%; height:100%; object-fit:cover; }
-.acct-who { min-width:0; display:flex; flex-direction:column; gap:2px; }
-.acct-who b { font-size:15.5px; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.acct-who small { font-size:12.5px; color:var(--text-2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+/* the profile card (nav.js _acctCardHTML): your backdrop as a banner fading into the card, your photo (poster or circle)
+   over its edge, name, Open profile, then your three chosen stats in one row. The whole card is the link. */
+.acct-card { position:relative; display:flex; flex-direction:column; margin-bottom:8px; overflow:hidden; border-radius:var(--radius); border:1px solid var(--border-default);
+  background:var(--surface-card); color:var(--text-body); text-decoration:none; isolation:isolate; transition:border-color .15s; }
+.acct-card:hover { border-color:var(--border-brand); }
+.acct-card:focus-visible { outline:2px solid var(--focus-ring); outline-offset:2px; }
+.acct-card-bd { height:84px; background:var(--brand) center 25% / cover no-repeat; }
+.acct-card.has-bd .acct-card-bd { -webkit-mask-image:linear-gradient(180deg, #000 45%, transparent); mask-image:linear-gradient(180deg, #000 45%, transparent); }
+.acct-card-top { display:flex; align-items:flex-end; gap:12px; margin-top:-34px; padding:0 14px; }
+.acct-card-pic { flex:none; display:grid; place-items:center; overflow:hidden; border:2px solid var(--surface-card); background:var(--brand);
+  color:var(--text-on-brand); font:600 22px var(--serif); }
+.acct-card-pic.is-poster { width:52px; height:78px; border-radius:8px; }
+.acct-card-pic.is-circle { width:64px; height:64px; border-radius:50%; }
+.acct-card-pic img { width:100%; height:100%; object-fit:cover; }
+.acct-card-who { flex:1; min-width:0; display:flex; flex-direction:column; gap:1px; padding-bottom:4px; }
+.acct-card-who b { font:600 19px/1.15 var(--serif); color:var(--text-heading); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.acct-card-who small { font-size:12.5px; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.acct-card-go { flex:none; display:inline-flex; align-items:center; gap:4px; padding-bottom:6px; font-size:12.5px; font-weight:800; color:var(--text-link);
+  text-decoration:underline; text-underline-offset:3px; }
+.acct-card:hover .acct-card-go { color:var(--text-heading); }
+.acct-card-stats { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); margin:12px 14px 14px; padding-top:10px; border-top:1px solid var(--border-subtle); }
+.acct-card-stats > span { min-width:0; display:flex; flex-direction:column; align-items:center; gap:2px; }
+.acct-card-stats > span + span { border-inline-start:1px solid var(--border-subtle); }
+.acct-card-stats b { font:400 24px/1 var(--bebas); color:var(--text-heading); }
+.acct-card-stats small { max-width:100%; font-size:10px; font-weight:700; letter-spacing:.6px; text-transform:uppercase; color:var(--text-muted);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.acct-card-stats .skel-line { width:40px; height:22px; }
 .acct-list { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:2px; }
 .acct-list li[hidden] { display:none; }
+@media(min-width:1200px) { .acct-phone { display:none; } }   /* Export: on phones it has no tab of its own (desktop: the You menu) */
 .acct-sep { margin-top:6px; padding-top:6px; border-top:0.5px solid var(--border-2); }
 .acct-row { display:flex; align-items:center; gap:12px; width:100%; min-height:46px; padding:6px 8px; box-sizing:border-box; border-radius:var(--radius-sm); border:0; background:none;
   color:var(--text); font:600 14px var(--sans); text-decoration:none; text-align:start; cursor:pointer; }
@@ -771,10 +809,8 @@ a.acct-row:focus-visible, button.acct-row:focus-visible { outline:2px solid var(
 [dir="rtl"] .shell-page-back svg { transform:scaleX(-1); }
 .shell-page-t { font-family:var(--serif); font-size:22px; font-weight:600; color:var(--text-heading); }
 .shell-page-body { flex:1; overflow-y:auto; overscroll-behavior:contain; padding:14px 16px calc(24px + env(safe-area-inset-bottom)); }
-#shellAcctPage .acct-head { padding:16px; margin-bottom:14px; border:0; background:var(--olive); color:var(--text-on-brand); border-radius:var(--radius); }
-[data-theme="dark"] #shellAcctPage .acct-head { background:color-mix(in srgb, var(--olive) 70%, var(--bg)); }
-#shellAcctPage .acct-head .acct-who small { color:rgba(255,255,255,.8); }
-#shellAcctPage .acct-av { width:58px; height:58px; border:2px solid rgba(255,255,255,.5); background:rgba(255,255,255,.12); color:#fff; }
+#shellAcctPage .acct-card { margin-bottom:14px; }
+#shellAcctPage .acct-card-bd { height:110px; }
 #shellAcctPage .acct-list { gap:0; padding:4px 12px; border-radius:var(--radius); border:1px solid var(--border); background:var(--card); }
 #shellAcctPage .acct-list > li + li { border-top:0.5px solid var(--border); }
 #shellAcctPage .acct-sep { margin-top:0; padding-top:0; }
@@ -805,7 +841,7 @@ a.acct-row:focus-visible, button.acct-row:focus-visible { outline:2px solid var(
 @property --x { syntax:'<percentage>'; inherits:true; initial-value:10%; }
 .bnav, .shell-fab, .nsh { display:none; }
 :root { --bnav-top:calc(82px + env(safe-area-inset-bottom));   /* where the bar's top edge is, from the bottom */
-  --bnav-surface:var(--bg-nav); --nsh-cur:var(--selected-bg); }
+  --bnav-surface:var(--bg-nav); }
 
 /* Bottom bar — the open tab sits in a circle that rises out of a cut-out at --x (set before the first paint) */
 .bnav {
@@ -840,10 +876,9 @@ nav.bnav, [data-theme="light"] nav.bnav { top:auto; background:none; border:0; -
 .bnav-item.on .bnav-dot { top:-35px; left:calc(50% + 12px); border-color:var(--olive); }
 [data-theme="light"] .bnav-orb { background:linear-gradient(145deg, var(--p-forest-700), var(--olive)); }
 
-/* ── Section sheets (Mobile nav v2 · shellSheet, nav.js): Library / Social / You, and Create from the round +.
+/* ── The Create sheet (Mobile nav v2 · shellCreateSheet, nav.js), from the round +.
    One surface with the bar: the bar's colour, full width, flush on its top edge, rounded top only, 1px
-   border on top / sides, no shadow; the page dims to ~42%. While one is open the bar's circle sinks away
-   and the sheet's tab shows flat (green icon + label + a short line on the bar's top edge). ── */
+   border on top / sides, no shadow; the page dims to ~42%. While it's open the bar's circle sinks away. ── */
 .nsh { position:fixed; inset:0; z-index:430; background:rgba(0,0,0,.42); opacity:0; visibility:hidden;
   transition:opacity .22s var(--layer-in), visibility 0s linear .22s; }
 .nsh.open { opacity:1; visibility:visible; transition:opacity .22s var(--layer-in); }
@@ -863,52 +898,16 @@ nav.bnav, [data-theme="light"] nav.bnav { top:auto; background:none; border:0; -
 .nsh-grab { display:block; width:36px; height:4px; margin:0 auto 10px; border-radius:2px; background:var(--border-2); }
 .nsh-head { padding:0 4px 6px; }
 .nsh-t { margin:0; font:600 25px/1.15 var(--serif); color:var(--text-heading); letter-spacing:.2px; }
-.nsh-sub { margin:2px 0 0; font:500 12.5px/1.35 var(--sans); color:var(--text-3); }
-.nsh-acct { display:flex; align-items:center; gap:12px; min-height:52px; border-radius:14px; color:var(--text); text-decoration:none; }
-.nsh-av { width:44px; height:44px; border-radius:50%; flex:none; display:grid; place-items:center; overflow:hidden; background:var(--olive-faint);
-  border:1px solid var(--border-olive); color:var(--olive-light); font:600 17px var(--serif); }
-.nsh-av img { width:100%; height:100%; object-fit:cover; }
-.nsh-who { display:flex; flex-direction:column; min-width:0; }
-.nsh-who .nsh-t { font-size:21px; }
-.nsh-who small { font:500 12px var(--sans); color:var(--text-3); }
-.nsh-acct:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
 .nsh-grp + .nsh-grp { margin-top:8px; padding-top:4px; border-top:1px solid var(--border); }
 .nsh-gl { margin:10px 6px 6px; font:700 10.5px/1 var(--sans); letter-spacing:.14em; text-transform:uppercase; color:var(--text-3); }
-.nsh-list, .nsh-results { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:2px; }
+.nsh-results { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:2px; }
 .nsh-row { position:relative; display:flex; align-items:center; gap:12px; min-height:56px; padding:8px 10px; box-sizing:border-box; border-radius:14px;
   border:1px solid transparent; color:var(--text); text-decoration:none; -webkit-tap-highlight-color:transparent; transition:background .15s var(--ease); }
 .nsh-row:hover { background:var(--card-2); }
 .nsh-row:focus-visible { outline:2px solid var(--olive-light); outline-offset:-2px; }
-.nsh-ic { width:40px; height:40px; flex:none; display:grid; place-items:center; border-radius:12px; border:1px solid var(--border); background:var(--card); color:var(--text-2); }
 .nsh-tx { display:flex; flex-direction:column; gap:1px; min-width:0; flex:1; }
 .nsh-tx b { font:700 14px/1.2 var(--sans); }
 .nsh-tx small { font:500 11.5px/1.3 var(--sans); color:var(--text-3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.nsh-cnt { flex:none; font:600 12px/1 var(--sans); color:var(--text-3); }
-.nsh-cnt:empty { display:none; }
-.nsh-red { display:inline-grid; place-items:center; min-width:20px; height:20px; padding:0 6px; box-sizing:border-box; border-radius:10px;
-  background:var(--danger-fill); color:#fff; font:700 11px/1 var(--sans); }
-.nsh-tick { flex:none; display:flex; color:var(--olive-light); }
-.nsh-row[aria-current="page"] { background:var(--nsh-cur); border-color:var(--border-olive); }
-.nsh-row[aria-current="page"] .nsh-ic { background:var(--olive-light); border-color:var(--olive-light); color:var(--bg); }
-.nsh-row[aria-current="page"] .nsh-tx b { color:var(--olive-light); }
-/* compact grid for long groups: icon + name, 2 columns, same row height */
-.nsh-list.is-grid { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:2px 6px; }
-.nsh-list.is-grid .nsh-row { min-height:56px; gap:10px; }
-.nsh-list.is-grid .nsh-tx b { font-size:13.5px; }
-/* Library and Diary (and Episodes) as cards */
-.nsh-list.is-cards { display:grid; grid-template-columns:repeat(auto-fit, minmax(0, 1fr)); grid-auto-flow:column; gap:8px; padding-top:2px; }
-.nsh-list.is-cards .nsh-row { flex-direction:column; align-items:flex-start; justify-content:space-between; gap:12px; height:100%; min-height:104px;
-  padding:12px; border-color:var(--border); background:var(--card); }
-.nsh-list.is-cards .nsh-tx small { white-space:normal; }
-.nsh-list.is-cards .nsh-cnt { position:absolute; top:12px; inset-inline-end:12px; font:400 24px/1 var(--bebas); color:var(--text); }
-.nsh-list.is-cards .nsh-tick { position:absolute; bottom:12px; inset-inline-end:12px; }
-.nsh-list.is-cards .nsh-ic { width:36px; height:36px; border-radius:11px; }
-.nsh-foot { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px; padding-top:12px; border-top:1px solid var(--border); }
-.nsh-fbtn { justify-content:center; gap:8px; min-height:44px; padding:0 12px; border-radius:var(--radius-sm); border-color:var(--border-2);
-  background:none; cursor:pointer; font:700 13px var(--sans); }
-.nsh-fbtn.is-out { color:var(--danger); }
-.nsh-fbtn.is-main { background:var(--action-primary-bg); border-color:var(--action-primary-bg); color:var(--text-on-primary); }
-.nsh-acct.is-guest .nsh-av { color:var(--text-2); }
 /* Create */
 .nsh-chead { display:flex; align-items:center; justify-content:space-between; gap:12px; }
 .nsh-x { width:44px; height:44px; flex:none; display:grid; place-items:center; border-radius:var(--radius-sm); border:1px solid var(--border-2);
@@ -944,11 +943,6 @@ nav.bnav, [data-theme="light"] nav.bnav { top:auto; background:none; border:0; -
 .bnav.has-sheet .bnav-item.on .bnav-ic { transform:none; }
 .bnav.has-sheet .bnav-item .bnav-lb { opacity:0; }
 .bnav.has-sheet .bnav-item.on .bnav-dot { top:13px; left:calc(50% + 8px); border-color:var(--bg-3); }
-.bnav.has-sheet .bnav-item.is-sheet { color:var(--olive-light); }
-.bnav.has-sheet .bnav-item.is-sheet .bnav-ic { transform:translateY(-8px); }
-.bnav.has-sheet .bnav-item.is-sheet .bnav-lb { opacity:1; color:var(--olive-light); }
-.bnav-item.is-sheet::before { content:''; position:absolute; top:0; left:50%; width:30px; height:3px; margin-left:-15px; border-radius:0 0 3px 3px; background:var(--olive-light); }
-.bnav-item { -webkit-touch-callout:none; }   /* long-press Library / Social / You goes to the page, not the link preview */
 
 /* The round Create button, bottom-right above the bar (hidden wherever it would cover something) */
 .shell-fab { position:fixed; z-index:395; inset-inline-end:calc(16px + env(safe-area-inset-right)); bottom:calc(var(--bnav-top) + 46px);
@@ -3394,7 +3388,7 @@ textarea.field-input { resize:vertical; min-height:80px; line-height:1.5; }
 @media(max-width:1199px) {
   .nav-top   { display:flex !important; }
   .nav-inner { display:none !important; }
-  .cat-page-header { flex-direction:row; align-items:flex-end; justify-content:space-between; top:60px; padding-inline-start:calc(50vw - 50% + 18px); padding-inline-end:calc(50vw - 50% + 18px); }
+  .cat-page-header { flex-direction:row; align-items:flex-end; justify-content:space-between; top:var(--shell-b); padding-inline-start:calc(50vw - 50% + 18px); padding-inline-end:calc(50vw - 50% + 18px); }
   .detail-poster-wrap { max-height:300px; }
   .ep-grid { grid-template-columns:1fr 1fr; }
 
@@ -3776,12 +3770,12 @@ body { font-size:15px; }
 
   .grid-nav-wrap .grid-nav-btn { display:flex !important; }
 
-  .page-wrap { padding:74px 14px 96px; --page-px:14px; --page-pt:74px; }
+  .page-wrap { padding:calc(74px + var(--atabs-h)) 14px 96px; --page-px:14px; --page-pt:calc(var(--shell-b) + 14px); }
 
   .cat-page-title { font-size:clamp(28px,8vw,38px); }
 
   .cat-page-sub { font-size:12px; margin-top:4px; }
-  .cat-page-header { margin-bottom:1.5rem; padding-bottom:1rem; top:60px; padding-inline-start:calc(50vw - 50% + 14px); padding-inline-end:calc(50vw - 50% + 14px); }
+  .cat-page-header { margin-bottom:1.5rem; padding-bottom:1rem; top:var(--shell-b); padding-inline-start:calc(50vw - 50% + 14px); padding-inline-end:calc(50vw - 50% + 14px); }
   .section-title  { font-size:22px; }
 
   /* Footer */
@@ -3862,11 +3856,11 @@ body { font-size:15px; }
    §34  Small Phones — up to 400px
    ═════════════════════════════════════════════════════════════ */
 @media (max-width: 400px) {
-  .page-wrap { padding:72px 12px 92px; --page-px:12px; --page-pt:72px; }
+  .page-wrap { padding:calc(72px + var(--atabs-h)) 12px 92px; --page-px:12px; --page-pt:calc(var(--shell-b) + 12px); }
   .cat-page-title { font-size:26px; }
 
   .cat-page-sub { font-size:11px; }
-  .cat-page-header { top:60px; padding-inline-start:calc(50vw - 50% + 12px); padding-inline-end:calc(50vw - 50% + 12px); }
+  .cat-page-header { top:var(--shell-b); padding-inline-start:calc(50vw - 50% + 12px); padding-inline-end:calc(50vw - 50% + 12px); }
   .site-footer { font-size:11px; margin-top:1.5rem; }
   .page-stat { padding:.65rem .5rem; }
   .page-stat-num { font-size:18px; }
@@ -3922,7 +3916,7 @@ body { font-size:15px; }
    §38  Tablet-only Nav
    ═════════════════════════════════════════════════════════════ */
 @media (min-width: 641px) and (max-width: 1199px) {
-  .page-wrap { padding:72px 24px 110px; --page-pt:72px; }
+  .page-wrap { padding:calc(72px + var(--atabs-h)) 24px 110px; --page-pt:calc(var(--shell-b) + 12px); }
 
 }
 
@@ -7398,7 +7392,7 @@ a.nc-author:hover span:last-child { color:var(--text); text-decoration:underline
 .tl-end-t { padding-top:8px; border-top:1px solid var(--dy-line); width:100%; text-align:center; }
 @media (max-width:719px) {
   .tl-day { display:block; padding:0 0 14px; border-top:0; }
-  .tl-date { top:60px; z-index:2; flex-direction:row; flex-wrap:wrap; align-items:baseline; gap:2px 10px; margin:0 -18px; padding:12px 18px 8px; background:var(--bg); border-bottom:1px solid var(--dy-line); }
+  .tl-date { top:var(--shell-b); z-index:2; flex-direction:row; flex-wrap:wrap; align-items:baseline; gap:2px 10px; margin:0 -18px; padding:12px 18px 8px; background:var(--bg); border-bottom:1px solid var(--dy-line); }
   .tl-wd { flex-basis:100%; }
   .tl-dn { font-size:18px; }
   .tl-n { margin-inline-start:auto; }

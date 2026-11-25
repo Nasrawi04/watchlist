@@ -465,7 +465,8 @@ function _discTopProgress(key) {
 function _discSaveTilePosters(key, items) {
   const posters = (items || []).map(it => it.poster_url).filter(u => safeURL(u)).slice(0, 3);
   if (!posters.length) return null;
-  try { const all = JSON.parse(localStorage.getItem('mss_explore_posters_v1') || '{}'); all[key] = { t: Date.now(), posters }; localStorage.setItem('mss_explore_posters_v1', JSON.stringify(all)); } catch {}
+  // v: the list's version — when its rules change (v bumped), posters saved before are dropped (_discTilePosters)
+  try { const all = JSON.parse(localStorage.getItem('mss_explore_posters_v1') || '{}'); all[key] = { t: Date.now(), v: getDiscoverCategory(key)?.v || 0, posters }; localStorage.setItem('mss_explore_posters_v1', JSON.stringify(all)); } catch {}
   return posters;
 }
 // The first page of a list from what's already there (Discover's tile posters), or null
@@ -480,6 +481,90 @@ async function _discTopPage(key, kind, page) {
     return (kind === 'episode' ? d.episodes : d.seasons).slice((page - 1) * 20, page * 20).map(x => _discTopItem(x, kind));
   } finally { off(); document.querySelectorAll('.disc-top-progress').forEach(el => el.remove()); }
 }
+
+/* ── Top Rated on MSF (get_top_rated_myscreenscore: members' scores, 2+ people a title) ── */
+// RPC rows → cards. Linked titles use their official TMDB poster (cached); the entry's own poster is only a
+// fallback (unlinked titles, or TMDB has none).
+async function _discMssRows(data) {
+  const official = await Promise.all(data.map(r =>
+    r.tmdb_id ? _discOfficialDetails(r.tmdb_type || r.derived_type, r.tmdb_id) : null));
+  return data.map((r, i) => ({
+    id: r.tmdb_id,
+    // derived_type (worked out server-side from the entry's own category) whenever tmdb_type is null —
+    // common for older / unlinked entries
+    media_type: r.tmdb_type || r.derived_type,
+    title: r.title,
+    poster_url: official[i]?.poster || r.poster_url || null,
+    overview: official[i]?.overview || '',               // the list rows' description, TMDB score and backdrop
+    backdrop_path: official[i]?.backdrop_path || null,
+    tmdb_score: official[i]?.score ?? null,
+    votes: official[i]?.votes || 0,
+    year: r.year || '',
+    score: r.avg_score != null ? Number(r.avg_score) : null,
+    // cat/genres come from 018_top_rated_mss_details.sql — the Sort & Filter popup (Type / Genre / Year)
+    cat: r.cat || (r.derived_type === 'movie' ? 'movies' : 'tv'),
+    genres: Array.isArray(r.genres) ? r.genres : [],
+    origin_country: [],
+    needs_linking: !r.tmdb_id, // drives the linking popup instead of goToTitle
+    derived_type: r.derived_type,
+  }));
+}
+// Movies on MSF / TV on MSF: the whole ranking once a visit (it's one small query), split by type, 20 a page
+let _discMssPool = null;
+function _discMssAll() {
+  _discMssPool = _discMssPool || sb.rpc('get_top_rated_myscreenscore', { p_limit: 2000, p_offset: 0 })
+    .then(({ data, error }) => { if (error) throw error; return data || []; })
+    .catch(e => { console.error('Top Rated (MyScreenFolio) fetch error:', e); _discMssPool = null; return []; });
+  return _discMssPool;
+}
+// by the title's category in members' libraries ('movies' | 'tv' | 'anime' | 'cartoons'): anime and cartoons —
+// films and series alike — have lists of their own, like the TMDB Top 250s (owner, 25 Nov 2026)
+async function _discMssCatPage(cat, page) {
+  const catOf = r => r.cat || (r.derived_type === 'movie' ? 'movies' : 'tv');
+  const rows = (await _discMssAll()).filter(r => catOf(r) === cat).slice(0, 250);   // Top 250 only
+  return _discMssRows(rows.slice((page - 1) * 20, page * 20));
+}
+// Highest-Rated Episodes on MSF: members' averages from the database, each episode's name and still from TMDB
+async function _discMssEpisodesPage(page) {
+  if (page > 13) return [];                              // Top 250 only (owner, 25 Nov 2026)
+  const { data, error } = await sb.rpc('get_top_rated_msf_episodes', { p_limit: Math.min(20, 250 - (page - 1) * 20), p_offset: (page - 1) * 20 });
+  if (error) { console.error('Highest-Rated Episodes on MSF fetch error:', error); return []; }
+  const rows = data || [];
+  const [shows, eps] = await Promise.all([
+    Promise.all(rows.map(r => _discFetchJSON(`${TMDB_BASE}/tv/${r.tmdb_id}?language=en-US`).catch(() => null))),
+    Promise.all(rows.map(r => _discFetchJSON(`${TMDB_BASE}/tv/${r.tmdb_id}/season/${r.season_number}/episode/${r.episode_number}?language=en-US`).catch(() => null))),
+  ]);
+  return rows.map((r, i) => {
+    const sh = shows[i], ep = eps[i];
+    const it = _discTopItem({ show_id: r.tmdb_id, show: sh?.name || r.show_title, show_poster: sh?.poster_path || null,
+      genre_ids: (sh?.genres || []).map(g => g.id), origin_country: sh?.origin_country || [],
+      s: r.season_number, n: r.episode_number, name: ep?.name, still: ep?.still_path, air: ep?.air_date || '',
+      score: Number(r.avg_score), votes: Number(r.rating_count), overview: ep?.overview || '' }, 'episode');
+    if (!it.poster_url && safeURL(r.show_poster)) it.poster_url = r.show_poster;
+    it.backdrop_path = ep?.still_path || sh?.backdrop_path || null;
+    return it;
+  });
+}
+// Highest-Rated Seasons on MSF: members' whole-season scores, each season's name, poster and size from the show on TMDB
+async function _discMssSeasonsPage(page) {
+  if (page > 13) return [];                              // Top 250 only
+  const { data, error } = await sb.rpc('get_top_rated_msf_seasons', { p_limit: Math.min(20, 250 - (page - 1) * 20), p_offset: (page - 1) * 20 });
+  if (error) { console.error('Highest-Rated Seasons on MSF fetch error:', error); return []; }
+  const rows = data || [];
+  const shows = await Promise.all(rows.map(r => _discFetchJSON(`${TMDB_BASE}/tv/${r.tmdb_id}?language=en-US`).catch(() => null)));
+  return rows.map((r, i) => {
+    const sh = shows[i], se = (sh?.seasons || []).find(x => x.season_number === r.season_number);
+    const it = _discTopItem({ show_id: r.tmdb_id, show: sh?.name || r.show_title, show_poster: sh?.poster_path || null,
+      genre_ids: (sh?.genres || []).map(g => g.id), origin_country: sh?.origin_country || [],
+      s: r.season_number, name: se?.name, poster: se?.poster_path || null, air: se?.air_date || '', eps: se?.episode_count || '?',
+      score: Number(r.avg_score), votes: Number(r.rating_count), overview: se?.overview || '' }, 'season');
+    if (!it.poster_url && safeURL(r.show_poster)) it.poster_url = r.show_poster;
+    it.backdrop_path = sh?.backdrop_path || null;
+    return it;
+  });
+}
+
+const _discOutNowSeen = new Set();   // Out Now: films already listed on an earlier page
 
 const DISCOVER_CATEGORIES = [
   {
@@ -518,6 +603,25 @@ const DISCOVER_CATEGORIES = [
     }
   },
   {
+    // Out Now (owner, 25 Nov 2026): Now Playing in Cinemas and New on Streaming in one list — films in cinemas
+    // right now, side by side with films out on streaming / digital in the last 30 days (TMDB release type 4)
+    key: 'out_now',
+    navLabel: 'Out Now',
+    title: 'Out Now',
+    async fetch(page) {
+      const today = _discTodayStr(), from = new Date(Date.now() - 30 * 864e5).toISOString().slice(0, 10);
+      const [cin, str] = await Promise.all([
+        _discFetchJSON(`${TMDB_BASE}/movie/now_playing?language=en-US&region=US&page=${page}`),
+        _discFetchJSON(`${TMDB_BASE}/discover/movie?language=en-US&region=US&with_release_type=4&release_date.gte=${from}&release_date.lte=${today}&sort_by=popularity.desc&page=${page}`),
+      ]);
+      const norm = rs => Promise.all((rs || []).map(r => _discNormalizeChecked(r, 'movie')));
+      const both = _discInterleave(await norm(cin.results), await norm(str.results));
+      // a film can be in both (still in cinemas and already on streaming): once only, across pages too
+      if (page === 1) _discOutNowSeen.clear();
+      return _discExcludeFamilyAnimation(both.filter(it => !_discOutNowSeen.has(it.id) && _discOutNowSeen.add(it.id)));
+    }
+  },
+  {
     key: 'top_rated_mss', v: 2, max: 500,   // v2: rows carry the overview, backdrop and TMDB score · max: Sort & Filter load all 500 (not cap: the list stays open-ended)
     navLabel: 'Top Rated on MSF',
     title: 'Top Rated on MSF',
@@ -531,36 +635,48 @@ const DISCOVER_CATEGORIES = [
       const limit = Math.min(pageSize, 500 - offset);
       const { data, error } = await sb.rpc('get_top_rated_myscreenscore', { p_limit: limit, p_offset: offset });
       if (error) { console.error('Top Rated (MyScreenFolio) fetch error:', error); return []; }
-      // Linked titles use their official TMDB poster (cached); the entry's
-      // own poster is only a fallback (unlinked titles, or TMDB has none).
-      const official = await Promise.all((data || []).map(r =>
-        r.tmdb_id ? _discOfficialDetails(r.tmdb_type || r.derived_type, r.tmdb_id) : null));
-      return (data || []).map((r, i) => ({
-        id: r.tmdb_id,
-        // Falls back to derived_type (computed server-side from the
-        // entry's own category — movies vs. everything else) whenever
-        // tmdb_type itself is null. That fallback was already being
-        // returned by the RPC and just never actually used here, so
-        // every group with a null tmdb_type (common for older/unlinked
-        // entries) rendered with a missing/wrong type tag instead.
-        media_type: r.tmdb_type || r.derived_type,
-        title: r.title,
-        poster_url: official[i]?.poster || r.poster_url || null,
-        overview: official[i]?.overview || '',               // the list rows' description, TMDB score and backdrop
-        backdrop_path: official[i]?.backdrop_path || null,
-        tmdb_score: official[i]?.score ?? null,
-        votes: official[i]?.votes || 0,
-        year: r.year || '',
-        score: r.avg_score != null ? Number(r.avg_score) : null,
-        // cat/genres come from 018_top_rated_mss_details.sql — used by the
-        // Sort & Filter popup (Type / Genre / Year) on the See All page.
-        cat: r.cat || (r.derived_type === 'movie' ? 'movies' : 'tv'),
-        genres: Array.isArray(r.genres) ? r.genres : [],
-        origin_country: [],
-        needs_linking: !r.tmdb_id, // drives the linking popup instead of goToTitle
-        derived_type: r.derived_type,
-      }));
+      return _discMssRows(data || []);
     }
+  },
+  {
+    // Top Rated on MSF split four ways, like the TMDB Top 250s (owner, 25 Nov 2026): Movies · TV Shows · Anime ·
+    // Cartoons. Same rule as the whole list: at least 2 members have scored it.
+    key: 'top_rated_mss_movies', v: 2, cap: 250,   // v2: anime and cartoon films moved to their own lists
+    navLabel: 'Top 250 Movies on MSF',
+    title: 'Top 250 Movies on MSF',
+    fetch: page => _discMssCatPage('movies', page),
+  },
+  {
+    key: 'top_rated_mss_tv', v: 2, cap: 250,
+    navLabel: 'Top 250 TV Shows on MSF',
+    title: 'Top 250 TV Shows on MSF',
+    fetch: page => _discMssCatPage('tv', page),
+  },
+  {
+    key: 'top_rated_mss_anime', v: 1, cap: 250,
+    navLabel: 'Top 250 Anime on MSF',
+    title: 'Top 250 Anime on MSF',
+    fetch: page => _discMssCatPage('anime', page),
+  },
+  {
+    key: 'top_rated_mss_cartoons', v: 1, cap: 250,
+    navLabel: 'Top 250 Cartoons on MSF',
+    title: 'Top 250 Cartoons on MSF',
+    fetch: page => _discMssCatPage('cartoons', page),
+  },
+  {
+    // Members' whole-season scores, at least 2 people per season (get_top_rated_msf_seasons, sql/140)
+    key: 'top_seasons_mss', v: 1, cap: 250,
+    navLabel: 'Highest-Rated Seasons on MSF',
+    title: 'Highest-Rated Seasons on MSF',
+    fetch: page => _discMssSeasonsPage(page),
+  },
+  {
+    // Members' episode scores, at least 2 people per episode (get_top_rated_msf_episodes, sql/140)
+    key: 'top_episodes_mss', v: 1, cap: 250,
+    navLabel: 'Highest-Rated Episodes on MSF',
+    title: 'Highest-Rated Episodes on MSF',
+    fetch: page => _discMssEpisodesPage(page),
   },
   {
     key: 'top250_movies',
@@ -729,8 +845,22 @@ const DISCOVER_META = {
     desc: 'What people are searching for, adding and talking about right now: movies and shows side by side.' },
   airing_today:     { eyebrow: 'Tonight', tile: 'New episodes today', a: '#1F6F78', b: '#0A2427', kind: 'tv', rotate: true,
     desc: 'Shows with a new episode out today, wherever you are in the world.' },
+  out_now:          { eyebrow: 'Out now', tile: 'In cinemas & new on streaming', a: '#8C3B3B', b: '#2A0E0E', kind: 'movie', rotate: true,
+    desc: 'Films in cinemas right now, side by side with the ones that came out on streaming in the last 30 days.' },
   top_rated_mss:    { eyebrow: 'Community', tile: 'Highest rated by members', a: '#2E7D32', b: '#0E2F14', kind: 'mixed', ranked: true, mss: true,
     desc: 'The titles MyScreenFolio members rate the highest, ranked by everyone’s scores combined.' },
+  top_rated_mss_movies: { eyebrow: 'Community · Movies', tile: 'Films members rate highest', a: '#2E7D32', b: '#0E2F14', kind: 'movie', ranked: true, mss: true,
+    desc: 'The 250 films MyScreenFolio members rate the highest. Anime and cartoons have lists of their own. A film needs scores from at least 2 members.' },
+  top_rated_mss_tv: { eyebrow: 'Community · TV', tile: 'Shows members rate highest', a: '#2F6B4F', b: '#0C2419', kind: 'tv', ranked: true, mss: true,
+    desc: 'The 250 shows MyScreenFolio members rate the highest. Anime and cartoons have lists of their own. A show needs scores from at least 2 members.' },
+  top_rated_mss_anime: { eyebrow: 'Community · Anime', tile: 'Anime members rate highest', a: '#5E3F78', b: '#1C1026', kind: 'mixed', ranked: true, mss: true,
+    desc: 'The 250 anime, series and films, MyScreenFolio members rate the highest. A title needs scores from at least 2 members.' },
+  top_rated_mss_cartoons: { eyebrow: 'Community · Cartoons', tile: 'Cartoons members rate highest', a: '#2F6E66', b: '#0B2220', kind: 'mixed', ranked: true, mss: true,
+    desc: 'The 250 cartoons, series and films, MyScreenFolio members rate the highest. A title needs scores from at least 2 members.' },
+  top_seasons_mss: { eyebrow: 'Community · Seasons', tile: 'Seasons members rate highest', a: '#5E5A24', b: '#1E1C08', kind: 'tv', ranked: true, mss: true,
+    desc: 'The 250 whole seasons MyScreenFolio members rate the highest. A season needs scores from at least 2 members.' },
+  top_episodes_mss: { eyebrow: 'Community · Episodes', tile: 'Episodes members rate highest', a: '#4F6B2A', b: '#18220B', kind: 'tv', ranked: true, mss: true,
+    desc: 'The 250 single episodes MyScreenFolio members rate the highest. An episode needs scores from at least 2 members.' },
   top250_movies:    { eyebrow: 'Ranked · Movies', tile: 'The best films ever', a: '#9C3D1C', b: '#2E1007', kind: 'movie', ranked: true, minVotes: 5000,
     desc: 'The best-rated films on TMDB with at least 5,000 votes, so brand-new releases can’t jump the queue.' },
   top250_shows:     { eyebrow: 'Ranked · TV', tile: 'The best TV ever', a: '#2F5F8A', b: '#0C1D2E', kind: 'tv', ranked: true, minVotes: 1000,

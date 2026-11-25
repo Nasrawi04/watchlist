@@ -212,25 +212,41 @@ const MSSDiscoverHome = (() => {
   MSSResults.recHooks('discover', { empty: () => { $('dzTaste').hidden = true; }, undo: () => { tasteShown = ''; renderTaste(); } });
 
   /* ══ 4. Browse by list ══ */
-  // the four Upcoming lists are the bottom row (owner, 16 Nov 2026)
-  const MAIN = ['top_rated_mss', 'trending_week', 'popular', 'airing_today', 'top250_movies', 'top250_shows', 'top250_anime', 'top250_cartoons', 'niche_movies', 'niche_shows', 'top_seasons', 'top_episodes'];
-  const MORE = ['upcoming_movies', 'upcoming_tv', 'upcoming_anime', 'upcoming_cartoons'];
+  // six groups of up to four (owner, 25 Nov 2026): what's on now · MSF's Top 250s · TMDB's Top 250s · seasons &
+  // episodes (TMDB's and MSF's) · upcoming · the niche picks. The first three on show, the rest under More lists.
+  // Each group has its own heading, so its tiles carry short names (Movies, TV Shows…) — the full name is the link's label.
+  const GROUPS = [
+    { h: 'Right now', note: 'What everyone’s watching this week, tonight and in cinemas',
+      keys: ['trending_week', 'popular', 'airing_today', 'out_now'] },
+    { h: 'Top 250 on MyScreenFolio', note: 'Ranked by members’ own scores',
+      keys: ['top_rated_mss_movies', 'top_rated_mss_tv', 'top_rated_mss_anime', 'top_rated_mss_cartoons'], short: ['Movies', 'TV Shows', 'Anime', 'Cartoons'] },
+    { h: 'Top 250 on TMDB', note: 'The all-time greats, by TMDB score',
+      keys: ['top250_movies', 'top250_shows', 'top250_anime', 'top250_cartoons'], short: ['Movies', 'TV Shows', 'Anime', 'Cartoons'] },
+    { h: 'Best seasons and episodes', note: 'By TMDB score, and by members’ scores',
+      keys: ['top_seasons', 'top_episodes', 'top_seasons_mss', 'top_episodes_mss'], short: ['Seasons', 'Episodes', 'Seasons on MSF', 'Episodes on MSF'] },
+    { h: 'Coming soon', note: 'Not out yet, most anticipated first',
+      keys: ['upcoming_movies', 'upcoming_tv', 'upcoming_anime', 'upcoming_cartoons'], short: ['Movies', 'TV Shows', 'Anime', 'Cartoons'] },
+    { h: 'Hidden gems', note: 'Glowing scores, barely any votes',
+      keys: ['niche_movies', 'niche_shows'], short: ['Movies', 'TV Shows'] },
+  ];
+  const SHOWN = 3, MAIN = GROUPS.slice(0, SHOWN).flatMap(g => g.keys), MORE = GROUPS.slice(SHOWN).flatMap(g => g.keys);
   const XP_STORE = 'mss_explore_posters_v1', XP_FRESH = 6 * 3600e3;
   const xpAll = () => { try { return JSON.parse(localStorage.getItem(XP_STORE) || '{}'); } catch { return {}; } };
-  // the old Home page's Explore cards: the list's #1 poster blurred under its colours, a big faint
-  // number, a badge, the name and a line, Explore, and its top three posters fanned on the right
-  const NUM = { top_rated_mss: 'MSF', trending_week: '#1', popular: 'HOT', airing_today: 'NEW', top250_movies: '250', top250_shows: '250',
-    top250_anime: '250', top250_cartoons: '250', niche_movies: 'GEM', niche_shows: 'GEM', upcoming_movies: 'SOON', upcoming_tv: 'SOON',
-    top_seasons: 'S', top_episodes: 'EP', upcoming_anime: 'SOON', upcoming_cartoons: 'SOON' };
+  // the Explore card (owner, 25 Nov 2026: the old design, with the groups' short names): the list's #1 poster blurred
+  // under its colours, a big faint number, a badge, the name and a line, Explore, and its top three posters fanned
+  const NUM = { top_rated_mss_movies: 'MSF', top_rated_mss_tv: 'MSF', top_rated_mss_anime: 'MSF', top_rated_mss_cartoons: 'MSF', top_seasons_mss: 'MSF', top_episodes_mss: 'MSF',
+    trending_week: '#1', popular: 'HOT', airing_today: 'NEW', out_now: 'NOW', top250_movies: '250', top250_shows: '250', top250_anime: '250', top250_cartoons: '250',
+    niche_movies: 'GEM', niche_shows: 'GEM', upcoming_movies: 'SOON', upcoming_tv: 'SOON', upcoming_anime: 'SOON', upcoming_cartoons: 'SOON', top_seasons: 'S', top_episodes: 'EP' };
   const ARROW = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>';
-  function tileHTML(key) {
+  function tileHTML(key, short, group) {
     const cat = getDiscoverCategory(key), m = discoverMeta(key);
+    // read out as "<group>: <name>, <line>" — the group's name is only heard (its heading is right above)
     return `<a class="dk-tile" href="discover-list.html?list=${encodeURIComponent(key)}" style="--xp-a:${m.a};--xp-b:${m.b}" data-tile="${key}">
       <span class="dk-bg" aria-hidden="true"></span><span class="dk-shade" aria-hidden="true"></span>
       <span class="dk-num" aria-hidden="true">${NUM[key] || ''}</span>
       <span class="dk-text">
-        <span class="dk-badge">${esc(m.eyebrow.split(' · ')[0])}</span>
-        <span class="dk-title">${esc(cat.title)}</span>
+        <span class="dk-badge" aria-hidden="true">${esc(m.eyebrow.split(' · ')[0])}</span>
+        <span class="dk-title">${short && group ? `<span class="sr-only">${esc(group)}: </span>` : ''}${esc(short || cat.title)}</span>
         <span class="dk-sub">${esc(m.tile)}</span>
         <span class="dk-cta" aria-hidden="true">Explore ${ARROW}</span>
       </span>
@@ -253,7 +269,9 @@ const MSSDiscoverHome = (() => {
     const saved = xpAll();
     let delay = 0;
     keys.forEach(key => {
-      const s = saved[key];
+      // posters saved before the list's rules last changed (its v) are dropped, not shown (owner, 25 Nov 2026:
+      // The Lion King stayed on Top 250 Movies on MSF after cartoons got their own list)
+      const s0 = saved[key], s = s0 && (s0.v || 0) === (getDiscoverCategory(key)?.v || 0) ? s0 : null;
       if (s?.posters?.length) fillTile(key, s.posters);
       if (s && Date.now() - s.t < XP_FRESH && s.posters?.length >= 3) return;
       const cat = getDiscoverCategory(key);
@@ -266,27 +284,25 @@ const MSSDiscoverHome = (() => {
       setTimeout(() => firstPage(key).then(use).catch(() => {}), (delay += 260));
     });
   }
-  // phones: the More lists tiles join the one swipe row and the button hides (CSS) — owner, 19 Nov 2026
+  // phones: the More lists rows are always shown and the button hides (CSS) — owner, 19 Nov 2026
   const PHONE = matchMedia('(max-width:640px)');
-  let listsSeen = false;
-  function placeMore() {
-    const box = PHONE.matches ? $('dzTiles') : $('dzTilesMore');
-    MORE.forEach(key => { const t = document.querySelector(`.dk-tile[data-tile="${key}"]`); if (t && t.parentNode !== box) box.appendChild(t); });
-    if (PHONE.matches && listsSeen) postersFor(MORE);
-  }
+  const group = g => `<div class="dk-group">
+      <div class="dk-gh"><h3>${esc(g.h)}</h3><span>${esc(g.note)}</span></div>
+      <div class="dk-grid dk-line">${g.keys.map((k, i) => tileHTML(k, g.short?.[i], g.h)).join('')}</div>
+    </div>`;
   function renderLists() {
-    $('dzTiles').innerHTML = MAIN.map(tileHTML).join('');
-    $('dzTilesMore').innerHTML = MORE.map(tileHTML).join('');
-    placeMore();
-    PHONE.addEventListener('change', placeMore);
-    const seen = () => { listsSeen = true; postersFor(PHONE.matches ? MAIN.concat(MORE) : MAIN); };
+    $('dzTiles').innerHTML = GROUPS.slice(0, SHOWN).map(group).join('');
+    $('dzTilesMore').innerHTML = GROUPS.slice(SHOWN).map(group).join('');
+    let seenOnce = false;
+    const seen = () => { if (seenOnce) return; seenOnce = true; postersFor(PHONE.matches ? MAIN.concat(MORE) : MAIN); };
+    PHONE.addEventListener('change', () => { if (PHONE.matches && seenOnce) postersFor(MORE); });
     const io = 'IntersectionObserver' in window ? new IntersectionObserver(es => { if (es.some(e => e.isIntersecting)) { io.disconnect(); seen(); } }, { rootMargin: '300px 0px' }) : null;
     io ? io.observe($('dzLists')) : seen();
     // …and quietly in the background once the page has settled (owner, 23 Nov 2026): every list's first page and
     // tile posters, so scrolling down — or opening a list — has them ready. Not on Data Saver / 2G.
     const c = navigator.connection;
     if (c && (c.saveData || /2g$/.test(c.effectiveType || ''))) return;
-    const later = () => { if (!listsSeen) { io?.disconnect(); seen(); } postersFor(MORE); };
+    const later = () => { io?.disconnect(); seen(); postersFor(MORE); };
     const soon = () => setTimeout(() => ('requestIdleCallback' in window ? requestIdleCallback(later, { timeout: 4000 }) : later()), 1500);
     document.readyState === 'complete' ? soon() : addEventListener('load', soon, { once: true });
   }

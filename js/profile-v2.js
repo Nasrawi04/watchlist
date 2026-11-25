@@ -127,7 +127,7 @@ const MSSProfile = (() => {
         <span class="tv-mini-txt"><small translate="no">${p.username ? '@' + esc(p.username) : 'Profile'}</small><b translate="no">${esc(nameOf(p))}</b></span>
         ${h.match ? ringPct(h.match.pct, 'xs') : ''}
       </div>
-      ${mssCrumbHTML(nameOf(p), own ? { href: 'index.html', label: 'Home' } : { href: 'friends.html', label: 'Friends' })}
+      ${own ? '' : mssCrumbHTML(nameOf(p), { href: 'friends.html', label: 'Friends' })}   ${/* ‹ Back only on someone else's profile — yours is a tab (owner, 25 Nov 2026) */ ''}
       <header class="tv-hero tp-hero pf-hero${own ? ' is-own' : ''}" id="pfHero" aria-label="Profile">
         <span class="tv-hero-bg" aria-hidden="true"></span><span class="tv-hero-shade" aria-hidden="true"></span>
         <div class="tv-hero-main">
@@ -305,7 +305,7 @@ const MSSProfile = (() => {
   // While it loads: the same header with sample text, masked into placeholders (mssSkeleton). own: the page is yours
   function headSkel(actions, own) {
     const h = { profile: {}, entries: [], lists: 0, diary: 0 };
-    return `<div class="tv-crumb mss-crumb" aria-hidden="true"><span>Back</span><span>/</span><span>Display name</span></div>
+    return `${own ? '' : '<div class="tv-crumb mss-crumb" aria-hidden="true"><span>Back</span><span>/</span><span>Display name</span></div>'}
       <header class="tv-hero tp-hero pf-hero"><div class="tv-hero-main">
         <div class="tv-poster pf-poster"></div>
         <div class="tv-hero-txt"><h1 class="tv-title pf-name">Display name</h1><p class="tv-facts pf-facts"><span>@username · Member since 2026</span></p>

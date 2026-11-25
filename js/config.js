@@ -79,7 +79,7 @@ if (MSS_PERF) {
   } catch {}
 }
 function mssDataChangedSince(t) { try { return Number(localStorage.getItem('mss_data_at') || 0) > t; } catch { return true; } }
-const _MSS_READ_RPC = /\/rest\/v1\/rpc\/(get_|is_|search|check|list_|count_|admin_(find|overview|user_detail|recent|flagged|picture_queue|unstarred|language_requests|title)|(session_alive|mss_my_status|my_age|member_medal|shell_summary|nav_counts|msg_unread_count|challenge_finishes|challenge_pick_options)\b)/;
+const _MSS_READ_RPC = /\/rest\/v1\/rpc\/(get_|is_|search|check|list_|count_|admin_(find|overview|user_detail|recent|flagged|picture_queue|unstarred|language_requests|title)|(session_alive|mss_my_status|my_age|member_medal|shell_summary|msg_unread_count|challenge_finishes|challenge_pick_options)\b)/;
 // Writes that can change your titles → MSFStore catches up: those tables (directly, or through their diary / episode
 // triggers) and the only database functions that change them (found in sql/: imports, linking to TMDB, two admin tools)
 const _MSS_LIB_WRITE = /\/rest\/v1\/(entries|entry_private_notes|diary_watches|episode_ratings)\b|\/rest\/v1\/rpc\/(import_|link_entries_to_tmdb|admin_delete_content|admin_censor_existing)/;
@@ -2241,10 +2241,10 @@ function mssR1(v) {
    Judged on the number as shown (2 decimals). Masterpiece (9.90+) is gold. */
 const MSS_TIERS = [
   { min: 9.9, key: 'masterpiece', name: 'Masterpiece', light: '#C9A227', dark: '#C9A227', onL: '#241800', onD: '#241800', inkL: '#9A7208', inkD: '#E3C45C', gold: true },
-  { min: 9.5, key: 'outstanding', name: 'Outstanding', light: '#1D4FA0', dark: '#3D7FE0', onL: '#FFFFFF', onD: '#FFFFFF' },
-  { min: 9.0, key: 'excellent',   name: 'Excellent',   light: '#1F6A35', dark: '#2F9A50', onL: '#FFFFFF', onD: '#FFFFFF' },
+  { min: 9.5, key: 'outstanding', name: 'Outstanding', light: '#0B5E46', dark: '#19C08A', onL: '#FFFFFF', onD: '#05261B' },   // deep emerald (owner, 25 Nov 2026; was blue)
+  { min: 9.0, key: 'excellent',   name: 'Excellent',   light: '#2A7D3F', dark: '#3CAD5B', onL: '#FFFFFF', onD: '#FFFFFF' },   // fresh forest (owner, 25 Nov 2026)
   { min: 8.0, key: 'great',       name: 'Great',       light: '#4A9443', dark: '#6BBF5E', onL: '#FFFFFF', onD: '#10200D' },
-  { min: 7.0, key: 'decent',      name: 'Decent',      light: '#97A63A', dark: '#B5C454', onL: '#1C2008', onD: '#1C2008' },
+  { min: 7.0, key: 'decent',      name: 'Decent',      light: '#8C8710', dark: '#DED948', onL: '#242204', onD: '#242204' },   // lemon-lime (owner, 25 Nov 2026)
   { min: 6.0, key: 'mixed',       name: 'Mixed',       light: '#D98E2B', dark: '#F0A64A', onL: '#241503', onD: '#241503' },
   { min: 5.0, key: 'weak',        name: 'Weak',        light: '#C2541A', dark: '#E7743A', onL: '#FFFFFF', onD: '#241005' },
   { min: 4.0, key: 'bad',         name: 'Bad',         light: '#9E1F1A', dark: '#D2423A', onL: '#FFFFFF', onD: '#FFFFFF' },

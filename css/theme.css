@@ -321,10 +321,10 @@
   --st-bad:#D2423A;          --st-bad-on:#FFFFFF;
   --st-weak:#E7743A;         --st-weak-on:#241005;
   --st-mixed:#F0A64A;        --st-mixed-on:#241503;
-  --st-decent:#B5C454;       --st-decent-on:#1C2008;
+  --st-decent:#DED948;       --st-decent-on:#242204;   /* lemon-lime (owner, 25 Nov 2026) */
   --st-great:#6BBF5E;        --st-great-on:#10200D;
-  --st-excellent:#2F9A50;    --st-excellent-on:#FFFFFF;
-  --st-outstanding:#3D7FE0;  --st-outstanding-on:#FFFFFF;
+  --st-excellent:#3CAD5B;    --st-excellent-on:#FFFFFF;   /* fresh forest (owner, 25 Nov 2026) */
+  --st-outstanding:#19C08A;  --st-outstanding-on:#05261B;   /* deep emerald (owner, 25 Nov 2026; was blue) */
   --st-masterpiece:#E3C45C;  --st-masterpiece-on:#241800;    /* the gold as a line / number; fills use the gradient */
 }
 :root[data-theme="light"] {
@@ -332,10 +332,10 @@
   --st-bad:#9E1F1A;          --st-bad-on:#FFFFFF;
   --st-weak:#C2541A;         --st-weak-on:#FFFFFF;
   --st-mixed:#D98E2B;        --st-mixed-on:#241503;
-  --st-decent:#97A63A;       --st-decent-on:#1C2008;
+  --st-decent:#8C8710;       --st-decent-on:#242204;   /* lemon-lime, darker so the number reads on cream (3.7:1) */
   --st-great:#4A9443;        --st-great-on:#FFFFFF;
-  --st-excellent:#1F6A35;    --st-excellent-on:#FFFFFF;
-  --st-outstanding:#1D4FA0;  --st-outstanding-on:#FFFFFF;
+  --st-excellent:#2A7D3F;    --st-excellent-on:#FFFFFF;
+  --st-outstanding:#0B5E46;  --st-outstanding-on:#FFFFFF;
   --st-masterpiece:#9A7208;  --st-masterpiece-on:#241800;
 }
 :root { --st-gold-fill: linear-gradient(135deg, #F3DC8A 0%, #C9A227 50%, #8A6300 100%); }

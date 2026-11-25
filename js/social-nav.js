@@ -9,7 +9,7 @@
    The bar (wide screens, ≥ 1200px): every Social page in one track, in three groups —
    People (Friends · Activity · Compare · Blend) │ Together (Movie Night · Challenges · Polls ·
    Episode Chat) │ Messages (unread badge). Its pages come from SHELL_TABS (nav.js), the same list the
-   phone / tablet Social sheet (shellSheet, nav.js) is built from.
+   phone / tablet Social area tabs (SHELL_AREA_TABS, nav.js) use.
 ══════════════════════════════════════════ */
 const MSSSocial = (() => {
   let cur = null;

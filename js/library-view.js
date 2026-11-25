@@ -809,7 +809,10 @@ function _libHeader(lists){
   if (pick) pick.disabled = !lists.queue.length;
   var all = LIB_ENTRIES().length, k = document.getElementById('libKicker'), sub = document.getElementById('libPageSub');
   if (k) k.textContent = (LIB_GUEST ? 'Example library · ' : 'Your collection · ') + all.toLocaleString(MSSI18n.locale) + ' title' + (all === 1 ? '' : 's');
-  if (sub) sub.textContent = lists.watching.length + ' in progress · ' + lists.queue.length + ' queued · ' + lists.completed.length + ' watched';
+  var line = lists.watching.length + ' in progress · ' + lists.queue.length + ' watchlist · ' + lists.completed.length + ' watched';
+  if (sub) sub.textContent = line;
+  var top = document.getElementById('ntopSub');   // phones / tablets: under the page's name in the top bar (nav.js) — wraps only between its parts
+  if (top) top.textContent = line.split(' · ').map(function(p){ return p.replace(/ /g, '\u00a0'); }).join(' · ');
 }
 
 function renderLibrary(){

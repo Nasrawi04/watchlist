@@ -489,3 +489,13 @@ button.sp-box-c:focus-visible { outline:2px solid var(--tv-green); outline-offse
 .sp-jump-btn.on small { color:rgba(255,255,255,.85); }
 .sp-all-sec { scroll-margin-top:calc(var(--de-top, 0px) + 150px); }   /* below the slim bar and the season bar */
 .tp-page.is-phone .sp-jump-btn { padding:8px 14px; }
+
+/* How many members have it (owner, 25 Nov 2026): a small line under the score tiles — watched · rated · on watchlists · watching now */
+.tp-aud { display:grid; grid-template-columns:repeat(2, auto); justify-content:center; gap:4px 14px; margin:0; font:500 12px/1.4 'Manrope',var(--sans); color:rgba(255,255,255,.78); }
+.tp-aud[hidden] { display:none; }
+.tp-aud-i { display:inline-flex; align-items:center; gap:4px; white-space:nowrap; }
+.tp-aud-i svg { width:13px; height:13px; opacity:.8; }
+.tp-aud-i b { font-weight:800; color:#fff; }
+.tp-aud-ph { display:none; }
+.tp-page.is-phone .tp-scores .tp-aud { display:none; }
+.tp-page.is-phone .tp-aud-ph:not([hidden]) { display:flex; flex-wrap:wrap; justify-content:flex-start; gap:4px 14px; margin-top:10px; }

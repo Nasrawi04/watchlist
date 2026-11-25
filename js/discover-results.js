@@ -67,7 +67,9 @@ const MSSResults = (() => {
     if (o.why) extra.push(o.why);
     // o.sub / o.over / o.controls: a line under the title, something on the poster, buttons beside the card (Picked for your taste)
     return MSSCard.tmdb(_discCardItem(it), { attrs: _discClickAttr(it), rank: o.rank || 0, sub: o.sub ?? _discSubHTML(it), over: o.over, controls: o.controls,
-      cls: ('dx-card ' + (o.cls || '')).trim(), labelExtra: extra.join(', '), ...(o.type === false || it.href ? { type: null } : {}) });
+      cls: ('dx-card ' + (o.cls || '')).trim(), labelExtra: extra.join(', '),
+      // o.plainType: just Movie / TV Show — an Anime or Cartoons list, where every title is already that (owner, 25 Nov 2026)
+      ...(o.type === false || it.href ? { type: null } : o.plainType ? { type: mssTypeOf('', it.media_type === 'movie') } : {}) });
   }
 
   /* ── List: the ranked row ── */
@@ -138,7 +140,7 @@ const MSSResults = (() => {
     const r = o.rank || 0, s = signedIn() ? stateOf(it) : null, small = !!o.compact;
     const tmdb = it.score != null && !isNaN(it.score) ? Number(_discFloorScore(it.score)) : null;
     const cat = _discCatOf(it);
-    const typeL = it.href ? '' : cat === 'anime' ? 'Anime' : cat === 'cartoons' ? 'Cartoon' : it.media_type === 'movie' ? 'Movie' : 'TV Show';
+    const typeL = it.href ? '' : !o.plainType && cat === 'anime' ? 'Anime' : !o.plainType && cat === 'cartoons' ? 'Cartoon' : it.media_type === 'movie' ? 'Movie' : 'TV Show';
     const showType = typeL && o.type !== false;
     const genres = (it.genres || []).filter(g => g !== 'Animation' || cat !== 'anime').slice(0, small ? 2 : 3).join(', ');
     const metaTxt = [genres, o.mss || small ? '' : fmtVotes(it.votes)].filter(Boolean).join(' · ');
@@ -165,7 +167,7 @@ const MSSResults = (() => {
         <span class="dx-body" aria-hidden="true">
           <span class="dx-head"><span class="dx-title" translate="no">${esc(it.title)}</span>${it.year ? `<span class="dx-year">${esc(it.year)}</span>` : ''}</span>
           ${it.sub ? `<span class="dx-sub" translate="no">${esc(it.sub)}</span>` : ''}
-          <span class="dx-meta">${showType ? `<span class="dx-type is-${TYPE_CLS[cat] || 'tv'}">${esc(typeL)}</span>` : ''}${
+          <span class="dx-meta">${showType ? `<span class="dx-type is-${o.plainType ? (it.media_type === 'movie' ? 'movie' : 'tv') : TYPE_CLS[cat] || 'tv'}">${esc(typeL)}</span>` : ''}${
             s && !small ? `<span class="dx-state is-${s.k}">${esc(s.label)}</span>` : ''}${metaTxt ? `<span class="dx-meta-t">${esc(metaTxt)}</span>` : ''}</span>
           ${!small && it.overview ? `<span class="dx-ov" translate="no">${esc(it.overview)}</span>` : ''}
         </span>

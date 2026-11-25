@@ -106,6 +106,7 @@ async function loadTitle() {
   _tpMount();
 
   getTmdbAvgScore(Number(_tdId), _tdType, titleForMatch, yearForMatch).then(s => { _tdMss = s; _tpPaintTiles(); }).catch(() => {});
+  _tpLoadAud();
   if (!_tpMovie()) _tdLoadEpScores();
   _tdLoadNotes();
   _tdLoadLists();
@@ -237,6 +238,28 @@ function _tpQuickHTML(d) {
 function _tpBarHTML(e) {
   return `<div class="tp-bar" role="toolbar" aria-label="Actions">${_tpMainHTML(e, 'bar')}${e ? _IB('Edit', 'edit', `onclick="goToDetail(${attrJSON(e.id)}, 'title.html')"`) : ''}${_IB('More actions', 'moreV', `onclick="_tpMore(this)" aria-haspopup="menu" data-top-more`)}</div>`;
 }
+// How many members have it (owner, 25 Nov 2026): watched · rated · on watchlists · watching now (shows) — get_title_audience, sql/141.
+// Counts people, never who; the line stays hidden until it arrives (or if the database doesn't have it yet).
+let _tdAud = null;
+function _tpAudHTML() {
+  const a = _tdAud;
+  if (!a) return '';
+  const n = v => { v = Number(v) || 0; return v >= 10000 ? new Intl.NumberFormat(MSSI18n.locale, { notation: 'compact', maximumFractionDigits: 1 }).format(v) : v.toLocaleString(MSSI18n.locale); };
+  const items = [[a.watched, 'watched', 'eye'], [a.rated, 'rated', 'star'], [a.watchlist, Number(a.watchlist) === 1 ? 'on a watchlist' : 'on watchlists', 'bookmark']];
+  if (!_tpMovie()) items.push([a.watching, 'watching now', 'play']);
+  return items.map(([v, l, ic]) => `<span class="tp-aud-i">${icon(ic, 13)}<b>${n(v)}</b> ${l}</span>`).join('');
+}
+function _tpPaintAud() {
+  document.querySelectorAll('#tdContent .tp-aud').forEach(el => { el.innerHTML = _tpAudHTML(); el.hidden = !_tdAud; });
+}
+async function _tpLoadAud() {
+  try {
+    const { data, error } = await sb.rpc('get_title_audience', { p_tmdb_id: Number(_tdId), p_tmdb_type: _tdType });
+    if (error) throw error;
+    _tdAud = (Array.isArray(data) ? data[0] : data) || null;
+  } catch (e) { _tdAud = null; console.warn('Title audience not available (run sql/141_title_audience.sql):', e?.message || e); }
+  _tpPaintAud();
+}
 // MSF · TMDB · Friends (filled in as they arrive)
 function _tpTilesHTML(d) {
   const tmdb = d.vote_average ? _discFloorScore(d.vote_average) : null, m = _tdMss;
@@ -283,9 +306,10 @@ function _tpHeroHTML(d, e) {
         <div class="tv-acts tp-acts">${_tpActsHTML(d, e)}</div>
         ${wall}
       </div>
-      <div class="tp-scores">${_tpMineHTML(e)}<div class="tp-tiles">${_tpTilesHTML(d)}</div></div>
+      <div class="tp-scores">${_tpMineHTML(e)}<div class="tp-tiles">${_tpTilesHTML(d)}</div><p class="tp-aud"${_tdAud ? "" : " hidden"}>${_tpAudHTML()}</p></div>
     </div>
     <div class="tp-tiles tp-tiles-ph">${_tpTilesHTML(d)}</div>
+    <p class="tp-aud tp-aud-ph"${_tdAud ? "" : " hidden"}>${_tpAudHTML()}</p>
     ${_tpQuickHTML(d)}
   </header>`;
 }

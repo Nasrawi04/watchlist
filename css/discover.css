@@ -342,6 +342,19 @@ button.dh-prog-next:hover b { text-decoration:underline; text-underline-offset:3
 .dk-grid { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:16px; }
 .dk-grid[hidden] { display:none; }
 .dk-extra { margin-top:16px; }
+/* five rows of four, one per kind of list (owner, 25 Nov 2026) — four a row down to 1000px, then two */
+.dk-lines { display:grid; grid-template-columns:minmax(0, 1fr); gap:16px; }   /* minmax(0…): a phone's swipe row scrolls inside, never widens the page */
+.dk-group { min-width:0; }
+.dk-lines[hidden] { display:none; }
+/* Groups (owner, 25 Nov 2026): a small heading + line over each row; the tiles keep the Explore card design
+   (badge, name, line, Explore, posters) with the group's short names */
+.dk-lines { gap:26px; }
+.dk-group + .dk-group { padding-top:22px; border-top:1px solid var(--border-subtle); }
+.dk-lines.dk-extra { margin-top:26px; padding-top:22px; border-top:1px solid var(--border-subtle); }
+.dk-gh { display:flex; align-items:baseline; flex-wrap:wrap; gap:4px 12px; margin-bottom:12px; }
+.dk-gh h3 { margin:0; font:600 18px/1.2 var(--serif); color:var(--text-heading); }
+.dk-gh span { font:500 12.5px/1.4 'Manrope',var(--sans); color:var(--text-3); }
+@media (min-width:1001px) { .dk-grid.dk-line { grid-template-columns:repeat(4, minmax(0, 1fr)); } }
 .dk-tile { --xp-a:var(--p-forest-700); --xp-b:var(--p-forest-900); position:relative; isolation:isolate; overflow:hidden; display:flex; align-items:stretch; height:196px; border-radius:18px;
   background:linear-gradient(135deg, var(--xp-a), var(--xp-b)); box-shadow:inset 0 0 0 1px rgba(255,255,255,.08); color:#fff; text-decoration:none;
   transition:transform .3s cubic-bezier(.2,.8,.2,1), box-shadow .3s; }
@@ -374,9 +387,10 @@ button.dh-prog-next:hover b { text-decoration:underline; text-underline-offset:3
 .dk-tile:hover .dk-p:nth-child(3) { transform:rotate(11deg) translate(8px, 0); }
 @media (max-width:1500px) { .dk-grid { grid-template-columns:repeat(3, minmax(0, 1fr)); } }
 @media (max-width:1000px) { .dk-grid { grid-template-columns:repeat(2, minmax(0, 1fr)); } }
-/* phones: all 16 lists in two compact rows that swipe sideways — no More lists button (owner, 19 Nov 2026) */
+/* phones: each row one compact line that swipes sideways (owner, 19 / 25 Nov 2026) */
 @media (max-width:640px) {
-  .dk-grid { grid-template-columns:none; grid-template-rows:repeat(2, auto); grid-auto-flow:column; grid-auto-columns:212px; gap:10px; overflow-x:auto;
+  .dk-lines { gap:10px; }
+  .dk-grid { grid-template-columns:none; grid-template-rows:auto; grid-auto-flow:column; grid-auto-columns:236px; gap:10px; overflow-x:auto;
     scroll-snap-type:x mandatory; overscroll-behavior-x:contain; margin:0 -14px; padding:2px 14px 4px; scroll-padding-inline:14px; scrollbar-width:none; }
   .dk-grid::-webkit-scrollbar { display:none; }
   .dk-tile { height:116px; border-radius:var(--radius); scroll-snap-align:start; }
@@ -391,6 +405,12 @@ button.dh-prog-next:hover b { text-decoration:underline; text-underline-offset:3
   .dk-p { width:44px; bottom:-10px; border-radius:6px; }
   .dk-p:nth-child(1) { inset-inline-end:34px; } .dk-p:nth-child(2) { inset-inline-end:20px; } .dk-p:nth-child(3) { inset-inline-end:6px; }
   .dk-num { font-size:84px; bottom:-14px; }
+  .dk-lines { gap:18px; }
+  .dk-group + .dk-group, .dk-lines.dk-extra { padding-top:16px; }
+  .dk-lines.dk-extra { margin-top:18px; }
+  .dk-gh { margin-bottom:8px; }
+  .dk-gh h3 { font-size:16px; }
+  .dk-gh span { font-size:11.5px; }
 }
 @media (prefers-reduced-motion:reduce) { .dk-tile, .dk-p, .dk-bg, .dk-cta { transition:none; } }
 .dk-more-w { display:flex; justify-content:center; margin-top:14px; }
@@ -400,7 +420,7 @@ button.dh-prog-next:hover b { text-decoration:underline; text-underline-offset:3
 .dk-more[aria-expanded="true"] svg { transform:rotate(180deg); }
 .dk-more:hover { border-color:var(--olive-light); }
 .dk-more:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; }
-@media (max-width:640px) { .dk-extra, .dk-more-w { display:none; } }   /* phones: the More lists are in the swipe row */
+@media (max-width:640px) { .dk-more-w { display:none; } .dk-lines.dk-extra[hidden] { display:grid; margin-top:10px; } }   /* phones: the More lists rows are always shown */
 
 /* Top rated on MSF: how many of them you have seen */
 .dz-prog { display:flex; align-items:center; gap:10px; margin-inline:auto 8px; }

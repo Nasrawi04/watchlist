@@ -74,8 +74,10 @@ const _dlMeta = discoverMeta(_dlCategory.key);
 const _dlTitle = _dlCategory.title || _dlParams.get('title') || 'Discover';
 const _dlIsMss = !!_dlMeta.mss;
 const _dlRanked = !!_dlMeta.ranked;
-const _dlTop = _dlCategory.key === 'top_seasons' || _dlCategory.key === 'top_episodes';
+const _dlTop = ['top_seasons', 'top_episodes', 'top_seasons_mss', 'top_episodes_mss'].includes(_dlCategory.key);   // seasons / episodes, not titles
 const _dlUpcoming = _dlCategory.key.startsWith('upcoming');
+// an Anime or Cartoons list: its Type filter offers just that category's Shows / Movies
+const _dlOnlyCat = /anime$/.test(_dlCategory.key) ? 'anime' : /cartoons$/.test(_dlCategory.key) ? 'cartoons' : undefined;
 
 let _dlPage = 1, _dlLoading = false, _dlDone = false, _dlAllItems = [];
 let _dlView = 'grid';   // a list always opens in Grid (owner); List is a switch for this visit only
@@ -85,9 +87,9 @@ const $dl = id => document.getElementById(id);
 const _dlType = () => _dlMeta.kind === 'mixed' ? undefined : false;
 const _dlRecs = _dlCategory.key === 'recommended';   // Picked for your taste / Recommended for you: never in your library, so no progress box
 const _dlItemHTML = (it, rank) => _dlView === 'list'
-  ? MSSResults.row(it.why ? { ...it, sub: it.why } : it, { rank, mss: _dlIsMss, type: _dlType() })   // a recommendation: its reason under the title
+  ? MSSResults.row(it.why ? { ...it, sub: it.why } : it, { rank, mss: _dlIsMss, type: _dlType(), plainType: !!_dlOnlyCat })   // a recommendation: its reason under the title
   : it.why ? MSSResults.recCard(it, 'all')                          // a recommendation: its reason and Wild card (Not interested: the title's ⋯)
-  : MSSResults.card(it, { rank, type: _dlType() });
+  : MSSResults.card(it, { rank, type: _dlType(), plainType: !!_dlOnlyCat });   // Anime / Cartoons lists: Movie / TV Show tags
 MSSResults.recHooks('all', { gone: it => { _dlAllItems = _dlAllItems.filter(x => x !== it); }, undo: () => location.reload() });
 
 /* Loading skeleton: this list's own rows (or cards) with sample text, masked (mssSkeleton, config.js) */
@@ -116,7 +118,7 @@ SF.register('dl', {
   sorts: () => ['rank', 'alpha', 'release', 'ratings'],
   filters: () => ['genre', 'year', 'score'],
   choiceFilters: () => [
-    ...(_dlMeta.kind === 'mixed' && !_dlTop ? [SF.typeChoice({ cat: it => _discCatOf(it), movie: it => it.media_type === 'movie' })] : []),
+    ...(_dlMeta.kind === 'mixed' && !_dlTop ? [SF.typeChoice({ cat: it => _discCatOf(it), movie: it => it.media_type === 'movie', only: _dlOnlyCat })] : []),
     ...(!_dlIsMss && !_dlUpcoming ? [{ key: 'votes', label: 'Minimum votes', single: true,
       options: [['', _dlMeta.minVotes ? `List minimum (${_dlMeta.minVotes.toLocaleString(MSSI18n.locale)})` : 'Any'],
         ...[1000, 5000, 10000, 20000].filter(n => n > (_dlMeta.minVotes || 0)).map(n => [String(n), `${n.toLocaleString(MSSI18n.locale)}+ votes`])],
@@ -207,7 +209,7 @@ function _dlRenderAll() {
     const count = Math.min(list.length, _dlRows.n * cols);
     _dlShown = count;
     const more = list.length > count || (!_dlDone && !_dlSfActive());
-    const left = _dlSfActive() ? list.length - count : (_dlCategory.cap ? Math.min(_dlCategory.cap, _dlDone ? list.length : _dlCategory.cap) - count : list.length - count);
+    const left = _dlSfActive() ? list.length - count : (_dlCategory.cap && !_dlIsMss ? Math.min(_dlCategory.cap, _dlDone ? list.length : _dlCategory.cap) - count : list.length - count);
     const step = _DL_ROWS[_dlView][1] * cols;
     grid.innerHTML = list.slice(0, count).map((it, i) => _dlItemHTML(it, rankOf(i))).join('')
       + (more ? `<div class="msf-more dl-more"><button type="button" class="msf-more-btn" onclick="_dlMore()">Show ${left > 0 ? Math.min(left, step) : step} more${left > 0 ? ` <small>· ${left.toLocaleString(MSSI18n.locale)} left</small>` : ''}</button></div>` : '');
@@ -243,7 +245,7 @@ addEventListener('resize', () => { clearTimeout(_dlResizeT); _dlResizeT = setTim
 }, 200); }, { passive: true });
 function _dlCount() {
   const all = _dlSfActive() ? SF.list('dl', 'all').length : _dlAllItems.length;
-  const total = _dlCategory.cap && !_dlSfActive() ? (_dlDone ? all : _dlCategory.cap) : (_dlDone || _dlSfActive() ? all : null);
+  const total = _dlCategory.cap && !_dlIsMss && !_dlSfActive() ? (_dlDone ? all : _dlCategory.cap) : (_dlDone || _dlSfActive() ? all : null);   // MSF lists: 250 at most, often fewer
   $dl('dlCount').textContent = !_dlAllItems.length ? '' : _dlSfActive() ? `${_dlShown} of ${all} ${all === 1 ? 'match' : 'matches'}`
     : total ? `Showing ${_dlShown} of ${total}` : `Showing ${_dlShown}`;
 }
@@ -258,14 +260,14 @@ function _dlHero() {
   const avg = scored.length ? scored.reduce((a, b) => a + b, 0) / scored.length : null;
   const stat = (k, v) => `<div class="lh-stat"><dt>${k}</dt><dd>${v}</dd></div>`;
   const s = [];
-  if (_dlCategory.cap) s.push(stat('Titles', `<b>${_dlFmt(_dlCategory.cap)}</b>`));
-  if (_dlIsMss) s.push(stat('Titles', `<b>Top 500</b>`));
+  if (_dlCategory.cap && !_dlIsMss) s.push(stat('Titles', `<b>${_dlFmt(_dlCategory.cap)}</b>`));
+  if (_dlIsMss) s.push(stat('Titles', `<b>Top ${_dlCategory.cap || 500}</b>`));
   if (avg != null) s.push(stat(_dlIsMss ? 'Average · MSF' : `Average · ${_dlDone || items.length >= (_dlCategory.cap || Infinity) ? 'TMDB' : 'top ' + items.length}`, `<span class="lh-score msf-score is-tmdb">★ ${_discFloorScore(avg)}</span>`));
   if (_dlMeta.minVotes) s.push(stat('Min. votes', `<b>${_dlFmt(_dlMeta.minVotes)}</b>`));
   if (_dlCategory.key.startsWith('niche')) s.push(stat('Votes', `<b>50–300</b>`));
   if (_dlMeta.rotate && !_dlUpcoming) s.push(stat('Updated', 'Every day'));
   if (_dlUpcoming) s.push(stat('Coming', 'Soon'));
-  if (_dlTop) s.push(stat('Updated', 'Every week'));
+  if (_dlTop && !_dlIsMss) s.push(stat('Updated', 'Every week'));
   if (_dlRecs && items.length) {
     const wild = items.filter(it => it.kind === 'wild').length;
     s.unshift(stat('Titles', `<b>${_dlFmt(items.length)}</b>`));

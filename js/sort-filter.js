@@ -73,7 +73,7 @@
    ── Type: one list for every page ──
    TV Shows · Movies · Anime Shows · Anime Movies · Cartoon Shows · Cartoon Movies
    SF.TYPES                      → those as options, after "All Types"
-   SF.typeChoice({ cat, movie }) → the Filter section; cat(e) / movie(e) read a page's own items
+   SF.typeChoice({ cat, movie, only }) → the Filter section; cat(e) / movie(e) read a page's own items; only: one category's Shows / Movies
                                    (default e.cat and SF.isMovie). 'anime' / 'cartoons' (older saved picks) mean both
    SF.typeIs(v, cat, movie)      → does one pick match
    SF.typeMovies(v) / typeShows(v) → only movies / only shows picked
@@ -140,8 +140,10 @@ const SF = (() => {
     const [c, f] = v.split('_');
     return c === cat && (!f || (f === 'movie') === !!movie);
   }
-  const typeChoice = (o = {}) => ({ key: 'cat', label: 'Type', options: [['', 'All Types'], ...TYPES],
-    test: (e, v) => typeIs(v, o.cat ? o.cat(e) : e.cat, o.movie ? o.movie(e) : isMovie(e)) });
+  // o.only ('anime' | 'cartoons'): a list of just that category — only its Shows / Movies are offered, and every item
+  // counts as that category (owner, 25 Nov 2026: the Anime / Cartoons lists)
+  const typeChoice = (o = {}) => ({ key: 'cat', label: 'Type', options: [['', 'All Types'], ...(o.only ? TYPES.filter(([k]) => k.startsWith(o.only + '_')) : TYPES)],
+    test: (e, v) => typeIs(v, o.only || (o.cat ? o.cat(e) : e.cat), o.movie ? o.movie(e) : isMovie(e)) });
   const typeMovies = v => picks(v).length > 0 && picks(v).every(k => k === 'movies' || k.endsWith('_movie'));
   const typeShows = v => picks(v).length > 0 && picks(v).every(k => k === 'tv' || k.endsWith('_show'));
   const typeCat = v => { const c = [...new Set(picks(v).map(k => k.split('_')[0]))]; return c.length === 1 ? c[0] : ''; };

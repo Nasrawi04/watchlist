@@ -672,8 +672,9 @@ async function initPageGuest(onReady) {
      Menus: one panel joined under the header, as wide as it — links with counts on the
        left, a live card on the right (_dm*). Hover (short delay), click / tap, keyboard.
      Account (avatar): a menu on desktop, a full page on phones (shellAccountHTML).
-     Phones / tablets: the top bar (wayfinding · search · bell · avatar), the bottom bar (Home · Discover ·
-       Library · Social · You — the last three open their section sheet), the round Create button.
+     Phones / tablets: the top bar (wayfinding · search · bell · avatar), the area tabs under it on Library, Social
+       and You pages (SHELL_AREA_TABS), the bottom bar (Home · Discover · Library · Social · You — each opens a page;
+       the last three where you left them), the round Create button.
      Guests (owner, 19 Nov 2026): every menu opens as usual; the few pages that need an account (MSS_JOIN_PAGES,
        config.js) wear a small lock, and their links open the Join panel instead (_navJoinClick).
      Footer: link columns, the Light / Dark switch, credits and the TMDB notice.
@@ -683,56 +684,59 @@ async function initPageGuest(onReady) {
 const LIBRARY_PAGES = [
   ['By type', [
     { href: 'movies.html',    icon: 'film',      label: 'Movies',   count: 'movies',   card: 'movie',    info: 'Watchlist to rated' },
-    { href: 'tv-shows.html',  icon: 'tv',        label: 'TV Shows', count: 'tv',       card: 'tv',       info: 'Watching, waiting, finished' },
+    { href: 'tv-shows.html',  icon: 'tv',        label: 'TV Shows', short: 'TV', count: 'tv', card: 'tv',     info: 'Watching, waiting, finished' },   // short: its name in the phone page row
     { href: 'anime.html',     icon: 'animeFace', label: 'Anime',    count: 'anime',    card: 'anime',    info: 'Series and films' },
     { href: 'cartoons.html',  icon: 'crown',     label: 'Cartoons', count: 'cartoons', card: 'cartoons', info: 'Animated shows and films' },
   ]],
   ['Your library', [
-    { href: 'library.html',   icon: 'list',      label: 'Library',  count: 'all',      card: 'any',      info: 'Everything, in one place', desc: 'All your titles by status', also: ['season.html', 'episode.html'] },   // a season / an episode: Library lit (Season & Episode redesign)
-    { href: 'episodes.html',  icon: 'episodes',  label: 'Episodes',  n: 'eps', card: 'eps',      info: 'Ratings and charts', desc: 'Your episode ratings' },
-    { href: 'diary.html',     icon: 'calendar',  label: 'Diary',                       card: 'diary',    info: 'Every watch, by day', desc: 'Every watch, day by day' },
+    { href: 'library.html',   icon: 'list',      label: 'Library',  count: 'all',      card: 'any',      info: 'Everything, in one place', also: ['season.html', 'episode.html'] },   // a season / an episode: Library lit (Season & Episode redesign)
+    { href: 'episodes.html',  icon: 'episodes',  label: 'Episodes',                    card: 'eps',      info: 'Ratings and charts' },
+    { href: 'diary.html',     icon: 'calendar',  label: 'Diary',                       card: 'diary',    info: 'Every watch, by day' },
   ]],
 ];
 const _VIEWS = page => [['Mine', page], ['Friends', `${page}?view=friends`], ['Community', `${page}?view=community`]];
 const SHELL_TABS = [
   { k: 'home', label: 'Home', icon: 'home', href: 'index.html' },
   { k: 'discover', label: 'Discover', icon: 'compass', href: 'discover.html', also: ['discover-list.html', 'browse.html'] },
-  // sheet: the phone / tablet section sheet (Mobile nav v2) — the same pages, laid out as cards, rows or a 2-column grid
-  { k: 'lib', label: 'Library', icon: 'grid', href: 'library.html', groups: LIBRARY_PAGES, sheet: { sub: 'Everything you track', groups: [
-    [null, 'cards', ['library.html', 'episodes.html', 'diary.html']],
-    ['By type', 'grid', ['tv-shows.html', 'movies.html', 'anime.html', 'cartoons.html']]] } },
-  { k: 'social', label: 'Social', icon: 'users', href: 'friends.html', sheet: { sub: 'Friends and things to do together', groups: [
-    ['People', 'rows', ['friends.html', 'activity.html', 'messages.html']],
-    ['Together', 'grid', ['compare.html', 'blend.html', 'movie-night.html', 'challenges.html', 'polls.html', 'episode-chat.html']]] }, groups: [
+  { k: 'lib', label: 'Library', icon: 'grid', href: 'library.html', groups: LIBRARY_PAGES },
+  { k: 'social', label: 'Social', icon: 'users', href: 'friends.html', groups: [
     ['People', [
-      { label: 'Friends', icon: 'users', href: 'friends.html', count: 'friends', req: true, card: 'friends', info: 'Requests and suggestions', desc: 'Friends, following, followers' },
-      { label: 'Activity', icon: 'activity', href: 'activity.html', card: 'lately', info: 'What friends watched and rated', desc: 'What friends just did' },
+      { label: 'Friends', icon: 'users', href: 'friends.html', count: 'friends', req: true, card: 'friends', info: 'Requests and suggestions' },
+      { label: 'Activity', icon: 'activity', href: 'activity.html', card: 'lately', info: 'What friends watched and rated' },
       { label: 'Compare', icon: 'compare', href: 'compare.html', card: 'compare', info: 'Your taste side by side' },
       { label: 'Blend', icon: 'shuffle', href: 'blend.html', card: 'blend', info: 'Picks you’ll both enjoy' },
     ]],
     ['Together', [
-      { label: 'Movie Night', icon: 'film', href: 'movie-night.html', card: 'night', waiting: 'night_invites', info: 'Pick something together' },
+      { label: 'Movie Night', icon: 'film', href: 'movie-night.html', card: 'night', info: 'Pick something together' },
       { label: 'Challenges', icon: 'trophy', href: 'challenges.html', card: 'challenge', info: 'Race to a watching goal' },
       { label: 'Polls', icon: 'poll', href: 'polls.html', card: 'poll', info: 'Ask what to watch next' },
       { label: 'Episode Chat', icon: 'comment', href: 'episode-chat.html', card: 'epchat', info: 'Talk about episodes' },
-      { label: 'Messages', icon: 'inbox', href: 'messages.html', msg: true, sep: true, card: 'msgs', info: 'Your chats', desc: 'Chats and recommendations' },
+      { label: 'Messages', icon: 'inbox', href: 'messages.html', msg: true, sep: true, card: 'msgs', info: 'Your chats' },
     ]],
   ] },
   // You (owner, 16 Nov 2026): your profile, medals and export in one group, Lists and Notes in the other (Made by you — Tier lists will join it)
-  { k: 'you', label: 'You', icon: 'user', href: 'profile.html', sheet: { account: true, groups: [
-    [null, 'rows', ['profile.html', 'lists.html', 'notes.html']],
-    [null, 'rows', ['cabinet.html', 'export.html']]] }, groups: [
+  { k: 'you', label: 'You', icon: 'user', href: 'profile.html', groups: [
     ['Your profile', [
-      { label: 'Profile', icon: 'user', href: 'profile.html', card: 'you', info: 'Stats, favourites, taste', desc: 'Overview, library, showcase' },
-      { label: 'Medals', icon: 'trophy', href: 'cabinet.html', n: 'medals', card: 'medals', info: 'Achievements you’ve earned', desc: 'Achievement Cabinet' },
-      { label: 'Export', icon: 'download', href: 'export.html', card: 'export', info: 'Cards, PDFs, backups', desc: 'PDFs, images, backups' },
+      { label: 'Profile', icon: 'user', href: 'profile.html', card: 'you', info: 'Stats, favourites, taste' },
+      { label: 'Medals', icon: 'trophy', href: 'cabinet.html', card: 'medals', info: 'Achievements you’ve earned' },
+      { label: 'Export', icon: 'download', href: 'export.html', card: 'export', info: 'Cards, PDFs, backups' },
     ]],
     ['Made by you', [
-      { label: 'Lists', icon: 'layers', href: 'lists.html', sub: _VIEWS('lists.html'), n: 'lists', card: 'list', info: 'Yours, friends’, community', desc: 'Yours, friends’, community' },
-      { label: 'Notes', icon: 'notebook', href: 'notes.html', sub: _VIEWS('notes.html'), n: 'notes', card: 'note', info: 'Your thoughts on what you watch', desc: 'Everything you wrote' },
+      { label: 'Lists', icon: 'layers', href: 'lists.html', sub: _VIEWS('lists.html'), card: 'list', info: 'Yours, friends’, community' },
+      { label: 'Notes', icon: 'notebook', href: 'notes.html', sub: _VIEWS('notes.html'), card: 'note', info: 'Your thoughts on what you watch' },
     ]],
   ] },
 ];
+/* Phones / tablets (<1200px): the area tabs under the top bar (owner, 25 Nov 2026 — replaces the section sheets).
+   Each area: [tab name, its pages]. A tab with several pages gets a second row that moves between them (each page
+   stays its own page). Never more than 5 in a row, so a row never scrolls. The pages are SHELL_TABS' own items;
+   anything of an area not listed here (Export, Settings…) is an inside page: ‹ Back and its name, no tabs. */
+const SHELL_AREA_TABS = {
+  lib:    [['Library', ['library.html', 'movies.html', 'tv-shows.html', 'anime.html', 'cartoons.html']], ['Episodes', ['episodes.html']], ['Diary', ['diary.html']]],
+  social: [['People', ['friends.html', 'activity.html', 'compare.html', 'blend.html']],
+           ['Together', ['movie-night.html', 'challenges.html', 'polls.html', 'episode-chat.html']], ['Messages', ['messages.html']]],
+  you:    [['Profile', ['profile.html']], ['Lists', ['lists.html']], ['Notes', ['notes.html']], ['Medals', ['cabinet.html']]],
+};
 const _shellItems = t => (t?.groups || []).flatMap(([, items]) => items);
 // Social in three sections — People · Together · Messages (the desktop tab bar, social-nav.js)
 const _socialSections = t => {
@@ -771,13 +775,60 @@ function shellWhere(href = location.href, viaRef) {
   return { tab: SHELL_TABS.some(t => t.k === last) ? last : null, href: null, sub: null };
 }
 
+/* ── The area tabs (phones / tablets — SHELL_AREA_TABS) ── */
+// → { k, tab (its index), page } when a page key (_mtabKey) is one of an area's tab pages, else null
+function _areaAt(key = _mtabKey(new URL(location.href))) {
+  const page = key.split('?')[0];
+  for (const [k, tabs] of Object.entries(SHELL_AREA_TABS)) {
+    const tab = tabs.findIndex(([, pages]) => pages.includes(page));
+    if (tab >= 0) return { k, tab, page };
+  }
+  return null;
+}
+// Where you left each area and each of its tabs, on this device (owner: leave Library on Movies → it opens on Movies)
+const _AREA_LAST = 'msf_area_last';
+// the old You sheet's medal count (mss_medals_<id>) went with the sheets: cleared from devices that still have it
+try { Object.keys(localStorage).forEach(k => { if (k.startsWith('mss_medals_')) localStorage.removeItem(k); }); } catch {}
+const _areaLast = () => { try { return JSON.parse(localStorage.getItem(_AREA_LAST) || '{}') || {}; } catch { return {}; } };
+function _areaRemember(a, key) {
+  const last = _areaLast();
+  last[a.k] = key; last[`${a.k}:${a.tab}`] = key;
+  try { localStorage.setItem(_AREA_LAST, JSON.stringify(last)); } catch {}
+}
+// the page an area / one of its tabs opens: where you left it, else its first page
+const _areaHref = k => { const v = _areaLast()[k]; return v && _areaAt(v)?.k === k ? v : SHELL_AREA_TABS[k][0][1][0]; };
+const _areaTabHref = (k, i) => { const v = _areaLast()[`${k}:${i}`], pages = SHELL_AREA_TABS[k][i][1]; return v && pages.includes(v.split('?')[0]) ? v : pages[0]; };
+const _areaItem = (k, href) => _shellItems(SHELL_TABS.find(t => t.k === k)).find(it => it.href === href);
+// The rows: the area's tabs (the lit one goes back to its first page), then — when that tab has several pages — those pages
+function _atabsHTML(a) {
+  if (!a) return '';
+  const tabs = SHELL_AREA_TABS[a.k], pages = tabs[a.tab][1];
+  const extra = h => {
+    const it = _areaItem(a.k, h);
+    return (it?.msg ? '<span class="notif-badge atab-badge" data-msg-badge></span>' : it?.req ? '<span class="nav-badge" data-req-badge hidden></span>' : '') + _navLockHTML(h, 'atab-lock');
+  };
+  const row1 = tabs.map(([name, ps], i) => {
+    const on = i === a.tab, href = on ? ps[0] : _areaTabHref(a.k, i);
+    return `<a class="atab${on ? ' on' : ''}" href="${href}"${on ? ` aria-current="${ps.length === 1 ? 'page' : 'true'}"` : ''}><span class="atab-l">${name}</span>${ps.length === 1 ? extra(ps[0]) : _navLockHTML(href, 'atab-lock')}</a>`;
+  }).join('');
+  const row2 = pages.length < 2 ? '' : `<div class="apage-row">${pages.map(h => {
+    const it = _areaItem(a.k, h), on = h === a.page;
+    return `<a class="apage${on ? ' on' : ''}" href="${h}"${on ? ' aria-current="page"' : ''}><span class="atab-l">${it.short || it.label}</span>${extra(h)}</a>`;
+  }).join('')}</div>`;
+  return `<div class="atabs" id="atabs" role="navigation" aria-label="${SHELL_TABS.find(t => t.k === a.k).label}"><div class="atab-row">${row1}</div>${row2}</div>`;
+}
+
 /* ── Building it (before the page's first paint) ── */
 function injectChrome() {
   const where = shellWhere();
   const ownSearch = ['index.html', 'discover.html'].includes(_mtabKey(new URL(location.href)));   // Home and Discover have their own search field: none in the bar
   try { if (where.tab) sessionStorage.setItem('mss_tab', where.tab); } catch {}
+  const area = _areaAt(), root = document.documentElement;
+  if (area) _areaRemember(area, _mtabKey(new URL(location.href)));
+  root.classList.toggle('has-atabs', !!area);
+  root.classList.toggle('has-apage', !!area && SHELL_AREA_TABS[area.k][area.tab][1].length > 1);
   // signed in or not, as far as this device knows (splash.js) — corrected once auth answers (_shellGuest)
-  document.documentElement.classList.toggle('mss-guest', window.mssSignedInHint === false);
+  root.classList.toggle('mss-guest', window.mssSignedInHint === false);
 
   const navEl = document.createElement('nav');
   navEl.id = 'mainNav';
@@ -816,6 +867,8 @@ function injectChrome() {
     </div>`;
 
   const bottomNavEl = _bnavEl(where);
+  // the area tabs: part of the page under the top bar (they scroll away with it — owner, 25 Nov 2026)
+  const atabsEl = area ? Object.assign(document.createElement('div'), { innerHTML: _atabsHTML(area) }).firstElementChild : null;
   _navPortraitOnPhones();
 
   /* ── CONFIRM DIALOG ── */
@@ -850,11 +903,12 @@ function injectChrome() {
   document.body.insertBefore(bottomNavEl, first);
   document.body.insertBefore(_shellFabEl(), first);
   document.body.insertBefore(navEl,      first);
+  if (atabsEl) document.body.insertBefore(atabsEl, first);
   _navInitBackToTop();
   document.body.appendChild(_shellFooterEl());
 
   _ntopInit();
-  _bnavLongInit(bottomNavEl);
+  _bnavInit(bottomNavEl);
   _dmInit();
   _acctInit();
   // Search: the header field on every page but Home and Discover (they have their own); shell-search.js does the rest
@@ -876,7 +930,6 @@ function _navJoinClick(ev) {
   if (!topic) return;
   ev.preventDefault(); ev.stopPropagation();
   if (typeof _dmHide === 'function' && _dmCur) _dmHide();
-  if (typeof _ntopDropHide === 'function') _ntopDropHide();
   const sheet = !!_nsh; if (sheet) shellSheetClose();
   setTimeout(() => mssJoin({ topic, href: file }), sheet ? 220 : 0);   // the sheet goes first, so the panel lands on the page
 }
@@ -945,7 +998,6 @@ function _navCloseAll(except) {
   if (except !== 'search' && typeof MSSSearch !== 'undefined') MSSSearch.close();
   if (except !== 'notif' && typeof closeNotifPanel === 'function') closeNotifPanel();
   if (except !== 'mega') _dmHide();
-  if (except !== 'ntop') _ntopDropHide();
 }
 
 /* ═════════ Desktop menus: Library · Social · You ═════════ */
@@ -1059,7 +1111,7 @@ function _dmHTML(t) {
 }
 const _dmCount = k => { const S = _shellSum; if (!S) return ''; const n = k === 'friends' ? S.friends : S.counts?.[k]; return n == null ? '' : `<span class="sr-only">, </span>${Number(n).toLocaleString(MSSI18n.locale)}`; };
 function _dmPaintCounts() {
-  document.querySelectorAll('#dnavMega [data-count], #ntopDrop [data-count]').forEach(el => { el.innerHTML = _dmCount(el.dataset.count); });
+  document.querySelectorAll('#dnavMega [data-count]').forEach(el => { el.innerHTML = _dmCount(el.dataset.count); });
   _navMsgBadge(_navMsgCount); _bnavDotPaint();
 }
 
@@ -1281,7 +1333,10 @@ async function _dmYouLoad() {
     const same = JSON.stringify(next) === JSON.stringify(_dmYou);
     _dmYou = next; _dmYouAt = Date.now();
     try { _dmYouStore().setItem(_DM_YOU_KEY(), JSON.stringify({ t: _dmYouAt, v: next })); } catch {}
-    if (!same) document.querySelectorAll('.dm-you').forEach(el => { el.outerHTML = _dmYouCard(); });   // redrawn only if it changed
+    if (!same) {   // redrawn only if it changed: the You menu's card and the account card
+      document.querySelectorAll('.dm-you').forEach(el => { el.outerHTML = _dmYouCard(); });
+      document.querySelectorAll('.acct-card').forEach(el => { el.outerHTML = _acctCardHTML(); });
+    }
   } catch (err) { console.warn('You card:', err); }
   finally { _dmYouBusy = false; }
 }
@@ -1537,15 +1592,34 @@ function _dmGuestCard(k) {
 }
 
 /* ═════════ Account: a menu under the avatar (desktop), a full page (phones) ═════════ */
+/* The account menu's / page's profile card (owner, 25 Nov 2026): your backdrop as a banner, your photo in the shape
+   your profile uses (poster or circle) over its edge, your name, the first three stats you chose for your profile
+   (the You menu's card data — _dmYou, kept per account) and Open profile. The whole card opens your profile. */
+function _acctCardHTML() {
+  _dmYouRead();
+  _dmYouLoad();   // nothing to do while the kept card is fresh; redraws this card when it changes
+  const p = window._navUserProfile || {}, name = p.username || '', Y = _dmYou;
+  const circle = p.profile_layout?.photo === 'circle', pic = circle ? safeURL(p.avatar_url) : mssPhotoPoster(p);
+  const stats = Y ? Y.stats.map(([v, l]) => `<span><b>${escHTML(v)}</b><small>${escHTML(l)}</small></span>`).join('')
+    : '<span><b class="skel skel-line"></b><small>&nbsp;</small></span>'.repeat(3);
+  return `<a class="acct-card${Y?.bd ? ' has-bd' : ''}" href="profile.html" aria-label="Open your profile, @${escHTML(name)}"${Y ? '' : ' aria-busy="true"'}>
+      <span class="acct-card-bd" aria-hidden="true"${Y?.bd ? ` style="background-image:${cssURL(Y.bd)}"` : ''}></span>
+      <span class="acct-card-top">
+        <span class="acct-card-pic ${circle ? 'is-circle' : 'is-poster'}" aria-hidden="true">${pic ? `<img src="${pic}" alt="">` : escHTML((name || '?')[0].toUpperCase())}</span>
+        <span class="acct-card-who"><b translate="no">${escHTML(p.display_name || name || 'You')}</b><small translate="no">@${escHTML(name)}</small></span>
+        <span class="acct-card-go" aria-hidden="true">Open profile ${icon('arrowRight', 13)}</span>
+      </span>
+      <span class="acct-card-stats">${stats}</span></a>`;
+}
 function shellAccountHTML() {
   const p = window._navUserProfile || {}, name = p.username || '';
-  const av = safeURL(p.avatar_url), n = typeof MSSAccounts !== 'undefined' ? MSSAccounts.list().length : 1;
+  const n = typeof MSSAccounts !== 'undefined' ? MSSAccounts.list().length : 1;
   let admin = false; try { admin = (sessionStorage.getItem('mss_admin') || '').endsWith(':1'); } catch {}
   const ic = (name, cls = '') => `<span class="acct-ic${cls}" aria-hidden="true">${icon(name, 16)}</span>`, go = `<span class="acct-chev" aria-hidden="true">${icon('chevright', 14)}</span>`;
-  return `<a class="acct-head" href="profile.html"><span class="acct-av" aria-hidden="true">${av ? `<img src="${av}" alt="">` : escHTML((name || '?')[0].toUpperCase())}</span>
-      <span class="acct-who"><b translate="no">${escHTML(p.display_name || name || 'You')}</b><small><span translate="no">@${escHTML(name)}</span> · View profile</small></span></a>
+  return `${_acctCardHTML()}
     <ul class="acct-list">
       <li><a class="acct-row" href="settings.html">${ic('settings')}<span class="acct-l">Settings</span>${go}</a></li>
+      <li class="acct-phone"><a class="acct-row" href="export.html">${ic('download')}<span class="acct-l">Export</span>${go}</a></li>${/* phones: You's tabs have no room for it (desktop: the You menu) */ ''}
       <li class="nav-admin-link"${admin ? '' : ' hidden'}><a class="acct-row" href="admin.html">${ic('lock')}<span class="acct-l">Admin</span><span class="acct-owner">Owner</span>${go}</a></li>
       <li><div class="acct-row acct-theme">${ic('sun')}<span class="acct-l" id="acctThemeL">Theme</span>${mssThemeSwitch('acctThemeL')}</div></li>
       <li><button type="button" class="acct-row" onclick="_acctHide();_navAccounts()">${ic('users')}<span class="acct-l">Switch account</span><span class="acct-meta">${n} on this device</span>${go}</button></li>
@@ -1616,7 +1690,7 @@ function _shellFabEl() {
   b.type = 'button'; b.className = 'shell-fab nav-auth-only'; b.id = 'shellFab';
   b.setAttribute('aria-label', 'Create'); b.setAttribute('aria-haspopup', 'dialog');
   b.innerHTML = icon('plus', 26);
-  b.onclick = e => { if (!mssGuestGate('add titles')) shellSheet('create', e.currentTarget); };
+  b.onclick = e => { if (!mssGuestGate('add titles')) shellCreateSheet(e.currentTarget); };
   return b;
 }
 // desktop: a menu under + Add (MSSPopover) · the round + (phones / tablets): Create in the section sheet (shellSheet)
@@ -1642,17 +1716,27 @@ function _bnavDo(k) {
 
 /* ═════════ Phones / tablets (<1200px): the bottom bar ═════════
    Home · Discover · Library · Social · You. The tab you're on sits in the olive circle that rises out
-   of the bar's cut-out — drawn there from the first paint (no slide from another tab). */
+   of the bar's cut-out — drawn there from the first paint (no slide from another tab). Every tab opens a page:
+   Library / Social / You the page you left them on (_areaHref), or — from one of their own tab pages — their first
+   page; already there, a tap scrolls back to the top. */
 function _bnavEl(where) {
   const el = document.createElement('nav');
   el.className = 'bnav' + (where.tab ? '' : ' is-none'); el.id = 'bnav';   // is-none: a page with no tab of its own and no known way in — nothing lit
   el.setAttribute('aria-label', 'Main');
-  const i = Math.max(0, SHELL_TABS.findIndex(t => t.k === where.tab));
+  const i = Math.max(0, SHELL_TABS.findIndex(t => t.k === where.tab)), inArea = _areaAt()?.k;
   el.style.setProperty('--x', (i * 20 + 10) + '%');
   el.innerHTML = `<div class="bnav-bg" aria-hidden="true"></div><div class="bnav-ring" aria-hidden="true"></div><span class="bnav-orb" aria-hidden="true"></span>
-    ${SHELL_TABS.map(t => `<a class="bnav-item${t.k === where.tab ? ' on' : ''}" href="${t.href}" data-tab="${t.k}"${t.k === where.tab ? ' aria-current="page"' : ''}${t.groups ? ` onclick="return _bnavTap(event, '${t.k}')" aria-haspopup="dialog" aria-expanded="false"` : ''}>
+    ${SHELL_TABS.map(t => `<a class="bnav-item${t.k === where.tab ? ' on' : ''}" href="${SHELL_AREA_TABS[t.k] && t.k !== inArea ? _areaHref(t.k) : t.href}" data-tab="${t.k}"${t.k === where.tab ? ' aria-current="page"' : ''}>
       <span class="bnav-ic">${icon(t.icon, 23)}</span><span class="bnav-lb">${t.label}</span></a>`).join('')}`;
   return el;
+}
+function _bnavInit(bar) {
+  bar.addEventListener('click', ev => {
+    const a = ev.target.closest('.bnav-item');
+    if (!a || ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.button > 0 || _mtabKey(new URL(a.href)) !== _mtabKey(new URL(location.href))) return;
+    ev.preventDefault();
+    window.scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+  });
 }
 /* Red dot on Social (bar + desktop tab) and a count on Friends while follow requests or messages wait */
 let _bnavReq = 0, _bnavMsg = 0;
@@ -1664,24 +1748,23 @@ function _bnavDotPaint() {
     if (why) a.insertAdjacentHTML('beforeend', `<span class="bnav-dot"><span class="sr-only">, ${why}</span></span>`);
   });
   document.querySelectorAll('[data-req-badge]').forEach(b => { b.textContent = _bnavReq > 9 ? '9+' : _bnavReq > 0 ? _bnavReq : ''; b.hidden = !(_bnavReq > 0); });
-  _nshPaintCounts();
 }
 
-/* ═════════ Phones / tablets (<1200px): the top bar (Mobile nav v2) ═════════
-   Left: Home — the logo · Discover — its name · a page of Library / Social / You — the area in small green
-   capitals over the page's name + ▾ (drops that area's menu down under the bar: the desktop menu's rows) · everything else (a title, a person, a list,
-   a friend's profile, Settings, Notifications…) — ‹ Back, the page's name, Share and ⋯ where the page has them.
-   Right: Search · Notifications · your avatar (its menu: Settings, Admin, Theme, Switch account, Sign out).
-   Scrolled: a 1px line under it. The page's own big title is hidden on phones (it stays for screen readers). */
+/* ═════════ Phones / tablets (<1200px): the top bar (Mobile nav v2; area tabs 25 Nov 2026) ═════════
+   Left: Home — the logo · Discover — its name · an area's tab page (SHELL_AREA_TABS) — just the page's name (no area
+   label, no ▾ — the tabs under the bar move you around); Library's pages add their counts under it · everything else
+   (a title, a person, a list, a friend's profile, Settings, Notifications…) — ‹ Back, the page's name, Share and ⋯
+   where the page has them. Right: Search · Notifications · your avatar (its menu: Settings, Export, Admin, Theme,
+   Switch account, Sign out). Scrolled: a 1px line under it. It always stays; the area tabs under it are part of the page
+   and scroll away (Back to top brings them back). The page's own big title is hidden on phones (it stays for screen readers). */
 const _NTOP_SHARE = ['title.html', 'person.html', 'list-view.html', 'profile-view.html', 'season.html', 'episode.html', 'discover-list.html'];
 const _ntopName = () => (document.title || '').replace(/\s*[—–|-]\s*MyScreenFolio\s*$/, '').trim() || 'MyScreenFolio';
 function _ntopLeftHTML(w) {
   const page = _navFile(location), t = SHELL_TABS.find(x => x.k === w.tab);
   if (page === 'index.html') return `<a class="nav-logo" href="index.html" aria-label="MyScreenFolio home">${mssLogoSVG('nav-logo-img')}</a>`;
   if (page === 'discover.html') return '<span class="ntop-name">Discover</span>';
-  const it = t?.sheet && w.href ? _shellItems(t).find(x => x.href === w.href) : null;
-  if (it) return `<button type="button" class="ntop-area" id="ntopArea" onclick="_ntopDrop('${t.k}', event)" aria-haspopup="true" aria-expanded="false">
-      <span class="ntop-kicker">${t.label}<span class="sr-only">:</span></span><span class="ntop-name">${it.label}${icon('chevdown', 15)}</span></button>`;
+  const a = _areaAt();
+  if (a) return `<span class="ntop-titles"><span class="ntop-name">${_areaItem(a.k, a.page).label}</span>${a.k === 'lib' && a.tab === 0 ? '<span class="ntop-sub" id="ntopSub"></span>' : ''}</span>`;
   return `<a class="ntop-btn ntop-back" href="${t?.href || 'index.html'}" onclick="return mssGoBack()" aria-label="Back">${icon('back', 20)}</a>
     <span class="ntop-name ntop-dname" id="ntopName" translate="no">${escHTML(_ntopName())}</span>
     ${_NTOP_SHARE.includes(page) ? `<button type="button" class="ntop-btn" onclick="_ntopShare()" aria-label="Share">${icon('share', 17)}</button>` : ''}
@@ -1696,48 +1779,6 @@ async function _ntopShare() {
 const _ntopMoreEl = () => { const all = [...document.querySelectorAll('[data-top-more]')]; return all.find(el => el.getClientRects().length) || all[0]; };
 function _ntopMore() { _ntopMoreEl()?.click(); }
 
-/* The page name's ▾: the area's menu drops down from under the bar (the desktop menu's rows, in one column),
-   over a dimmed page. Tap a row → go there; tap ▾ again, the dim page or Esc → closed. */
-function _ntopDrop(k, ev) {
-  const btn = document.getElementById('ntopArea');
-  // with the bottom bar showing (phones / tablets): the area's own drag sheet — the same one its tab opens (owner, 25 Nov 2026)
-  const bar = document.getElementById('bnav');
-  if (bar && getComputedStyle(bar).display !== 'none' && typeof shellSheet === 'function') { shellSheet(k, btn, ev?.detail === 0); return; }
-  let el = document.getElementById('ntopDrop');
-  if (el && !el.hidden) { _ntopDropHide(true); return; }
-  const t = SHELL_TABS.find(x => x.k === k);
-  if (!t?.groups || !btn) return;
-  _navCloseAll('ntop');
-  if (typeof shellSheetClose === 'function') shellSheetClose();
-  if (!el) {
-    el = document.createElement('div');
-    el.className = 'ntop-drop'; el.id = 'ntopDrop'; el.hidden = true;
-    el.addEventListener('click', e => { if (e.target === el) _ntopDropHide(); });
-    el.addEventListener('keydown', e => {
-      const links = [...el.querySelectorAll('.dm-link')], i = links.indexOf(document.activeElement);
-      if (e.key === 'Escape') { e.preventDefault(); _ntopDropHide(true); return; }
-      if (!['ArrowDown', 'ArrowUp'].includes(e.key)) return;
-      e.preventDefault();
-      links[(i + (e.key === 'ArrowDown' ? 1 : -1) + links.length) % links.length]?.focus();
-    });
-    document.getElementById('navTop').appendChild(el);
-  }
-  el.innerHTML = `<div class="ntop-drop-in" role="region" aria-labelledby="ntopArea"><div class="dm-cols">${_dmColsHTML(t, 'nd')}</div></div>`;
-  el.style.top = Math.round(document.getElementById('mainNav').getBoundingClientRect().bottom) + 'px';
-  el.hidden = false;
-  btn.setAttribute('aria-expanded', 'true');
-  requestAnimationFrame(() => el.classList.add('open'));
-  if (ev.detail === 0) el.querySelector('.dm-link')?.focus();       // opened from the keyboard → into the menu
-  _shellSummary();
-}
-function _ntopDropHide(refocus) {
-  const el = document.getElementById('ntopDrop');
-  if (!el || el.hidden) return;
-  el.classList.remove('open'); el.hidden = true;
-  const btn = document.getElementById('ntopArea');
-  btn?.setAttribute('aria-expanded', 'false');
-  if (refocus) btn?.focus({ preventScroll: true });
-}
 function _ntopInit() {
   const root = document.documentElement;
   const line = () => { if (!root.classList.contains('mss-scroll-locked')) root.classList.toggle('ntop-line', window.scrollY > 2); };
@@ -1751,16 +1792,11 @@ function _ntopInit() {
   sync();
 }
 
-/* ═════════ Phones / tablets: the section sheets (Mobile nav v2) ═════════
-   Library, Social and You in the bottom bar open their area's sheet instead
-   of going anywhere; the round + opens Create in the same sheet. One component, built from SHELL_TABS[].sheet.
-   It sits flush on the bar (same surface, rounded top only); while it's open the bar's circle sinks away and
-   the area's tab shows flat (green icon + label + a short line on the bar's top edge). Pick a row → go there
-   (the page you're on just closes it). Swipe down, tap the dim page, Esc, or tap the tab again → closed,
-   and the circle rises back on the page's own tab. Long-press Library / Social / You → straight to
-   Library / Friends / Profile. */
-let _nsh = null;          // { k, opener } while open
-let _nshC = null;         // nav_counts() (133): lists, notes, eps, night_invites
+/* ═════════ Phones / tablets: the drag sheet for Create (Mobile nav v2) ═════════
+   The round + opens Create in a sheet that sits flush on the bar (same surface, rounded top only); while it's
+   open the bar's circle sinks away. Swipe down, tap the dim page or Esc → closed. (Library, Social and You used
+   to open sheets here too — they're area tabs now, 25 Nov 2026.) */
+let _nsh = null;          // { opener } while open
 function _nshEl() {
   let ov = document.getElementById('nsh');
   if (ov) return ov;
@@ -1769,33 +1805,20 @@ function _nshEl() {
   ov.innerHTML = '<div class="nsh-card" role="dialog" aria-modal="true" aria-labelledby="nshT"><span class="nsh-grab" aria-hidden="true"></span><div class="nsh-body" id="nshBody"></div></div>';
   MSSDialog.bind(ov, () => shellSheetClose());
   ov.addEventListener('keydown', _nshKeys);
-  ov.addEventListener('click', ev => {
-    const a = ev.target.closest('a.nsh-row');
-    if (a && a.getAttribute('aria-current') === 'page') { ev.preventDefault(); shellSheetClose(); }
-  });
   _nshSwipe(ov.firstElementChild);
   document.body.appendChild(ov);
   return ov;
 }
-// kb: opened from the keyboard — focus goes to the current row (else the first); a tap focuses the sheet itself (no ring on a row)
-function shellSheet(k, opener, kb) {
-  if (_nsh?.k === k) return shellSheetClose();
-  const ov = _nshEl(), bar = document.getElementById('bnav'), wasOpen = !!_nsh;
-  _nsh = { k, opener: _nsh?.opener || opener || null };
-  ov.dataset.k = k;
-  document.getElementById('nshBody').innerHTML = k === 'create' ? _nshCreateHTML() : _nshHTML(k);
+function shellCreateSheet(opener) {
+  if (_nsh) return shellSheetClose();
+  const ov = _nshEl();
+  _nsh = { opener: opener || null };
+  document.getElementById('nshBody').innerHTML = _nshCreateHTML();
   ov.querySelector('.nsh-card').scrollTop = 0;
-  bar?.classList.add('has-sheet', 'sheet-anim');
-  document.querySelectorAll('#bnav .bnav-item').forEach(a => {
-    const on = a.dataset.tab === k;
-    a.classList.toggle('is-sheet', on);
-    if (a.hasAttribute('aria-expanded')) a.setAttribute('aria-expanded', String(on));
-  });
-  const target = k === 'create' ? ov.querySelector('#nshQ') : kb ? ov.querySelector('.nsh-row[aria-current]') || ov.querySelector('.nsh-row') : ov.querySelector('.nsh-card');
-  if (!wasOpen) { _nshKbFollow(true); MSSDialog.open(ov, { focus: target }); }
-  else target?.focus({ preventScroll: true });
-  if (k === 'create') _nshCreateInit();
-  else _nshCountsLoad();
+  document.getElementById('bnav')?.classList.add('has-sheet', 'sheet-anim');
+  _nshKbFollow(true);
+  MSSDialog.open(ov, { focus: ov.querySelector('#nshQ') });
+  _nshCreateInit();
 }
 // The on-screen keyboard (phones): the sheet sits right on top of it, so Create's search and its tiles stay in view.
 // The page itself doesn't shrink for the keyboard (iPhone), so the sheet follows the visual viewport while it's open:
@@ -1808,7 +1831,7 @@ function _nshKb() {
   ov.style.setProperty('--nsh-vh', Math.round(kb ? vv.height : Math.min(vv.height, innerHeight)) + 'px');
   ov.style.setProperty('--nsh-top', Math.round(vv.offsetTop) + 'px');     // where the visible screen starts (iPhone scrolls it for the keyboard)
   ov.classList.toggle('has-kb', kb > 0);
-  if (kb && _nsh?.k === 'create') ov.classList.add('is-tall');             // typing in Create: the whole screen
+  if (kb && _nsh) ov.classList.add('is-tall');                             // typing in Create: the whole screen
 }
 function _nshKbFollow(on) {
   const vv = window.visualViewport; if (!vv) return;
@@ -1824,77 +1847,8 @@ function shellSheetClose() {
   ov.classList.remove('is-tall');
   MSSDialog.close(ov);
   document.getElementById('bnav')?.classList.remove('has-sheet');
-  document.querySelectorAll('#bnav .bnav-item').forEach(a => { a.classList.remove('is-sheet'); if (a.hasAttribute('aria-expanded')) a.setAttribute('aria-expanded', 'false'); });
   if (opener?.isConnected && !ov.contains(document.activeElement) && document.activeElement === document.body) { try { opener.focus({ preventScroll: true }); } catch {} }
 }
-
-// One row: icon tile, name (+ one line on main rows), count, ✓ on the page you're on
-function _nshRow(it, kind, w) {
-  const here = it.href === w.href;
-  return `<li><a class="nsh-row" href="${it.href}"${here ? ' aria-current="page"' : ''}>
-      <span class="nsh-ic" aria-hidden="true">${icon(it.icon, 18)}</span>
-      <span class="nsh-tx"><b>${it.label}${_isGuest() ? _navLockHTML(it.href, 'nsh-lock') : ''}</b>${kind !== 'grid' && it.desc ? `<small>${it.desc}</small>` : ''}</span>
-      <span class="nsh-cnt" data-nsh-n="${it.href}" data-kind="${kind}">${_nshNum(it, kind)}</span>
-      ${here ? `<span class="nsh-tick" aria-hidden="true">${icon('check', 16)}</span>` : ''}</a></li>`;
-}
-function _nshHTML(k) {
-  const t = SHELL_TABS.find(x => x.k === k), S = t.sheet, w = shellWhere(), items = _shellItems(t);
-  const p = window._navUserProfile || {}, name = p.username || '', av = safeURL(p.avatar_url);
-  const guest = _isGuest();
-  const head = S.account && guest
-    ? `<div class="nsh-acct is-guest"><span class="nsh-av" aria-hidden="true">${icon('user', 20)}</span><span class="nsh-who"><b class="nsh-t" id="nshT">Browsing as a guest</b><small>Your profile preview, lists and notes</small></span></div>`
-    : S.account
-    ? `<a class="nsh-acct" href="profile.html"${w.href === 'profile.html' ? ' aria-current="page"' : ''}><span class="nsh-av" aria-hidden="true">${av ? `<img src="${av}" alt="">` : escHTML((name || '?')[0].toUpperCase())}</span>
-        <span class="nsh-who"><b class="nsh-t" id="nshT" translate="no">${escHTML(p.display_name || name || 'You')}</b><small translate="no">@${escHTML(name)}</small></span></a>`
-    : `<h2 class="nsh-t" id="nshT">${t.label}</h2><p class="nsh-sub">${S.sub}</p>`;
-  const groups = S.groups.map(([label, kind, hrefs]) => {
-    const list = hrefs.map(h => items.find(it => it.href === h)).filter(Boolean);
-    return `<div class="nsh-grp">${label ? `<p class="nsh-gl" id="nshG-${k}-${label.replace(/\W/g, '')}">${label}</p>` : ''}
-      <ul class="nsh-list is-${kind}"${label ? ` aria-labelledby="nshG-${k}-${label.replace(/\W/g, '')}"` : ''}>${list.map(it => _nshRow(it, kind, w)).join('')}</ul></div>`;
-  }).join('');
-  const foot = S.account && guest ? `<div class="nsh-foot"><a class="nsh-fbtn nsh-row is-main" href="login.html#signup">${icon('sparkles', 16)}<span>Create account</span></a>
-      <a class="nsh-fbtn nsh-row" href="login.html">${icon('user', 16)}<span>Sign in</span></a></div>`
-    : S.account ? `<div class="nsh-foot"><a class="nsh-fbtn nsh-row" href="settings.html"${_navFile(location) === 'settings.html' ? ' aria-current="page"' : ''}>${icon('settings', 16)}<span>Settings</span></a>
-      <button type="button" class="nsh-fbtn nsh-row is-out" onclick="shellSheetClose();handleLogout()">${icon('logout', 16)}<span>Sign out</span></button></div>` : '';
-  return `<div class="nsh-head">${head}</div><div class="nsh-nav" role="navigation" aria-label="${t.label}">${groups}</div>${foot}`;
-}
-
-/* Counts: grey for totals, a red pill only when something's waiting (requests, unread, invites).
-   Two-column rows show only the red ones. */
-function _nshNum(it, kind) {
-  const S = _shellSum || {}, C = _nshC || {}, msg = typeof _navMsgCount !== 'undefined' ? _navMsgCount : 0;
-  const red = (n, what) => `<span class="nsh-red">${n > 99 ? '99+' : n}<span class="sr-only"> ${what}</span></span>`;
-  if (it.req && _bnavReq > 0) return red(_bnavReq, _bnavReq === 1 ? 'request waiting' : 'requests waiting');
-  if (it.msg && msg > 0) return red(msg, 'unread');
-  if (it.waiting && C[it.waiting] > 0) return red(C[it.waiting], C[it.waiting] === 1 ? 'invite waiting' : 'invites waiting');
-  if (kind === 'grid') return '';
-  let n = null;
-  if (it.count === 'all') n = S.counts?.all;
-  else if (it.count === 'friends') n = S.friends;
-  else if (it.n === 'medals') { try { n = localStorage.getItem('mss_medals_' + window._navUser?.id); } catch {} }
-  else if (it.n) n = C[it.n];
-  return n == null || n === '' || Number(n) === 0 && it.n === 'medals' ? '' : `<span class="sr-only">, </span>${Number(n).toLocaleString(MSSI18n.locale)}`;
-}
-function _nshPaintCounts() {
-  if (!_nsh || _nsh.k === 'create') return;
-  const items = _shellItems(SHELL_TABS.find(x => x.k === _nsh.k));
-  document.querySelectorAll('#nsh [data-nsh-n]').forEach(el => { const it = items.find(x => x.href === el.dataset.nshN); if (it) el.innerHTML = _nshNum(it, el.dataset.kind); });
-}
-async function _nshCountsLoad() {
-  const uid = window._navUser?.id;
-  if (!uid) return;
-  _shellSummary().then(_nshPaintCounts);
-  if (!_nshC) try { const c = JSON.parse(sessionStorage.getItem('mss_nav_counts') || 'null'); if (c?.uid === uid && Date.now() - c.at < 120000) _nshC = c.v; } catch {}
-  if (_nshC) return _nshPaintCounts();
-  try {
-    const { data, error } = await sb.rpc('nav_counts');
-    if (error) throw error;
-    _nshC = data || {};
-    try { sessionStorage.setItem('mss_nav_counts', JSON.stringify({ uid, at: Date.now(), v: _nshC })); } catch {}
-  } catch { _nshC = {}; }   // not run yet (sql/133): no numbers on those rows
-  _nshPaintCounts();
-}
-
 // ↑ ↓ (and ← →) move between rows, Home / End to the ends; Enter opens (a link)
 function _nshKeys(ev) {
   if (!['ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(ev.key) || ev.target.matches('input')) return;
@@ -1925,28 +1879,6 @@ function _nshSwipe(card) {
     y0 = null;
   };
   card.addEventListener('touchend', end); card.addEventListener('touchcancel', end);
-}
-
-/* The bottom bar's Library / Social / You: tap → the sheet, long-press → the area's main page */
-let _bnavLong = 0;
-function _bnavTap(e, k) {
-  e.preventDefault();
-  if (Date.now() - _bnavLong < 800) return false;        // the long-press already went there
-  shellSheet(k, e.currentTarget, e.detail === 0);
-  return false;
-}
-function _bnavLongInit(bar) {
-  let timer = 0, x0 = 0, y0 = 0;
-  const stop = () => clearTimeout(timer);
-  bar.addEventListener('pointerdown', ev => {
-    const a = ev.target.closest('.bnav-item[aria-haspopup]');
-    if (!a || ev.button) return;
-    x0 = ev.clientX; y0 = ev.clientY;
-    timer = setTimeout(() => { _bnavLong = Date.now(); shellSheetClose(); location.href = a.getAttribute('href'); }, 500);
-  });
-  bar.addEventListener('pointermove', ev => { if (Math.abs(ev.clientX - x0) + Math.abs(ev.clientY - y0) > 10) stop(); });
-  ['pointerup', 'pointercancel', 'pointerleave'].forEach(n => bar.addEventListener(n, stop));
-  bar.addEventListener('contextmenu', ev => { if (ev.target.closest('.bnav-item[aria-haspopup]')) ev.preventDefault(); });
 }
 
 /* ═════════ Create, from the round + (phones / tablets) ═════════
