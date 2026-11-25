@@ -1266,6 +1266,9 @@ async function _dmYouLoad() {
   if ((_dmYou && Date.now() - _dmYouAt < 10 * 60000) || _dmYouBusy) return;
   _dmYouBusy = true;
   try {
+    // profile-v2.js needs profile-stats.js when it loads — without it (Home, Discover, Library…) it broke and the card
+    // stayed blank (owner, 25 Nov 2026)
+    await mssLoadScript('js/profile-stats.js');
     await mssLoadScript('js/profile-v2.js');
     const p = window._navUserProfile || {}, uid = window._navUser.id, keys = MSSProfile.statKeys(p).slice(0, 3);
     const count = q => q.then(r => r.count ?? null, () => null);
@@ -3396,11 +3399,12 @@ async function _notifLoad(limit) {
    on sign-out — config.js mssForgetData) and shown at once — the bell's count, the sheet, the Notifications page —
    while the fresh list loads; new ones then simply appear on top. */
 const _notifStore = () => (typeof MSSConsent !== 'undefined' && MSSConsent.allows('speed')) ? localStorage : sessionStorage;
-const _notifKey = () => 'msf_notif_' + (_notifUser?.id || '');
+const _notifKey = uid => 'msf_notif_' + (uid || _notifUser?.id || '');
 function _notifKeep() { try { _notifStore().setItem(_notifKey(), JSON.stringify({ t: Date.now(), items: _notifItems.slice(0, 200) })); } catch {} }
-function _notifKept() {
+// uid: the Notifications page asks as soon as it knows who you are, before the header has loaded your profile
+function _notifKept(uid) {
   if (_notifItems.length) return;
-  try { const c = JSON.parse(_notifStore().getItem(_notifKey()) || 'null'); if (Array.isArray(c?.items) && Date.now() - c.t < 7 * 864e5) _notifItems = c.items.filter(n => !_nfHidden.has(n.id)); } catch {}
+  try { const c = JSON.parse(_notifStore().getItem(_notifKey(uid)) || 'null'); if (Array.isArray(c?.items) && Date.now() - c.t < 7 * 864e5) _notifItems = c.items.filter(n => !_nfHidden.has(n.id)); } catch {}
 }
 function _notifRenderBadge() {
   const unread = _notifItems.filter(n => !n.read_at).length;

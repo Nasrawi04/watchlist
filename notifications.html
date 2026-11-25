@@ -240,6 +240,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
     // what you saw last time at once (nav.js _notifKept); the fresh list follows and adds anything new on top
+    _notifKept(user.id);
     if (_notifItems.length) { _npLoaded = true; renderNotificationsPage(); }
     await _notifLoad(200);
     _npLoaded = true;
