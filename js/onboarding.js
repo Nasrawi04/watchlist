@@ -375,7 +375,8 @@ const MSSOnboarding = (() => {
     if (u) bg.style.backgroundImage = cssURL(u);
   }
   const avHTML = (cls = '') => { const p = prof(), u = safeURL(p.avatar_url), name = p.display_name || p.username || '?';
-    return `<div class="ob-av${layout().photo === 'circle' ? '' : ' is-poster'}${cls}">${u ? `<img src="${esc(u)}" alt="">` : esc(name[0].toUpperCase())}</div>`; };
+    const src = layout().photo === 'circle' ? u : mssPhotoPoster(p);   // the poster framing for the tall photo
+    return `<div class="ob-av${layout().photo === 'circle' ? '' : ' is-poster'}${cls}">${u ? `<img src="${esc(src)}" alt="">` : esc(name[0].toUpperCase())}</div>`; };
 
   const STEP = {
     /* 1 · Profile photo */

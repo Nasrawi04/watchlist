@@ -71,7 +71,7 @@ const MSSProfile = (() => {
   // the poster: their photo (whole, over a blurred copy — square photos from before 2:3), else their initial on MSF green;
   // as a circle, the photo fills it
   function photoPosterHTML(p, own) {
-    const u = safeURL(p && p.avatar_url), round = photoShape(p) === 'circle';
+    const round = photoShape(p) === 'circle', u = round ? safeURL(p && p.avatar_url) : mssPhotoPoster(p);   // each shape its own framing
     const inner = u ? `${round ? '' : `<span class="pf-poster-fill" style="background-image:url('${u}')" aria-hidden="true"></span>`}<img src="${u}" alt="">`
       : `<span class="pf-poster-mono" aria-hidden="true"><b>${esc(initialOf(p))}</b>${round ? '' : '<i>MSF</i>'}</span>`;
     const cls = `tv-poster pf-poster${round ? ' is-circle' : ''}${u ? '' : ' is-default'}`;
@@ -123,7 +123,7 @@ const MSSProfile = (() => {
     const facts = [(p.display_name || '').trim() && p.username ? `<span translate="no">@${esc(p.username)}</span>` : '', since ? `<span>Member since ${esc(since)}</span>` : ''].filter(Boolean);
     el.innerHTML = `<div class="tv-mini de-mini tp-mini pf-mini" id="pfMini" inert>
         <span class="tv-hero-bg" aria-hidden="true"></span><span class="tv-hero-shade" aria-hidden="true"></span>
-        ${safeURL(p.avatar_url) ? `<img class="tv-mini-poster${photoShape(p) === 'circle' ? ' pf-mini-circle' : ''}" src="${safeURL(p.avatar_url)}" alt="">` : `<span class="tv-mini-poster pf-mini-mono${photoShape(p) === 'circle' ? ' pf-mini-circle' : ''}" aria-hidden="true">${esc(initialOf(p))}</span>`}
+        ${safeURL(p.avatar_url) ? `<img class="tv-mini-poster${photoShape(p) === 'circle' ? ' pf-mini-circle' : ''}" src="${photoShape(p) === 'circle' ? safeURL(p.avatar_url) : mssPhotoPoster(p)}" alt="">` : `<span class="tv-mini-poster pf-mini-mono${photoShape(p) === 'circle' ? ' pf-mini-circle' : ''}" aria-hidden="true">${esc(initialOf(p))}</span>`}
         <span class="tv-mini-txt"><small translate="no">${p.username ? '@' + esc(p.username) : 'Profile'}</small><b translate="no">${esc(nameOf(p))}</b></span>
         ${h.match ? ringPct(h.match.pct, 'xs') : ''}
       </div>
@@ -757,7 +757,7 @@ const MSSProfile = (() => {
       body: `<div class="pf-edit">
         <div class="pf-edit-photo"><span class="pf-av">${avatarHTML(p)}</span><div><b>Profile photo</b><small>Upload one, or use a movie or show’s poster</small></div>
           <span class="pf-edit-photo-acts"><a class="pf-btn-soft" href="settings.html#profile">${icon('image', 14)} Upload</a>
-          <button type="button" class="pf-btn-soft" data-go="poster">${icon('film', 14)} Poster</button></span></div>
+          <button type="button" class="pf-btn-soft" data-go="poster">${icon('film', 14)} Poster</button>${mssPhotoPic(p) ? `<button type="button" class="pf-btn-soft" data-go="adjust">${icon('edit', 14)} Adjust</button>` : ''}</span></div>
         <div class="pf-field"><span class="pf-field-l" id="pfEdShapeL"><span>Show my photo as</span></span>
           <div class="mss-choices pf-shape" role="radiogroup" aria-labelledby="pfEdShapeL">${[['poster', 'Poster', 'Tall, like a title’s poster'], ['circle', 'Circle', 'Round, like everywhere else']].map(([k, l, d]) =>
             `<button type="button" role="radio" class="mss-choice" aria-checked="${photoShape(p) === k}" data-shape="${k}"><span class="mss-choice-pic${k === 'circle' ? ' is-circle' : ''}" aria-hidden="true"></span><span class="mss-choice-t"><b>${l}</b><small>${d}</small></span></button>`).join('')}</div>
@@ -779,7 +779,7 @@ const MSSProfile = (() => {
       onClose: () => { E = null; } });
     E.h = h;
     h.body.addEventListener('input', ev => { const n = document.getElementById(ev.target.id + 'N'); if (n) n.textContent = `${ev.target.value.length}/${ev.target.maxLength}`; });
-    h.body.addEventListener('click', ev => { const g = ev.target.closest('[data-go]'); if (g) ({ banner: editBanner, stats: editStats, poster: posterPhoto })[g.dataset.go]();
+    h.body.addEventListener('click', ev => { const g = ev.target.closest('[data-go]'); if (g) ({ banner: editBanner, stats: editStats, poster: posterPhoto, adjust: adjustPhoto })[g.dataset.go]();
       const sh = ev.target.closest('[data-shape]'); if (sh) setShape(sh.dataset.shape); });
   }
   // Poster / Circle: saved at once (the header behind follows); the switch only moves once it's saved
@@ -792,14 +792,21 @@ const MSSProfile = (() => {
     showToast(shape === 'circle' ? 'Your photo shows as a circle' : 'Your photo shows as a poster');
   }
   // a title's poster as your photo: the site's picker in poster mode; the header and this panel's photo follow
+  // a title's poster as your photo (the site's picker in poster mode), or Adjust the framings you have — both end in
+  // Adjust photo (avatar-upload.js); the header and this panel's photo follow
+  const photoSaved = { onSaved: (url, row) => {
+    const p = P.head?.profile; if (!p) return;
+    p.avatar_url = url; if (row) p.profile_layout = row.profile_layout;
+    const av = document.querySelector('.pf-edit-photo .pf-av'); if (av) av.innerHTML = avatarHTML(p);
+    header(P.head.el, P.head);
+  } };
   async function posterPhoto() {
     await mssLoadScript('js/backdrop-picker.js');
-    MSSBackdropPicker.photo({ onSaved: url => {
-      const p = P.head?.profile; if (!p) return;
-      p.avatar_url = url;
-      const av = document.querySelector('.pf-edit-photo .pf-av'); if (av) av.innerHTML = avatarHTML(p);
-      header(P.head.el, P.head);
-    } });
+    MSSBackdropPicker.photo(photoSaved);
+  }
+  async function adjustPhoto() {
+    await mssLoadScript('js/avatar-upload.js');
+    MSSAvatarUpload.adjust(photoSaved);
   }
   async function saveDetails(h) {
     const p = P.head.profile, uid = window._navUser?.id || p.id;

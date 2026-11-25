@@ -102,7 +102,7 @@ function _rtRow(e, n) {
   return mssListCard(e, { onclick: '_rtOpen(' + attrJSON(e.id) + ')', rank: n || 0, type: type });
 }
 function _rtCard(e, n) {
-  return MSSCard.poster(mssEntryCard(e, { cls: 'lv-card lv-in-view', onclick: '_rtOpen(' + attrJSON(e.id) + ')',
+  return MSSCard.poster(mssEntryCard(e, { cls: 'lv-card', onclick: '_rtOpen(' + attrJSON(e.id) + ')',
     age: _rtOwner ? [e.tmdb_type || (e.cat === 'movies' ? 'movie' : 'tv'), e.tmdb_id] : null, rank: n || 0 }));
 }
 

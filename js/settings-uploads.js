@@ -95,7 +95,8 @@ const MSSUploads = (() => {
     if (!ok) return;
     btn.disabled = true;
     try {
-      const updated = await updateProfile(me, { avatar_url: null });
+      const { pic, ...lay } = _sProfile?.profile_layout || {};        // the framings go with the photo (avatar-upload.js)
+      const updated = await updateProfile(me, { avatar_url: null, ...(pic ? { profile_layout: lay } : {}) });
       window._navUserProfile = updated;
       _sProfile = updated;
       await mssAvatarTidy(me, null).catch(err => console.warn('My Uploads: the photo file stayed', err));

@@ -89,7 +89,6 @@ let _lvReact = null;         // likes on someone else's list
 // Grid or List: kept per list on this device — a list opens in the view you left it in, any other in Grid (owner)
 const _lvViewKey = 'msf_list_view_' + (_lvListId || '');
 let _lvView = (() => { try { return localStorage.getItem(_lvViewKey) === 'list' ? 'list' : 'grid'; } catch { return 'grid'; } })();
-let _lvRevealObserver = null;
 const _lvOwn = () => !!_lvUser && !!_lvList && _lvList.user_id === _lvUser.id;
 const _lvIsTmdbOnly = e => typeof e.id === 'string' && e.id.startsWith('tmdb:');
 const _lvFmt = d => new Date(d).toLocaleDateString(MSSI18n.locale, { day: 'numeric', month: 'short', year: 'numeric' });
@@ -152,7 +151,7 @@ mssSkeleton.define('lv-page', () => {
   const e = { id: '', title: 'Sample title', year: '2024', cat: 'tv', final_score: 8.5 };
   return `<div class="lh is-skel"><div class="lh-in"><div class="lh-text"><h1 class="lh-title">Sample list name</h1><p class="lh-desc">A sample description for this list.</p></div></div></div>
     <div class="lv-bar"><div class="lv-bar-l"></div><div class="lv-bar-r" data-skel-keep><div class="lv-sf-bar">${SF.bar('lv', 'all')}</div><div class="view-toggle">${_lvViewToggleHTML()}</div></div></div>
-    <div class="${_lvView === 'list' ? 'lp-grid lv-rows' : 'lv-grid msf-grid'}">${Array.from({ length: n }, () => _lvView === 'list' ? _lvRowHTML(e, null) : _lvCardHTML(e, null).replace('lv-card"', 'lv-card lv-in-view"')).join('')}</div>`.replace(/ (id|onclick)="[^"]*"/g, '');
+    <div class="${_lvView === 'list' ? 'lp-grid lv-rows' : 'lv-grid msf-grid'}">${Array.from({ length: n }, () => _lvView === 'list' ? _lvRowHTML(e, null) : _lvCardHTML(e, null)).join('')}</div>`.replace(/ (id|onclick)="[^"]*"/g, '');
 });
 
 /* …and the editor's (?edit=1 / ?new=1): its head with Cancel · Save changes, the Details and Your list panels
@@ -170,15 +169,6 @@ mssSkeleton.define('le-page', () => {
 });
 // edit mode: the editor's skeleton instead of the list page's
 if (_lvParams.get('edit') || _lvParams.get('new')) $('lvLoading').dataset.skel = 'le-page';
-
-function _lvObserveCards() {
-  if (!_lvRevealObserver) {
-    _lvRevealObserver = new IntersectionObserver(entries => entries.forEach(entry => {
-      if (entry.isIntersecting) { entry.target.classList.add('lv-in-view'); _lvRevealObserver.unobserve(entry.target); }
-    }), { rootMargin: '0px 0px -8% 0px', threshold: 0.05 });
-  }
-  $('lvGrid').querySelectorAll('.lv-card').forEach(el => _lvRevealObserver.observe(el));
-}
 
 function _lvRenderGrid() {
   const grid = $('lvGrid');
@@ -214,7 +204,6 @@ function _lvRenderGrid() {
   const count = Math.min(shown.length, _lvRows.n * cols), left = shown.length - count;
   grid.innerHTML = shown.slice(0, count).map((e, i) => _lvView === 'list' ? _lvRowHTML(e, ranks[i]) : _lvCardHTML(e, ranks[i])).join('')
     + (left > 0 ? `<div class="msf-more lv-more"><button type="button" class="msf-more-btn" onclick="_lvMore()">Show ${Math.min(left, R[1] * cols)} more <small>· ${left} left</small></button></div>` : '');
-  if (_lvView === 'grid') _lvObserveCards();
 }
 const _LV_ROWS = { grid: [5, 3], list: [10, 5] };   // first rows, rows per Show more (library-view.js's LIB_ROWS)
 const _lvRows = {};
@@ -229,7 +218,6 @@ function _lvMore() {
   _lvRows.n += _LV_ROWS[_lvView][1];
   _lvRenderGrid();
   const cards = $('lvGrid').querySelectorAll('.lv-card, .lv-lp');
-  for (let i = 0; i < from && i < cards.length; i++) cards[i].classList.add('lv-in-view');   // the ones already seen don't fade in again
   scrollTo({ top: y, behavior: 'instant' });   // (the page scrolls smoothly otherwise)
   cards[from]?.focus?.({ preventScroll: true });
 }
@@ -259,7 +247,7 @@ function _lvHero() {
   document.title = `${l.title} — MyScreenFolio`;
   $('lvBack').setAttribute('href', _lvFrom);
   $('lvBack').textContent = '‹ ' + ({ 'lists.html': 'Lists', 'profile.html': 'Profile', 'friends.html': 'Friends' }[_lvFrom.split('?')[0]] || 'Back');
-  $('lvOwner').innerHTML = ` · ${mssProfileLinkHTML({ id: l.user_id, username: p.username }, `<span class="lh-owner"><span class="lh-av">${safeURL(p.avatar_url) ? `<img src="${safeURL(p.avatar_url)}" alt="" loading="lazy">` : escHTML((p.username || '?')[0].toUpperCase())}</span>@${escHTML(p.username || 'user')}</span>`)}`;
+  $('lvOwner').innerHTML = `<span class="lh-dot" aria-hidden="true">·</span>${mssProfileLinkHTML({ id: l.user_id, username: p.username }, `<span class="lh-owner"><span class="lh-av">${safeURL(p.avatar_url) ? `<img src="${safeURL(p.avatar_url)}" alt="" loading="lazy">` : escHTML((p.username || '?')[0].toUpperCase())}</span>@${escHTML(p.username || 'user')}</span>`)}`;
   $('lvChips').innerHTML = (MSSList.officialBadge(l) || MSSList.rankBadge(l.ranked)) + mssVisBadge(l.visibility)
     + (_lvShared ? '<span class="cl-tag">Shared with you</span>' : '');
   $('lvTitle').textContent = l.title;

@@ -15,7 +15,7 @@
      framing: { targets(sel), live(all) } | null         Adjust framing (MSSBdTools.frame targets); null → no framing
      onSave(sel) → Promise (throw to stay open), onReset() → Promise, onClose()
    })
-   MSSBackdropPicker.photo({ onSaved(url) }) — a title's poster as your profile photo (it's 2:3, like the photo)
+   MSSBackdropPicker.photo({ onSaved(url, profile) }) — a title's poster as your profile photo → Adjust photo frames it
    MSSBackdropPicker.usePoster(path) → url — save a TMDB poster path as your photo (Set up your folio's quick picks)
    Requires config.js, db.js (updateProfile), nav.js (_tmdbSearch); loads js/panel.js, js/backdrop-tools.js and
    css/profile.css (its "backdrop editor" styles, .pf-bn-*) on pages that don't have it.
@@ -146,28 +146,31 @@ const MSSBackdropPicker = (() => {
     me.o.onClose?.();
   }
 
-  /* ── A poster as your profile photo: saved as TMDB's picture (nothing uploaded, so no photo check);
-     your old uploaded photo is tidied away like a new upload does ── */
+  /* ── A poster as your profile photo: pick one here, then frame its Poster and Circle in Adjust photo
+     (avatar-upload.js — a TMDB poster isn't put through the photo check) ── */
   function photo(o = {}) {
     if (!window._navUser?.id) return;
-    const now = safeURL(window._navUserProfile?.avatar_url);
-    return open({ kind: 'poster', title: 'Profile photo', subtitle: 'Any movie or show’s poster', saveLabel: 'Use this poster',
+    const now = mssPhotoPoster(window._navUserProfile);
+    let chosen = null;
+    return open({ kind: 'poster', title: 'Profile photo', subtitle: 'Any movie or show’s poster', saveLabel: 'Next: frame it',
       emptyText: 'Search for a movie or show, then pick one of its posters.',
       preview: (box, sel) => {
         box.classList.add('is-photo');
         const u = sel ? `${IMG}w342${esc(sel.path)}` : now;
         box.innerHTML = `<span class="pf-bn-photo">${u ? `<img src="${u}" alt="">` : icon('user', 22)}</span>
-          <span class="pf-bn-photo-tx"><b>${sel ? 'New photo' : 'Your photo now'}</b><small>Your profile shows the whole poster. Elsewhere it’s cropped to a circle.</small></span>`;
+          <span class="pf-bn-photo-tx"><b>${sel ? 'New photo' : 'Your photo now'}</b><small>Next, you frame it twice: the poster your profile shows, and the circle shown everywhere else.</small></span>`;
       },
-      onSave: async sel => { o.onSaved?.(await usePoster(sel.path)); } });
+      onSave: async sel => { chosen = sel.path; },
+      onClose: async () => { if (!chosen) return; await mssLoadScript('js/avatar-upload.js'); MSSAvatarUpload.poster(chosen, o); } });
   }
   // a TMDB poster path → your profile photo (also Set up your folio's "From your Top 5")
   async function usePoster(path) {
     const uid = window._navUser?.id, url = `${IMG}w500${path}`;
-    try { await updateProfile(uid, { avatar_url: url }); }
+    const { pic, ...lay } = window._navUserProfile?.profile_layout || {};   // a quick pick has no framings of its own
+    try { await updateProfile(uid, { avatar_url: url, ...(pic ? { profile_layout: lay } : {}) }); }
     catch (err) { showToast('Couldn’t save — try again.', 'err'); throw err; }
     mssAvatarTidy(uid, url).catch(() => {});
-    if (window._navUserProfile) { window._navUserProfile.avatar_url = url; _shellUserPaint(window._navUserProfile); }
+    if (window._navUserProfile) { window._navUserProfile.avatar_url = url; if (pic) window._navUserProfile.profile_layout = lay; _shellUserPaint(window._navUserProfile); }
     showToast('Photo updated');
     return url;
   }

@@ -234,6 +234,7 @@ function _navMemberMedal(uid) {
 function _navAvatarShrink(uid, profile) {
   const url = safeURL(profile?.avatar_url), key = 'mss_ava_tidy_' + uid;
   if (!url || !url.includes('/storage/v1/object/public/avatars/')) return;   // only photos in our own storage
+  if (mssPhotoPic(profile)) return;                                         // framed in Adjust photo: already the right size
   try { if (localStorage.getItem(key) === url) return; } catch { return; }
   setTimeout(async () => {
     try {

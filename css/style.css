@@ -6133,7 +6133,10 @@ button.acc-sw-row:hover { border-color:var(--border-olive); }
 .lh-shade { position:absolute; inset:0; z-index:-1; background:linear-gradient(180deg, rgba(0,0,0,.42) 0%, rgba(0,0,0,.28) 36%, rgba(0,0,0,.68) 74%, rgba(0,0,0,.84) 100%); }   /* white text ≥ 4.5:1 on any picture */
 .lh-top { display:flex; align-items:center; justify-content:flex-end; gap:12px; min-height:36px; }
 /* ‹ Lists · @owner — above the hero, on the page (owner) */
-.lh-crumb { display:flex; align-items:center; gap:4px; min-width:0; margin:0 0 12px; font:700 13px 'Manrope',var(--sans); color:var(--text-2); }
+.lh-crumb { display:flex; align-items:center; gap:4px; min-width:0; margin:0 0 12px; font:700 13px/1 'Manrope',var(--sans); color:var(--text-2); }
+#lvOwner { display:inline-flex; align-items:center; gap:8px; min-width:0; }   /* the dot, picture and @name on one centre line */
+#lvOwner:empty { display:none; }
+.lh-dot { color:var(--text-muted); }
 .lh-crumb a { color:inherit; text-decoration:none; }
 .lh-crumb a:hover { text-decoration:underline; text-underline-offset:3px; }
 .lh-owner { display:inline-flex; align-items:center; gap:6px; }
@@ -6244,16 +6247,9 @@ button.acc-sw-row:hover { border-color:var(--border-olive); }
 @media (prefers-reduced-motion:reduce) { .lh-bd { transition:none; } .le-panel .la-row.dragging { rotate:none; } }
 
 /* ── Grid view ── */
-/* the standard card grid (.msf-grid); cards rise in as they scroll into view */
-.lv-card {
-  opacity:0; transform:translateY(18px); width:100%; box-sizing:border-box;
-  transition:opacity .5s var(--ease), transform .5s var(--ease);
-}
-.lv-card.lv-in-view { opacity:1; transform:none; }
+/* the standard card grid (.msf-grid); no scroll-in animation — Show more adds rows (owner) */
+.lv-card { width:100%; box-sizing:border-box; }
 
-/* ── List view: the standard list row (.msf-rows / .msf-row); rows slide in as they scroll into view ── */
-.lv-list-row { opacity:0; transform:translateX(-10px); transition:opacity .4s var(--ease), transform .4s var(--ease), box-shadow var(--trans) var(--ease), border-color var(--trans) var(--ease); }
-.lv-list-row.lv-in-view { opacity:1; transform:none; }
 /* ── v572: plain page layout (like Discover's See All) ── */
 .lv-owner-row { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:.9rem; }
 .lv-owner-row .lv-owner { margin-bottom:0; }
@@ -9830,17 +9826,57 @@ a.pw-tile:hover::after { opacity:1; }
 .pw-tile img.in { opacity:1; }
 
 /* ═════════════════════════════════════════════════════════════
-   §72  Adjust Photo — framing an uploaded profile photo (js/avatar-upload.js: Settings and Set up your folio)
+   §72  Adjust photo — a profile photo's two framings, Poster and Circle (js/avatar-upload.js: Settings, Edit profile, Set up your folio)
    ═════════════════════════════════════════════════════════════ */
-.avatar-crop-vp { position:relative; width:200px; height:300px; margin:0 auto 1.25rem; border-radius:14px; overflow:hidden;
-  background:var(--fill-subtle); border:0.5px solid var(--border-default); cursor:grab; touch-action:none; }
-.avatar-crop-vp.is-drag { cursor:grabbing; }
-.avatar-crop-vp img { position:absolute; top:50%; left:50%; max-width:none; user-select:none; -webkit-user-select:none; -webkit-user-drag:none; pointer-events:none; }
-.avatar-crop-ring { position:absolute; left:0; right:0; top:50%; aspect-ratio:1; transform:translateY(-50%); border-radius:50%;
-  border:1.5px dashed color-mix(in srgb, var(--p-ivory-50) 75%, transparent); pointer-events:none; }
-.avatar-crop-hint { max-width:320px; margin:-.5rem auto 1.25rem; text-align:center; font-size:12px; line-height:1.45; color:var(--text-muted); }
-.avatar-zoom { max-width:420px; margin:0 auto 1.5rem; }
-.avatar-crop-rule .mss-upload-rule { margin:0 0 1rem; }
+.pe { display:flex; flex-direction:column; gap:14px; }
+.pe-tabs { align-self:center; gap:2px; margin:0; padding:3px; border:0.5px solid var(--border-2); border-radius:var(--radius-sm); background:var(--bg-3); }   /* the site's segmented switch */
+.pe-tabs .pn-toggle-btn { min-width:104px; min-height:36px; padding:0 18px; border:0; border-radius:calc(var(--radius-sm) - 3px); font:700 13px 'Manrope',var(--sans); }
+.pe-hint { margin:0 auto; max-width:440px; min-height:2.9em; text-align:center; font-size:12.5px; line-height:1.45; color:var(--text-muted); }
+/* the stage: always dark (a photo editor's canvas); the picture is dimmed outside the frame */
+.pe-stage { position:relative; overflow:hidden; width:100%; height:clamp(300px, 52vh, 420px); border-radius:var(--radius-sm);
+  background:var(--p-forest-950); border:1px solid var(--border-default); cursor:grab; touch-action:none; user-select:none; -webkit-user-select:none; color-scheme:dark; }
+.pe-stage.is-drag { cursor:grabbing; }
+.pe-stage:focus-visible { outline:2px solid var(--focus-ring); outline-offset:2px; }
+.pe-img { position:absolute; top:0; left:0; max-width:none; transform-origin:0 0; pointer-events:none; -webkit-user-drag:none; }
+.pe-frame { position:absolute; top:50%; left:50%; translate:-50% -50%; border-radius:12px; pointer-events:none;
+  border:1.5px solid var(--text-on-photo); box-shadow:0 0 0 200vmax var(--overlay-photo); }   /* the spread is the dimming mask, not a shadow */
+.pe-frame.is-circle { border-radius:50%; }
+/* thirds: shown while you move the picture */
+.pe-frame i { position:absolute; background:color-mix(in srgb, var(--text-on-photo) 45%, transparent); opacity:0; transition:opacity .15s ease; }
+.pe-frame i:nth-child(1), .pe-frame i:nth-child(2) { top:0; bottom:0; width:1px; }
+.pe-frame i:nth-child(1) { left:33.333%; } .pe-frame i:nth-child(2) { left:66.666%; }
+.pe-frame i:nth-child(3), .pe-frame i:nth-child(4) { left:0; right:0; height:1px; }
+.pe-frame i:nth-child(3) { top:33.333%; } .pe-frame i:nth-child(4) { top:66.666%; }
+.pe-stage.is-drag .pe-frame i { opacity:1; }
+.pe-tools { display:flex; align-items:center; gap:10px; }
+.pe-zoom { flex:1; min-width:0; }
+.pe-pct { flex:none; min-width:3.4em; text-align:end; font:400 18px/1 'Bebas Neue',var(--sans); letter-spacing:.02em; color:var(--text-2); font-variant-numeric:tabular-nums; }
+.pe-reset { flex:none; min-height:38px; }
+.pe-reset svg { width:14px; height:14px; }
+.pe-warn { display:flex; align-items:flex-start; gap:8px; margin:0; padding:10px 12px; border-radius:var(--radius-sm); border:1px solid var(--border-default); background:var(--fill-subtle); font-size:12.5px; line-height:1.45; color:var(--text-2); }
+.pe-warn[hidden] { display:none; }
+.pe-warn svg { flex:none; margin-top:2px; }
+.pe-warn b { color:var(--text); }
+/* the previews: each shows its own framing; tapping one switches to it */
+.pe-pvs { display:flex; align-items:flex-end; justify-content:center; gap:28px; padding:14px 12px; border-radius:var(--radius-sm); border:1px solid var(--border-default); background:var(--fill-subtle); }
+.pe-pv-g { display:flex; flex-direction:column; align-items:center; gap:8px; }
+.pe-pv-l { font:700 11px 'Manrope',var(--sans); letter-spacing:.08em; text-transform:uppercase; color:var(--text-muted); }
+.pe-pv-row { display:flex; align-items:center; gap:12px; }
+.pe-pv { display:grid; place-items:center; min-width:44px; min-height:44px; padding:3px; border:0; border-radius:12px; background:none; cursor:pointer; }
+.pe-pv-pic { position:relative; display:block; overflow:hidden; width:var(--w); height:var(--h); border-radius:6px; background:var(--p-forest-950); outline:1px solid var(--border-default); }
+.pe-pv-pic.is-circle { border-radius:50%; }
+.pe-pv-pic img { position:absolute; top:0; left:0; max-width:none; transform-origin:0 0; pointer-events:none; }
+.pe-pv.is-on .pe-pv-pic { outline:2px solid var(--selected-fg); outline-offset:2px; }
+.pe-pv:focus-visible { outline:2px solid var(--focus-ring); outline-offset:2px; }
+.avatar-crop-rule .mss-upload-rule { margin:0; }
+@media (max-width:480px) {
+  .pe-tools { flex-wrap:wrap; }
+  .pe-zoom { flex-basis:100%; }
+  .pe-pct { order:1; text-align:start; }
+  .pe-reset { order:2; margin-inline-start:auto; }
+  .pe-pvs { gap:18px; }
+}
+@media (prefers-reduced-motion:reduce) { .pe-frame i { transition:none; } }
 
 /* ═════════════════════════════════════════════════════════════
    §73  Device frames — a real screenshot inside a laptop, phone or tablet (Welcome slides, Help & Guides)

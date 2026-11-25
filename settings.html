@@ -62,6 +62,7 @@
               <div class="set-pf-names"><b id="pfName" translate="no"></b><small id="pfHandle" translate="no"></small></div>
               <div class="set-pf-acts">
                 <button type="button" class="set-btn" id="pfNew" aria-haspopup="true" aria-expanded="false" onclick="_photoMenu(this)"><span data-ic="download" class="set-ic-up"></span><span class="set-pf-new-l">New photo</span><span class="set-pf-new-s">Photo</span></button>
+                <button type="button" class="set-btn" id="phAdjust" onclick="_avatarAdjust()" hidden><span data-ic="edit"></span><span>Adjust</span></button>
                 <button type="button" class="set-btn" id="phRemove" onclick="MSSUploads.photo(this)" hidden>Remove</button>
               </div>
             </div>
@@ -711,13 +712,15 @@ async function changePassword(h) {
 const _photoShapeOf = p => p?.profile_layout?.photo === 'circle' ? 'circle' : 'poster';
 // both previews from your profile (or a picture that's still uploading: preview)
 function _photoPaint(preview) {
-  const p = _sProfile || {}, url = preview || safeURL(p.avatar_url), name = p.display_name || p.username || 'You';
+  const p = _sProfile || {}, name = p.display_name || p.username || 'You', poster = _photoShapeOf(p) === 'poster';
+  const url = preview || (poster ? mssPhotoPoster(p) : safeURL(p.avatar_url));   // the poster framing or the circle one
   const ph = document.getElementById('pfPhoto');
   ph.innerHTML = url ? `<img src="${url}" alt="">` : escHTML((name[0] || '?').toUpperCase());
-  ph.classList.toggle('is-poster', _photoShapeOf(p) === 'poster');       // exactly as your profile shows it
+  ph.classList.toggle('is-poster', poster);       // exactly as your profile shows it
   document.querySelectorAll('.mss-choice[data-shape]').forEach(b => b.setAttribute('aria-checked', String(b.dataset.shape === _photoShapeOf(p))));
   document.getElementById('phRemove').hidden = !safeURL(p.avatar_url);
-  document.getElementById('setAcctAv').innerHTML = _avatarHTML({ ...p, avatar_url: url });
+  document.getElementById('phAdjust').hidden = !MSSAvatarUpload.canAdjust(p);
+  document.getElementById('setAcctAv').innerHTML = _avatarHTML({ ...p, avatar_url: preview || p.avatar_url });
 }
 // New photo: Upload a photo · Choose a poster (the site's ⋯ menu; a page on phones)
 async function _photoMenu(btn) {
@@ -785,18 +788,14 @@ async function _photoShape(shape) {
   try { await updateProfile(_sUser.id, { profile_layout: lay }); if (window._navUserProfile) window._navUserProfile.profile_layout = lay; showToast(shape === 'circle' ? 'Your photo shows as a circle' : 'Your photo shows as a poster'); }
   catch (err) { console.error(err); p.profile_layout = before; _photoPaint(); showToast('Couldn’t save that — try again.', 'err'); }
 }
-// Upload a photo (avatar-upload.js: frame it, check it, save it)
-function _avatarUpload() {
-  MSSAvatarUpload.pick({ onPreview: url => _photoPaint(url), onSaved: url => { if (_sProfile) _sProfile.avatar_url = url; _photoPaint(); MSSUploads.draw(); } });
-}
-// A title's poster as your photo (backdrop-picker.js, poster mode)
+// Upload a photo, a title's poster, or Adjust the one you have — all end in Adjust photo (avatar-upload.js:
+// the Poster and Circle framings, the check, the save)
+const _photoSaved = { onSaved: (url, row) => { if (_sProfile) Object.assign(_sProfile, { avatar_url: url, profile_layout: row?.profile_layout ?? _sProfile.profile_layout }); _photoPaint(); MSSUploads.draw(); } };
+function _avatarUpload() { MSSAvatarUpload.pick(_photoSaved); }
+function _avatarAdjust() { MSSAvatarUpload.adjust(_photoSaved); }
 async function _avatarPoster() {
   await mssLoadScript('js/backdrop-picker.js');
-  MSSBackdropPicker.photo({ onSaved: url => {
-    if (_sProfile) _sProfile.avatar_url = url;
-    _photoPaint();
-    MSSUploads.draw();
-  } });
+  MSSBackdropPicker.photo(_photoSaved);
 }
 
 /* ── Messages passcode (100): a lock screen, optional ── */

@@ -1848,14 +1848,19 @@ try {
    (~40–70 kB); round avatars elsewhere crop its middle. Photos from before are square — still fine everywhere.
    Settings uses it for uploads, nav.js to shrink old ones (keeping their shape). */
 const MSS_AVATAR = { px: 400, h: 600, q: 0.82, max: 110 * 1024 };   // px = width; max = a saved photo bigger than this gets redone
+// Your photo's two framings (avatar-upload.js — Adjust photo): avatar_url is the circle, so every round avatar shows it;
+// profile_layout.pic.poster is the 2:3 poster. pic counts only while avatar_url is still the one it was made with.
+const mssPhotoPic = p => { const pic = p?.profile_layout?.pic; return pic && pic.av && pic.av === p.avatar_url && safeURL(pic.poster) && safeURL(pic.src) ? pic : null; };
+// the picture for a tall (poster-shaped) photo: the poster framing, else the photo itself (older photos, posters)
+const mssPhotoPoster = p => mssPhotoPic(p)?.poster || safeURL(p?.avatar_url) || '';
 // Older versions saved avatar.png / avatar.jpeg, so a new photo left the old file behind.
-// Removes every file in your avatars folder except the one your profile uses (keepUrl;
-// null = remove them all, for deleting the account).
-async function mssAvatarTidy(uid, keepUrl) {
-  const keep = decodeURIComponent(String(keepUrl || '').split('?')[0].split('/').pop());
+// Removes every file in your avatars folder except the ones your profile uses (keep: a URL or a list of them —
+// the circle, the poster and the original; null = remove them all, for deleting the account).
+async function mssAvatarTidy(uid, keep) {
+  const names = new Set([].concat(keep || []).map(u => decodeURIComponent(String(u || '').split('?')[0].split('/').pop())));
   if (!uid) return;
   const { data } = await sb.storage.from('avatars').list(uid);
-  const old = (data || []).map(f => f.name).filter(n => n && n !== keep);
+  const old = (data || []).map(f => f.name).filter(n => n && !names.has(n));
   if (old.length) await sb.storage.from('avatars').remove(old.map(n => `${uid}/${n}`));
 }
 
