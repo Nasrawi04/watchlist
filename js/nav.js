@@ -1063,22 +1063,32 @@ function _dmPaintCounts() {
 }
 
 // shell_summary (117), kept for 2 minutes this session; anything you log drops it (mss:watched / progress)
+// (owner, 25 Nov 2026) the last summary is shown at once — up to a day old — and asked again in the background once
+// it's 2 minutes old; with Faster pages it's kept per account across tabs (deleted on sign-out), else for this tab
+const _shellSumStore = () => (typeof MSSConsent !== 'undefined' && MSSConsent.allows('speed')) ? localStorage : sessionStorage;
+let _shellSumAt = 0, _shellSumBusy = null;
 async function _shellSummary(force) {
   const uid = window._navUser?.id;
   if (!uid) return null;
-  if (!force && !_shellSum) try { const c = JSON.parse(sessionStorage.getItem('mss_shell_sum') || 'null'); if (c?.uid === uid && Date.now() - c.at < 120000) _shellSum = c.v; } catch {}
-  if (_shellSum && !force) { _dmPaintCounts(); _dmRefresh(); return _shellSum; }
+  if (!_shellSum) try { const c = JSON.parse(_shellSumStore().getItem('mss_shell_sum') || 'null'); if (c?.uid === uid && Date.now() - c.at < 864e5) { _shellSum = c.v; _shellSumAt = c.at; } } catch {}
+  if (_shellSum) { _dmPaintCounts(); _dmRefresh(); }
+  if (_shellSum && !force && Date.now() - _shellSumAt < 120000) return _shellSum;
+  if (_shellSumBusy) return _shellSumBusy;
+  return (_shellSumBusy = _shellSumFetch(uid).finally(() => { _shellSumBusy = null; }));
+}
+async function _shellSumFetch(uid) {
+  const was = JSON.stringify(_shellSum);
   try {
     const { data, error } = await sb.rpc('shell_summary');
     if (error) throw error;
-    _shellSum = data || {};
-    try { sessionStorage.setItem('mss_shell_sum', JSON.stringify({ uid, at: Date.now(), v: _shellSum })); } catch {}
+    _shellSum = data || {}; _shellSumAt = Date.now();
+    try { _shellSumStore().setItem('mss_shell_sum', JSON.stringify({ uid, at: _shellSumAt, v: _shellSum })); } catch {}
   } catch (err) { console.warn('Menu summary:', err?.message || err); _shellSum = _shellSum || null; }
-  _dmPaintCounts();
-  _dmRefresh();
+  if (JSON.stringify(_shellSum) !== was) { _dmPaintCounts(); _dmRefresh(); }   // redrawn only if it changed
   return _shellSum;
 }
-function _shellSumDrop() { _shellSum = null; try { sessionStorage.removeItem('mss_shell_sum'); } catch {} }
+// something you logged: the kept summary is out of date — still shown, asked again at once
+function _shellSumDrop() { _shellSumAt = 0; }
 ['mss:watched', 'mss:progress', 'mss:library-changed'].forEach(n => document.addEventListener(n, () => { _shellSumDrop(); if (_dmCur) _shellSummary(true); }));
 function _dmRefresh() {
   if (!_dmCur || _isGuest()) return;
@@ -1238,10 +1248,22 @@ function _dmDiaryCard(d) {
 /* You: your profile's backdrop and the first three stats you chose for its header (Edit profile › Profile stats).
    profile-v2.js picks and counts them (the same numbers as your profile); it and your library load the first time
    this card shows, then stay for this visit. Until then the three tiles wait as placeholders. */
-let _dmYou = null, _dmYouBusy = false;
-function _dmYouDrop() { _dmYou = null; }   // your stats or backdrop changed (profile-v2.js)
+let _dmYou = null, _dmYouBusy = false, _dmYouAt = 0;
+// The last card is kept per account (owner, 25 Nov 2026 — Faster pages; deleted on sign-out, config.js mssForgetData):
+// shown at once with your backdrop and stats, worked out again in the background when it's 10 minutes old or
+// something changed. Without Faster pages it's kept for this tab only.
+const _DM_YOU_KEY = () => 'msf_you_card_' + (window._navUser?.id || '');
+const _dmYouStore = () => (typeof MSSConsent !== 'undefined' && MSSConsent.allows('speed')) ? localStorage : sessionStorage;
+function _dmYouRead() {
+  if (_dmYou) return;
+  try { const c = JSON.parse(_dmYouStore().getItem(_DM_YOU_KEY()) || 'null'); if (c?.v?.stats) { _dmYou = c.v; _dmYouAt = c.t || 0; } } catch {}
+}
+function _dmYouDrop() { _dmYouAt = 0; _dmYouLoad(); }   // your stats or backdrop changed (profile-v2.js): worked out again
+['mss:watched', 'mss:progress', 'mss:library-changed'].forEach(n => document.addEventListener(n, () => { _dmYouAt = 0; }));
 async function _dmYouLoad() {
-  if (_dmYou || _dmYouBusy || !window._navUser) return;
+  if (!window._navUser) return;
+  _dmYouRead();
+  if ((_dmYou && Date.now() - _dmYouAt < 10 * 60000) || _dmYouBusy) return;
   _dmYouBusy = true;
   try {
     await mssLoadScript('js/profile-v2.js');
@@ -1251,15 +1273,19 @@ async function _dmYouLoad() {
       keys.includes('lists') ? count(sb.from('favorite_lists').select('id', { count: 'exact', head: true }).eq('user_id', uid).eq('cat', 'custom')) : null,
       keys.includes('diary') ? count(sb.from('diary_watches').select('id', { count: 'exact', head: true }).eq('user_id', uid)) : null]);
     const vals = MSSProfile.statValues(entries, { lists, diary, time: MSSProfile.timeOf(p) }), bd = await MSSProfile.bannerURL(p, entries).catch(() => null);
-    _dmYou = { stats: keys.map(k => [vals[k] ?? '—', MSSProfile.statLabel(k)]), bd: bd?.url ? bd.url.replace('/w1280/', '/w780/') : null };
-    document.querySelectorAll('.dm-you').forEach(el => { el.outerHTML = _dmYouCard(); });
+    const next = { stats: keys.map(k => [vals[k] ?? '—', MSSProfile.statLabel(k)]), bd: bd?.url ? bd.url.replace('/w1280/', '/w780/') : null };
+    const same = JSON.stringify(next) === JSON.stringify(_dmYou);
+    _dmYou = next; _dmYouAt = Date.now();
+    try { _dmYouStore().setItem(_DM_YOU_KEY(), JSON.stringify({ t: _dmYouAt, v: next })); } catch {}
+    if (!same) document.querySelectorAll('.dm-you').forEach(el => { el.outerHTML = _dmYouCard(); });   // redrawn only if it changed
   } catch (err) { console.warn('You card:', err); }
   finally { _dmYouBusy = false; }
 }
 function _dmYouCard() {
+  _dmYouRead();
   const p = window._navUserProfile || {}, name = p.username || '', Y = _dmYou;
   const av = safeURL(p.avatar_url);
-  if (!Y) _dmYouLoad();
+  _dmYouLoad();   // nothing to do while the kept card is fresh
   const tiles = Y ? Y.stats.map(([v, l]) => `<span><b>${escHTML(v)}</b><small>${escHTML(l)}</small></span>`).join('')
     : '<span><b class="skel skel-line"></b><small>&nbsp;</small></span>'.repeat(3);
   return `<a class="dm-card-in dm-you${Y?.bd ? ' has-bd' : ''}" href="profile.html" aria-label="Open your profile"${Y ? '' : ' aria-busy="true"'}>
@@ -3285,6 +3311,7 @@ async function _navMsgRefresh() {
 function _notifInit(user) {
   if (!user || _notifUser) return;
   _notifUser = user;
+  _notifKept(); if (_notifItems.length) _notifRenderBadge();
   _nfDisplayLoad().catch(() => {}).then(() => _notifLoad());
   _navMsgRefresh();
   _notifLive(user);
@@ -3352,6 +3379,7 @@ async function _notifLoad(limit) {
       friendStatus: n.friendship_id ? (F[n.friendship_id] || 'gone') : null,
       inviteStatus: n.type === 'list_invite' ? (I[n.list_id] || 'gone') : null,
       followsMe: n.actor_id ? (FT[n.actor_id] || 'none') : null, iFollow: n.actor_id ? (FF[n.actor_id] || 'none') : null }));
+    _notifKeep();
     _notifRenderBadge();
     if (document.getElementById('notifPanel')?.classList.contains('open')) _notifRenderPanel();
     if (typeof renderNotificationsPage === 'function') renderNotificationsPage();
@@ -3364,6 +3392,16 @@ async function _notifLoad(limit) {
   } catch (e) { console.warn('Notifications load failed:', e); }
 }
 
+/* Your notifications as last seen (owner, 25 Nov 2026): kept per account (Faster pages; else this tab only; deleted
+   on sign-out — config.js mssForgetData) and shown at once — the bell's count, the sheet, the Notifications page —
+   while the fresh list loads; new ones then simply appear on top. */
+const _notifStore = () => (typeof MSSConsent !== 'undefined' && MSSConsent.allows('speed')) ? localStorage : sessionStorage;
+const _notifKey = () => 'msf_notif_' + (_notifUser?.id || '');
+function _notifKeep() { try { _notifStore().setItem(_notifKey(), JSON.stringify({ t: Date.now(), items: _notifItems.slice(0, 200) })); } catch {} }
+function _notifKept() {
+  if (_notifItems.length) return;
+  try { const c = JSON.parse(_notifStore().getItem(_notifKey()) || 'null'); if (Array.isArray(c?.items) && Date.now() - c.t < 7 * 864e5) _notifItems = c.items.filter(n => !_nfHidden.has(n.id)); } catch {}
+}
 function _notifRenderBadge() {
   const unread = _notifItems.filter(n => !n.read_at).length;
   document.querySelectorAll('[data-notif-badge]').forEach(b => {

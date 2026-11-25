@@ -84,6 +84,7 @@ function renderNotificationsPage(o = {}) {
     acts.hidden = true;
     document.getElementById('npFilters').innerHTML = '';
     document.getElementById('npSide').innerHTML = '';
+    list._html = null;                                          // the settings replace the list: it's drawn again on the way back
     list.innerHTML = `<a class="ns-back" href="notifications.html" onclick="return npSetView('list')">${icon('back', 14)} Notifications</a><div id="npSettings"></div>`;
     MSSNotifSettings.render(document.getElementById('npSettings'));
     return;
@@ -100,10 +101,11 @@ function renderNotificationsPage(o = {}) {
   document.getElementById('npReadAll').disabled = !unread;
   document.getElementById('npFilters').innerHTML = _nfFiltersHTML(false);
   const rows = _nfRows(_notifItems.filter(n => _nfMatch(n, _nfFilter)));
-  list.innerHTML = !rows.length ? _notifEmptyHTML(_nfFilter)
+  const html = !rows.length ? _notifEmptyHTML(_nfFilter)
     : `<div class="ntf-list">${_nfListHTML(rows.slice(0, _npShown), { page: true })}${rows.length > _npShown
       ? `<button type="button" class="ntf-older" onclick="npOlder()">Show older</button>` : ''}</div>`;
-  mssFillEpNames(list);
+  // nothing new (a refresh, coming back to the tab): the list stays exactly as it is — no flash
+  if (list._html !== html) { list._html = html; list.innerHTML = html; mssFillEpNames(list); }
   npSide();
 }
 function npOlder() {
@@ -237,6 +239,8 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('npList').innerHTML = mssGuestEmpty('notifications');
       return;
     }
+    // what you saw last time at once (nav.js _notifKept); the fresh list follows and adds anything new on top
+    if (_notifItems.length) { _npLoaded = true; renderNotificationsPage(); }
     await _notifLoad(200);
     _npLoaded = true;
     renderNotificationsPage();

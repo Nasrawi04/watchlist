@@ -198,7 +198,8 @@ function mssForgetKeys(id) {
 function mssForgetData(id) {
   if (!id) return;
   try { if (typeof MSFStore !== 'undefined') MSFStore.forget(id); else indexedDB.deleteDatabase('msf-data-' + id); } catch {}
-  try { localStorage.removeItem('msf_home_snap_' + id); localStorage.removeItem('msf_home_friends_' + id); } catch {}
+  try { localStorage.removeItem('msf_home_snap_' + id); localStorage.removeItem('msf_home_friends_' + id); localStorage.removeItem('msf_you_card_' + id); localStorage.removeItem('msf_notif_' + id); } catch {}
+  try { if (JSON.parse(localStorage.getItem('mss_shell_sum') || 'null')?.uid === id) localStorage.removeItem('mss_shell_sum'); } catch {}
 }
 const MSSRemember = {
   set(on) {

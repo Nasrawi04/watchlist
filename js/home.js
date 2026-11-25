@@ -279,15 +279,29 @@ const MSSHome = (() => {
 
   /* ── Friends activity (the home row's cards: their score, their face, who / when) ── */
   const FE = {}, FP = {};
+  // when a friend's title happened: dropped → when it was dropped; finished → when it was finished (else added)
+  const friendAt = e => new Date(e.status === 'dropped' ? (e.progress_at || e.updated_at) : (e.completed_at || e.created_at || e.updated_at));
   async function loadFriends() {
+    // one request (get_friend_activity, sql/139): friends, their profiles and their latest finished / dropped titles
+    let noFn = false; try { noFn = sessionStorage.getItem('msf_no_friend_fn') === '1'; } catch {}
+    const { data: one, error: oneErr } = noFn ? { data: null, error: { code: 'PGRST202' } } : await sb.rpc('get_friend_activity', { p_limit: 12 });
+    if (oneErr && (oneErr.code === 'PGRST202' || oneErr.code === '42883')) { try { sessionStorage.setItem('msf_no_friend_fn', '1'); } catch {} }   // this tab: don't ask again
+    if (!oneErr && one) {
+      (one.profiles || []).forEach(p => { FP[p.id] = p; });
+      const rows1 = (one.rows || []).filter(e => !isNaN(friendAt(e)));
+      rows1.forEach(e => { FE[e.id] = e; e._at = friendAt(e); });
+      friendsSave(rows1);
+      return rows1;
+    }
+    if (oneErr && oneErr.code !== 'PGRST202' && oneErr.code !== '42883') console.warn('Friend activity:', oneErr.message || oneErr);
+    // until sql/139 runs: the three requests, as before
     const fr = (await getFriendships(uid)).filter(f => f.status === 'accepted');
     const ids = fr.map(f => f.friendId);
     fr.forEach(f => { FP[f.friendId] = f.friendProfile || {}; });
     if (!ids.length) return [];
     const { data } = await sb.from('entries').select('*').in('user_id', ids).in('status', ['completed', 'dropped']).order('updated_at', { ascending: false }).limit(80);
-    const at = e => new Date(e.status === 'dropped' ? (e.progress_at || e.updated_at) : (e.completed_at || e.created_at || e.updated_at));
-    const rows = (data || []).filter(e => !isNaN(at(e))).sort((a, b) => at(b) - at(a)).slice(0, 12);
-    rows.forEach(e => { FE[e.id] = e; e._at = at(e); });
+    const rows = (data || []).filter(e => !isNaN(friendAt(e))).sort((a, b) => friendAt(b) - friendAt(a)).slice(0, 12);
+    rows.forEach(e => { FE[e.id] = e; e._at = friendAt(e); });
     friendsSave(rows);
     return rows;
   }
