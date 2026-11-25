@@ -149,7 +149,7 @@ const MSS_GUIDE = [
     what: 'Give a title on your Watchlist a priority: Must Watch, Want to Watch or Eventually.',
     why: 'A long Watchlist is easier when the ones you can’t wait for stand out — and Pick for me can stick to them.',
     how: ['Adding a title to your Watchlist: choose its Priority just above Who can see this title (it starts on Want to Watch).',
-      'Already on your Watchlist: open the title › Title Info › Priority (just above Who can see this title) and tap a level — tap the chosen one again for no priority. Or use ⋯ › Priority on its card, panel or page.',
+      'Already on your Watchlist: open the title › Title Info › Priority (just above Who can see this title) and tap a level — tap the chosen one again for no priority. Or use ⋯ › Priority on its card, panel or page, or its Edit page (Priority above Who can see this title).',
       'Titles you haven’t given a priority have no tag; only you ever see a priority.',
       'Its tag shows beside “On your watchlist” in the title’s panel (on a phone, its page), and At a glance › Status says the level — not on the cards.',
       'Sort › Priority puts Must Watch (or Eventually) first, and can be your Watchlist’s default; Filter › Priority shows only the levels you tick.',

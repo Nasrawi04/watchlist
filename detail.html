@@ -226,6 +226,7 @@
 
         <div class="de-col">
           <div class="tv-box de-box">
+            <div id="dPrioWrap" hidden></div>
             <div id="dTitleVisWrap"></div>
             <div class="de-set" id="deEpRateRow" hidden>
               <span class="de-set-t"><b id="deEpRateL">Rate episodes</b><small>Score each episode as you watch</small></span>
@@ -674,6 +675,7 @@ function onStatusChange() {
 
 function updateStatusUI() {
   const status    = document.getElementById('dStatus').value;
+  const prio = document.getElementById('dPrioWrap'); if (prio) prio.hidden = status !== 'queue';   // a priority only on the Watchlist
   // Times Watched: for titles you've watched (Watched / To Be Continued)
   const rewatchSec = document.getElementById('dRewatchSection');
   if (rewatchSec) rewatchSec.style.display = (status === 'completed' || status === 'ongoing') ? '' : 'none';
@@ -1258,6 +1260,9 @@ function _detFill(e) {
   document.getElementById('dNotesSpoiler').checked = mssIsSpoiler(e);
   document.getElementById('dNoteVisWrap').innerHTML = mssNoteVisHTML('dNoteVis', e?.note_visibility, e?.id);   // who can view (069)
   document.getElementById('dTitleVisWrap').innerHTML = mssTitleVisHTML('dTitleVis', e?.visibility);           // who can see this title (073)
+  // Watchlist priority (sql/144), just above it — Watchlist only; a new title starts on Want to Watch, a saved one shows its own (or none)
+  document.getElementById('dPrioWrap').innerHTML = MSSPriority.pickerHTML('dPrio', e ? MSSPriority.of(e) : MSSPriority.DEFAULT);
+  document.getElementById('dPrioWrap').hidden = (e?.status || 'queue') !== 'queue';
   _detNotesSaved = e?.notes || '';   // what's saved — an easter egg's confirm only asks about a new or changed note
   _notesUpdateWordCount();
   document.getElementById('dRewatchCount').value = Number(e?.ratings?._rewatch_count) || 1;
@@ -1440,6 +1445,8 @@ async function doSave() {
     const saved = await saveEntry(payload, _detUser.id, _detId);
     _detId = saved.id;
     _detEntry = { ..._detEntry, ...saved };
+    if (status === 'queue' && _deEl('dPrio')) await MSSPriority.set(_detEntry, _deEl('dPrio').value || null)   // Watchlist priority (sql/144)
+      .catch(err => { console.error('Watchlist priority:', err); showToast('Saved — but its priority didn’t save. Try again.', 'err'); });
     _originalStatus = status; // update so re-saves don't re-trigger popup
     _detNotesSaved = payload.notes || '';
     MSSBackdrop.remember(saved);             // its backdrop shows everywhere from now on
@@ -1623,7 +1630,7 @@ function _deSnapshot() {
     title: v('dTitle'), cat: v('dCat'), media: v('dMediaType'), status: v('dStatus'), year: v('dYear'), end: v('dCompletionYear'), desc: v('dDesc'),
     genres: [...document.querySelectorAll('#detailLayout .genre-opt.selected')].map(x => x.dataset.genre).sort().join('|'),
     season: v('dSeason'), episode: v('dEpisode'), seasons: _deSizes().join(','), runtime: v('dRuntimeH') + ':' + v('dRuntimeM'), dropped: v('dDroppedH') + ':' + v('dDroppedM'),
-    notes: v('dNotes'), spoiler: String(!!_deEl('dNotesSpoiler')?.checked), noteVis: v('dNoteVis'), titleVis: v('dTitleVis'),
+    notes: v('dNotes'), spoiler: String(!!_deEl('dNotesSpoiler')?.checked), noteVis: v('dNoteVis'), titleVis: v('dTitleVis'), prio: v('dPrio'),
     watchedOn: _parseCompletedDate() || '', rewatch: v('dRewatchCount'), poster: _posterUrl || '',
   };
   ['fav', 'low'].forEach(w => ['Character', 'Episode', 'Season'].forEach(f => { o[w + f] = v(w + f); }));
