@@ -156,13 +156,13 @@ button.set-nav { width:100%; border:0; background:none; text-align:start; cursor
 
 /* ── My Profile: the live preview card ── */
 .set-pf { overflow:hidden; }
-.set-pf-banner { position:relative; height:clamp(96px, 9vw, 128px); display:flex; justify-content:flex-end; align-items:flex-start; padding:12px; color-scheme:dark;
+.set-pf-banner { position:relative; height:clamp(140px, 20vw, 220px); display:flex; justify-content:flex-end; align-items:flex-start; padding:12px; color-scheme:dark;
   background:radial-gradient(80% 110% at 88% 0%, color-mix(in srgb, var(--p-forest-300) 30%, transparent) 0%, transparent 60%), radial-gradient(70% 90% at 0% 100%, color-mix(in srgb, var(--p-forest-700) 62%, transparent) 0%, transparent 65%), linear-gradient(160deg, #173a20 0%, #10200f 52%, #0b100c 100%); }
 .set-pf-banner::before { content:''; position:absolute; inset:0; background:var(--pf-bd, none) var(--pf-bd-pos, center) / cover no-repeat; }
 .set-pf-banner::after { content:''; position:absolute; inset:0; background:linear-gradient(180deg, rgba(0,0,0,0) 40%, rgba(0,0,0,.35) 100%); pointer-events:none; }
 .set-pf-banner > * { position:relative; z-index:1; }
 .set-pf-bd-s, .set-pf-new-s { display:none; }
-.set-pf-id { display:flex; align-items:flex-end; gap:14px; padding:0 16px; margin-top:-34px; position:relative; z-index:1; }
+.set-pf-id { display:flex; align-items:flex-end; gap:14px; padding:0 16px; margin-top:-34px; position:relative; z-index:1; border-top:0; }   /* it overlaps the banner: the card's divider would cut across the picture */
 .set-pf-photo { flex:none; display:grid; place-items:center; width:72px; aspect-ratio:1; border-radius:50%; overflow:hidden; border:3px solid var(--bg); background:var(--olive); color:var(--text-on-brand); font:600 28px var(--serif); transition:border-radius .2s; }
 .set-pf-photo.is-poster { width:60px; aspect-ratio:2 / 3; border-radius:var(--radius-xs); }
 .set-pf-photo { position:relative; }

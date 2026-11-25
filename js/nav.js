@@ -38,9 +38,9 @@ function mssCrumbHTML(current, fallback, back = 'return mssGoBack()') {
   const from = mssCameFrom() || fallback;
   const href = from?.href || 'index.html';
   return `<div class="tv-crumb mss-crumb" role="navigation" aria-label="Breadcrumb">
-    <a href="${esc(href)}" onclick="${back}">${icon('back', 14)}<span>Back</span></a>
-    ${from ? `<span aria-hidden="true">/</span><a href="${esc(from.href)}" translate="no">${esc(from.label)}</a>` : ''}
-    <span aria-hidden="true">/</span><span aria-current="page" translate="no">${esc(current || '')}</span></div>`;
+    <a href="${escHTML(href)}" onclick="${back}">${icon('back', 14)}<span>Back</span></a>
+    ${from ? `<span aria-hidden="true">/</span><a href="${escHTML(from.href)}" translate="no">${escHTML(from.label)}</a>` : ''}
+    <span aria-hidden="true">/</span><span aria-current="page" translate="no">${escHTML(current || '')}</span></div>`;
 }
 function mssGoBack() {
   if (mssCameFrom() && history.length > 1) { history.back(); return false; }
@@ -1789,15 +1789,31 @@ function shellSheet(k, opener, kb) {
     if (a.hasAttribute('aria-expanded')) a.setAttribute('aria-expanded', String(on));
   });
   const target = k === 'create' ? ov.querySelector('#nshQ') : kb ? ov.querySelector('.nsh-row[aria-current]') || ov.querySelector('.nsh-row') : ov.querySelector('.nsh-card');
-  if (!wasOpen) MSSDialog.open(ov, { focus: target });
+  if (!wasOpen) { _nshKbFollow(true); MSSDialog.open(ov, { focus: target }); }
   else target?.focus({ preventScroll: true });
   if (k === 'create') _nshCreateInit();
   else _nshCountsLoad();
+}
+// The on-screen keyboard (phones): the sheet sits right on top of it, so Create's search and its tiles stay in view.
+// The page itself doesn't shrink for the keyboard (iPhone), so the sheet follows the visual viewport while it's open:
+// --nsh-kb = how far the keyboard reaches up from the bottom, --nsh-vh = the height left above it.
+function _nshKb() {
+  const vv = window.visualViewport, ov = document.getElementById('nsh'); if (!vv || !ov) return;
+  const kb = Math.max(0, document.documentElement.clientHeight - (vv.offsetTop + vv.height));
+  ov.style.setProperty('--nsh-kb', Math.round(kb) + 'px');
+  ov.style.setProperty('--nsh-vh', Math.round(vv.height) + 'px');
+}
+function _nshKbFollow(on) {
+  const vv = window.visualViewport; if (!vv) return;
+  const fn = on ? 'addEventListener' : 'removeEventListener';
+  vv[fn]('resize', _nshKb); vv[fn]('scroll', _nshKb);
+  if (on) _nshKb(); else { const ov = document.getElementById('nsh'); ov?.style.removeProperty('--nsh-kb'); ov?.style.removeProperty('--nsh-vh'); }
 }
 function shellSheetClose() {
   if (!_nsh) return;
   const ov = document.getElementById('nsh'), opener = _nsh.opener;
   _nsh = null;
+  _nshKbFollow(false);
   MSSDialog.close(ov);
   document.getElementById('bnav')?.classList.remove('has-sheet');
   document.querySelectorAll('#bnav .bnav-item').forEach(a => { a.classList.remove('is-sheet'); if (a.hasAttribute('aria-expanded')) a.setAttribute('aria-expanded', 'false'); });
@@ -2264,7 +2280,7 @@ document.addEventListener('keydown', e => {
 ══════════════════════════════════════════ */
 (function() {
   const MAX_PULL  = 85;
-  let startY = null, currentY = 0, pulling = false, triggered = false;
+  let startY = null, startX = 0, currentY = 0, pulling = false, triggered = false;
 
   // Loading bar at top
   const bar = document.createElement('div');
@@ -2318,6 +2334,7 @@ document.addEventListener('keydown', e => {
     if (window.scrollY > 0) return;
     if (_mssLocks.size || MSSDialog.top() || e.target.closest('.hc-card, .modal-wrap, [class*="overlay"], .bnav')) return;
     startY = e.touches[0].clientY;
+    startX = e.touches[0].clientX;
     pulling = false;
     triggered = false;
   }, { passive: true });
@@ -2328,6 +2345,11 @@ document.addEventListener('keydown', e => {
     if (_mssLocks.size || window.scrollY > 0) return;
     currentY = e.touches[0].clientY;
     const diff = currentY - startY;
+    // A sideways swipe (a row of chips, a shelf) is never a pull: let it go before it's claimed, or the
+    // preventDefault below would stop the row scrolling (iPhone, at the top of a page — the Notifications chips)
+    const dx = Math.abs(e.touches[0].clientX - startX);
+    if (!pulling && dx < 8 && Math.abs(diff) < 8) return;                 // too small to tell yet
+    if (!pulling && dx > Math.abs(diff)) { startY = null; return; }
     // Only claim the gesture once it's confirmed as a genuine downward
     // pull. Calling preventDefault() unconditionally here (even before
     // checking direction) was meant to close a small timing gap with the
