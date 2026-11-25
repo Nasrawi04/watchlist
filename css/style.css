@@ -2960,8 +2960,13 @@ body.notif-sheet-open { overflow:hidden; }
    layout (is-page) with the side panel's title row. */
 .lyr-grab { display:none; }
 .lyr.is-sheet { background:var(--scrim); }
-.lyr.is-page.is-sheet .lyr-card { inset:auto 0 var(--lyr-kb, 0px); margin:0 auto; width:min(560px, 100%); height:auto; max-height:none;
+/* the card hangs a screen's height below the bottom edge, in its own colour: however far it's lifted (an over-pull,
+   Safari's bounce), what shows under it is more sheet, never the page behind (owner, 25 Nov 2026) */
+.lyr.is-page.is-sheet .lyr-card { --sheet-ext:100vh; box-sizing:content-box; padding-bottom:var(--sheet-ext);
+  inset:auto 0 calc(var(--lyr-kb, 0px) - var(--sheet-ext)); margin:0 auto; width:min(560px, 100%); height:auto; max-height:none;
   border:1px solid var(--border-2); border-bottom:0; border-radius:20px 20px 0 0; will-change:transform; }
+.lyr.is-sheet { overscroll-behavior:none; }
+html:has(.lyr.is-sheet.open), html:has(.lyr.is-sheet.open) body { overscroll-behavior:none; }   /* no page bounce behind an open sheet */
 .lyr.is-sheet .lyr-grab { display:block; flex:none; width:40px; height:5px; margin:8px auto 2px; border-radius:3px; background:var(--border-2); }
 .lyr.is-sheet .lyr-grab, .lyr.is-sheet .lyr-top { cursor:grab; }
 .lyr.is-sheet.is-dragging .lyr-card { cursor:grabbing; user-select:none; -webkit-user-select:none; }

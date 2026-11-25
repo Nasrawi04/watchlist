@@ -384,7 +384,8 @@ const MSSPanel = (() => {
     const card = P.ov.firstElementChild, S = P.sh;
     const room = vh(P) - SHEET_GAP, cap = Math.round(vh(P) * SHEET_HALF);
     card.style.height = 'auto';
-    const nat = card.offsetHeight;                                  // everything in it, at its natural height
+    // everything in it, at its natural height (less the colour that hangs below the screen — CSS --sheet-ext)
+    const nat = card.offsetHeight - (parseFloat(getComputedStyle(card).paddingBottom) || 0);
     const tall = nat > cap;
     S.H = tall ? room : Math.min(nat, room);
     S.stops = tall ? { full: 0, half: S.H - cap, closed: S.H } : { open: 0, closed: S.H };
@@ -398,7 +399,7 @@ const MSSPanel = (() => {
     card.style.transition = t;
     // pulled past its top: it grows taller from the bottom edge (stays on it), so nothing behind it ever shows below
     card.style.transform = `translateY(${Math.max(0, off)}px)`;
-    card.style.height = (S.H + Math.max(0, -off)) + 'px';
+    card.style.height = (S.H + Math.min(Math.max(0, -off), Math.max(0, vh(P) - 12 - S.H))) + 'px';   // never past the top of the screen
     // the bar stays on the screen's edge down to half; below that it goes with the sheet
     const keep = Math.max(0, Math.min(off, S.stops.half ?? 0));
     foot.style.transition = t; foot.style.transform = keep ? `translateY(${-keep}px)` : '';
