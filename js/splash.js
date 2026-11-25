@@ -10,7 +10,9 @@
        bring it back). The page loads and runs behind it — nothing waits for it — and it fades out
        after LAUNCH_MS (a shorter LAUNCH_DEEP_MS when the first page is a deep link or a notification).
        Tap / any key / Skip closes it sooner. It's announced, and never holds the keyboard.
-   Both use the poster wall chosen in Admin (sign_in_wall, 078; this device's copy 'msf_wall').
+   Both use the poster wall chosen in Admin (sign_in_wall, 078; this device's copy 'msf_wall'), and every tile always
+   has a poster (owner, 26 Nov 2026): a built-in copy of the wall when the device has none, a stand-in for any poster
+   that won't load, and the launch screen stays (at most WAIT_MS longer) until the posters are in.
    Also sets window.mssSignedInHint (nav.js draws the header for it before auth answers) and
    window.mssLaunchOpen() (popups that open on their own wait for the launch screen: config.js mssAfterLaunch).
    Not shown: inside a frame, the offline and 404 pages, password-reset or email links.
@@ -18,6 +20,7 @@
 (() => {
   const LAUNCH_MS = 3000;           // how long the signed-in launch screen stays — the one place to change it (owner, 23 Nov 2026: was 7000)
   const LAUNCH_DEEP_MS = 1200;      // …when the app opens straight onto another page (a link, a notification)
+  const WAIT_MS = 2500;             // the most it stays longer while posters are still arriving (slow connection)
   const page = location.pathname.split('/').pop() || 'index.html', params = new URLSearchParams(location.search);
   const signedIn = (() => {
     try {
@@ -44,6 +47,7 @@
   if (!mode) return;
 
   const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const whenReady = fn => { if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn, { once: true }); else fn(); };
   const root = document.documentElement;
   // The splash is dark in both themes (it sits on the poster wall): MSF's dark palette
   const css = document.createElement('style');
@@ -57,8 +61,10 @@ html.msf-splash { overflow:hidden; }
 .msf-s-wall { position:absolute; inset:-14% -12%; z-index:-2; display:grid; grid-template-columns:repeat(var(--cols, 5), 1fr); gap:12px; transform:rotate(-8deg) scale(1.08); }
 .msf-s-col { display:flex; flex-direction:column; gap:12px; animation:msfDrift 60s linear infinite; }
 .msf-s-col:nth-child(even) { animation-direction:reverse; }
-.msf-s-tile { aspect-ratio:2/3; border-radius:10px; overflow:hidden; border:0.5px solid rgba(255,255,255,.1); background:linear-gradient(160deg, var(--g), var(--s-bg)); }
-.msf-s-tile img { display:block; width:100%; height:100%; object-fit:cover; opacity:0; transition:opacity .8s ease; }
+.msf-s-col > * { min-width:0; }
+.msf-s-tile { position:relative; flex:none; width:100%; border-radius:10px; overflow:hidden; border:0.5px solid rgba(255,255,255,.1); background:linear-gradient(160deg, var(--g), var(--s-bg)); }
+.msf-s-tile::before { content:''; display:block; padding-top:150%; }   /* 2:3 from padding, not aspect-ratio: Safari keeps the size */
+.msf-s-tile img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:0; transition:opacity .8s ease; }
 .msf-s-tile img.in { opacity:.62; }
 @keyframes msfDrift { to { transform:translateY(-50%); } }
 .msf-sp::before { content:''; position:absolute; inset:0; z-index:-1; pointer-events:none;
@@ -117,9 +123,17 @@ html.msf-splash { overflow:hidden; }
   const TONES = ['#2F4A2A', '#6B4A22', '#3B2347', '#22384F', '#1E4A47', '#4A2A22', '#33442A'], PER = 7;
   const COLS = innerWidth >= 1200 ? 9 : innerWidth >= 700 ? 7 : 5;     // posters about the same size on every screen
   const okPath = p => typeof p === 'string' && /^\/[A-Za-z0-9_-]{5,64}\.(jpg|jpeg|png)$/.test(p);
-  const savedPosters = () => {
-    try { return Object.values(JSON.parse(localStorage.getItem('msf_wall') || 'null')?.slots || {}).flat().map(t => t?.poster).filter(okPath); } catch { return []; }
-  };
+  const fromSlots = slots => Object.values(slots || {}).flat().map(t => t?.poster).filter(okPath);
+  const saved = (() => { try { return JSON.parse(localStorage.getItem('msf_wall') || 'null'); } catch { return null; } })();
+  // Built in, so the wall is never empty: the admin's wall as saved on 29 Oct 2026 (sign_in_wall, 078). Used until
+  // this device has its own copy, or when it can't keep one (Faster pages off) — the live wall replaces it as soon as it answers.
+  const BUILT_IN = ['/1XS1oqL89opfnbLl8WnZY1O1uJx.jpg', '/g3lqc6SJXogd9xPhh2KsHmGKGD5.jpg', '/thIxqvn9yBY79Y1YMFDTaWvTg2T.jpg', '/sIYLtCHNW3N7v9SQD5PcZSVbuLp.jpg',
+    '/7LUswjn6jgLxdJ4e6sgwkULXsZI.jpg', '/lrjox5mFm9WecMeqyBeXlGaejoc.jpg', '/krVa7rKCQb4OBfsr2LTJv4rTz5q.jpg', '/3XF2ojwuFEZRc16OOuktb2U6dgH.jpg',
+    '/63pSXrvtXhGoHAZ68peN7Le7BoH.jpg', '/8ztUAcLKlBw9wjUO81jHFB2m5sU.jpg', '/8hoD5BQuUV9dDecAbiyVIxLjzZ9.jpg', '/nzuwQyhtlKwEMO2ifqWpOpB9y6k.jpg',
+    '/tZrSywdS0crNCkNwoSbeHNyAYa0.jpg', '/53jKxpNhPFBxUOMQm2qR17ESiTz.jpg', '/xtMxOgvkhCgRrkpl7IsKx4GPtGv.jpg', '/ryiKybd1N5tFis2TOUZicvPtvVQ.jpg',
+    '/vUUqzWa2LnHIVqkaKVlVGkVcZIW.jpg', '/1sjUYMxIRqjCnta2GuHVOzYF2rb.jpg', '/bJLYrLIHT1r7cikhWGbpZkxlUpA.jpg', '/voln3hFAJwZUgcLdhvDmsjK6Lpq.jpg',
+    '/ssr94RLcyp5xkMDRN9QWfA7dtUl.jpg', '/rplfv5tqvDOkyXecRthBtXpfnkq.jpg', '/gqgwNjwjSqGkOqkE2rppogenu4v.jpg', '/5lc6nQc0VhWFYFbNv016xze8Jvy.jpg',
+    '/qWnJzyZhyy74gjpSjIXWmuk0ifX.jpg', '/aJ5xcT3t9HS5NoDBejch2AhEeQN.jpg', '/jIsnJGjTHx7Y4BXlD0W0HiPe42m.jpg', '/nZRZ662f4KjKssXYsh7TmSh8FbJ.jpg'];
   const wall = `<div class="msf-s-wall" aria-hidden="true" style="--cols:${COLS}">${Array.from({ length: COLS }, (_, c) => `<div class="msf-s-col" style="animation-delay:-${(c * 7) % 23}s">${Array.from({ length: PER * 2 }, (_, i) =>
       `<div class="msf-s-tile" style="--g:${TONES[(c * 3 + i) % TONES.length]}"></div>`).join('')}</div>`).join('')}</div>`;
 
@@ -150,21 +164,33 @@ html.msf-splash { overflow:hidden; }
   }
   root.appendChild(el);
 
+  // Every tile gets a poster. One that won't load takes the next on the list (then the built-in ones), so no tile stays empty.
+  let pending = 0, onWallReady = null;
   function fillWall(paths) {
     if (!paths.length) return;
+    const pool = [...new Set(paths.concat(BUILT_IN))];
     el.querySelectorAll('.msf-s-col').forEach((col, c) => [...col.children].forEach((tile, i) => {
-      if (tile.firstChild) return;
-      const img = new Image();
-      img.alt = ''; img.decoding = 'async';
-      img.onload = () => img.classList.add('in');
-      img.src = `https://image.tmdb.org/t/p/w342${paths[(c * PER + i % PER) % paths.length]}`;
-      tile.appendChild(img);
+      let k = (c * PER + i % PER) % paths.length, tries = 0, img = tile.querySelector('img');
+      if (img?.dataset.p === paths[k]) return;
+      const fresh = new Image();
+      fresh.alt = ''; fresh.decoding = 'async'; fresh.loading = 'eager'; fresh.fetchPriority = 'high';
+      pending++;
+      const settle = () => { if (fresh.dataset.done) return; fresh.dataset.done = '1'; if (--pending <= 0 && onWallReady) onWallReady(); };
+      fresh.onload = () => { fresh.classList.add('in'); if (img && img !== fresh) img.remove(); settle(); };
+      fresh.onerror = () => {
+        if (++tries >= pool.length) { fresh.remove(); settle(); return; }
+        const p = pool[(c * PER + i + tries * 7) % pool.length];   // each tile its own stand-in, so a broken poster doesn't repeat one title
+        fresh.dataset.p = p; fresh.src = `https://image.tmdb.org/t/p/w342${p}`;
+      };
+      fresh.dataset.p = paths[k];
+      fresh.src = `https://image.tmdb.org/t/p/w342${paths[k]}`;
+      tile.appendChild(fresh);
     }));
   }
-  fillWall(savedPosters());
+  const savedPaths = fromSlots(saved?.slots);
+  fillWall(savedPaths.length ? savedPaths : BUILT_IN);
   if (still) el.querySelectorAll('.msf-s-col').forEach(c => { c.style.animation = 'none'; });
 
-  const whenReady = fn => { if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn, { once: true }); else fn(); };
   let done = false;
   function finish() {
     if (done) return;
@@ -175,23 +201,27 @@ html.msf-splash { overflow:hidden; }
       document.dispatchEvent(new CustomEvent('mss:launch-done'));
     }, still ? 150 : 520);
   }
-  // The admin's poster wall, the first time this device sees it (sign_in_wall, 078)
+  // The admin's poster wall, as soon as the page's scripts are in (sign_in_wall, 078): swapped in when it's new to this device
   const fetchWall = async () => {
-    if (savedPosters().length || typeof sb === 'undefined' || !sb) return;
+    if (typeof sb === 'undefined' || !sb) return;
     try {
       const { data } = await sb.from('sign_in_wall').select('slots, updated_at').eq('id', 1).maybeSingle();
-      const paths = Object.values(data?.slots || {}).flat().map(t => t?.poster).filter(okPath);
-      if (!paths.length) return;
+      const paths = fromSlots(data?.slots);
+      if (!paths.length || (savedPaths.length && saved?.updated_at === data.updated_at)) return;
       try { localStorage.setItem('msf_wall', JSON.stringify({ slots: data.slots, updated_at: data.updated_at })); } catch {}
-      fillWall(paths);
+      if (!done) fillWall(paths);
     } catch {}
   };
-  if (document.readyState === 'complete') fetchWall(); else addEventListener('load', fetchWall, { once: true });
+  whenReady(fetchWall);
   addEventListener('pageshow', ev => { if (ev.persisted) finish(); });   // back to a page kept in memory
 
   if (mode === 'launch') {
-    // nothing here waits: the page under it is already loading; it just fades out
-    setTimeout(finish, home && !location.search ? LAUNCH_MS : LAUNCH_DEEP_MS);
+    // the page under it is already loading; it fades out after its time — once the posters are in (at most WAIT_MS longer)
+    const ms = home && !location.search ? LAUNCH_MS : LAUNCH_DEEP_MS;
+    let timeUp = false;
+    onWallReady = () => { if (timeUp) finish(); };
+    setTimeout(() => { timeUp = true; if (pending <= 0) finish(); }, ms);
+    setTimeout(finish, ms + WAIT_MS);
     el.addEventListener('click', finish);
     addEventListener('keydown', finish, { once: true });
     return;
