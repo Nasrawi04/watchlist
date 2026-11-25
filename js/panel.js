@@ -371,16 +371,18 @@ const MSSPanel = (() => {
   addEventListener('resize', () => stack.forEach(paintMode));
 
   /* ── Bottom sheets (small panels on phones) — they follow the finger and settle on the nearest stop ──
-     Stops: "open" (as tall as its content) — or, when the content is taller than ~64% of the screen, "half" (64%) and
-     "full" (the whole height) — and "closed". The card is always its final height and slides (translateY), so a drag is
+     Stops: "open" (as tall as its content) — or, when the content is taller than about half the screen, "half" (where it
+     opens) and "full" (all but a strip at the top, so the handle is always on screen) — and "closed". The card is always its final height and slides (translateY), so a drag is
      1:1 and smooth; letting go picks the stop nearest to where it's heading (a flick carries it on, owner 25 Nov 2026).
      The bottom bar (Apply…) stays on the screen's bottom edge while the sheet is above half. Full: the content scrolls,
      and pulling down from its very top moves the sheet. */
   const vh = P => Number(P.ov.style.getPropertyValue('--lyr-vh').replace('px', '')) || innerHeight;
+  const SHEET_GAP = 56;                // full height still leaves this much of the screen above it: the handle never leaves the screen
+  const SHEET_HALF = .52;              // a long sheet opens at about half the screen
   const SETTLE = 'transform .38s cubic-bezier(.2,.9,.25,1)';
   function sheetMeasure(P) {
     const card = P.ov.firstElementChild, S = P.sh;
-    const room = vh(P) - 10, cap = Math.round(room * .64);
+    const room = vh(P) - SHEET_GAP, cap = Math.round(vh(P) * SHEET_HALF);
     card.style.height = 'auto';
     const nat = card.offsetHeight;                                  // everything in it, at its natural height
     const tall = nat > cap;
@@ -495,9 +497,10 @@ const MSSPanel = (() => {
   function sheetKeyboard(P, on) {
     const vv = window.visualViewport; if (!vv) return;
     if (!P.kb) P.kb = () => {
-      const kb = Math.max(0, document.documentElement.clientHeight - (vv.offsetTop + vv.height));
+      const raw = document.documentElement.clientHeight - (vv.offsetTop + vv.height);
+      const kb = raw > 150 ? raw : 0;                               // a keyboard — not Safari's toolbar coming and going
       P.ov.style.setProperty('--lyr-kb', Math.round(kb) + 'px');
-      P.ov.style.setProperty('--lyr-vh', Math.round(vv.height) + 'px');
+      P.ov.style.setProperty('--lyr-vh', Math.round(kb ? vv.height : Math.min(vv.height, innerHeight)) + 'px');
       if (P.sh && !P.sh.dragging && !P.sh.closing) { sheetMeasure(P); sheetPlace(P, P.sh.stops[P.sh.at], true); }
     };
     const fn = on ? 'addEventListener' : 'removeEventListener';

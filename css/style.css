@@ -854,9 +854,11 @@ nav.bnav, [data-theme="light"] nav.bnav { top:auto; background:none; border:0; -
   background:var(--bnav-surface);
   transform:translateY(24px); transition:transform .22s var(--layer-in); outline:none; }
 .nsh.open .nsh-card { transform:none; }
-/* Create, typing: the whole height above the keyboard (or above the bar once it's down) — nav.js _nshCreateInit */
-.nsh.is-tall .nsh-card { height:calc(var(--nsh-vh, 100dvh) - 16px - max(var(--bnav-top) - var(--nsh-kb, 0px), 0px)); max-height:none;
+/* Create, typing: the whole screen — with the keyboard up it reaches down behind it (nothing of the page shows between the
+   sheet and the keyboard; what's under the keyboard can scroll up into view); once it's down, above the bar — nav.js */
+.nsh.is-tall .nsh-card { height:calc(var(--nsh-vh, 100dvh) - 16px - var(--bnav-top)); max-height:none;
   transition:transform .22s var(--layer-in), height .3s cubic-bezier(.2,.9,.25,1); }
+.nsh.is-tall.has-kb .nsh-card { top:calc(var(--nsh-top, 0px) + 16px); bottom:0; height:auto; padding-bottom:calc(var(--nsh-kb, 0px) + 14px); transition:none; }
 @media (prefers-reduced-motion:reduce) { .nsh.is-tall .nsh-card { transition:none; } }
 .nsh-grab { display:block; width:36px; height:4px; margin:0 auto 10px; border-radius:2px; background:var(--border-2); }
 .nsh-head { padding:0 4px 6px; }

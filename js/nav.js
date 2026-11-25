@@ -1802,10 +1802,13 @@ function shellSheet(k, opener, kb) {
 // --nsh-kb = how far the keyboard reaches up from the bottom, --nsh-vh = the height left above it.
 function _nshKb() {
   const vv = window.visualViewport, ov = document.getElementById('nsh'); if (!vv || !ov) return;
-  const kb = Math.max(0, document.documentElement.clientHeight - (vv.offsetTop + vv.height));
+  const raw = document.documentElement.clientHeight - (vv.offsetTop + vv.height);
+  const kb = raw > 150 ? raw : 0;                                           // a keyboard — not Safari's toolbar coming and going
   ov.style.setProperty('--nsh-kb', Math.round(kb) + 'px');
-  ov.style.setProperty('--nsh-vh', Math.round(vv.height) + 'px');
-  if (kb > 80 && _nsh?.k === 'create') ov.classList.add('is-tall');        // typing in Create: the whole height above the keyboard
+  ov.style.setProperty('--nsh-vh', Math.round(kb ? vv.height : Math.min(vv.height, innerHeight)) + 'px');
+  ov.style.setProperty('--nsh-top', Math.round(vv.offsetTop) + 'px');     // where the visible screen starts (iPhone scrolls it for the keyboard)
+  ov.classList.toggle('has-kb', kb > 0);
+  if (kb && _nsh?.k === 'create') ov.classList.add('is-tall');             // typing in Create: the whole screen
 }
 function _nshKbFollow(on) {
   const vv = window.visualViewport; if (!vv) return;
