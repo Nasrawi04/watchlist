@@ -854,6 +854,10 @@ nav.bnav, [data-theme="light"] nav.bnav { top:auto; background:none; border:0; -
   background:var(--bnav-surface);
   transform:translateY(24px); transition:transform .22s var(--layer-in); outline:none; }
 .nsh.open .nsh-card { transform:none; }
+/* Create, typing: the whole height above the keyboard (or above the bar once it's down) — nav.js _nshCreateInit */
+.nsh.is-tall .nsh-card { height:calc(var(--nsh-vh, 100dvh) - 16px - max(var(--bnav-top) - var(--nsh-kb, 0px), 0px)); max-height:none;
+  transition:transform .22s var(--layer-in), height .3s cubic-bezier(.2,.9,.25,1); }
+@media (prefers-reduced-motion:reduce) { .nsh.is-tall .nsh-card { transition:none; } }
 .nsh-grab { display:block; width:36px; height:4px; margin:0 auto 10px; border-radius:2px; background:var(--border-2); }
 .nsh-head { padding:0 4px 6px; }
 .nsh-t { margin:0; font:600 25px/1.15 var(--serif); color:var(--text-heading); letter-spacing:.2px; }
@@ -2949,24 +2953,24 @@ body.notif-sheet-open { overflow:hidden; }
 .lyr.is-page.is-leaving .lyr-card { animation:lyrPop .24s var(--layer-out) forwards; }
 .lyr.is-page.is-create.is-leaving .lyr-card { animation:lyrSink .24s var(--layer-out) forwards; }
 .lyr.is-dragging .lyr-card { transition:none; }
-/* Bottom sheet (phones, small panels — panel.js sheetDrag): grab handle, half (as tall as its content, ≤ ~64%) or full;
-   it sits on the keyboard (--lyr-kb / --lyr-vh). Built on the phone layout (is-page) with the side panel's title row. */
+/* Bottom sheet (phones, small panels — panel.js sheet…): the card is its final height (set by JS) and slides on stops
+   (open · half · full · closed), following the finger; it sits on the keyboard (--lyr-kb / --lyr-vh). Built on the phone
+   layout (is-page) with the side panel's title row. */
 .lyr-grab { display:none; }
 .lyr.is-sheet { background:var(--scrim); }
-.lyr.is-page.is-sheet .lyr-card { inset:auto 0 var(--lyr-kb, 0px); margin:0 auto; width:min(560px, 100%); height:auto;
-  max-height:min(64dvh, calc(var(--lyr-vh, 100dvh) - 10px)); border:1px solid var(--border-2); border-bottom:0; border-radius:20px 20px 0 0;
-  touch-action:pan-x; }   /* half: a vertical drag anywhere moves the sheet (side-scrolling rows still scroll) */
-.lyr.is-page.is-sheet.is-full .lyr-card { height:calc(var(--lyr-vh, 100dvh) - 10px); max-height:none; touch-action:auto; }
-.lyr.is-sheet .lyr-grab { display:block; flex:none; width:36px; height:4px; margin:8px auto 2px; border-radius:2px; background:var(--border-2); }
-.lyr.is-sheet .lyr-grab, .lyr.is-sheet .lyr-top { touch-action:none; cursor:grab; }
+.lyr.is-page.is-sheet .lyr-card { inset:auto 0 var(--lyr-kb, 0px); margin:0 auto; width:min(560px, 100%); height:auto; max-height:none;
+  border:1px solid var(--border-2); border-bottom:0; border-radius:20px 20px 0 0; will-change:transform; }
+.lyr.is-sheet .lyr-grab { display:block; flex:none; width:40px; height:5px; margin:8px auto 2px; border-radius:3px; background:var(--border-2); }
+.lyr.is-sheet .lyr-grab, .lyr.is-sheet .lyr-top { cursor:grab; }
+.lyr.is-sheet.is-dragging .lyr-card { cursor:grabbing; user-select:none; -webkit-user-select:none; }
 .lyr.is-page.is-sheet .lyr-bar { display:none; }
 .lyr.is-page.is-sheet .lyr-top { display:flex; margin-bottom:14px; }
 .lyr.is-page.is-sheet .lyr-x { display:grid; }
-.lyr.is-page.is-sheet .lyr-body { padding:8px 16px 16px; overflow:hidden; }
+.lyr.is-page.is-sheet .lyr-body { padding:8px 16px 16px; overflow:hidden; overscroll-behavior:contain; }
 .lyr.is-page.is-sheet.is-full .lyr-body { overflow-y:auto; }
-.lyr.is-page.is-sheet .lyr-foot { padding-bottom:max(16px, calc(10px + env(safe-area-inset-bottom))); }
+.lyr.is-page.is-sheet .lyr-foot { position:relative; z-index:1; padding-bottom:max(16px, calc(10px + env(safe-area-inset-bottom))); }
 .lyr.is-sheet.is-entering { animation:fadeIn .2s ease-out; }
-.lyr.is-page.is-sheet.is-entering .lyr-card { animation:lyrRise .26s var(--layer-in); }
+.lyr.is-page.is-sheet.is-entering .lyr-card { animation:none; }   /* it rises by JS (sheetOn) */
 .lyr.is-sheet.is-leaving { animation:fadeOut .2s ease-in forwards; }
 .lyr.is-page.is-sheet.is-leaving .lyr-card { animation:lyrSink .22s var(--layer-out) forwards; }
 .lyr.is-swap .lyr-body, .lyr.is-swap .lyr-hero, .lyr.is-swap .lyr-bar { animation:fadeIn .16s ease-out; }

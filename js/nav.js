@@ -1805,6 +1805,7 @@ function _nshKb() {
   const kb = Math.max(0, document.documentElement.clientHeight - (vv.offsetTop + vv.height));
   ov.style.setProperty('--nsh-kb', Math.round(kb) + 'px');
   ov.style.setProperty('--nsh-vh', Math.round(vv.height) + 'px');
+  if (kb > 80 && _nsh?.k === 'create') ov.classList.add('is-tall');        // typing in Create: the whole height above the keyboard
 }
 function _nshKbFollow(on) {
   const vv = window.visualViewport; if (!vv) return;
@@ -1817,6 +1818,7 @@ function shellSheetClose() {
   const ov = document.getElementById('nsh'), opener = _nsh.opener;
   _nsh = null;
   _nshKbFollow(false);
+  ov.classList.remove('is-tall');
   MSSDialog.close(ov);
   document.getElementById('bnav')?.classList.remove('has-sheet');
   document.querySelectorAll('#bnav .bnav-item').forEach(a => { a.classList.remove('is-sheet'); if (a.hasAttribute('aria-expanded')) a.setAttribute('aria-expanded', 'false'); });
@@ -1973,6 +1975,11 @@ function _nshCreateHTML() {
 function _nshCreateInit() {
   const q = document.getElementById('nshQ'), out = document.getElementById('nshResults'), status = document.getElementById('nshStatus');
   let timer = 0, last = '';
+  // typing: the sheet opens to the full height above the keyboard, and stays that tall until it's closed (owner, 25 Nov 2026 —
+  // not just the search sliding up and dropping back when the keyboard goes)
+  // (the box already has focus when the sheet opens, so a tap on it counts too — and the keyboard coming up, _nshKb)
+  const tall = () => document.getElementById('nsh')?.classList.add('is-tall');
+  q.addEventListener('pointerdown', tall); q.addEventListener('input', tall);
   q.addEventListener('input', () => {
     clearTimeout(timer);
     const v = q.value.trim();

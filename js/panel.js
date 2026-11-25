@@ -125,8 +125,7 @@ const MSSPanel = (() => {
     P.ov.classList.toggle('is-sheet', sheet);
     // Back instead of ✕ when this panel replaced another one (side panels, sheets); full pages always have Back
     P.ov.classList.toggle('has-back', (side || sheet) ? stack.indexOf(P) > 0 : true);
-    if (sheet !== was) sheetKeyboard(P, sheet);
-    if (!sheet) setFull(P, false);
+    if (sheet !== was) { sheetKeyboard(P, sheet); if (!sheet) sheetOff(P); else if (P.ov.classList.contains('open')) sheetOn(P); }
   }
   function setTitle(P, title, sub) {
     P.ov.querySelectorAll('.lyr-title').forEach(el => { el.textContent = title || ''; });
@@ -297,6 +296,7 @@ const MSSPanel = (() => {
     paintMode(P);
     ov.classList.remove('is-leaving', 'is-under');
     ov.classList.add('open');
+    if (ov.classList.contains('is-sheet')) { if (!P.sh) sheetOn(P); else { sheetMeasure(P); sheetPlace(P, P.sh.stops[P.sh.at], false); } }
     if (how) { ov.classList.add(how); setTimeout(() => ov.classList.remove(how), 300); }
   }
   let forward = false;
@@ -336,6 +336,7 @@ const MSSPanel = (() => {
     ov.classList.add('is-leaving');
     const done = () => {
       sheetKeyboard(P, false);
+      P.sh?.ro?.disconnect();
       MSSDialog.close(ov);
       ov.remove();
       P.o.onClose?.();
@@ -369,71 +370,125 @@ const MSSPanel = (() => {
   }
   addEventListener('resize', () => stack.forEach(paintMode));
 
-  /* ── Bottom sheets (small panels on phones) ──
-     Half: as tall as its content, at most ~64% of the screen; the content doesn't scroll — a drag anywhere moves the
-     sheet (up → full height, down → close). Full: the content scrolls; the grab handle / title row drag it (down → half). */
+  /* ── Bottom sheets (small panels on phones) — they follow the finger and settle on the nearest stop ──
+     Stops: "open" (as tall as its content) — or, when the content is taller than ~64% of the screen, "half" (64%) and
+     "full" (the whole height) — and "closed". The card is always its final height and slides (translateY), so a drag is
+     1:1 and smooth; letting go picks the stop nearest to where it's heading (a flick carries it on, owner 25 Nov 2026).
+     The bottom bar (Apply…) stays on the screen's bottom edge while the sheet is above half. Full: the content scrolls,
+     and pulling down from its very top moves the sheet. */
   const vh = P => Number(P.ov.style.getPropertyValue('--lyr-vh').replace('px', '')) || innerHeight;
-  function setFull(P, on) {
-    P.full = !!on;
-    P.ov.classList.toggle('is-full', P.full);
+  const SETTLE = 'transform .38s cubic-bezier(.2,.9,.25,1)';
+  function sheetMeasure(P) {
+    const card = P.ov.firstElementChild, S = P.sh;
+    const room = vh(P) - 10, cap = Math.round(room * .64);
+    card.style.height = 'auto';
+    const nat = card.offsetHeight;                                  // everything in it, at its natural height
+    const tall = nat > cap;
+    S.H = tall ? room : Math.min(nat, room);
+    S.stops = tall ? { full: 0, half: S.H - cap, closed: S.H } : { open: 0, closed: S.H };
+    if (!(S.at in S.stops) || S.at === 'closed') S.at = tall ? 'half' : 'open';
+    card.style.height = S.H + 'px';
   }
-  // how tall the sheet would be with all of its content showing
-  function natural(P) {
-    const card = P.ov.firstElementChild, body = card.querySelector('.lyr-body');
-    return card.offsetHeight - body.clientHeight + body.scrollHeight;
+  function sheetPlace(P, off, animate) {
+    const card = P.ov.firstElementChild, foot = card.querySelector('.lyr-foot'), S = P.sh;
+    S.off = off;
+    const t = animate && !mssReducedMotion() ? SETTLE : 'none';
+    card.style.transition = t; card.style.transform = `translateY(${off}px)`;
+    // the bar stays on the screen's edge down to half; below that it goes with the sheet
+    const keep = Math.max(0, Math.min(off, S.stops.half ?? 0));
+    foot.style.transition = t; foot.style.transform = keep ? `translateY(${-keep}px)` : '';
   }
-  // animate the card's height from what it is now to `to` px, then hand it back to the CSS (half / full)
-  function glide(P, to, after) {
+  function settle(P, at) {
+    const S = P.sh; if (!S) return;
+    if (at === 'closed') {
+      if (P.o.dirty?.()) { settle(P, S.at); requestClose(P); return; }   // unsaved: it asks first, the sheet stays
+      S.closing = true;
+      sheetPlace(P, S.stops.closed, true);
+      setTimeout(() => requestClose(P), mssReducedMotion() ? 0 : 200);
+      return;
+    }
+    S.at = at;
+    P.ov.classList.toggle('is-full', at === 'full');
+    sheetPlace(P, S.stops[at], true);
+  }
+  // it turns into a sheet (opening, or the screen got narrow): measured, then it rises to its first stop
+  function sheetOn(P) {
     const card = P.ov.firstElementChild;
-    if (mssReducedMotion()) { card.style.height = ''; after?.(); return; }
-    card.style.height = card.offsetHeight + 'px';
-    requestAnimationFrame(() => {
-      card.style.transition = 'height .22s var(--layer-in), transform .22s var(--layer-in)';
-      card.style.height = to + 'px'; card.style.transform = '';
-      setTimeout(() => { card.style.transition = ''; card.style.height = ''; after?.(); }, 230);
+    P.sh = { at: '', off: 0 };
+    sheetMeasure(P);
+    P.ov.classList.toggle('is-full', P.sh.at === 'full');
+    sheetPlace(P, P.sh.stops.closed, false);
+    card.getBoundingClientRect();                                   // start from below the screen
+    sheetPlace(P, P.sh.stops[P.sh.at], true);
+    // its content changes (results arrive, a section opens): the stops follow
+    P.sh.ro = new ResizeObserver(() => {
+      const S = P.sh; if (!S || S.closing || S.dragging || !P.ov.classList.contains('open')) return;
+      sheetMeasure(P); sheetPlace(P, S.stops[S.at], true);
     });
+    P.sh.ro.observe(card.querySelector('.lyr-content'));
+    P.sh.ro.observe(card.querySelector('.lyr-foot'));
+  }
+  function sheetOff(P) {
+    const card = P.ov.firstElementChild, foot = card.querySelector('.lyr-foot');
+    P.sh?.ro?.disconnect(); P.sh = null;
+    P.ov.classList.remove('is-full');
+    ['height', 'transform', 'transition'].forEach(k => { card.style[k] = ''; foot.style[k] = ''; });
   }
   function sheetDrag(P, ov) {
-    const card = ov.firstElementChild;
-    let id = null, y0 = 0, t0 = 0, dy = 0, h0 = 0, max = 0, moved = false;
-    card.addEventListener('pointerdown', ev => {
-      if (!ov.classList.contains('is-sheet') || ev.button > 0) return;
-      const handle = ev.target.closest('.lyr-grab, .lyr-top');
-      // full: the content scrolls itself, so only the handle / title row move the sheet; fields and sliders keep their touches
-      if (!handle && (P.full || ev.target.closest('input, textarea, select, [contenteditable="true"], [role="slider"]'))) return;
-      id = ev.pointerId; y0 = ev.clientY; t0 = Date.now(); dy = 0; moved = false;
-      h0 = card.offsetHeight;
-      max = P.full ? h0 : Math.min(vh(P) - 10, Math.max(h0, natural(P)));   // nothing more to show → it only gives a little
-    });
-    card.addEventListener('pointermove', ev => {
-      if (ev.pointerId !== id) return;
-      dy = ev.clientY - y0;
-      if (!moved) { if (Math.abs(dy) < 6) return; moved = true; card.setPointerCapture?.(id); ov.classList.add('is-dragging'); }
-      if (dy > 0) { card.style.height = ''; card.style.transform = `translateY(${dy}px)`; }
-      else { card.style.transform = ''; card.style.height = Math.min(max + 24, h0 - dy) + 'px'; }
-    });
-    const end = ev => {
-      if (ev.pointerId !== id) return;
-      id = null;
-      if (!moved) return;
-      ov.classList.remove('is-dragging');
-      const fast = dy / Math.max(1, Date.now() - t0);
-      const fullPx = vh(P) - 10;
-      if (dy < -40 && !P.full && max > h0 + 8) { glide(P, fullPx, () => setFull(P, true)); return; }       // up: the full height
-      if (dy > 0 && P.full && (dy > 70 || fast > .6)) {                                                    // full → half (a long drag closes)
-        if (dy > h0 * .55) { card.style.transform = ''; requestClose(P); return; }
-        setFull(P, false); const half = card.offsetHeight; setFull(P, true);
-        glide(P, half, () => setFull(P, false)); return;
-      }
-      if (dy > 0 && !P.full && (dy > 80 || fast > .6)) { card.style.transform = ''; requestClose(P); return; } // half: down closes
-      glide(P, P.full ? fullPx : h0);                                                                       // not far enough: back
+    const card = ov.firstElementChild, body = card.querySelector('.lyr-body');
+    let g = null, dragged = false;
+    const begin = (x, y, target) => {
+      if (!ov.classList.contains('is-sheet') || !P.sh || P.sh.closing) return;
+      if (target.closest('input, textarea, select, [contenteditable="true"], [role="slider"]')) return;   // fields keep their touches
+      g = { x0: x, y0: y, off0: P.sh.off, own: null, inBody: !target.closest('.lyr-top, .lyr-grab, .lyr-foot'), pts: [] };
     };
-    card.addEventListener('pointerup', end);
-    card.addEventListener('pointercancel', end);
+    const move = (x, y, ev) => {
+      if (!g) return;
+      const dy = y - g.y0, dx = x - g.x0;
+      if (g.own === null) {
+        if (Math.abs(dy) < 5 && Math.abs(dx) < 5) return;
+        if (Math.abs(dx) > Math.abs(dy)) { g = null; return; }                 // sideways: a row of chips scrolls
+        // full: the content scrolls — the sheet only takes a pull down from the content's very top
+        const scrolls = P.sh.at === 'full' && g.inBody && body.scrollHeight > body.clientHeight + 1;
+        if (scrolls && !(dy > 0 && body.scrollTop <= 0)) { g = null; return; }
+        g.own = true; g.y0 = y; g.off0 = P.sh.off;                             // from here, so it doesn't jump
+        P.sh.dragging = true; dragged = true;
+        ov.classList.add('is-dragging');
+      }
+      if (ev?.cancelable) ev.preventDefault();
+      let off = g.off0 + (y - g.y0);
+      if (off < 0) off = -Math.pow(-off, .72);                                 // past the top it gives a little
+      sheetPlace(P, off, false);
+      g.pts.push([y, performance.now()]); if (g.pts.length > 6) g.pts.shift();
+    };
+    const end = () => {
+      const G = g; g = null;
+      if (!G?.own || !P.sh) return;
+      P.sh.dragging = false;
+      ov.classList.remove('is-dragging');
+      const a = G.pts[0], b = G.pts[G.pts.length - 1];
+      const v = a && b && b[1] - a[1] > 0 ? (b[0] - a[0]) / (b[1] - a[1]) : 0;   // px per ms, + is down
+      const aim = P.sh.off + Math.max(-1.6, Math.min(1.6, v)) * 220;           // where a flick carries it
+      const [at] = Object.entries(P.sh.stops).reduce((best, s) => Math.abs(s[1] - aim) < Math.abs(best[1] - aim) ? s : best);
+      settle(P, at);
+    };
+    // touch: its own events, so a drag can be taken from the content's scrolling only when it should
+    card.addEventListener('touchstart', ev => { const t = ev.touches[0]; if (ev.touches.length === 1) begin(t.clientX, t.clientY, ev.target); else g = null; }, { passive: true });
+    card.addEventListener('touchmove', ev => { const t = ev.touches[0]; move(t.clientX, t.clientY, ev); }, { passive: false });
+    card.addEventListener('touchend', end); card.addEventListener('touchcancel', end);
+    // a mouse (a narrow desktop window): the same, from the handle or anywhere
+    card.addEventListener('pointerdown', ev => {
+      if (ev.pointerType !== 'mouse' || ev.button > 0) return;
+      begin(ev.clientX, ev.clientY, ev.target);
+      const mv = e => move(e.clientX, e.clientY, e), up = () => { removeEventListener('pointermove', mv); removeEventListener('pointerup', up); end(); };
+      addEventListener('pointermove', mv); addEventListener('pointerup', up);
+    });
     // a drag isn't a tap on whatever it started on
-    card.addEventListener('click', ev => { if (moved) { ev.preventDefault(); ev.stopPropagation(); moved = false; } }, true);
+    card.addEventListener('click', ev => { if (dragged) { ev.preventDefault(); ev.stopPropagation(); } dragged = false; }, true);
     // typing needs the room: a field taking focus opens the sheet to its full height
-    card.addEventListener('focusin', ev => { if (ov.classList.contains('is-sheet') && !P.full && ev.target.matches('input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), textarea, [contenteditable="true"]')) setFull(P, true); });
+    card.addEventListener('focusin', ev => {
+      if (P.sh?.stops.full != null && P.sh.at !== 'full' && ev.target.matches('input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), textarea, [contenteditable="true"]')) settle(P, 'full');
+    });
   }
   // the keyboard (phones): the sheet sits on top of it — the page doesn't shrink for it on iPhone, so it follows the
   // visual viewport: --lyr-kb = how far the keyboard reaches up, --lyr-vh = the height left above it
@@ -443,12 +498,12 @@ const MSSPanel = (() => {
       const kb = Math.max(0, document.documentElement.clientHeight - (vv.offsetTop + vv.height));
       P.ov.style.setProperty('--lyr-kb', Math.round(kb) + 'px');
       P.ov.style.setProperty('--lyr-vh', Math.round(vv.height) + 'px');
+      if (P.sh && !P.sh.dragging && !P.sh.closing) { sheetMeasure(P); sheetPlace(P, P.sh.stops[P.sh.at], true); }
     };
     const fn = on ? 'addEventListener' : 'removeEventListener';
     vv[fn]('resize', P.kb); vv[fn]('scroll', P.kb);
     if (on) P.kb(); else { P.ov.style.removeProperty('--lyr-kb'); P.ov.style.removeProperty('--lyr-vh'); }
   }
-
 
   // ?panel=name&id=… — open it once its page says how (here, or when the route is registered)
   function route(name, fn) {
