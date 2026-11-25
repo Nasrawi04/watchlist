@@ -384,8 +384,14 @@ const MSSPanel = (() => {
     const card = P.ov.firstElementChild, S = P.sh;
     const room = vh(P) - SHEET_GAP, cap = Math.round(vh(P) * SHEET_HALF);
     card.style.height = 'auto';
-    // everything in it, at its natural height (less the colour that hangs below the screen — CSS --sheet-ext)
+    // everything in it, at its natural height (less the colour that hangs below the screen — CSS --sheet-ext). The body is
+    // flex:1 (min-height 0) so it can scroll; Safari counts a flex:1 body as 0 tall inside a card of auto height, so the
+    // sheet came out as just its title and buttons and could never be pulled up (owner, 26 Nov 2026) — measured with
+    // the body at its own height instead, in every browser.
+    const body = card.querySelector('.lyr-body');
+    if (body) body.style.flex = 'none';
     const nat = card.offsetHeight - (parseFloat(getComputedStyle(card).paddingBottom) || 0);
+    if (body) body.style.flex = '';
     const tall = nat > cap;
     S.H = tall ? room : Math.min(nat, room);
     S.stops = tall ? { full: 0, half: S.H - cap, closed: S.H } : { open: 0, closed: S.H };
