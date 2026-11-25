@@ -2949,6 +2949,26 @@ body.notif-sheet-open { overflow:hidden; }
 .lyr.is-page.is-leaving .lyr-card { animation:lyrPop .24s var(--layer-out) forwards; }
 .lyr.is-page.is-create.is-leaving .lyr-card { animation:lyrSink .24s var(--layer-out) forwards; }
 .lyr.is-dragging .lyr-card { transition:none; }
+/* Bottom sheet (phones, small panels — panel.js sheetDrag): grab handle, half (as tall as its content, ≤ ~64%) or full;
+   it sits on the keyboard (--lyr-kb / --lyr-vh). Built on the phone layout (is-page) with the side panel's title row. */
+.lyr-grab { display:none; }
+.lyr.is-sheet { background:var(--scrim); }
+.lyr.is-page.is-sheet .lyr-card { inset:auto 0 var(--lyr-kb, 0px); margin:0 auto; width:min(560px, 100%); height:auto;
+  max-height:min(64dvh, calc(var(--lyr-vh, 100dvh) - 10px)); border:1px solid var(--border-2); border-bottom:0; border-radius:20px 20px 0 0;
+  touch-action:pan-x; }   /* half: a vertical drag anywhere moves the sheet (side-scrolling rows still scroll) */
+.lyr.is-page.is-sheet.is-full .lyr-card { height:calc(var(--lyr-vh, 100dvh) - 10px); max-height:none; touch-action:auto; }
+.lyr.is-sheet .lyr-grab { display:block; flex:none; width:36px; height:4px; margin:8px auto 2px; border-radius:2px; background:var(--border-2); }
+.lyr.is-sheet .lyr-grab, .lyr.is-sheet .lyr-top { touch-action:none; cursor:grab; }
+.lyr.is-page.is-sheet .lyr-bar { display:none; }
+.lyr.is-page.is-sheet .lyr-top { display:flex; margin-bottom:14px; }
+.lyr.is-page.is-sheet .lyr-x { display:grid; }
+.lyr.is-page.is-sheet .lyr-body { padding:8px 16px 16px; overflow:hidden; }
+.lyr.is-page.is-sheet.is-full .lyr-body { overflow-y:auto; }
+.lyr.is-page.is-sheet .lyr-foot { padding-bottom:max(16px, calc(10px + env(safe-area-inset-bottom))); }
+.lyr.is-sheet.is-entering { animation:fadeIn .2s ease-out; }
+.lyr.is-page.is-sheet.is-entering .lyr-card { animation:lyrRise .26s var(--layer-in); }
+.lyr.is-sheet.is-leaving { animation:fadeOut .2s ease-in forwards; }
+.lyr.is-page.is-sheet.is-leaving .lyr-card { animation:lyrSink .22s var(--layer-out) forwards; }
 .lyr.is-swap .lyr-body, .lyr.is-swap .lyr-hero, .lyr.is-swap .lyr-bar { animation:fadeIn .16s ease-out; }
 @keyframes lyrIn   { from { opacity:0; transform:translateX(24px); } }
 @keyframes lyrOut  { to   { opacity:0; transform:translateX(24px); } }

@@ -5,7 +5,12 @@
    MSSPanel.open(o) → a handle
      o.size      'S' (440px) | 'L' (600px) — a side panel from the right, full height, while it leaves
                  at least 320px of the page beside it; otherwise (phones, small tablets, short
-                 landscape screens) a full page with a back arrow and a bottom bar
+                 landscape screens) a full page with a back arrow and a bottom bar — except an 'S'
+                 panel, which is a bottom sheet there (owner, 25 Nov 2026: small things don't need a
+                 whole page): a grab handle, as tall as what's in it (up to ~64% of the screen); drag
+                 it up for the full height (its content scrolls then), down to make it smaller or close
+                 it; tap outside or ✕ to close; it sits on top of the keyboard. o.sheet: false → a full
+                 page instead (kind 'title' and o.head panels are always full pages)
      o.kind      'title'   → the header shows the title's backdrop behind the title (o.backdrop = an entry → its
                                owner's backdrop, or { type: 'tv' | 'movie', id } → yours — MSSBackdrop; o.tallHero → a taller picture; o.heroImg = an image URL to use instead (an episode's still); o.poster = an image URL → the poster beside the title); no backdrop → a plain title row
                  'generic' → no header bar on a side panel: the title sits at the top of the body
@@ -46,7 +51,7 @@
    MSSPopover.open(button, { title, subtitle, label, create, sheet, align, items: [{ label, sub, icon, onSelect, danger, divider, on }] })
      align: 'start' → the menu lines up with the button's left edge (default: its right edge). on: the current choice (highlighted, ✓).
      A 240px menu under the button (flips up near the bottom of the screen; ↑ ↓ Home End Enter Esc),
-     or on narrow screens a full page of 56px rows (create: true → it slides up). sheet: true → a
+     or on narrow screens a bottom sheet of 64px rows (a small panel — MSSPanel's sheet). sheet: true → a
      sheet that slides up from the bottom instead (one row per action; drag it down, tap outside or
      Esc to close). sub: a one-line
      description under the label. Choosing closes it first, then runs onSelect.
@@ -71,6 +76,8 @@ const MSSPanel = (() => {
   let closing = false;
 
   const sideFor = o => o.as !== 'page' && mssLayerFits(WIDTH[o.size] || WIDTH.S);
+  // not beside the page: a small panel is a bottom sheet, anything else a full page
+  const sheetFor = o => o.as !== 'page' && o.sheet !== false && (o.size || 'S') === 'S' && o.kind !== 'title' && o.head == null;
   const html = x => typeof x === 'string' ? x : '';
 
   function header(P) {
@@ -87,6 +94,7 @@ const MSSPanel = (() => {
     ov.className = 'lyr' + (o.kind === 'title' ? ' is-title' : ' is-generic') + (o.create ? ' is-create' : '') + (o.tallHero ? ' is-tall-hero' : '');
     ov.style.setProperty('--lyr-w', (WIDTH[o.size] || WIDTH.S) + 'px');
     ov.innerHTML = `<section class="lyr-card" role="dialog" aria-modal="true" aria-labelledby="${P.id}-t" tabindex="-1">
+        <span class="lyr-grab" aria-hidden="true"></span>
         ${header(P)}
         <div class="lyr-body">
           ${o.kind === 'title' || o.head != null ? '' : `<div class="lyr-top"><button type="button" class="lyr-back" aria-label="Back">${icon('back', 20)}</button><div class="lyr-top-txt"><h2 class="lyr-title" id="${P.id}-t"></h2><p class="lyr-sub" id="${P.id}-s" hidden></p></div>
@@ -106,14 +114,19 @@ const MSSPanel = (() => {
       if (ev.target.closest('.lyr-back')) requestClose(P);                        // Back: the one before
     });
     edgeSwipe(P, ov);
+    sheetDrag(P, ov);
     return ov;
   }
   function paintMode(P) {
-    const side = sideFor(P.o);
+    const side = sideFor(P.o), sheet = !side && sheetFor(P.o), was = P.ov.classList.contains('is-sheet');
     P.ov.classList.toggle('is-side', side);
+    // a sheet is "a phone layout" too (is-page: the phone sizes, no field focused on open), drawn as a sheet (is-sheet)
     P.ov.classList.toggle('is-page', !side);
-    // Back instead of ✕ when this panel replaced another one (side panels); full pages always have Back
-    P.ov.classList.toggle('has-back', !side || stack.indexOf(P) > 0);
+    P.ov.classList.toggle('is-sheet', sheet);
+    // Back instead of ✕ when this panel replaced another one (side panels, sheets); full pages always have Back
+    P.ov.classList.toggle('has-back', (side || sheet) ? stack.indexOf(P) > 0 : true);
+    if (sheet !== was) sheetKeyboard(P, sheet);
+    if (!sheet) setFull(P, false);
   }
   function setTitle(P, title, sub) {
     P.ov.querySelectorAll('.lyr-title').forEach(el => { el.textContent = title || ''; });
@@ -292,7 +305,7 @@ const MSSPanel = (() => {
     P.handle = {
       get body() { return P.ov.querySelector('.lyr-content'); },
       setTitle: (t, s) => setTitle(P, t, s), setBody: (b, m) => setBody(P, b, m), setFooter: (f, m) => setFooter(P, f, m),
-      setMedia: src => setMedia(P, src), setHead: (h, m) => setHead(P, h, m), setRoute: id => setRoute(P, id), setHero: src => setHero(P, src), setPoster: src => setPoster(P, src), setPrimary: o => setPrimary(P, o), get isPage() { return P.ov.classList.contains('is-page'); },
+      setMedia: src => setMedia(P, src), setHead: (h, m) => setHead(P, h, m), setRoute: id => setRoute(P, id), setHero: src => setHero(P, src), setPoster: src => setPoster(P, src), setPrimary: o => setPrimary(P, o), get isPage() { return P.ov.classList.contains('is-page'); },   // full pages and sheets (phones)
       busy: on => busy(P, on), banner: (m, r) => banner(P, m, r), fieldError,
       close: () => requestClose(P), closeNow: () => { P.o.dirty = null; requestClose(P); },
     };
@@ -322,20 +335,21 @@ const MSSPanel = (() => {
     const ov = P.ov;
     ov.classList.add('is-leaving');
     const done = () => {
+      sheetKeyboard(P, false);
       MSSDialog.close(ov);
       ov.remove();
       P.o.onClose?.();
     };
     if (under) { show(under, 'is-swap'); done(); return; }
     closing = true;
-    setTimeout(() => { closing = false; done(); }, mssReducedMotion() ? 120 : ov.classList.contains('is-page') ? 240 : 180);
+    setTimeout(() => { closing = false; done(); }, mssReducedMotion() ? 120 : ov.classList.contains('is-sheet') ? 220 : ov.classList.contains('is-page') ? 240 : 180);
   }
 
   /* phones: swipe from the left edge to go back — the page follows your finger */
   function edgeSwipe(P, ov) {
     let x0 = 0, y0 = 0, t0 = 0, dx = 0, id = null, card = null;
     ov.addEventListener('pointerdown', ev => {
-      if (ev.pointerType !== 'touch' || !ov.classList.contains('is-page') || ev.clientX > 24) return;
+      if (ev.pointerType !== 'touch' || !ov.classList.contains('is-page') || ov.classList.contains('is-sheet') || ev.clientX > 24) return;
       id = ev.pointerId; x0 = ev.clientX; y0 = ev.clientY; t0 = Date.now(); dx = 0; card = ov.firstElementChild;
     });
     ov.addEventListener('pointermove', ev => {
@@ -354,6 +368,86 @@ const MSSPanel = (() => {
     ov.addEventListener('pointerup', end); ov.addEventListener('pointercancel', end);
   }
   addEventListener('resize', () => stack.forEach(paintMode));
+
+  /* ── Bottom sheets (small panels on phones) ──
+     Half: as tall as its content, at most ~64% of the screen; the content doesn't scroll — a drag anywhere moves the
+     sheet (up → full height, down → close). Full: the content scrolls; the grab handle / title row drag it (down → half). */
+  const vh = P => Number(P.ov.style.getPropertyValue('--lyr-vh').replace('px', '')) || innerHeight;
+  function setFull(P, on) {
+    P.full = !!on;
+    P.ov.classList.toggle('is-full', P.full);
+  }
+  // how tall the sheet would be with all of its content showing
+  function natural(P) {
+    const card = P.ov.firstElementChild, body = card.querySelector('.lyr-body');
+    return card.offsetHeight - body.clientHeight + body.scrollHeight;
+  }
+  // animate the card's height from what it is now to `to` px, then hand it back to the CSS (half / full)
+  function glide(P, to, after) {
+    const card = P.ov.firstElementChild;
+    if (mssReducedMotion()) { card.style.height = ''; after?.(); return; }
+    card.style.height = card.offsetHeight + 'px';
+    requestAnimationFrame(() => {
+      card.style.transition = 'height .22s var(--layer-in), transform .22s var(--layer-in)';
+      card.style.height = to + 'px'; card.style.transform = '';
+      setTimeout(() => { card.style.transition = ''; card.style.height = ''; after?.(); }, 230);
+    });
+  }
+  function sheetDrag(P, ov) {
+    const card = ov.firstElementChild;
+    let id = null, y0 = 0, t0 = 0, dy = 0, h0 = 0, max = 0, moved = false;
+    card.addEventListener('pointerdown', ev => {
+      if (!ov.classList.contains('is-sheet') || ev.button > 0) return;
+      const handle = ev.target.closest('.lyr-grab, .lyr-top');
+      // full: the content scrolls itself, so only the handle / title row move the sheet; fields and sliders keep their touches
+      if (!handle && (P.full || ev.target.closest('input, textarea, select, [contenteditable="true"], [role="slider"]'))) return;
+      id = ev.pointerId; y0 = ev.clientY; t0 = Date.now(); dy = 0; moved = false;
+      h0 = card.offsetHeight;
+      max = P.full ? h0 : Math.min(vh(P) - 10, Math.max(h0, natural(P)));   // nothing more to show → it only gives a little
+    });
+    card.addEventListener('pointermove', ev => {
+      if (ev.pointerId !== id) return;
+      dy = ev.clientY - y0;
+      if (!moved) { if (Math.abs(dy) < 6) return; moved = true; card.setPointerCapture?.(id); ov.classList.add('is-dragging'); }
+      if (dy > 0) { card.style.height = ''; card.style.transform = `translateY(${dy}px)`; }
+      else { card.style.transform = ''; card.style.height = Math.min(max + 24, h0 - dy) + 'px'; }
+    });
+    const end = ev => {
+      if (ev.pointerId !== id) return;
+      id = null;
+      if (!moved) return;
+      ov.classList.remove('is-dragging');
+      const fast = dy / Math.max(1, Date.now() - t0);
+      const fullPx = vh(P) - 10;
+      if (dy < -40 && !P.full && max > h0 + 8) { glide(P, fullPx, () => setFull(P, true)); return; }       // up: the full height
+      if (dy > 0 && P.full && (dy > 70 || fast > .6)) {                                                    // full → half (a long drag closes)
+        if (dy > h0 * .55) { card.style.transform = ''; requestClose(P); return; }
+        setFull(P, false); const half = card.offsetHeight; setFull(P, true);
+        glide(P, half, () => setFull(P, false)); return;
+      }
+      if (dy > 0 && !P.full && (dy > 80 || fast > .6)) { card.style.transform = ''; requestClose(P); return; } // half: down closes
+      glide(P, P.full ? fullPx : h0);                                                                       // not far enough: back
+    };
+    card.addEventListener('pointerup', end);
+    card.addEventListener('pointercancel', end);
+    // a drag isn't a tap on whatever it started on
+    card.addEventListener('click', ev => { if (moved) { ev.preventDefault(); ev.stopPropagation(); moved = false; } }, true);
+    // typing needs the room: a field taking focus opens the sheet to its full height
+    card.addEventListener('focusin', ev => { if (ov.classList.contains('is-sheet') && !P.full && ev.target.matches('input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), textarea, [contenteditable="true"]')) setFull(P, true); });
+  }
+  // the keyboard (phones): the sheet sits on top of it — the page doesn't shrink for it on iPhone, so it follows the
+  // visual viewport: --lyr-kb = how far the keyboard reaches up, --lyr-vh = the height left above it
+  function sheetKeyboard(P, on) {
+    const vv = window.visualViewport; if (!vv) return;
+    if (!P.kb) P.kb = () => {
+      const kb = Math.max(0, document.documentElement.clientHeight - (vv.offsetTop + vv.height));
+      P.ov.style.setProperty('--lyr-kb', Math.round(kb) + 'px');
+      P.ov.style.setProperty('--lyr-vh', Math.round(vv.height) + 'px');
+    };
+    const fn = on ? 'addEventListener' : 'removeEventListener';
+    vv[fn]('resize', P.kb); vv[fn]('scroll', P.kb);
+    if (on) P.kb(); else { P.ov.style.removeProperty('--lyr-kb'); P.ov.style.removeProperty('--lyr-vh'); }
+  }
 
 
   // ?panel=name&id=… — open it once its page says how (here, or when the route is registered)
@@ -426,14 +520,14 @@ const MSSPopover = (() => {
     if (cur) { const same = cur.btn === btn; close(); if (same) return; }
     const items = o.items || [];
     if (o.sheet) return openSheet(btn, o, items);
-    if (innerWidth < 560) {                                   // narrow screen → a full page of rows
+    if (innerWidth < 560) {                                   // narrow screen → a bottom sheet of rows (a small panel)
       const list = document.createElement('ul');
-      list.className = 'lyr-menu is-page'; list.setAttribute('role', 'menu'); list.setAttribute('aria-label', o.label || o.title || 'Actions');
+      list.className = 'lyr-menu is-sheet'; list.setAttribute('role', 'menu'); list.setAttribute('aria-label', o.label || o.title || 'Actions');
       list.innerHTML = items.map(rowHTML).join('');
       list.addEventListener('click', ev => { const b = ev.target.closest('[data-i]'); if (b) choose(items[Number(b.dataset.i)]); });
       list.addEventListener('keydown', ev => keys(ev, list));
       list.querySelectorAll('[role="menuitem"]').forEach(b => b.tabIndex = 0);
-      const page = MSSPanel.open({ as: 'page', kind: 'generic', create: !!o.create, title: o.title || 'Actions', subtitle: o.subtitle, body: list, onClose: () => { if (cur?.page === page) cur = null; } });
+      const page = MSSPanel.open({ size: 'S', kind: 'generic', title: o.title || 'Actions', subtitle: o.subtitle, body: list, onClose: () => { if (cur?.page === page) cur = null; } });
       cur = { page, btn };
       return;
     }

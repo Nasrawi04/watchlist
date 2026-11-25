@@ -1700,6 +1700,9 @@ function _ntopMore() { _ntopMoreEl()?.click(); }
    over a dimmed page. Tap a row → go there; tap ▾ again, the dim page or Esc → closed. */
 function _ntopDrop(k, ev) {
   const btn = document.getElementById('ntopArea');
+  // with the bottom bar showing (phones / tablets): the area's own drag sheet — the same one its tab opens (owner, 25 Nov 2026)
+  const bar = document.getElementById('bnav');
+  if (bar && getComputedStyle(bar).display !== 'none' && typeof shellSheet === 'function') { shellSheet(k, btn, ev?.detail === 0); return; }
   let el = document.getElementById('ntopDrop');
   if (el && !el.hidden) { _ntopDropHide(true); return; }
   const t = SHELL_TABS.find(x => x.k === k);
@@ -3824,7 +3827,7 @@ const _nfPhone = () => matchMedia('(max-width: 767px)').matches;
 async function toggleNotifPanel(ev) {
   ev?.stopPropagation();
   if (location.pathname.endsWith('notifications.html')) return;   // already on the full page
-  if (_nfPhone()) { location.href = 'notifications.html'; return; } // phones: the full page, no panel
+  if (_nfPhone()) return _notifPhoneSheet();                        // phones: a sheet of the latest, then See all
   const el = _notifEnsurePanel();
   if (el.classList.contains('open')) { closeNotifPanel(); return; }
   _navCloseAll('notif');
@@ -3840,6 +3843,28 @@ async function toggleNotifPanel(ev) {
   document.getElementById('notifList').scrollTop = 0;
   el.focus({ preventScroll: true });          // into the panel, without a ring on ×
   // Opening the sheet = seen (the highlight stays until it's closed)
+  _notifMarkRead(_notifItems.filter(n => !n.read_at).map(n => n.id));
+}
+// Phones: the bell opens a bottom sheet (a small panel — panel.js) with your latest 8, Mark all read and See all → the full
+// page (owner, 25 Nov 2026: a peek first, the page when you want it). Opening it counts as seeing them, like the desktop panel.
+let _notifPhoneH = null;
+const _NF_PEEK = 8;
+async function _notifPhoneSheet() {
+  await mssLoadScript('js/panel.js');
+  if (_notifPhoneH) return;
+  _notifSheetNew = new Set(_notifItems.filter(n => !n.read_at).map(n => n.id));
+  const draw = () => {
+    const rows = _nfRows(_notifItems), fresh = _notifSheetNew.size;
+    _notifPhoneH?.setTitle('Notifications', fresh ? `${fresh} new` : 'You’re all caught up');
+    return !rows.length ? _notifEmptyHTML('all')
+      : `<div class="ntf-list ntf-peek">${_nfListHTML(rows.slice(0, _NF_PEEK), { fresh: _notifSheetNew })}</div>`;
+  };
+  const h = _notifPhoneH = MSSPanel.open({ size: 'S', kind: 'generic', title: 'Notifications', label: 'Notifications', body: '',
+    footer: { secondary: [{ label: 'Mark all read', onClick: x => { _notifSheetReadAll(); x.setBody(draw(), true); } }],
+      primary: { label: 'See all', onClick: () => { location.href = 'notifications.html'; } } },
+    onClose: () => { if (_notifPhoneH === h) _notifPhoneH = null; _notifSheetNew.clear(); } });
+  h.setBody(draw());
+  mssFillEpNames(h.body);
   _notifMarkRead(_notifItems.filter(n => !n.read_at).map(n => n.id));
 }
 function closeNotifPanel() {
