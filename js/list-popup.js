@@ -21,6 +21,8 @@
    MSSList.tmdb(id) resolves those from a device cache (14 days, shared by
    every page), and MSSList.hydrate(lists) fetches any that are missing —
    resolves true when something new arrived (re-render then).
+   Each lookup keeps TMDB's score too: MSSList.tmdbScore(e) — for a Discover pick,
+   or (after MSSList.loadScores(entries)) a library title nobody has rated.
 ═══════════════════════════════════════════════════════════════ */
 
 const MSSList = (() => {
@@ -37,33 +39,48 @@ const MSSList = (() => {
   const tmdb = id => cache[id] || null;
 
   const pending = new Set();
+  const stale = id => !cache[id] || !('tmdb_score' in cache[id]);   // looked up before scores were kept: once more
+  async function fetchOne(pid) {
+    const [, type, tid] = pid.split(':');
+    try {
+      const res = await tmdbFetch(`${TMDB_BASE}/${type}/${tid}?language=en-US`);
+      if (!res.ok) return;
+      const d = await res.json();
+      cache[pid] = {
+        id: pid, title: (type === 'movie' ? d.title : d.name) || '',
+        poster_url: d.poster_path ? TMDB_FULL + d.poster_path : null,
+        tmdb_id: Number(tid), tmdb_type: type,
+        year: ((type === 'movie' ? d.release_date : d.first_air_date) || '').split('-')[0],
+        released: (type === 'movie' ? d.release_date : d.first_air_date) || '',
+        genres: tmdbGenreNames(d.genres),
+        tmdb_score: d.vote_count && d.vote_average ? Number(mssR1(d.vote_average)) : null,
+        cat: type === 'movie' ? 'movies' : 'tv', _t: Date.now(),
+      };
+    } catch (e) { console.error('List item lookup failed:', pid, e); }
+    finally { pending.delete(pid); }
+  }
+  async function fetchAll(need) {
+    if (!need.size) return false;
+    need.forEach(id => pending.add(id));
+    await Promise.all([...need].map(fetchOne));
+    saveCache();
+    return true;
+  }
   // perList: only look up the first N titles of each list (cards show 5, popups 8)
   async function hydrate(lists, perList) {
     const need = new Set();
     (lists || []).forEach(l => (perList ? (l.items || []).slice(0, perList) : (l.items || []))
-      .forEach(id => { if (isTmdbId(id) && !cache[id] && !pending.has(id)) need.add(id); }));
-    if (!need.size) return false;
-    need.forEach(id => pending.add(id));
-    await Promise.all([...need].map(async pid => {
-      const [, type, tid] = pid.split(':');
-      try {
-        const res = await tmdbFetch(`${TMDB_BASE}/${type}/${tid}?language=en-US`);
-        if (!res.ok) return;
-        const d = await res.json();
-        cache[pid] = {
-          id: pid, title: (type === 'movie' ? d.title : d.name) || '',
-          poster_url: d.poster_path ? TMDB_FULL + d.poster_path : null,
-          tmdb_id: Number(tid), tmdb_type: type,
-          year: ((type === 'movie' ? d.release_date : d.first_air_date) || '').split('-')[0],
-          released: (type === 'movie' ? d.release_date : d.first_air_date) || '',
-          genres: tmdbGenreNames(d.genres),
-          cat: type === 'movie' ? 'movies' : 'tv', _t: Date.now(),
-        };
-      } catch (e) { console.error('List item lookup failed:', pid, e); }
-      pending.delete(pid);
-    }));
-    saveCache();
-    return true;
+      .forEach(id => { if (isTmdbId(id) && stale(id) && !pending.has(id)) need.add(id); }));
+    return fetchAll(need);
+  }
+  // TMDB's score for a list item: a Discover pick's own, or a library title's (by its TMDB id) once loadScores has it
+  const keyOf = e => !e ? null : isTmdbId(e.id) ? e.id
+    : e.tmdb_id ? `tmdb:${e.tmdb_type || (mssIsMovieEntry(e) ? 'movie' : 'tv')}:${Number(e.tmdb_id)}` : null;
+  const tmdbScore = e => { const k = keyOf(e); return (k && cache[k]?.tmdb_score) ?? null; };
+  function loadScores(entries) {
+    const need = new Set();
+    (entries || []).forEach(e => { const k = keyOf(e); if (k && stale(k) && !pending.has(k)) need.add(k); });
+    return fetchAll(need);
   }
 
   /* ── Pieces ── */
@@ -234,5 +251,5 @@ const MSSList = (() => {
     if (add === c) drawAdd();
   }
 
-  return { addTo, reorder, sortBy, orderValue, orderHint, ORDER_GROUPS, orderLabel, byLabel, _addClose: addClose, _addToggle: addToggle, cardHTML, cardInnerHTML, url, average, rankBadge, officialBadge, ownerHTML, avatarHTML, collabLineHTML, tmdb, isTmdbId, hydrate, cache };
+  return { addTo, reorder, sortBy, orderValue, orderHint, ORDER_GROUPS, orderLabel, byLabel, _addClose: addClose, _addToggle: addToggle, cardHTML, cardInnerHTML, url, average, rankBadge, officialBadge, ownerHTML, avatarHTML, collabLineHTML, tmdb, isTmdbId, hydrate, tmdbScore, loadScores, cache };
 })();

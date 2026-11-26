@@ -93,6 +93,11 @@ const _lvViewKey = 'msf_list_view_' + (_lvListId || '');
 let _lvView = (() => { try { return localStorage.getItem(_lvViewKey) === 'list' ? 'list' : 'grid'; } catch { return 'grid'; } })();
 const _lvOwn = () => !!_lvUser && !!_lvList && _lvList.user_id === _lvUser.id;
 const _lvIsTmdbOnly = e => typeof e.id === 'string' && e.id.startsWith('tmdb:');
+// A title's score on a list: the list owner's own rating, else TMDB's (one added from Discover, or one they
+// haven't rated) — on the cards, in Sort › Ratings and its rank numbers, and in the Score filter
+const _lvMine = e => _lvIsTmdbOnly(e) ? null : liveScore(e);
+const _lvTmdb = e => _lvMine(e) == null ? MSSList.tmdbScore(e) : null;
+const _lvScore = e => _lvMine(e) ?? MSSList.tmdbScore(e);
 const _lvFmt = d => new Date(d).toLocaleDateString(MSSI18n.locale, { day: 'numeric', month: 'short', year: 'numeric' });
 
 // Personal ranked lists can mix movies and shows, so the type badge always shows when it's known:
@@ -125,14 +130,14 @@ function _lvOpenInfo(id) {
 
 /* ── Grid view: the standard card, 5 a row (phones 3); a ranked list keeps the card's rank badge ── */
 function _lvCardHTML(e, rank) {
-  const real = !_lvIsTmdbOnly(e), sc = real ? liveScore(e) : null;
+  const real = !_lvIsTmdbOnly(e), sc = _lvScore(e);
   return MSSCard.poster({ cls: 'lv-card', onclick: `_lvOpenInfo(${attrJSON(e.id)})`, title: e.title, year: e.year, poster: e.poster_url, age: [e.tmdb_type || e.media_type, e.tmdb_id],
     rank: rank == null ? 0 : rank + 1, type: _lvTypeLabel(e) ? { label: _lvTypeLabel(e), tv: !_lvIsMovie(e) } : null,
     score: sc != null ? sc : undefined, meta: real ? mssMetaOf(e) : null, rewatch: real ? mssRewatchCount(e) : 0 });
 }
 /* ── List view: the Library's card (mssListCard, config.js) — the same on Ratings and in the Library ── */
 function _lvRowHTML(e, rank) {
-  return mssListCard(e, { rank: rank != null ? rank + 1 : 0, onclick: `_lvOpenInfo(${attrJSON(e.id)})`, real: !_lvIsTmdbOnly(e), type: _lvTypeLabel(e) });
+  return mssListCard(e, { rank: rank != null ? rank + 1 : 0, onclick: `_lvOpenInfo(${attrJSON(e.id)})`, real: !_lvIsTmdbOnly(e), type: _lvTypeLabel(e), tmdb: _lvTmdb(e) });
 }
 
 function _lvRenderViewToggle() { $('lvViewToggle').innerHTML = _lvViewToggleHTML(); }
@@ -189,12 +194,12 @@ function _lvRenderGrid() {
     return;
   }
   // Rank numbers: a ranked list in its own order (or reversed) → its place in the list; sorted by rating → its
-  // place in that order (unrated titles get none); anything else → none
+  // place in that order (titles with no score at all get none); anything else → none
   const sort = SF.getSort('lv', 'all');
   const byScore = sort === 'highest' || sort === 'lowest';
   const byOrder = (sort === 'rank' || sort === 'rankRev') && _lvList?.ranked === true;
   let n = 0;
-  const ranks = shown.map(e => byScore ? ((_lvIsTmdbOnly(e) ? null : liveScore(e)) != null ? n++ : null) : byOrder ? e._rank - 1 : null);
+  const ranks = shown.map(e => byScore ? (_lvScore(e) != null ? n++ : null) : byOrder ? e._rank - 1 : null);
   grid.className = _lvView === 'list' ? 'lp-grid lv-rows' : 'lv-grid msf-grid';
   // Whole rows, the Library's system: grid starts with 5 rows and Show more adds 3; list view starts with 10
   // rows and adds 5 (a row = as many cards as fit right now)
@@ -240,7 +245,8 @@ SF.register('lv', {
   sorts: () => ['rank', 'alpha', 'release', 'ratings', 'runtime', 'seasons', 'episodes'],
   filters: () => ['genre', 'year', 'score', 'length'],
   choiceFilters: () => [SF.typeChoice({ cat: e => e.cat || (e.tmdb_type === 'movie' ? 'movies' : 'tv') })],
-  scoreOf: e => _lvIsTmdbOnly(e) ? null : liveScore(e),
+  scoreOf: _lvScore,
+  scoreLabel: 'Score',
 });
 
 /* ── The hero ── */
@@ -256,7 +262,8 @@ function _lvHero() {
   $('lvDesc').textContent = l.description || '';
   $('lvDesc').hidden = !l.description;
   // Stats: titles · average (when there are ratings) · ordered by · updated (the last saved edit — sql/124)
-  const avg = MSSList.average(l, id => _lvItems.find(e => e.id === id) || null);
+  const scores = _lvItems.map(_lvScore).filter(v => v != null);   // their own scores, TMDB's for the rest
+  const avg = scores.length ? scores.reduce((a, b) => a + Number(b), 0) / scores.length : null;
   const order = l.sort_mode && l.sort_mode !== 'picked' ? MSSList.orderLabel(l.sort_mode) : own ? 'Your order' : `@${p.username || 'user'}’s order`;
   const stat = (k, v) => `<div class="lh-stat"><dt>${k}</dt><dd>${v}</dd></div>`;
   $('lvStats').innerHTML = stat('Titles', `<b>${_lvItems.length}</b>`)
@@ -471,6 +478,8 @@ async function _lvLoad() {
     }
     await MSSList.hydrate([list]);
     const look = id => MSSList.isTmdbId(id) ? MSSList.tmdb(id) : map[id];
+    // ordered by rating: TMDB's scores for their unrated titles first, so those slot in by score (not last)
+    if (list.sort_mode === 'highest' || list.sort_mode === 'lowest') await MSSList.loadScores(entryIds.map(id => map[id]).filter(e => e && liveScore(e) == null)).catch(() => {});
     // A list set to an order (Ratings Highest, Date Watched…) shows in it even if a score changed since it was
     // last saved; your own is saved that way too (db.js keeps it so from now on)
     if (MSSOrder.reorder(list, list.sort_mode, id => look(id) || null) && _lvOwn())
@@ -588,6 +597,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (_lvParams.get('edit') && (_lvOwn() || _lvShared)) return _lvEdit(list);
     _lvShow();
     _lvHandleJoinLink();
+    // TMDB's scores for the titles the owner hasn't rated (Discover picks already have theirs): then drawn again
+    MSSList.loadScores(_lvItems.filter(e => _lvMine(e) == null)).then(got => { if (got) { _lvHero(); _lvRenderGrid(); } }, () => {});
   });
 });
 </script>

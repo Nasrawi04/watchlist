@@ -1103,6 +1103,8 @@ const MSSViews = (() => {
   }
   async function open(entry, o = {}) {
     if (!entry) return;
+    // a list's title added straight from Discover ("tmdb:movie:123") is no one's entry: the title itself
+    if (String(entry.id || '').startsWith('tmdb:') && !entry.entry_id) return openItem({ ...entry, id: entry.tmdb_id, media_type: entry.tmdb_type || entry.media_type });
     if (!o.own && entry.tmdb_id && !(await MSSAge.guard(entry.tmdb_type || entry.media_type, entry.tmdb_id))) return;
     // On This Day for a title you've since removed: the title itself (TMDB), still with its own bar
     const e = o.otd && !entry.entry_id ? null : await full(entry);

@@ -2292,14 +2292,15 @@ function mssIsGold(v) { return v != null && v !== '' && !isNaN(v) && Number(Numb
    uses it, so they look like the Library on every screen size.
      o.rank (1, 2, 3…; 0 = none) · o.onclick · o.real (false: a TMDB-only title, no score) · o.type ('Movie', 'TV Show'…) · o.cls */
 function mssListCard(e, o = {}) {
-  const real = o.real !== false, sc = real ? liveScore(e) : null, m = real ? mssMetaOf(e) : {};
+  // o.tmdb: TMDB's score where there's none of theirs (a list page) — in the same ring
+  const real = o.real !== false, own = real ? liveScore(e) : null, sc = own ?? o.tmdb ?? null, m = real ? mssMetaOf(e) : {};
   const bd = e.tmdb_id || e.ratings?._backdrop ? MSSBackdrop.key(e) : '', art = safeURL(e.poster_url) ? safeURL(e.poster_url).replace(/\/(w\d+|original)\//, '/w342/') : '';
   const frame = real ? MSSBackdrop.style(e, false, 'card') : '';
   const yr = e.year ? String(e.year).slice(0, 4) : '';
   // the year sits in the kicker (Movie · 2014) on a computer and right after the title on a phone (.lp-yr — owner, 19 Nov 2026)
   const kicker = `${escHTML(o.type || '')}${yr ? `<span class="lp-k-yr">${o.type ? ' · ' : ''}${yr}</span>` : ''}`;
   const r = o.rank || 0, badge = r ? `<span class="cg-rank-badge ${r === 1 ? 'cg-rank-1' : r === 2 ? 'cg-rank-2' : r === 3 ? 'cg-rank-3' : 'cg-rank-other'}" aria-hidden="true">${r}</span>` : '';
-  const label = [r ? '#' + r : '', e.title, sc != null ? `your score ${Number(sc).toFixed(2)}` : ''].filter(Boolean).join(', ');
+  const label = [r ? '#' + r : '', e.title, sc != null ? `${own != null ? 'your score' : 'score'} ${Number(sc).toFixed(2)}` : ''].filter(Boolean).join(', ');
   return `<article class="lp-card lv-lp${o.cls ? ' ' + o.cls : ''}" role="button" tabindex="0" onclick="${o.onclick || ''}" onkeydown="if(event.key==='Enter'){event.preventDefault();this.click()}" aria-label="${escHTML(label)}"${MSSAge.attr(e.tmdb_type || e.media_type, e.tmdb_id, 'soft')}>
     ${bd || art ? `<span class="msf-row__art lp-art${bd ? ' is-bd' : ''}"${bd ? ` data-bd="${escHTML(bd)}"` : ''}${art ? ` data-poster="${escHTML(art)}"` : ''}${!bd && art ? ` style="background-image:url('${art}')"` : frame ? ` style="${escHTML(frame)}"` : ''} aria-hidden="true"></span>` : ''}
     <span class="lp-shade" aria-hidden="true"></span>
@@ -2309,7 +2310,7 @@ function mssListCard(e, o = {}) {
       <div class="lp-titlerow"><h3 class="lp-title" translate="no">${escHTML(e.title)}</h3>${yr ? `<span class="lp-yr">${yr}</span>` : ''}</div>
       ${m.long ? `<div class="lp-scoreline"><span class="lp-meta">${escHTML(m.long)}</span></div>` : ''}
     </div>
-    ${real ? `<div class="lp-ringbox">${mssScoreRing(sc)}</div>` : ''}
+    ${real || sc != null ? `<div class="lp-ringbox">${mssScoreRing(sc)}</div>` : ''}
   </article>`;
 }
 // Your score as the site's ring (.tv-ring) — the Library's list cards (.lp-ring), its podium, and every list view
@@ -3125,9 +3126,13 @@ const MSSOrder = (() => {
   const subRating = (e, concept) => mssRatingValue(e, concept);
   const watchedOn = e => String(e?.completed_date || e?.completed_at || '').slice(0, 10) || null;
   const releasedOn = e => String(e?.released || e?.release_date || e?.first_air_date || e?.year || '').slice(0, 10) || null;
-  // The value a mode sorts by (null = unknown → last); desc = bigger first
+  // The value a mode sorts by (null = unknown → last); desc = bigger first. Ratings: the list owner's own
+  // score, else TMDB's (a Discover pick, or a title they haven't rated — MSSList.tmdbScore, list-popup.js)
   function orderValue(e, mode) {
-    if (mode === 'highest' || mode === 'lowest') return liveScore(e) != null ? Number(liveScore(e)) : null;
+    if (mode === 'highest' || mode === 'lowest') {
+      const v = liveScore(e) ?? (typeof MSSList !== 'undefined' ? MSSList.tmdbScore(e) : null);
+      return v != null ? Number(v) : null;
+    }
     if (mode === 'watched_new' || mode === 'watched_old') return watchedOn(e);
     if (mode === 'release_new' || mode === 'release_old') return releasedOn(e);
     if (mode === 'az' || mode === 'za') return (e?.title || '').toLowerCase();
