@@ -1259,7 +1259,8 @@ function _detFill(e) {
   document.getElementById('dNotesSpoilerWrap').innerHTML = mssSpoilerToggleHTML('dNotesSpoiler', e);
   document.getElementById('dNotesSpoiler').checked = mssIsSpoiler(e);
   document.getElementById('dNoteVisWrap').innerHTML = mssNoteVisHTML('dNoteVis', e?.note_visibility, e?.id);   // who can view (069)
-  document.getElementById('dTitleVisWrap').innerHTML = mssTitleVisHTML('dTitleVis', e?.visibility);           // who can see this title (073)
+  // who can see this title (073) — a saved title saves it the moment it's tapped (145 takes back what others can no longer see)
+  document.getElementById('dTitleVisWrap').innerHTML = mssTitleVisHTML('dTitleVis', e?.visibility, e?.id ? '_deTitleVisPick' : undefined);
   // Watchlist priority (sql/144), just above it — Watchlist only; a new title starts on Want to Watch, a saved one shows its own (or none)
   document.getElementById('dPrioWrap').innerHTML = MSSPriority.pickerHTML('dPrio', e ? MSSPriority.of(e) : MSSPriority.DEFAULT);
   document.getElementById('dPrioWrap').hidden = (e?.status || 'queue') !== 'queue';
@@ -1621,6 +1622,23 @@ function _deScroll() {
   const on = hero.bottom + _deTabGap <= top + 9;
   L.classList.toggle('is-scrolled', on);
   _deEl('deMini').inert = !on;
+}
+
+/* ── Who can see this title: saved straight away (no Save changes), like Title Info ── */
+async function _deTitleVisPick(v) {
+  const e = _detEntry; if (!e?.id) return;
+  const prev = e.visibility || 'anyone';
+  if (prev === v) return;
+  try {
+    const saved = await updateProgress(e.id, _detUser?.id || (await getCurrentUser()).id, { visibility: v });
+    _detEntry = { ..._detEntry, visibility: saved?.visibility || v };
+    if (_deSaved) { _deSaved.titleVis = v; _deChanged(); }   // saved already — not an unsaved change
+    showToast(v === 'private' ? 'Only you can see this title now.' : v === 'friends' ? 'Only your friends can see this title now.' : 'Anyone can see this title now.');
+  } catch (err) {
+    console.error('Title visibility:', err);
+    showToast('Couldn’t save that — try again.', 'err');
+    mssVisSet('dTitleVis', prev);
+  }
 }
 
 /* ── unsaved changes ── */

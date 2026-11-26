@@ -582,6 +582,7 @@ function _notifyQueuedFrom(entry) {
     const src = JSON.parse(sessionStorage.getItem('mssQueuedFrom') || 'null');
     if (!src || !entry) return;
     sessionStorage.removeItem('mssQueuedFrom');
+    if (entry.visibility === 'private') return;   // added as Only me — nobody hears about it (the server checks too, 145)
     const fresh = Date.now() - src.t < 30 * 60 * 1000;
     const same = (src.title || '').trim().toLowerCase() === (entry.title || '').trim().toLowerCase();
     if (fresh && same) sb.rpc('notify_friend_queued', { p_owner: src.owner, p_entry: src.entry }).then(() => {}, () => {});
