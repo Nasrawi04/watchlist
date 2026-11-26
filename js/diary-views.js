@@ -22,7 +22,7 @@
 
    The profile's Diary tab (26 Nov 2026, owner: Timeline only): MSSDiaryPage.mount(el, { userId, own, name })
    draws the Timeline inside a tab, view-only — no other views, logging, ⋯, search, filters, No date
-   strip or On This Day; just ‹ Today › and jump-to-date (At a glance beside it on desktop). Your own
+   strip, On This Day or ‹ Today ›; just scrolling and jump-to-date (At a glance beside it on desktop). Your own
    profile reads your rows; someone else's reads 146 (get_profile_diary_page / _years / get_profile_diary:
    only titles you may see, as their Library). Until 146 runs their tab says so.
 ══════════════════════════════════════════ */
@@ -630,7 +630,7 @@ const MSSDiaryPage = (() => {
   }
   const unitName = () => ({ day: 'day', week: 'week', month: 'month', year: 'year' })[st.view];
 
-  // The profile's Diary tab: the Timeline's head without views, logging, search or filters (an h2 — the profile has the h1)
+  // The profile's Diary tab: the Timeline's head without ‹ Today ›, views, logging, search or filters (an h2 — the profile has the h1)
   function tabShell() {
     const t = st.tab, who = t.own ? 'Your Diary' : `${t.name ? `${t.name}’s` : 'Their'} Diary`;
     t.el.innerHTML = `<div id="dyRoot" class="dy-tab">
@@ -639,11 +639,6 @@ const MSSDiaryPage = (() => {
           <div class="lib-kicker">${esc(who)}</div>
           <h2 class="dy-h1"><button type="button" class="dy-title" id="dyTitle" aria-label="Jump to a date"></button></h2>
           <div class="dy-sub" id="dyCount" aria-live="polite"></div>
-        </div>
-        <div class="dy-nav" id="dyNav">
-          <button type="button" class="dy-ic" id="dyPrev">${icon('chevleft', 16)}</button>
-          <button type="button" class="dy-today" id="dyToday">Today</button>
-          <button type="button" class="dy-ic" id="dyNext">${icon('chevright', 16)}</button>
         </div>
       </div>
       <div id="dyMain"></div></div>`;
@@ -690,7 +685,7 @@ const MSSDiaryPage = (() => {
     root.classList.toggle('is-dates', st.dates);
     root.dataset.view = st.view;
     document.querySelectorAll('.dy-views [data-view]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.view === st.view)));
-    $('dyPrev').setAttribute('aria-label', st.view === 'timeline' ? 'Newer day' : `Previous ${unitName()}`); $('dyNext').setAttribute('aria-label', st.view === 'timeline' ? 'Older day' : `Next ${unitName()}`);
+    if ($('dyPrev')) $('dyPrev').setAttribute('aria-label', st.view === 'timeline' ? 'Newer day' : `Previous ${unitName()}`); if ($('dyNext')) $('dyNext').setAttribute('aria-label', st.view === 'timeline' ? 'Older day' : `Next ${unitName()}`);
     if ($('dyBack')) $('dyBack').hidden = !st.dates;
     if (st.dates) return drawDates();
     if (!ro()) drawStrip();
@@ -726,8 +721,8 @@ const MSSDiaryPage = (() => {
     $('dyCount').textContent = countText();
     // the middle button names where it goes (owner, 14 Nov 2026): Today · This week · This month · This year
     const here = { timeline: 'Today', day: 'Today', week: 'This week', month: 'This month', year: 'This year' }[st.view];
-    $('dyToday').textContent = here;
-    $('dyToday').setAttribute('aria-label', st.view === 'timeline' ? 'Back to your newest watches' : `Go to ${here.toLowerCase()}`);
+    if ($('dyToday')) $('dyToday').textContent = here;
+    if ($('dyToday')) $('dyToday').setAttribute('aria-label', st.view === 'timeline' ? 'Back to your newest watches' : `Go to ${here.toLowerCase()}`);
     let html;
     if (st.view === 'timeline') html = `<div class="dy-tlw"><div class="dy-tlw-main">${timelineHTML()}</div>${split() ? `<aside class="dy-tlw-side">${glanceHTML()}</aside>` : ''}</div>`;
     else if (st.view === 'year') html = yearHTML(y);
@@ -1061,7 +1056,7 @@ const MSSDiaryPage = (() => {
   }
   // Timeline ‹ ›: the newer / older day with watches, from the one at the top of the screen
   async function tlStep(dir) {
-    const off = Math.round(Math.max(document.getElementById('mainNav')?.getBoundingClientRect().bottom || 72, tabBar())) + 12;
+    const off = Math.round(document.getElementById('mainNav')?.getBoundingClientRect().bottom || 72) + 12;
     const days = () => [...document.querySelectorAll('#dyTl .tl-day')];
     let list = days();
     // the day at the top of the screen: the last one whose start has reached it
@@ -1073,11 +1068,6 @@ const MSSDiaryPage = (() => {
     const to = list[k];
     if (!to) { showToast(dir > 0 ? `That’s the start of ${whose()} Diary.` : other() ? 'These are their newest watches.' : 'You’re at your newest watches.'); return; }
     scrollTo({ top: Math.max(0, scrollY + to.getBoundingClientRect().top - off), behavior: reduced() ? 'auto' : 'smooth' });
-    // on a profile the tab bar moves into place as the page scrolls: line the day up again after
-    if (st.tab) setTimeout(() => {
-      const d = to.getBoundingClientRect().top - Math.round(Math.max(document.getElementById('mainNav')?.getBoundingClientRect().bottom || 72, tabBar())) - 12;
-      if (Math.abs(d) > 4) scrollBy({ top: d, behavior: 'auto' });
-    }, reduced() ? 260 : 700);
   }
   function setView(v) { st.view = v; put('view2', v); }
   // on a profile: where the sticky tab bar ends once it's stuck (0 where it doesn't stick)
@@ -1086,12 +1076,12 @@ const MSSDiaryPage = (() => {
     const cs = getComputedStyle(bar);
     return cs.position === 'sticky' ? (parseFloat(cs.top) || 0) + bar.offsetHeight : 0;
   }
-  // back to the top of the Timeline: the page's top, or the tab's (under the bars) on a profile
-  function toTop(behavior = 'auto') {
-    if (!st.tab) return scrollTo({ top: 0, behavior });
+  // after jumping to a date: the page's top, or the tab's (under the bars) on a profile
+  function toTop() {
+    if (!st.tab) return scrollTo({ top: 0, behavior: 'auto' });
     const under = Math.max(document.getElementById('mainNav')?.getBoundingClientRect().bottom || 64, tabBar());
     const top = $('dyRoot').getBoundingClientRect().top + scrollY - under - 8;
-    if (top < scrollY) scrollTo({ top: Math.max(0, top), behavior });
+    if (top < scrollY) scrollTo({ top: Math.max(0, top), behavior: 'auto' });
   }
   function pickDay(d, open) {
     st.day = d;
@@ -1104,19 +1094,19 @@ const MSSDiaryPage = (() => {
     });
   }
   function wire() {
-    $('dyPrev').onclick = () => st.view === 'timeline' ? tlStep(-1) : step(-1);
-    $('dyNext').onclick = () => st.view === 'timeline' ? tlStep(1) : step(1);
-    $('dyToday').onclick = () => {
-      if (st.view === 'timeline') { const back = !!st.tl.from; if (back) tlReset(); toTop(reduced() ? 'auto' : 'smooth'); if (back) draw(); return; }
-      st.day = today(); draw();
-    };
     $('dyTitle').onclick = () => {
       if (st.dates) return;
       MSSDateRange.pickDate({ value: st.view === 'timeline' ? (st.tl.from || today()) : st.day, label: 'Jump to', view: st.view === 'year' ? 'years' : undefined, anchor: $('dyTitle'),
         onPick: v => { if (st.view === 'timeline') { tlReset(v >= today() ? null : v); toTop(); } else st.day = v; draw(); } });
     };
     wireMain();
-    if (st.tab) return;   // the profile tab is the Timeline, view-only: no views, logging, search or Set dates
+    if (st.tab) return;   // the profile tab is the Timeline, view-only: no ‹ Today ›, views, logging, search or Set dates
+    $('dyPrev').onclick = () => st.view === 'timeline' ? tlStep(-1) : step(-1);
+    $('dyNext').onclick = () => st.view === 'timeline' ? tlStep(1) : step(1);
+    $('dyToday').onclick = () => {
+      if (st.view === 'timeline') { const back = !!st.tl.from; if (back) tlReset(); scrollTo({ top: 0, behavior: reduced() ? 'auto' : 'smooth' }); if (back) draw(); return; }
+      st.day = today(); draw();
+    };
     document.querySelector('.dy-views').addEventListener('click', ev => {
       const b = ev.target.closest('[data-view]'); if (!b) return;
       setView(b.dataset.view); draw();
