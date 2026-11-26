@@ -7434,6 +7434,8 @@ a.nc-author:hover span:last-child { color:var(--text); text-decoration:underline
   .dy-tlw { grid-template-columns:minmax(0, 1fr) 340px; }
   .dy-tlw .tl { max-width:none; }
   .dy-tlw-side { display:block; position:sticky; top:calc(var(--page-pt, 104px) - 12px); max-height:calc(100dvh - var(--page-pt, 104px)); overflow:auto; overscroll-behavior:contain; scrollbar-width:thin; border-radius:18px; }
+  /* a profile's Diary tab: stick under the profile's own small header and tab bar (de-tabs: --de-top + 84px, ~54px tall) */
+  .dy-tab .dy-tlw-side { --dy-stick:calc(var(--de-top, 0px) + 152px); top:var(--dy-stick); max-height:calc(100dvh - var(--dy-stick) - 16px); }
 }
 .lib-glance.dy-gl { padding:0; overflow:clip; }
 .dy-gl-head { display:flex; align-items:center; gap:10px; width:100%; min-height:56px; padding:14px 18px; border:0; background:none; color:var(--text); cursor:pointer; text-align:start; }
