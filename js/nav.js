@@ -1749,7 +1749,7 @@ function _bnavDotPaint() {
    and scroll away (Back to top brings them back). The page's own big title is hidden on phones (it stays for screen readers). */
 const _NTOP_SHARE = ['title.html', 'person.html', 'list-view.html', 'profile-view.html', 'season.html', 'episode.html', 'discover-list.html'];
 // the line under a tab page's title (Library's counts, Lists' stats, Activity's description, Diary's watches…)
-const _NTOP_SUB_SRC = '.cat-page-header .cat-page-sub, .cab-head .cab-sub, .dy-sub';
+const _NTOP_SUB_SRC = '.cat-page-header .cat-page-sub, .cab-head .cab-sub, .dy-page .dy-sub';   // the Diary page's, not a profile's Diary tab
 const _ntopName = () => (document.title || '').replace(/\s*[—–|-]\s*MyScreenFolio\s*$/, '').trim() || 'MyScreenFolio';
 function _ntopLeftHTML(w) {
   const page = _navFile(location), t = SHELL_TABS.find(x => x.k === w.tab);

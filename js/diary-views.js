@@ -19,6 +19,12 @@
    Filters (the site's Filter popup): Type · First watch / Rewatch · Rated / Unrated · Genre ·
    "Only dates with watches" (‹ › jump between watch days). Search lists every watch of a title.
    Times show only when one was saved (an exact midnight is a day without a time).
+
+   The profile's Diary tab (26 Nov 2026, owner: Timeline only): MSSDiaryPage.mount(el, { userId, own, name })
+   draws the Timeline inside a tab, view-only — no other views, logging, ⋯, search, filters, No date
+   strip or On This Day; just ‹ Today › and jump-to-date (At a glance beside it on desktop). Your own
+   profile reads your rows; someone else's reads 146 (get_profile_diary_page / _years / get_profile_diary:
+   only titles you may see, as their Library). Until 146 runs their tab says so.
 ══════════════════════════════════════════ */
 const MSSDiaryPage = (() => {
   const VIEWS = ['timeline', 'day', 'week', 'month', 'year'];
@@ -60,8 +66,13 @@ const MSSDiaryPage = (() => {
     prevRatings: new Map(), eps: new Map(), open: new Set(), search: null, dates: false, monthN: new Map(),
     nodate: { n: 0, rows: [], waiting: [] },
     tl: { rows: [], off: 0, done: false, busy: false, from: null },
+    tab: null,   // the profile's Diary tab: { el, userId, own, name } — view-only
   };
   const $ = id => document.getElementById(id);
+  const ro = () => !!st.tab;                       // view-only (a profile's Diary tab)
+  const other = () => !!st.tab && !st.tab.own;     // someone else's diary (get_profile_diary, 146)
+  const scoreWho = () => other() ? 'Their score' : 'Your score';
+  const whose = () => other() ? 'their' : 'your';
 
   /* ── The week ── */
   function regionWeekStart() {
@@ -82,6 +93,16 @@ const MSSDiaryPage = (() => {
   /* ── Loading (only what's on screen) ── */
   async function fetchRows(from, to) {
     const out = [];
+    if (other()) {
+      // someone else's: a month per call (146 takes at most 62 days), only titles you may see
+      const calls = [];
+      for (let a = from; a <= to; a = addMonths(monthStart(a), 1)) {
+        const b = monthEnd(a) < to ? monthEnd(a) : to;
+        calls.push(sb.rpc('get_profile_diary', { p_user: st.tab.userId, p_from: a, p_to: b }));
+      }
+      for (const { data, error } of await Promise.all(calls)) { if (error) throw error; out.push(...(data || [])); }
+      return out;
+    }
     for (let off = 0; off < 20000; off += 1000) {
       const { data, error } = await sb.from('diary_watches').select(COLS).gte('watched_date', from).lte('watched_date', to)
         .order('watched_date').order('watched_at', { nullsFirst: true }).order('season', { nullsFirst: true }).order('episode', { nullsFirst: true }).range(off, off + 999);
@@ -109,6 +130,7 @@ const MSSDiaryPage = (() => {
   }
   // A rewatch shows what you rated before: the title's earlier completions
   async function prevRatingsFor(rows) {
+    if (other()) return;   // someone else's earlier scores aren't read (their diary table is private)
     const ids = [...new Set(rows.filter(r => r.completes_title && r.is_rewatch && r.entry_id && !st.prevRatings.has(r.entry_id)).map(r => r.entry_id))];
     if (!ids.length) return;
     const { data } = await sb.from('diary_watches').select('entry_id,rewatch_no,rating_at_watch,watched_date').eq('completes_title', true).in('entry_id', ids.slice(0, 200));
@@ -120,6 +142,13 @@ const MSSDiaryPage = (() => {
   async function loadYears() {
     if (st.years) return;
     const years = new Map();
+    if (other()) {
+      const { data, error } = await sb.rpc('get_profile_diary_years', { p_user: st.tab.userId });
+      if (error) throw error;
+      (data || []).forEach(r => years.set(String(r.yr), Number(r.n)));
+      st.years = years;
+      return;
+    }
     for (let off = 0; off < 100000; off += 1000) {
       const { data, error } = await sb.from('diary_watches').select('watched_date').not('watched_date', 'is', null).order('watched_date').range(off, off + 999);
       if (error) throw error;
@@ -153,13 +182,18 @@ const MSSDiaryPage = (() => {
     return q.order('watched_date', { ascending: false }).order('watched_at', { ascending: false, nullsFirst: false })
       .order('season', { ascending: false, nullsFirst: false }).order('episode', { ascending: false, nullsFirst: false }).order('id');
   }
+  // a page of the Timeline, newest first: your rows, or someone else's through 146
+  function tlPage(off, n) {
+    if (other()) return sb.rpc('get_profile_diary_page', { p_user: st.tab.userId, p_before: st.tl.from, p_offset: off, p_limit: n });
+    return tlQuery().range(off, off + n - 1);
+  }
   function tlReset(from = null) { st.tl = { rows: [], off: 0, done: false, busy: false, from }; }
   async function tlMore() {
     const tl = st.tl;
     if (tl.busy || tl.done || st.search || st.view !== 'timeline') return;
     tl.busy = true; tlFoot();
     try {
-      const { data, error } = await tlQuery().range(tl.off, tl.off + TL_PAGE - 1);
+      const { data, error } = await tlPage(tl.off, TL_PAGE);
       if (error) throw error;
       if (tl !== st.tl) return;
       const rows = (data || []).map(enrich);
@@ -213,6 +247,7 @@ const MSSDiaryPage = (() => {
   let passing = null;
   const passes = r => !passing || passing.has(r.id);
   function refreshPassing() {
+    if (st.tab) { passing = null; return; }   // no filters on the profile tab
     const any = SF.filterCount('diary', 'all') - (choice().only === 'all' ? 1 : 0) > 0;
     passing = any ? new Set(SF.list('diary', 'all').map(r => r.id)) : null;
   }
@@ -261,7 +296,7 @@ const MSSDiaryPage = (() => {
   const typeTag = r => `<span class="dy-type${isMovie(r) ? ' is-movie' : ''}">${esc(CAT_LABEL[r.cat] || (isMovie(r) ? 'Movie' : 'TV Show'))}</span>`;
   const rewatchTag = r => r.is_rewatch && r.rewatch_no > 1 ? `<span class="dy-tag is-re">${icon('refresh', 11)}${ord(r.rewatch_no)} watch</span>` : '';
   const art = (r, cls = 'dy-art') => `<span class="${cls}">${r.poster_url ? `<img src="${esc(small(r.poster_url))}" alt="" loading="lazy">` : `<span class="dy-art-ph" aria-hidden="true">${esc((r.title || '?')[0])}</span>`}</span>`;
-  const moreBtn = (ids, label) => `<button type="button" class="dy-more" data-act="more" data-ids="${esc(ids.join(','))}" aria-label="Options for ${esc(label)}">${icon('moreV', 17)}</button>`;
+  const moreBtn = (ids, label) => ro() ? '' : `<button type="button" class="dy-more" data-act="more" data-ids="${esc(ids.join(','))}" aria-label="Options for ${esc(label)}">${icon('moreV', 17)}</button>`;
   const byEp = (a, b) => (a.season ?? -1) - (b.season ?? -1) || (a.episode ?? -1) - (b.episode ?? -1);
   // "S1 E1–E8" · "S1–S4" for several episodes
   function rangeText(rows) {
@@ -469,7 +504,7 @@ const MSSDiaryPage = (() => {
         <span class="tl-main"><span class="tl-title" translate="no">${esc(r.title)}</span>${sub}${tags ? `<span class="tl-meta">${tags}</span>` : ''}</span>`;
     return `<li class="tl-row"${ep && r.tmdb_id ? ` data-ep="${r.tmdb_id}:${r.season}:${r.episode}"` : ''}>
         ${href ? `<a class="tl-link" href="${esc(href)}">${inner}</a>` : `<div class="tl-link">${inner}</div>`}
-        <span class="tl-end">${sc != null ? `<span class="tl-sc${mssTierCls(sc)}${mssIsGold(sc) ? ' is-gold' : ''}" aria-label="Your score ${mssR1(sc)}">${mssR1(sc)}</span>` : ''}${moreBtn([r.id], label)}</span>
+        <span class="tl-end">${sc != null ? `<span class="tl-sc${mssTierCls(sc)}${mssIsGold(sc) ? ' is-gold' : ''}" aria-label="${scoreWho()} ${mssR1(sc)}">${mssR1(sc)}</span>` : ''}${moreBtn([r.id], label)}</span>
       </li>`;
   }
   const tlDayHead = (d, n) => `<header class="tl-date"><span class="tl-wd">${esc(weekday(d))}</span><span class="tl-dn">${esc(longDate(d))}</span><span class="tl-n">${plural(n, 'watch', 'watches')}</span></header>`;
@@ -498,11 +533,13 @@ const MSSDiaryPage = (() => {
     const tl = st.tl, shown = $('dyTl')?.querySelector('.tl-row');
     f.innerHTML = tl.failed ? `<span>Couldn’t load older watches.</span><button type="button" class="dy-btn" onclick="MSSDiaryPage.more()">Try again</button>`
       : tl.busy ? `<span class="tl-busy">Loading older watches…</span>`
-      : tl.done ? (shown ? `<span class="tl-end-t">${tl.from ? `The start of your Diary` : `That’s everything — the start of your Diary`}</span>` : '') : '';
+      : tl.done ? (shown ? `<span class="tl-end-t">${tl.from ? `The start of ${whose()} Diary` : `That’s everything — the start of ${whose()} Diary`}</span>` : '') : '';
   }
   function timelineHTML() {
     const rows = st.tl.rows.filter(passes);
     if (!rows.length && st.tl.done) {
+      if (other()) return mssEmpty({ art: 'episodes', title: 'Nothing to show yet', text: 'Watches they log show up here — only titles they share with you.' });
+      if (ro()) return mssEmpty({ art: 'episodes', title: 'Nothing in your Diary yet', text: 'Watch something, or log a past watch, and it shows up here.', actions: [{ label: 'Open your Diary', icon: 'calendar', href: 'diary.html' }] });
       return mssEmpty({ art: 'episodes', title: passing ? 'Nothing matches your filters' : 'Nothing in your Diary yet', text: passing ? 'Try a different filter.' : 'Watch something, or log a past watch, and it shows up here.',
         actions: passing ? [] : [{ label: 'Log a watch', icon: 'plus', primary: true, onclick: 'MSSDiaryPage.add()' }] });
     }
@@ -593,6 +630,25 @@ const MSSDiaryPage = (() => {
   }
   const unitName = () => ({ day: 'day', week: 'week', month: 'month', year: 'year' })[st.view];
 
+  // The profile's Diary tab: the Timeline's head without views, logging, search or filters (an h2 — the profile has the h1)
+  function tabShell() {
+    const t = st.tab, who = t.own ? 'Your Diary' : `${t.name ? `${t.name}’s` : 'Their'} Diary`;
+    t.el.innerHTML = `<div id="dyRoot" class="dy-tab">
+      <div class="dy-head">
+        <div class="dy-head-l">
+          <div class="lib-kicker">${esc(who)}</div>
+          <h2 class="dy-h1"><button type="button" class="dy-title" id="dyTitle" aria-label="Jump to a date"></button></h2>
+          <div class="dy-sub" id="dyCount" aria-live="polite"></div>
+        </div>
+        <div class="dy-nav" id="dyNav">
+          <button type="button" class="dy-ic" id="dyPrev">${icon('chevleft', 16)}</button>
+          <button type="button" class="dy-today" id="dyToday">Today</button>
+          <button type="button" class="dy-ic" id="dyNext">${icon('chevright', 16)}</button>
+        </div>
+      </div>
+      <div id="dyMain"></div></div>`;
+    wire();
+  }
   function shell() {
     $('dyRoot').innerHTML = `
       <div class="dy-head fade-up">
@@ -621,6 +677,7 @@ const MSSDiaryPage = (() => {
     wire();
   }
   function filterBtn() {
+    if (!$('dyFilter')) return;
     const n = SF.filterCount('diary', 'all');
     $('dyFilter').innerHTML = `<button type="button" class="dy-ic${n ? ' is-on' : ''}" onclick="SF.openFilter('diary','all')" aria-label="${n ? `Filter, ${n} on` : 'Filter'}">${icon('filter', 15)}${n ? `<b class="dy-ic-n">${n}</b>` : ''}</button>`;
   }
@@ -634,9 +691,9 @@ const MSSDiaryPage = (() => {
     root.dataset.view = st.view;
     document.querySelectorAll('.dy-views [data-view]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.view === st.view)));
     $('dyPrev').setAttribute('aria-label', st.view === 'timeline' ? 'Newer day' : `Previous ${unitName()}`); $('dyNext').setAttribute('aria-label', st.view === 'timeline' ? 'Older day' : `Next ${unitName()}`);
-    $('dyBack').hidden = !st.dates;
+    if ($('dyBack')) $('dyBack').hidden = !st.dates;
     if (st.dates) return drawDates();
-    drawStrip();
+    if (!ro()) drawStrip();
     if (st.search) return drawSearch();
     const y = st.day.slice(0, 4);
     try {
@@ -644,7 +701,7 @@ const MSSDiaryPage = (() => {
         await loadYears();
         if (split()) await ensure(`${today().slice(0, 4)}-01-01`, today());   // At a glance beside it (desktop)
         if (!st.tl.rows.length && !st.tl.done) {
-          const { data, error } = await tlQuery().range(0, TL_PAGE - 1);
+          const { data, error } = await tlPage(0, TL_PAGE);
           if (error) throw error;
           const rows = (data || []).map(enrich);
           await prevRatingsFor(rows);
@@ -653,7 +710,16 @@ const MSSDiaryPage = (() => {
       } else if (st.view === 'year') await Promise.all([ensure(`${y}-01-01`, `${y}-12-31`), loadYears()]);
       else if (st.view === 'week') await ensure(weekOf(st.day), addDays(weekOf(st.day), 6));
       else await ensure(monthStart(st.day), monthEnd(st.day));
-    } catch (err) { console.error(err); if (seq === drawing) $('dyMain').innerHTML = mssEmpty({ compact: true, art: 'episodes', title: 'Couldn’t load your Diary', text: 'Check your connection and try again.', actions: [{ label: 'Try again', icon: 'refresh', onclick: 'MSSDiaryPage.reload()' }] }); return; }
+    } catch (err) {
+      if (seq !== drawing) return;
+      // someone else's diary before 146 runs: say so, quietly (the rest of their profile works)
+      const missing = other() && (err?.code === 'PGRST202' || err?.code === '42883' || /get_profile_diary/.test(err?.message || ''));
+      if (missing) console.warn('Profile diary: sql/146 not run yet'); else console.error(err);
+      $('dyTitle').textContent = titleText(); $('dyCount').textContent = '';
+      $('dyMain').innerHTML = missing ? mssEmpty({ compact: true, art: 'episodes', title: 'Their Diary isn’t available yet', text: 'Diaries on profiles are on their way. Check back soon.' })
+        : mssEmpty({ compact: true, art: 'episodes', title: ro() && !st.tab.own ? 'Couldn’t load this Diary' : 'Couldn’t load your Diary', text: 'Check your connection and try again.', actions: [{ label: 'Try again', icon: 'refresh', onclick: 'MSSDiaryPage.reload()' }] });
+      return;
+    }
     if (seq !== drawing) return;
     refreshPassing();
     $('dyTitle').textContent = titleText();
@@ -995,7 +1061,7 @@ const MSSDiaryPage = (() => {
   }
   // Timeline ‹ ›: the newer / older day with watches, from the one at the top of the screen
   async function tlStep(dir) {
-    const off = Math.round(document.getElementById('mainNav')?.getBoundingClientRect().bottom || 72) + 12;
+    const off = Math.round(Math.max(document.getElementById('mainNav')?.getBoundingClientRect().bottom || 72, tabBar())) + 12;
     const days = () => [...document.querySelectorAll('#dyTl .tl-day')];
     let list = days();
     // the day at the top of the screen: the last one whose start has reached it
@@ -1005,10 +1071,28 @@ const MSSDiaryPage = (() => {
     if (k >= list.length && !st.tl.done) { await tlMore(); list = days(); }
     if (k < 0 && cur <= 0 && scrollY > 0 && list[0]) k = 0;
     const to = list[k];
-    if (!to) { showToast(dir > 0 ? 'That’s the start of your Diary.' : 'You’re at your newest watches.'); return; }
+    if (!to) { showToast(dir > 0 ? `That’s the start of ${whose()} Diary.` : other() ? 'These are their newest watches.' : 'You’re at your newest watches.'); return; }
     scrollTo({ top: Math.max(0, scrollY + to.getBoundingClientRect().top - off), behavior: reduced() ? 'auto' : 'smooth' });
+    // on a profile the tab bar moves into place as the page scrolls: line the day up again after
+    if (st.tab) setTimeout(() => {
+      const d = to.getBoundingClientRect().top - Math.round(Math.max(document.getElementById('mainNav')?.getBoundingClientRect().bottom || 72, tabBar())) - 12;
+      if (Math.abs(d) > 4) scrollBy({ top: d, behavior: 'auto' });
+    }, reduced() ? 260 : 700);
   }
   function setView(v) { st.view = v; put('view2', v); }
+  // on a profile: where the sticky tab bar ends once it's stuck (0 where it doesn't stick)
+  function tabBar() {
+    const bar = st.tab && document.querySelector('.tv-tabs'); if (!bar) return 0;
+    const cs = getComputedStyle(bar);
+    return cs.position === 'sticky' ? (parseFloat(cs.top) || 0) + bar.offsetHeight : 0;
+  }
+  // back to the top of the Timeline: the page's top, or the tab's (under the bars) on a profile
+  function toTop(behavior = 'auto') {
+    if (!st.tab) return scrollTo({ top: 0, behavior });
+    const under = Math.max(document.getElementById('mainNav')?.getBoundingClientRect().bottom || 64, tabBar());
+    const top = $('dyRoot').getBoundingClientRect().top + scrollY - under - 8;
+    if (top < scrollY) scrollTo({ top: Math.max(0, top), behavior });
+  }
   function pickDay(d, open) {
     st.day = d;
     if (open) setView('day');
@@ -1023,14 +1107,20 @@ const MSSDiaryPage = (() => {
     $('dyPrev').onclick = () => st.view === 'timeline' ? tlStep(-1) : step(-1);
     $('dyNext').onclick = () => st.view === 'timeline' ? tlStep(1) : step(1);
     $('dyToday').onclick = () => {
-      if (st.view === 'timeline') { const back = !!st.tl.from; if (back) tlReset(); scrollTo({ top: 0, behavior: reduced() ? 'auto' : 'smooth' }); if (back) draw(); return; }
+      if (st.view === 'timeline') { const back = !!st.tl.from; if (back) tlReset(); toTop(reduced() ? 'auto' : 'smooth'); if (back) draw(); return; }
       st.day = today(); draw();
     };
     $('dyTitle').onclick = () => {
       if (st.dates) return;
       MSSDateRange.pickDate({ value: st.view === 'timeline' ? (st.tl.from || today()) : st.day, label: 'Jump to', view: st.view === 'year' ? 'years' : undefined, anchor: $('dyTitle'),
-        onPick: v => { if (st.view === 'timeline') { tlReset(v >= today() ? null : v); scrollTo({ top: 0, behavior: 'auto' }); } else st.day = v; draw(); } });
+        onPick: v => { if (st.view === 'timeline') { tlReset(v >= today() ? null : v); toTop(); } else st.day = v; draw(); } });
     };
+    wireMain();
+    if (st.tab) return;   // the profile tab is the Timeline, view-only: no views, logging, search or Set dates
+    document.querySelector('.dy-views').addEventListener('click', ev => {
+      const b = ev.target.closest('[data-view]'); if (!b) return;
+      setView(b.dataset.view); draw();
+    });
     $('dyLogBtn').onclick = () => add(st.view === 'timeline' ? null : st.day);
     $('dySearchBtn').onclick = () => {
       const row = $('dySearchRow'), open = row.hidden;
@@ -1039,11 +1129,10 @@ const MSSDiaryPage = (() => {
       else if (st.search) SF._search('diary', '', true);
     };
     $('dyBack').onclick = ev => { ev.preventDefault(); closeDates(); };
-    document.querySelector('.dy-views').addEventListener('click', ev => {
-      const b = ev.target.closest('[data-view]'); if (!b) return;
-      setView(b.dataset.view); draw();
-    });
     addEventListener('popstate', () => { const want = new URLSearchParams(location.search).has('dates'); if (want !== st.dates) { st.dates = want; draw(); } });
+  }
+  // the views' own taps, keys and swipes (the Diary page; the profile tab uses the Timeline's)
+  function wireMain() {
     const main = $('dyMain');
     main.addEventListener('click', ev => {
       const t = ev.target.closest('[data-act], [data-d], [data-m], [data-y], [data-add]');
@@ -1098,9 +1187,13 @@ const MSSDiaryPage = (() => {
       const dx = ev.changedTouches[0].clientX - sx, dy = ev.changedTouches[0].clientY - sy; sx = null;
       if (Math.abs(dx) > 60 && Math.abs(dy) < 40) step((dx < 0) !== (document.documentElement.dir === 'rtl') ? 1 : -1);
     }, { passive: true });
-    let wasSplit = split();
-    addEventListener('resize', () => { if (split() !== wasSplit) { wasSplit = split(); if (st.view !== 'timeline') draw(); } });
+    if (!wiredResize) {
+      wiredResize = true;
+      let wasSplit = split();
+      addEventListener('resize', () => { if (split() !== wasSplit) { wasSplit = split(); if (st.view !== 'timeline' && $('dyMain')) draw(); } });
+    }
   }
+  let wiredResize = false;
 
   /* ── Start ── */
   async function start(user) {
@@ -1123,6 +1216,22 @@ const MSSDiaryPage = (() => {
     await Promise.all([draw(), onThisDay()]);
   }
   function reload() { forget(); tlReset(st.tl.from); draw(); }
+
+  /* ── The profile's Diary tab (profile.html, profile-view.html) ── */
+  // Opened again (back to the tab): kept as it was. Needs date-range.js (jump to a date) and
+  // episode-ratings.js (episode names), loaded here if the page hasn't.
+  async function mount(el, o) {
+    if (!el || !o?.userId) return;
+    if (st.tab && st.tab.el === el && st.tab.userId === o.userId && $('dyRoot')) return;
+    st.tab = { el, userId: o.userId, own: !!o.own, name: o.name || '' };
+    st.user = { id: o.userId };
+    st.view = 'timeline';
+    forget(); tlReset();
+    el.innerHTML = `<div class="page-loading"><div class="spinner"></div></div>`;
+    await Promise.all([mssLoadScript('js/date-range.js'), typeof MSSEp === 'undefined' ? mssLoadScript('js/episode-ratings.js') : null]);
+    tabShell();
+    await draw();
+  }
   // On This Day (115): a slim strip when today has anniversaries; from the notification
   // (diary.html?otd=2026-11-06) the cards open straight away
   async function onThisDay() {
@@ -1144,11 +1253,12 @@ const MSSDiaryPage = (() => {
   });
 
   document.addEventListener('DOMContentLoaded', () => {
+    if (!document.querySelector('.dy-page')) return;   // a profile's Diary tab starts itself (mount)
     initPage(user => {
       if (!user) { $('dyRoot').innerHTML = mssGuestEmpty('diary'); return; }
       start(user).catch(err => { console.error(err); $('dyRoot').innerHTML = mssEmpty({ art: 'episodes', title: 'Couldn’t open your Diary', text: 'Check your connection and try again.', actions: [{ label: 'Try again', icon: 'refresh', onclick: 'location.reload()' }] }); });
     });
   });
 
-  return { add, reload, openDates, closeDates, more: () => { st.tl.failed = false; tlMore(); } };
+  return { add, reload, openDates, closeDates, mount, more: () => { st.tl.failed = false; tlMore(); } };
 })();

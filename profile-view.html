@@ -181,7 +181,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   _pvCmtUser = _pvMe;
   renderProfile();
   var tab = parseInt(new URLSearchParams(location.search).get('tab'), 10);
-  if (tab > 0 && tab <= 5) pvTab(tab);
+  if (tab > 0 && tab <= 6) pvTab(tab);
   _libResume();
   // Signed in and able to see their titles: how your tastes line up — your own titles, quietly, then the ring in their header
   if (_pvMe && _pvCanSeeDrawn) {
@@ -317,7 +317,7 @@ mssSkeleton.define('pvprofile', function() {
 // The tab bar — the title page's (also drawn in the loading skeleton); counts once their titles are in
 function _pvTabsHTML(active, n) {
   n = n || {};
-  return MSSProfile.tabsHTML([[0, 'Overview', ''], [1, 'Library', n[1] || ''], [2, 'Lists', n[2] || ''], [3, 'Notes', n[3] || ''], [4, 'Episodes', ''], [5, 'Showcase', '']],
+  return MSSProfile.tabsHTML([[0, 'Overview', ''], [1, 'Library', n[1] || ''], [6, 'Diary', ''], [2, 'Lists', n[2] || ''], [3, 'Notes', n[3] || ''], [4, 'Episodes', ''], [5, 'Showcase', '']],
     active || 0, ((_pvProfile && (_pvProfile.display_name || _pvProfile.username)) || 'Their') + '’s profile');
 }
 function renderProfile() {
@@ -336,6 +336,7 @@ function renderProfile() {
     + (locked ? '' : _pvTabsHTML(0, { 1: _pvEntries.length, 2: lists, 3: notes })
       + panel(0, '<div id="pvOverviewContent"><div class="page-loading"><div class="spinner"></div></div></div>')
       + panel(1, '<div id="libraryLoading"><div class="page-loading"><div class="spinner"></div></div></div><div id="libraryContent" style="display:none"></div>')
+      + panel(6, '<div id="pvDiaryContent"></div>')
       + panel(2, '<div id="pvListsContent"></div>')
       + panel(3, '<div id="pvNotesContent"></div>')
       + panel(4, '<div id="pvEpisodesContent"></div>')
@@ -378,6 +379,8 @@ function pvTab(n, byPerson) {
   if (n === 2) MSSTabs.lists(document.getElementById('pvListsContent'), tabOpts);
   if (n === 3) MSSTabs.notes(document.getElementById('pvNotesContent'), tabOpts);
   if (n === 4) MSSTabs.episodes(document.getElementById('pvEpisodesContent'), tabOpts);
+  // Diary: their Day / Week / Month, view-only — only titles you may see (diary-views.js, 146 get_profile_diary)
+  if (n === 6) mssLoadScript('js/diary-views.js').then(function(){ MSSDiaryPage.mount(document.getElementById('pvDiaryContent'), { userId: _pvUserId, own: tabOpts.owner, name: tabOpts.name }); });
   if (n === 5) MSSShowcase.mount(document.getElementById('pvShowcase'), _pvProfile && _pvProfile.id, { own: !!(_pvMe && _pvProfile && _pvMe.id === _pvProfile.id), name: (_pvProfile && (_pvProfile.display_name || _pvProfile.username)) || '' });
 }
 

@@ -58,6 +58,7 @@
 
     <div class="prof-panel active" id="pfPanel-0" role="tabpanel" aria-labelledby="pfTab-0" tabindex="-1"><div id="pfPrompts"></div><div id="overviewContent"><div class="page-loading"><div class="spinner"></div></div></div></div>
     <div class="prof-panel" id="pfPanel-1" role="tabpanel" aria-labelledby="pfTab-1" tabindex="-1"><div id="libraryLoading"><div class="page-loading"><div class="spinner"></div></div></div><div id="libraryContent" style="display:none"></div></div>
+    <div class="prof-panel" id="pfPanel-7" role="tabpanel" aria-labelledby="pfTab-7" tabindex="-1"><div id="diaryTabContent"></div></div>
     <div class="prof-panel" id="pfPanel-2" role="tabpanel" aria-labelledby="pfTab-2" tabindex="-1"><div id="listsTabContent"><div class="page-loading"><div class="spinner"></div></div></div></div>
     <div class="prof-panel" id="pfPanel-3" role="tabpanel" aria-labelledby="pfTab-3" tabindex="-1"><div id="notesTabContent"><div class="page-loading"><div class="spinner"></div></div></div></div>
     <div class="prof-panel" id="pfPanel-5" role="tabpanel" aria-labelledby="pfTab-5" tabindex="-1"><div id="episodesTabContent"><div class="page-loading"><div class="spinner"></div></div></div></div>
@@ -96,7 +97,7 @@
 /* ── State ── */
 var _pUser = null, _pProfile = null, _pEntries = [], _activeTab = 0;
 // the tab bar (the title page's): drawn straight away, the counts arrive with your library
-var _PF_TABS = [[0, 'Overview'], [1, 'Library'], [2, 'Lists'], [3, 'Notes'], [5, 'Episodes'], [6, 'Showcase']];
+var _PF_TABS = [[0, 'Overview'], [1, 'Library'], [7, 'Diary'], [2, 'Lists'], [3, 'Notes'], [5, 'Episodes'], [6, 'Showcase']];
 (function() {
   var t = parseInt(new URLSearchParams(location.search).get('tab'), 10);
   document.getElementById('pfTabsBox').outerHTML = MSSProfile.tabsHTML(_PF_TABS.map(function(x){ return [x[0], x[1], '']; }), _PF_TABS.some(function(x){ return x[0] === t; }) ? t : 0, 'Your profile');
@@ -135,7 +136,7 @@ document.addEventListener('DOMContentLoaded', function() {
       if (b && (b.top < 0 || b.bottom > innerHeight)) rc.scrollIntoView({ block:'center', behavior:'instant' }); }, ms); });
     var tab = parseInt(new URLSearchParams(location.search).get('tab'), 10);
     if (tab === 4) { location.replace('export.html'); return; }   // Exports moved to its own page (avatar menu)
-    if (tab > 0 && tab <= 6) switchTab(tab);
+    if (_PF_TABS.some(function(x){ return x[0] === tab && tab > 0; })) switchTab(tab);
     else if (_activeTab === 1) renderLibrary();
     _libResume();
     // Episode time / Total time: shows from before that don't know their episode length yet get it (in the background)
@@ -165,16 +166,17 @@ async function _profGuest() {
     + '<div class="lib-guest-t"><b>' + escHTML(MSS_GUEST.profile.title) + '</b><span>A preview with example titles. Your own stats, favourites and top picks fill in as you watch.</span></div></section>';
   renderTab0();
   var tab = parseInt(new URLSearchParams(location.search).get('tab'), 10);
-  if (tab > 0 && tab <= 6) switchTab(tab);
+  if (_PF_TABS.some(function(x){ return x[0] === tab && tab > 0; })) switchTab(tab);
 }
 function _profGuestTab(n) {
   var E = {
     2: ['lists', 'lists.html', 'Your lists live here', 'Top 10s, comfort rewatches, guilty pleasures. Until you make your own, browse the community’s.', 'Browse Community lists', 'lists.html?view=community'],
     3: ['notes', 'notes.html', 'Your notes live here', 'What you really thought of that finale. Until you write your own, read the community’s.', 'Read Community notes', 'notes.html?view=community'],
     5: ['episodes', 'episodes.html', 'Your episode ratings live here', 'Rate every episode and see each show on one chart. You can already look up any show’s episodes.', 'Look up a show', 'episodes.html'],
+    7: ['episodes', 'diary.html', 'Your diary lives here', 'Every movie and episode on the day you watched it, by day, week and month. It fills in as you watch.', 'Open the Diary', 'diary.html'],
     6: ['medal', '', 'Your showcase lives here', 'Medals, top picks and the cards you make, arranged the way you like. It fills up as you watch.', '', ''],
   }[n];
-  var id = { 2: 'listsTabContent', 3: 'notesTabContent', 5: 'episodesTabContent', 6: 'profShowcase' }[n];
+  var id = { 2: 'listsTabContent', 3: 'notesTabContent', 5: 'episodesTabContent', 6: 'profShowcase', 7: 'diaryTabContent' }[n];
   document.getElementById(id).innerHTML = mssEmpty({ art: E[0], title: E[2], text: E[3],
     actions: [E[4] ? { label: E[4], icon: 'arrowRight', href: E[5] } : null, { label: 'Create a free account', icon: 'sparkles', href: 'login.html#signup', primary: true }] });
 }
@@ -239,6 +241,8 @@ function switchTab(n, byPerson) {
   if (n===2 || n===3) _renderPersonalTab(n);
   if (n===5) MSSTabs.episodes(document.getElementById('episodesTabContent'), { userId: _pUser.id, owner: true });
   if (n===6) MSSShowcase.mount(document.getElementById('profShowcase'), _pUser.id, { own: true });
+  // Diary: the Diary page's Day / Week / Month, view-only (diary-views.js, loaded the first time)
+  if (n===7) mssLoadScript('js/diary-views.js').then(function(){ MSSDiaryPage.mount(document.getElementById('diaryTabContent'), { userId: _pUser.id, own: true }); });
   if (n===0) renderTab0();
 }
 
