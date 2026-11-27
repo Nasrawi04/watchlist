@@ -9773,6 +9773,11 @@ a.mh-medal:focus-visible { outline:2px solid var(--mc-focus); outline-offset:2px
   .mh-favs.is-n3 .mh-fav.is-r1 { height:max(220px, min(100cqw * .43, var(--fit) * .58, 560px)); }
   .mh-favs.is-n3 .mh-fav:is(.is-r2, .is-r3) { height:max(170px, min((3 * var(--col) + 28px) * .48, var(--fit) * .42 - 14px)); }
   .mh-favs.is-n3 .mh-fav.is-r3 .mh-fav-title { font-size:28px; }
+  /* 4 (only when your profile has four): #1 full width and taller, #2–#4 thirds under it — all on one screen */
+  .mh-favs.is-n4 { --fit:calc(100dvh - 230px); }
+  .mh-favs.is-n4 .mh-fav.is-r1 { height:max(220px, min(100cqw * .43, var(--fit) * .58, 560px)); }
+  .mh-favs.is-n4 .mh-fav:not(.is-r1) { height:max(170px, min((100cqw - 28px) / 3 * .56, var(--fit) * .42 - 14px)); }
+  .mh-favs.is-n4 .mh-fav.is-r2 .mh-fav-title { font-size:22px; }
   .mh-favs.is-n3 .mh-fav.is-r3 .mh-fav-meta { font-size:11.5px; }
 }
 @media (prefers-reduced-motion:reduce) {

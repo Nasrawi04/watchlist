@@ -4423,11 +4423,12 @@ function scoreColor(score) {
 }
 
 /* How many of the six columns a Top Favorites tile takes (profile, Home, setup — owner, 27 Nov 2026): 1 → the full width;
-   2 → both full width, one above the other; 3 → #1 full width, #2 and #3 halves under it; 4 / 5 → #1 4/6 with #2 2/6 beside it,
-   the rest sharing the row under */
+   2 → both full width, one above the other; 3 → #1 full width, #2 and #3 halves under it; 4 → #1 full width, #2–#4 thirds under it;
+   5 → #1 4/6 with #2 2/6 beside it, #3–#5 thirds under */
 function mssFavSpan(r, n) {
   if (n <= 2) return 6;
   if (n === 3) return r === 1 ? 6 : 3;
+  if (n === 4) return r === 1 ? 6 : 2;
   return r === 1 ? 4 : r === 2 ? 2 : Math.round(6 / Math.max(1, n - 2));
 }
 /* The score ring (css .tv-ring): fills to score / 10 in its tier's colour (mssScoreTier) — Masterpiece gold never for a dropped
