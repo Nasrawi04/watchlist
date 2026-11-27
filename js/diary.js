@@ -85,7 +85,7 @@ const MSSDiary = (() => {
       if (k === 'today') st.date = todayISO();
       else if (k === 'yesterday') st.date = yesterdayISO();
       else if (k === 'none') st.date = null;
-      else return mssLoadScript('js/date-range.js').then(() => MSSDateRange.pickDate({ value: st.date || todayISO(), label: 'When did you watch it?',
+      else return mssLoadScript('js/date-range.js').then(() => MSSDateRange.pickDate({ value: st.date || todayISO(), label: 'When did you watch it?', anchor: b,
         onPick: v => { st.date = v; if (st.time == null && o.time !== null) st.time = hhmm(Date.now()); paint(); ov.querySelector('[data-day="pick"]')?.focus(); } }));
       paint();
     });

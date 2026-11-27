@@ -4817,10 +4817,11 @@ function mssDateFields(el, prefix, o = {}) {
     const label = mssT(p.label);
     MSSPicker.mount(el.querySelector(`.mss-birth-${k.toLowerCase()}`), { id: prefix + k, label, placeholder: label, value: '', inputmode: p.inputmode, typed: true, groups: [{ items: p.items }], onChange: () => o.onChange?.() });
   });
-  el.querySelector('.mss-date-cal').addEventListener('click', async () => {
+  el.querySelector('.mss-date-cal').addEventListener('click', async ev => {
+    const anchor = ev.currentTarget;
     await mssLoadScript('js/date-range.js');
     const v = mssBirthValue(prefix), value = v && v !== 'invalid' && v <= max ? v : null;
-    MSSDateRange.pickDate({ value, min: `${oldest}-01-01`, max, label: o.label, view: o.view, onPick: iso => mssDateSet(prefix, iso) });
+    MSSDateRange.pickDate({ value, min: `${oldest}-01-01`, max, label: o.label, view: o.view, anchor, onPick: iso => mssDateSet(prefix, iso) });
   });
   el._mssDateChange = o.onChange;
 }

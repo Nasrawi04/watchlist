@@ -6934,6 +6934,9 @@ a.fl-count:focus-visible, button.fl-count:focus-visible { outline:2px solid var(
 .rf-fold svg { transition:transform .15s; }
 .rf-fold[aria-expanded="true"] svg { transform:rotate(180deg); }
 .rf-fold:hover { color:var(--text); }
+.rf-card-h:has(.rf-fold) { position:relative; }
+/* the whole box toggles a folded bonus group, not only the "Not rated · n" button */
+.rf-fold::after { content:''; position:absolute; inset:-14px -18px; border-radius:var(--radius); }
 .rf-fold:focus-visible { outline:2px solid var(--olive-light); outline-offset:2px; border-radius:4px; }
 .rf-card-b[hidden] { display:none; }
 .rf-rows { display:flex; flex-direction:column; margin-top:6px; }
@@ -6987,6 +6990,7 @@ a.fl-count:focus-visible, button.fl-count:focus-visible { outline:2px solid var(
 /* narrow (phones, panels): the name and the value on one line, − bar + under them */
 @container rf (max-width:560px) {
   .rf-card { padding:12px 14px 6px; }
+  .rf-fold::after { inset:-12px -14px -14px; }
   .rf-row { grid-template-columns:auto minmax(0, 1fr) auto; grid-template-areas:"name name val" "minus bar plus" "tip tip tip"; row-gap:2px; padding:8px 10px; }
   .rf-name { grid-area:name; }
   .rf-val { grid-area:val; width:3.2rem; }

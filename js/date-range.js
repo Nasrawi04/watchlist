@@ -285,7 +285,7 @@ const MSSDateRange = (() => {
     });
   }
   async function pickDate(o) {
-    const anchor = o.anchor || (document.activeElement !== document.body ? document.activeElement : null);
+    const anchor = o.anchor || document.activeElement?.closest?.('button, input, [role="button"]') || null;   // Safari doesn't focus clicked buttons: callers pass the anchor
     popClose();
     const base = o.value || (o.max && iso(new Date()) > o.max ? o.max : iso(new Date()));
     P = { value: o.value || null, min: o.min || null, max: o.max || null, onPick: o.onPick, view: o.view && !o.value ? o.view : 'days', y: +base.slice(0, 4), m: +base.slice(5, 7) };
