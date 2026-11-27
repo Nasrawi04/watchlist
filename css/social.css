@@ -300,6 +300,10 @@
 .cp-side.is-slot b { color:var(--text-3); font-family:'Manrope', var(--sans); font-size:12.5px; }
 .cp-ring-big { width:120px; height:120px; } .cp-ring-big > div { width:100px; height:100px; } .cp-ring-big b { font-size:38px; }
 .cp-hero2.is-empty .cp-ring-big b { color:var(--text-3); }
+/* the number alone in the ring, the label under it (owner, 27 Nov 2026) */
+.cp-match { display:flex; flex-direction:column; align-items:center; gap:8px; }
+.cp-ring-big b { margin-top:2px; }   /* Bebas sits a touch high: optical centre */
+.cp-match-l { font:700 10.5px/1.2 'Manrope', var(--sans); letter-spacing:1.4px; text-transform:uppercase; color:var(--text-3); white-space:nowrap; }
 .cp-hero2-title { margin:0 0 10px; font:600 24px/1.15 'Oswald', var(--sans); color:var(--text-heading); }
 .cp-hero2-lead { margin:0 0 10px; font-size:13.5px; line-height:1.5; color:var(--text-2); }
 .cp-facts { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px; }

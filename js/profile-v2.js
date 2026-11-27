@@ -399,19 +399,26 @@ const MSSProfile = (() => {
     return `<button type="button" class="pf-fav is-r${r}" style="--span:${span}" data-fav="${esc(e.id)}" onclick="MSSProfile._open(${attrJSON(e.id)})" aria-label="#${r} ${esc(e.title)}${sv != null ? ', ' + Number(sv).toFixed(2) : ''}">
       <span class="pf-fav-bg" data-bdkey="${esc(MSSBackdrop.key(e))}" aria-hidden="true"></span><span class="pf-fav-shade" aria-hidden="true"></span>
       ${rankBadge(r).replace('cg-rank-badge', 'cg-rank-badge pf-fav-rank')}
-      <span class="pf-fav-poster">${posterHTML(e, 'big', r === 1 ? '170px' : '110px')}${rankBadge(r)}</span>
       <span class="pf-fav-tx"><span class="pf-fav-title" translate="no">${esc(e.title)}</span>
         ${mssPhotoTagsHTML(e, { genres: r <= 2 ? 2 : 0, cls: 'pf-fav-meta' })}${mssFavChipsHTML(e, 'lp-favs lib-pod-favs pf-fav-favs')}</span>
       ${sv != null ? `<span class="pf-fav-ring" aria-hidden="true">${MSSViews.ring(sv, r === 1 ? '' : 's', e.status === 'dropped')}</span>` : ''}
     </button>`;
   }
+  // the backdrop on every tile, phones too (owner, 27 Nov 2026); framed for the tile's shape: a phone's tiles have their own
+  // framing ('favph' — Edit page › Adjust framing › Top Favorites on a phone), the desktop tile's until framed
+  const FAV_PH = matchMedia('(max-width:700px)'), favT = () => FAV_PH.matches ? 'favph' : 'fav';
+  FAV_PH.addEventListener?.('change', () => O()?.el?.querySelectorAll('.pf-fav').forEach(tile => {
+    const e = byId(tile.dataset.fav), bg = tile.querySelector('.pf-fav-bg.in:not(.is-poster)'); if (!e || !bg) return;
+    bg.style.backgroundPosition = ''; bg.style.transform = ''; bg.style.transformOrigin = '';
+    const st = MSSBackdrop.style(e, false, favT()); if (st) bg.style.cssText += ';' + st;
+  }));
   function paintFavArt() {
     O().el.querySelectorAll('.pf-fav').forEach(tile => {
       const e = byId(tile.dataset.fav), bg = tile.querySelector('.pf-fav-bg'); if (!e || !bg) return;
       MSSBackdrop.url(e, 'w1280').then(u => {
         if (!u) { const pu = safeURL(e.poster_url); if (pu) { bg.style.backgroundImage = `url('${pu}')`; bg.classList.add('in', 'is-poster'); } return; }
         const im = new Image(); im.onload = () => { bg.style.backgroundImage = `url('${u}')`; bg.classList.add('in'); }; im.src = u;
-        const st = MSSBackdrop.style(e, false, 'fav'); if (st) bg.setAttribute('style', st);   // its Top Favorites framing (Edit page → Adjust framing)
+        const st = MSSBackdrop.style(e, false, favT()); if (st) bg.setAttribute('style', st);   // its Top Favorites framing (Edit page → Adjust framing)
       }).catch(() => {});
     });
   }

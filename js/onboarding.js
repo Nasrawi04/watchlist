@@ -512,7 +512,7 @@ const MSSOnboarding = (() => {
               const span = r === 1 ? (n === 1 ? 6 : 4) : r === 2 ? 2 : Math.round(6 / rest);
               return `<button type="button" class="pf-fav is-r${r}" style="--span:${span}" data-rate="${esc(e.id)}" aria-label="#${r} ${esc(e.title)}${sv != null ? `, rated ${Number(sv).toFixed(2)} — rate again` : ' — rate it'}">
                 <span class="pf-fav-bg" data-bd="${esc(e.id)}" aria-hidden="true"></span><span class="pf-fav-shade" aria-hidden="true"></span>
-                ${rankB(r).replace('cg-rank-badge', 'cg-rank-badge pf-fav-rank')}<span class="pf-fav-poster">${posterHTML(e, 'big', r === 1 ? '170px' : '110px')}${rankB(r)}</span>
+                ${rankB(r).replace('cg-rank-badge', 'cg-rank-badge pf-fav-rank')}
                 <span class="pf-fav-tx"><span class="pf-fav-title" translate="no">${esc(e.title)}</span><span class="pf-fav-meta">${esc([t.label, e.year].filter(Boolean).join(' · '))}</span>
                   ${sv == null && phone() ? `<span class="ob-rate-cta">${icon('star', 14)} Tap to rate</span>` : ''}</span>
                 ${sv != null ? `<span class="pf-fav-ring" aria-hidden="true">${MSSViews.ring(sv, r === 1 ? '' : 's', e.status === 'dropped')}</span>` : phone() ? '' : `<span class="ob-rate-cta" aria-hidden="true">${icon('star', 14)} ${r === 1 ? 'Tap to rate' : 'Rate'}</span>`}</button>`; }).join('')}</div>

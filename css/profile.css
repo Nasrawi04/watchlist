@@ -189,9 +189,6 @@ a.pf-poster:focus-visible { outline:2px solid var(--tv-green); outline-offset:3p
 .pf-fav-shade { position:absolute; inset:0; z-index:-1; background:linear-gradient(0deg, rgba(4,19,10,.92) 0%, rgba(4,19,10,.55) 38%, rgba(4,19,10,.08) 72%, rgba(4,19,10,0) 100%); }
 .pf-fav.is-r1 .pf-fav-shade { background:linear-gradient(0deg, rgba(4,19,10,.9) 0%, rgba(4,19,10,.45) 35%, rgba(4,19,10,0) 65%), linear-gradient(90deg, rgba(4,19,10,.45) 0%, rgba(4,19,10,0) 55%); }
 .pf-fav-rank.cg-rank-badge { position:absolute; top:0; inset-inline-start:0; z-index:2; }
-.pf-fav-poster { display:none; position:relative; flex:none; aspect-ratio:2/3; border-radius:10px; overflow:hidden; background:#212622; }   /* phones only */
-.pf-fav-poster img { width:100%; height:100%; object-fit:cover; display:block; }
-.pf-fav-poster .cg-rank-badge { position:absolute; top:0; inset-inline-start:0; z-index:2; }
 .pf-fav-tx { display:flex; flex-direction:column; gap:5px; min-width:0; max-width:100%; }
 .pf-fav-meta { font:600 11.5px 'Manrope',var(--sans); letter-spacing:.3px; color:rgba(255,255,255,.7); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 /* Oswald's g, j, p, q, y hang below the line: a little room under the last line so they aren't cut (less than the next line's
@@ -408,27 +405,22 @@ a.pf-t5-a:focus-visible { outline:2px solid var(--olive-light); outline-offset:1
   .pf-fav.is-r1 { grid-column:1 / -1; }
 }
 
-/* ── Phones: a taller banner, photo top-left, name at the bottom; poster-first favourites; one Top 5 per screen ── */
+/* ── Phones: a taller banner, photo top-left, name at the bottom; backdrop favourites (#1 full width); one Top 5 per screen ── */
 @media (max-width:700px) {
   .pf-sec-t h2 { font-size:22px; }
   .pf-sec-t { flex-direction:column; gap:2px; }
   .pf-favs { grid-template-columns:repeat(2, minmax(0, 1fr)); gap:10px; }
   .pf-fav { grid-column:span 1; height:200px; padding:12px; flex-direction:column; align-items:flex-start; justify-content:flex-end; gap:8px; border-radius:16px; }
-  .pf-fav.is-r1 { grid-column:1 / -1; height:232px; flex-direction:row; align-items:center; justify-content:flex-start; padding:16px; gap:16px; }
+  .pf-fav.is-r1 { grid-column:1 / -1; height:220px; padding:16px; }   /* the backdrop only, like the others (owner, 27 Nov 2026) */
   .pf-fav.is-r2 { height:200px; padding:12px; gap:8px; }
   .pf-favs.is-n5 .pf-fav.is-r5:nth-child(odd):last-child, .pf-favs.is-n3 .pf-fav.is-r3:nth-child(odd):last-child { grid-column:span 1; }
-  .pf-fav-poster { display:block; }
-  .pf-fav-rank.cg-rank-badge { display:none; }
-  .pf-fav.is-r1 .pf-fav-poster { width:112px; box-shadow:0 10px 24px rgba(0,0,0,.45); }
   .pf-fav.is-r1 .pf-fav-title { font-size:24px; }
   .pf-fav-ring { inset-inline-end:12px; bottom:12px; }
   .pf-fav-ring .tv-ring.is-s { width:46px; } .pf-fav-ring .tv-ring.is-s circle { stroke-width:9; } .pf-fav-ring .tv-ring.is-s b { font-size:17px; }
-  .pf-fav.is-r1 .pf-fav-ring { position:static; margin-inline-start:auto; align-self:center; }
+  .pf-fav.is-r1 .pf-fav-ring { inset-inline-end:16px; bottom:16px; }
   .pf-fav.is-r1 .pf-fav-ring .tv-ring { width:74px; } .pf-fav.is-r1 .pf-fav-ring .tv-ring circle { stroke-width:8; } .pf-fav.is-r1 .pf-fav-ring .tv-ring b { font-size:26px; }
   .pf-fav:has(.pf-fav-ring) .pf-fav-tx { padding-inline-end:52px; }
-  .pf-fav.is-r1:has(.pf-fav-ring) .pf-fav-tx { padding-inline-end:0; }
-  .pf-fav:not(.is-r1) .pf-fav-poster { position:absolute; inset:0; width:auto; aspect-ratio:auto; border-radius:0; box-shadow:none; z-index:-2; }
-  .pf-fav:not(.is-r1) .pf-fav-bg { display:none; }
+  .pf-fav.is-r1:has(.pf-fav-ring) .pf-fav-tx { padding-inline-end:86px; }
   .pf-fav:not(.is-r1) .pf-fav-shade { background:linear-gradient(0deg, rgba(4,19,10,.95) 0%, rgba(4,19,10,.45) 50%, rgba(4,19,10,0) 78%); }
   .pf-fav:not(.is-r1) :is(.pf-fav-meta, .pf-fav-favs) { display:none; }
   .pf-fav:not(.is-r1) .pf-fav-title { font-size:17px; }
@@ -446,8 +438,8 @@ a.pf-t5-a:focus-visible { outline:2px solid var(--olive-light); outline-offset:1
   .pf-tp.is-phone .pf-hero .pf-name { font-size:25px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .pf-fav-bg, .pf-fav-poster { transition:opacity .2s; }
-  .pf-fav:hover .pf-fav-bg { scale:1; } .pf-fav:hover .pf-fav-poster { translate:none; }
+  .pf-fav-bg { transition:opacity .2s; }
+  .pf-fav:hover .pf-fav-bg { scale:1; }
 }
 
 /* Top Favorites: the favourite character / episode / season (mssFavChipsHTML, the Watched podium's chips) — one line on the small tiles */

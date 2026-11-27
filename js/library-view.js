@@ -449,7 +449,7 @@ function _libGlance(list){
 }
 
 /* ── Rating fingerprint: your average in each rating group (Narrative, Visual…) across the titles you rated,
-   drawn as a radar, with the group you score highest ("You reward") and lowest ("Toughest on").
+   drawn as a radar, with the group you score highest ("You appreciate") and lowest ("Toughest on").
    A group shows once 2+ titles have it rated; the radar needs 3+ groups. Overall Experience (one rating) is left out. ── */
 var _LIB_FP = { narrative:['Narrative','Narrative'], characters:['Characters','Characters'], visual:['Visual','Visual craft'], intrigue:['Intrigue','Intrigue'],
   emotion:['Emotional','Emotional impact'], atmosphere:['Atmosphere','Atmosphere'], creative:['Creative','Creativity & sound'], spectacle:['Spectacle','Spectacle'] };
@@ -491,13 +491,13 @@ function _libFingerHTML(f){
   var head = '<header class="lf-head"><h2 class="lg-kicker" id="libFingerH">Rating fingerprint</h2><span class="lf-sub">avg by category group</span></header>';
   if (!f) return '<section class="lib-finger is-empty" aria-labelledby="libFingerH">'+head
     + '<div class="lf-empty"><svg viewBox="0 0 120 110" aria-hidden="true"><polygon class="lf-ring is-outer" points="60,8 112,46 92,104 28,104 8,46"/><polygon class="lf-ring" points="60,34 87,54 77,84 43,84 33,54"/></svg>'
-    + '<p>'+((LIB_READONLY && !LIB_GUEST) ? 'Not enough ratings yet to show where their scores lean.' : 'Rate a few more titles to see where your scores lean — which parts of a story you reward, and where you’re toughest.')+'</p></div></section>';
+    + '<p>'+((LIB_READONLY && !LIB_GUEST) ? 'Not enough ratings yet to show where their scores lean.' : 'Rate a few more titles to see where your scores lean — which parts of a story you appreciate, and where you’re toughest.')+'</p></div></section>';
   var tile = function(k, a){ return '<div class="lf-tile"><small>'+k+'</small><b>'+_libEsc(a.name)+'</b><span>'+a.avg.toFixed(2)+' average · '+a.n+' titles</span></div>'; };
   return '<section class="lib-finger" aria-labelledby="libFingerH">'+head
     + '<div class="lf-body"><div class="lf-chart">'+_libRadar(f.axes)+'</div>'
     + '<div class="lf-tiles">'+(f.best.avg - f.worst.avg < 0.01
         ? '<div class="lf-tile"><small>Your spread</small><b>Even</b><span>every group at '+f.best.avg.toFixed(2)+'</span></div><div class="lf-tile"><small>Groups</small><b>'+f.axes.length+'</b><span>rated on 2+ titles</span></div>'
-        : tile((LIB_READONLY && !LIB_GUEST) ? 'They reward' : 'You reward', f.best)+tile('Toughest on', f.worst))+'</div></div></section>';
+        : tile((LIB_READONLY && !LIB_GUEST) ? 'They appreciate' : 'You appreciate', f.best)+tile('Toughest on', f.worst))+'</div></div></section>';
 }
 
 function _libRing(avg, size){

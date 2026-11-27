@@ -40,25 +40,27 @@ const MSSHome = (() => {
   /* ══ The widgets ══ */
   const W = {
     continue:  { t: 'Continue watching',      d: 'Your current title, its next episode and progress', sizes: ['M', 'L'] },
-    progress:  { t: 'Also in progress',        d: 'Up to four more titles on the go (else your Watchlist)', sizes: ['S', 'M'] },
+    progress:  { t: 'Also in progress',        d: 'Up to four more titles on the go (else your Watchlist)' },
     glance:    { t: 'At a glance',             d: 'Average score, watched, episodes, this month' },
     friends:   { t: 'Friends activity',        d: 'What your friends just watched and rated' },
-    pick:      { t: 'Pick for me',             d: 'A random title from your watchlist, and why', sizes: ['S', 'M'] },
+    pick:      { t: 'Pick for me',             d: 'A random title from your watchlist, and why' },
     rated:     { t: 'Recently rated',          d: 'Your latest scores' },
     watchlist: { t: 'From your watchlist',     d: 'A random handful of saved titles' },
     waiting:   { t: 'Waiting on new episodes', d: 'Your To Be Continued shows and their next dates' },
     spread:    { t: 'Score spread',            d: 'How many titles got each score' },
-    discover:  { t: 'Discover',                d: 'Top rated, popular and the Top 250s' },
+    discover:  { t: 'Discover',                d: 'The four Top 250s' },
     week:      { t: 'This week',               d: 'Episodes of your shows airing in the next 7 days' },
     medals:    { t: 'Medal progress',          d: 'Your challenges and how close you are' },
     goal:      { t: 'Year goal',               d: 'Titles finished this year against your target' },
-    favs:      { t: 'Top Favorites',           d: 'Your profile’s Top Favorites — S: your #1 · M: top 3 · L: all 5', def: 'M' },
+    favs:      { t: 'Top Favorites',           d: 'Your profile’s Top Favorites — your #1, top 3 or all 5, laid out as on your profile', def: 'M', count: [1, 3, 5] },
     notes:     { t: 'Recent notes',            d: 'Your latest reviews and notes' },
     recs:      { t: 'Recommended for you',     d: 'Picked from your favourites, top scores and favourite people' },
     viewed:    { t: 'Recently viewed',         d: 'Titles you opened lately' },
     otd:       { t: 'On this day',             d: 'What you finished on this date in earlier years' },
   };
   const IDS = Object.keys(W);
+  // S / M / L is the widget's width: a third, two thirds, the full row (owner, 27 Nov 2026). How many it shows is its own choice
+  // (W[id].count, L.count) — Top Favorites: 1 · 3 · 5, whatever the width
   const SIZE_ALL = ['S', 'M', 'L'];
   const sizesOf = id => W[id].sizes || SIZE_ALL;
 
@@ -73,7 +75,7 @@ const MSSHome = (() => {
   function fromPreset(key, keep) {
     const p = PRESETS[key] || PRESETS.default, on = p.w.map(x => x[0]);
     const size = {}; IDS.forEach(id => { size[id] = DEF_SIZE(id); }); p.w.forEach(([id, s]) => { size[id] = s; });   // hidden ones too, so turning one on has a size
-    return { v: 1, preset: key, order: [...on, ...IDS.filter(id => !on.includes(id))], hidden: IDS.filter(id => !on.includes(id)), size, goal: keep?.goal || null, name: keep?.name || 'signature' };
+    return { v: 1, preset: key, order: [...on, ...IDS.filter(id => !on.includes(id))], hidden: IDS.filter(id => !on.includes(id)), size, count: keep?.count || {}, goal: keep?.goal || null, name: keep?.name || 'signature' };
   }
   const DEF_SIZE = id => PRESETS.default.w.find(x => x[0] === id)?.[1] || W[id].def || (sizesOf(id).includes('S') ? 'S' : sizesOf(id)[0]);
 
@@ -91,8 +93,11 @@ const MSSHome = (() => {
     const hidden = order.filter(id => (Array.isArray(x.hidden) && x.hidden.includes(id)) || !known.has(id));
     const size = {};
     order.forEach(id => { const s = x.size?.[id]; size[id] = sizesOf(id).includes(s) ? s : DEF_SIZE(id); });
+    // how many: a saved choice, else (layouts saved before it existed) what the old size meant — Top Favorites S #1 · M top 3 · L all 5
+    const count = {}; IDS.filter(id => W[id].count).forEach(id => { const c = Number(x.count?.[id]), old = { S: 1, M: 3, L: 5 }[x.size?.[id]];
+      count[id] = W[id].count.includes(c) ? c : W[id].count.includes(old) ? old : W[id].count[1]; });
     const goal = x.goal && Number(x.goal.n) > 0 ? { year: Number(x.goal.year) || new Date().getFullYear(), n: Math.min(9999, Math.round(Number(x.goal.n))) } : null;
-    return { v: 1, preset: PRESETS[x.preset] ? x.preset : 'custom', order, hidden, size, goal, name: x.name === 'simple' ? 'simple' : 'signature' };
+    return { v: 1, preset: PRESETS[x.preset] ? x.preset : 'custom', order, hidden, size, count, goal, name: x.name === 'simple' ? 'simple' : 'signature' };
   }
   function readLocal() { try { return clean(JSON.parse(localStorage.getItem(LKEY()) || 'null')); } catch { return null; } }
   function adopt(profile) {
@@ -277,7 +282,7 @@ const MSSHome = (() => {
     return `<div class="mh-bands"><h3 class="lg-h">Your scores <span>${g.rated} rated</span></h3><ul class="lg-bands">${B.map(b => `<li><span>${b[0]}</span><span class="lg-band-bar" aria-hidden="true"><i class="${b[2]}" style="width:${Math.round(b[1] / max * 100)}%"></i></span><b>${b[1]}</b><small>${g.rated ? Math.round(b[1] / g.rated * 100) : 0}%</small></li>`).join('')}</ul></div>`;
   }
 
-  /* ── Friends activity (the home row's cards: their score, their face, who / when) ── */
+  /* ── Friends activity (the home row's cards: their score, their face on the corner, when) ── */
   const FE = {}, FP = {};
   // when a friend's title happened: dropped → when it was dropped; finished → when it was finished (else added)
   const friendAt = e => new Date(e.status === 'dropped' ? (e.progress_at || e.updated_at) : (e.completed_at || e.created_at || e.updated_at));
@@ -324,7 +329,8 @@ const MSSHome = (() => {
   const friendsSig = rows => (rows || []).map(e => `${e.id}:${e.updated_at}`).join();
   function friendCard(e) {
     const p = FP[e.user_id] || {}, u = safeURL(p.avatar_url), name = p.username || 'friend', sc = liveScore(e), drop = e.status === 'dropped';
-    const who = `<a class="mh-who" href="profile-view.html?id=${encodeURIComponent(e.user_id)}" aria-label="${esc('@' + name + '’s profile')}"><span class="mh-who-av" aria-hidden="true">${u ? `<img src="${u}" alt="" loading="lazy">` : esc(name[0].toUpperCase())}</span><span class="mh-who-t"><b translate="no">@${esc(name)}</b><small>${drop ? 'dropped · ' : ''}${esc(_notifTimeAgo(e._at))}</small></span></a>`;
+    // under the card only when (owner, 27 Nov 2026): their picture on the poster's corner says who
+    const who = `<span class="mh-ago"><span class="sr-only" translate="no">@${esc(name)} · </span>${drop ? 'dropped · ' : ''}${esc(_notifTimeAgo(e._at))}</span>`;
     return MSSCard.poster({ onclick: `MSSHome.openFriend(${attrJSON(e.id)})`, title: e.title, year: e.year, posterHTML: posterHTML(e, 'big', MSF_CARD_SIZES),
       type: mssTypeOf(e.cat, isMovie(e)), age: [e.tmdb_type, e.tmdb_id], dropped: drop, meta: drop ? 'Dropped' : mssMetaOf(e),
       over: `<span class="hf-av" aria-hidden="true">${u ? `<img src="${u}" alt="" loading="lazy">` : esc(name[0].toUpperCase())}</span>`,
@@ -366,9 +372,6 @@ const MSSHome = (() => {
     MSSPick.open({ pool: () => all().filter(e => e.status === 'queue'), all, user: window._navUser, onStarted: () => refresh() });
   }
 
-  /* A small grid of the standard cards: 8 drawn; how many show follows the widget's width
-     (one row of the home page card size, as many as fit — style.css .mh-cgrid / --mh-card) */
-  const cgrid = cards => `<div class="mh-cgrid">${cards}</div>`;
 
   /* ── Recently rated: your latest scores, as the standard cards ── */
   function wRated() {
@@ -376,7 +379,8 @@ const MSSHome = (() => {
       .sort((a, b) => String(doneAt(b) || b.updated_at || '') > String(doneAt(a) || a.updated_at || '') ? 1 : -1).slice(0, 8);
     const h = head('rated', '', more('library.html?sec=watched', 'Watched'));
     if (!list.length) return h + empty('watched', 'Nothing rated yet', 'Rate a title you’ve finished and your latest scores line up here.');
-    return h + cgrid(list.map(e => MSSCard.poster(mssEntryCard(e, { onclick: `MSSHome.act.open(${attrJSON(e.id)})` }))).join(''));
+    // a rail like Friends activity — the same gaps, the rest scroll (owner, 27 Nov 2026)
+    return h + rail('mhRatedRail', list.map(e => MSSCard.poster(mssEntryCard(e, { onclick: `MSSHome.act.open(${attrJSON(e.id)})` }))).join(''));
   }
 
   /* ── From your watchlist: a random dozen, a fresh mix each visit ── */
@@ -395,7 +399,7 @@ const MSSHome = (() => {
       .sort((a, b) => { const x = D.sched?.[a.id]?.next?.air || '9999', y = D.sched?.[b.id]?.next?.air || '9999'; return x < y ? -1 : x > y ? 1 : byUpdated(a, b); });
     const h = head('waiting', count(list.length), more('library.html?sec=watched', 'Library'));
     if (!list.length) return h + empty('watched', 'Nothing waiting', 'Shows you’ve caught up on that are still running wait here for new episodes.');
-    return h + cgrid(list.slice(0, 8).map(e => {
+    return h + rail('mhWaitRail', list.slice(0, 8).map(e => {
       const nx = D.sched?.[e.id]?.next;
       const sub = nx?.air ? `<span class="mh-next">Next: S${nx.s} E${nx.n} · ${esc(fmtDay(nx.air))}</span>` : `<span class="mh-next is-wait">Caught up · ${esc(SE(e).replace(' · ', ' '))}</span>`;
       return MSSCard.poster(mssEntryCard(e, { onclick: `MSSHome.act.open(${attrJSON(e.id)})`, sub, labelExtra: nx?.air ? `next episode ${fmtDay(nx.air)}` : 'waiting for new episodes' }));
@@ -419,19 +423,19 @@ const MSSHome = (() => {
   }
 
   /* ── Discover: the Discover page's list tiles (three posters fanned, then the list's name) ── */
-  const DK = ['top_rated_mss', 'popular', 'top250_movies', 'top250_shows', 'top250_anime', 'top250_cartoons'];
-  const DK_NUM = { top_rated_mss: 'MSF', popular: 'HOT', top250_movies: '250', top250_shows: '250', top250_anime: '250', top250_cartoons: '250' };
+  // the four Top 250s, two by two (owner, 27 Nov 2026)
+  const DK = ['top250_movies', 'top250_shows', 'top250_anime', 'top250_cartoons'];
   function tile(key) {
     const cat = getDiscoverCategory(key), m = discoverMeta(key);
     if (!cat) return '';
     return `<a class="dk-tile" href="discover-list.html?list=${encodeURIComponent(key)}" style="--xp-a:${m.a};--xp-b:${m.b}" data-tile="${key}">
-      <span class="dk-bg" aria-hidden="true"></span><span class="dk-shade" aria-hidden="true"></span><span class="dk-num" aria-hidden="true">${DK_NUM[key] || ''}</span>
+      <span class="dk-bg" aria-hidden="true"></span><span class="dk-shade" aria-hidden="true"></span><span class="dk-num" aria-hidden="true">250</span>
       <span class="dk-text"><span class="dk-badge">${esc(m.eyebrow.split(' · ')[0])}</span><span class="dk-title">${esc(cat.title)}</span><span class="dk-sub">${esc(m.tile)}</span>
         <span class="dk-cta" aria-hidden="true">Explore ${'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>'}</span></span>
       <span class="dk-fan" aria-hidden="true"><span class="dk-p"></span><span class="dk-p"></span><span class="dk-p"></span></span></a>`;
   }
   function wDiscover() {
-    // all six; how many show follows the widget's width (2 narrow · 3 · 6 full width — style.css)
+    // two by two; four in a row when the widget is full width on a computer (style.css)
     return head('discover', '', more('discover.html', 'Explore')) + `<div class="dk-grid mh-dk">${DK.map(tile).join('')}</div>`;
   }
   function fillTiles(root) {
@@ -514,24 +518,29 @@ const MSSHome = (() => {
     showToast(r === 'error' ? 'Couldn’t save your goal — try again.' : 'Goal saved.', r === 'error' ? 'err' : undefined);
   }
 
-  /* ── Top Favorites: your profile's Top 5 (profiles.top_picks) — the size picks how many: S #1 · M top 3 · L all 5 ── */
+  /* ── Top Favorites: your profile's Top 5 (profiles.top_picks) — how many is its own choice (1 · 3 · 5), the size is the width ── */
+  const countOf = id => L?.count?.[id] || W[id].count[1];
   function wFavs() {
-    const p = window._navUserProfile, n = { S: 1, M: 3, L: 5 }[L.size.favs] || 3;
+    const p = window._navUserProfile, n = countOf('favs');
     const h = head('favs', '', more('profile.html', 'Profile'));
     if (!p || D.entries == null) return h + skel('favs');
     const list = (Array.isArray(p.top_picks) ? p.top_picks : []).map(entry).filter(Boolean).slice(0, n);
     if (!list.length) return h + empty('medal', 'No Top Favorites yet', 'Pick your Top 5 on your profile and they show up here.', [{ label: 'Pick your favourites', icon: 'plus', href: 'profile.html' }]);
-    return h + favGrid(L.size.favs, list.map((e, i) => favTile(e, i, list.length)).join(''), list.length);
+    return h + favGrid(list.map((e, i) => favTile(e, i, list.length)).join(''), list.length);
   }
-  /* the profile's Top Favorites tiles (profile-v2.js favTile — css .mh-fav is the .pf-fav look): the backdrop full bleed in its
-     Top Favorites framing, the rank in the corner, details, title and score ring along the bottom; #1 the hero. Each size has its own
-     layout (style.css .mh-favs.is-S / is-M / is-L); the widget's width picks the wide or narrow version of it (container query). */
-  const favGrid = (z, tiles, n) => `<div class="mh-fv"><div class="mh-favs is-${z} is-n${n}">${tiles}</div></div>`;
+  /* the profile's Top Favorites tiles and layout (profile-v2.js favTile — css .mh-fav is the .pf-fav look; owner, 27 Nov 2026):
+     the backdrop full bleed in its Top Favorites framing, the rank in the corner, details, title and score ring along the bottom.
+     A narrow widget: the profile on a phone (#1 the full width, the rest two by two); a wide one: the profile on a computer
+     (#1 with #2 beside it, the rest sharing the row under) — style.css .mh-favs, a container query on the widget's width. */
+  const favGrid = (tiles, n) => `<div class="mh-fv"><div class="mh-favs is-n${n}">${tiles}</div></div>`;
+  // how many of the six columns each tile takes when wide: the profile's (#1 4, #2 2, the rest sharing the row), except
+  // Top 3 (owner, 27 Nov 2026): #1 the full width and taller, #2 and #3 half each under it
+  const favSpan = (r, n) => n === 3 ? (r === 1 ? 6 : 3) : r === 1 ? (n === 1 ? 6 : 4) : r === 2 ? 2 : Math.round(6 / Math.max(1, n - 2));
   function favTile(e, i, n) {
-    const r = i + 1, t = mssTypeOf(e.cat, isMovie(e)), sv = liveScore(e), rest = Math.max(1, n - 2);
+    const r = i + 1, t = mssTypeOf(e.cat, isMovie(e)), sv = liveScore(e);
     const genres = (Array.isArray(e.genres) ? e.genres : []).slice(0, 2);
     const bits = [t.label, e.year ? String(e.year).slice(0, 4) : '', ...(r <= 2 ? genres : [])].filter(Boolean);
-    const span = r === 1 ? (n === 1 ? 6 : 4) : r === 2 ? 2 : Math.round(6 / rest);   // the wide Large layout (as the profile)
+    const span = favSpan(r, n);
     const badge = `<span class="cg-rank-badge mh-fav-rank ${r === 1 ? 'cg-rank-1' : r === 2 ? 'cg-rank-2' : r === 3 ? 'cg-rank-3' : 'cg-rank-other'}" aria-hidden="true">${r}</span>`;
     return `<button type="button" class="mh-fav is-r${r}" style="--span:${span}" data-fav="${esc(e.id)}" onclick="MSSHome.act.open(${attrJSON(e.id)})" aria-label="${esc(`#${r} ${e.title}${sv != null ? ', ' + Number(sv).toFixed(2) : ''}`)}">
       <span class="mh-fav-bg" aria-hidden="true"></span><span class="mh-fav-shade" aria-hidden="true"></span>${badge}
@@ -546,7 +555,8 @@ const MSSHome = (() => {
       MSSBackdrop.url(e, 'w1280').then(u => {
         if (!bg.isConnected) return;
         if (!u) { const pu = safeURL(e.poster_url); if (pu) { bg.style.backgroundImage = `url('${pu}')`; bg.classList.add('in', 'is-poster'); } return; }
-        const st = MSSBackdrop.style(e, false, 'fav'); if (st) bg.setAttribute('style', st);   // its Top Favorites framing (Edit page → Adjust framing)
+        // its Top Favorites framing (Edit page → Adjust framing): narrow, the tiles are the profile's phone shapes → the phone framing
+        const st = MSSBackdrop.style(e, false, (tile.closest('.mh-fv')?.clientWidth || 0) < 700 ? 'favph' : 'fav'); if (st) bg.setAttribute('style', st);
         const im = new Image(); im.onload = () => { bg.style.backgroundImage = `url('${u}')`; bg.classList.add('in'); }; im.src = u;
       }).catch(() => {});
     });
@@ -604,12 +614,12 @@ const MSSHome = (() => {
       continue: () => `<article class="mh-hero is-skel"><header class="mh-hero-top"><div class="mh-hero-tl"><span class="mh-hero-k" data-skel-keep>Continue watching</span><span class="mh-badge">Watching · S2 E4</span></div></header><div class="mh-hero-in"><span class="mh-hero-poster skel-media-box"></span><div class="mh-hero-body"><h3 class="mh-hero-t">Sample title here</h3><div class="mh-up"><span class="mh-up-still"></span><span class="mh-up-t"><small>Up next · S2 E5</small><b>Episode name</b><span>50 min</span></span></div><div class="mh-prog"><div class="lp-bar"><i style="width:60%"></i></div><div class="lp-count">14 of 20 episodes · 70%</div></div><div class="mh-hero-acts lc-row"><button class="lc-btn">Watched S2 E5</button><button class="lc-btn">Rate</button></div></div></div></article>`,
       progress: () => `<div class="mh-plist">${n(4, () => MSSCard.row({ title: 'Sample title', year: '2024', posterHTML: '', type: 'tv', progress: { badge: 'S1 · E3', count: '3 / 10 eps', pct: 30 }, cls: 'mh-prow', controls: '<div class="lc-row"><button class="lc-btn lc-ic">-</button><button class="lc-btn lc-ic">+</button></div>' }))}</div>`,
       glance: () => `<div class="mh-glance"><div class="mh-avg"><span class="mh-ring skel-media-box"></span></div><dl class="lg-kpis mh-kpis">${n(4, () => '<div class="lg-kpi"><dt>Label</dt><dd><b>123</b></dd></div>')}</dl></div>`,
-      friends: () => rail('', n(5, () => poster({ over: '<span class="hf-av"></span>', score: 8.5, controls: '<span class="mh-who"><span class="mh-who-av"></span><span class="mh-who-t"><b>@friend</b><small>2d ago</small></span></span>', cls: 'mh-fcard' }))),
+      friends: () => rail('', n(5, () => poster({ over: '<span class="hf-av"></span>', score: 8.5, controls: '<span class="mh-ago">2d ago</span>', cls: 'mh-fcard' }))),
       pick: () => `<div class="mh-pick-in"><span class="mh-pick-poster skel-media-box"></span><div class="mh-pick-body"><small>Tonight’s pick</small><h3 class="mh-pick-t">Sample title</h3><p>2024 · Movie · 2h</p></div></div>`,
-      rated: () => cgrid(n(6, () => poster({ type: 'movie', meta: '2h 10m', score: 8.5 }))),
-      favs: () => { const z = L?.size?.favs || 'M', k = { S: 1, M: 3, L: 5 }[z] || 3; return favGrid(z, n(k, i => `<span class="mh-fav is-r${i + 1}" style="--span:${i ? 2 : 4}"><span class="mh-fav-tx"><span class="mh-fav-title">Sample title</span></span></span>`), k); },
+      rated: () => rail('', n(6, () => poster({ type: 'movie', meta: '2h 10m', score: 8.5 }))),
+      favs: () => { const k = L?.count?.favs || 3; return favGrid(n(k, i => `<span class="mh-fav is-r${i + 1}" style="--span:${favSpan(i + 1, k)}"><span class="mh-fav-tx"><span class="mh-fav-title">Sample title</span></span></span>`), k); },
       watchlist: () => rail('', n(7, () => poster({ meta: '2h 10m' }))),
-      waiting: () => cgrid(n(6, () => poster({ sub: '<span class="mh-next">Next: S2 E1 · 12 Dec</span>' }))),
+      waiting: () => rail('', n(6, () => poster({ sub: '<span class="mh-next">Next: S2 E1 · 12 Dec</span>' }))),
       spread: () => `<div class="mh-spread"><span class="mh-bars">${n(6, i => `<span class="mh-sb"><small>${i}</small><i style="height:${20 + i * 14}%"></i><b>${i + 5}</b></span>`)}</span></div>`,
       week: () => `<ul class="mh-week">${n(3, () => `<li><span class="mh-wk"><span class="mh-wk-day">Tue 12</span><span class="mh-wk-p"></span><span class="mh-wk-t"><b>Sample show</b><small>S1 E4 · Episode</small></span></span></li>`)}</ul>`,
       medals: () => `<ul class="mh-medals">${n(2, () => `<li><span class="mh-medal"><span class="mh-medal-t"><b>Challenge name</b><small>3 of 10 · 30%</small></span><span class="lp-bar"><i style="width:30%"></i></span></span></li>`)}</ul>`,
@@ -630,8 +640,10 @@ const MSSHome = (() => {
     const s = L.size[id], sizes = sizesOf(id), i = visible().indexOf(id), n = visible().length;
     return `<button type="button" class="mh-grip" data-grip="${id}" aria-label="${esc(`Move ${W[id].t}, position ${i + 1} of ${n}. Drag, or use the arrow keys`)}" title="Drag to move">${icon('grip', 16)}</button>
       <span class="mh-ctl-t" aria-hidden="true">${esc(W[id].t)}</span>
-      <span class="mh-sizes" role="group" aria-label="${esc(W[id].t + ' size')}">${SIZE_ALL.map(z => sizes.includes(z)
-        ? `<button type="button" class="mh-size${z === s ? ' on' : ''}" aria-pressed="${z === s}" aria-label="${esc(`Size ${z === 'S' ? 'small' : z === 'M' ? 'medium' : 'large'}`)}" onclick="MSSHome.resize('${id}','${z}')">${z}</button>` : '').join('')}</span>
+      ${W[id].count ? `<span class="mh-sizes mh-counts" role="group" aria-label="${esc(W[id].t + ': how many')}" title="How many">${W[id].count.map(c =>
+        `<button type="button" class="mh-size${c === countOf(id) ? ' on' : ''}" aria-pressed="${c === countOf(id)}" aria-label="${esc(c === 1 ? 'Show your #1' : `Show your top ${c}`)}" onclick="MSSHome.recount('${id}',${c})">${c === 1 ? '#1' : 'Top ' + c}</button>`).join('')}</span>` : ''}
+      <span class="mh-sizes" role="group" aria-label="${esc(W[id].t + ' width')}" title="Width">${SIZE_ALL.map(z => sizes.includes(z)
+        ? `<button type="button" class="mh-size${z === s ? ' on' : ''}" aria-pressed="${z === s}" aria-label="${esc(`Width: ${z === 'S' ? 'a third of the row' : z === 'M' ? 'two thirds of the row' : 'the full row'}`)}" onclick="MSSHome.resize('${id}','${z}')">${z}</button>` : '').join('')}</span>
       <button type="button" class="mh-hide" onclick="MSSHome.toggle('${id}', false)" aria-label="${esc('Hide ' + W[id].t)}" title="Hide">${icon('eyeOff', 15)}</button>`;
   }
   const visible = () => L.order.filter(id => !L.hidden.includes(id));
@@ -656,6 +668,7 @@ const MSSHome = (() => {
     if (id === 'continue') fillHero(b);
     if (id === 'discover') fillTiles(b);
     if (id === 'favs') paintFavs(b);
+    fitRails();
     if (editing) w.querySelector('.mh-ctl').innerHTML = ctlHTML(id);
   }
   function drawEntryWidgets() { ENTRY_W.forEach(draw); updateGreeting(); }
@@ -677,6 +690,45 @@ const MSSHome = (() => {
       row.push({ el, s }); used += s;
     });
     flush();
+    fitRails();
+  }
+
+  /* A row of cards in a box made taller by a widget beside it (Top Favorites next to Recently rated…) fills the extra height:
+     the cards go top to bottom in rows, as many columns as leave the least empty space (the cards a little narrower if that
+     fits a row more), the rest scroll down (owner, 27 Nov 2026). Never on a phone (one column: nothing beside it). It only
+     uses the height the row already has — it never makes the row taller. */
+  let fitQ = 0;
+  function fitRails() {
+    cancelAnimationFrame(fitQ);
+    fitQ = requestAnimationFrame(() => {
+      if (!grid) return;
+      const rails = [...grid.querySelectorAll('.mh-w:not([hidden]) .mh-rail')];
+      const off = r => { r.classList.remove('is-stack'); r.style.maxHeight = r.style.gridTemplateColumns = ''; r.closest('.msf-rail-wrap')?.classList.remove('is-stack'); };
+      rails.forEach(off);
+      if (grid.dataset.cols === '1') return;
+      rails.forEach(r => {
+        const w = r.closest('.mh-w'), first = r.firstElementChild; if (!first) return;
+        const cs = getComputedStyle(w), rs = getComputedStyle(r), gap = parseFloat(rs.columnGap) || 0, padY = parseFloat(rs.paddingTop) + parseFloat(rs.paddingBottom);
+        const bottom = w.getBoundingClientRect().bottom - parseFloat(cs.paddingBottom) - parseFloat(cs.borderBottomWidth);
+        const top = first.getBoundingClientRect().top, avail = bottom - top - 4, h1 = first.offsetHeight;
+        if (avail - h1 < Math.max(60, h1 * .35)) return;                                  // hardly any room under the row: leave it
+        const inner = r.clientWidth - parseFloat(rs.paddingLeft) - parseFloat(rs.paddingRight), n = r.children.length;
+        r.classList.add('is-stack'); r.closest('.msf-rail-wrap')?.classList.add('is-stack');
+        let best = null;
+        for (let c = 2; c <= Math.min(8, n); c++) {
+          if ((inner - (c - 1) * gap) / c < 104) break;                                     // never smaller than a phone's card
+          r.style.gridTemplateColumns = `repeat(${c}, minmax(0, 1fr))`;
+          const h = first.offsetHeight, rows = Math.min(Math.ceil(n / c), Math.floor((avail + gap) / (h + gap)));
+          if (rows < 2) continue;
+          const waste = avail - (rows * h + (rows - 1) * gap);
+          if (!best || waste < best.waste - 1) best = { c, h, rows, waste };
+        }
+        if (!best || best.waste >= avail - h1) { off(r); return; }                          // no better than one row
+        r.style.gridTemplateColumns = `repeat(${best.c}, minmax(0, 1fr))`;
+        // more cards than fit: the whole height, so the next row peeks in (there's more to scroll); else just the rows
+        r.style.maxHeight = `${n > best.c * best.rows ? avail + padY - 14 : best.rows * best.h + (best.rows - 1) * gap + padY}px`;
+      });
+    });
   }
 
   /* ── Greeting: the time of day where you are, your display name, one line about where you are ── */
@@ -770,7 +822,14 @@ const MSSHome = (() => {
     flip(() => { L.size[id] = z; L.preset = 'custom'; draw(id); pack(); });
     barState();
     $('mhw-' + id).querySelector(`.mh-size[onclick*="'${z}'"]`)?.focus();
-    say(`${W[id].t}: size ${z}`);
+    say(`${W[id].t}: ${z === 'S' ? 'a third of the row' : z === 'M' ? 'two thirds of the row' : 'the full row'}`);
+  }
+  function recount(id, c) {
+    if (!W[id].count?.includes(c)) return;
+    flip(() => { L.count = { ...(L.count || {}), [id]: c }; L.preset = 'custom'; draw(id); pack(); });
+    barState();
+    $('mhw-' + id).querySelector(`.mh-counts .mh-size[onclick*=",${c})"]`)?.focus();
+    say(`${W[id].t}: ${c === 1 ? 'your #1' : 'your top ' + c}`);
   }
   function toggle(id, on) {
     const i = L.hidden.indexOf(id);
@@ -940,7 +999,7 @@ const MSSHome = (() => {
       if (editing) onGripKey(ev);
     });
     document.addEventListener('lostpointercapture', () => { if (drag && !drag.started) drag = null; });
-    if (typeof ResizeObserver === 'function') { let lastC = 0; new ResizeObserver(() => { const c = cols(); if (c !== lastC) { lastC = c; pack(); if (editing) setEditing(true); } }).observe($('mhGrid')); }
+    if (typeof ResizeObserver === 'function') { let lastC = 0; new ResizeObserver(() => { const c = cols(); if (c !== lastC) { lastC = c; pack(); if (editing) setEditing(true); } else fitRails(); }).observe($('mhGrid')); }
     updateGreeting();
 
     // the first screen from what this device kept (hero, Also in progress), skeletons for the rest
@@ -991,7 +1050,7 @@ const MSSHome = (() => {
     D.sched = {}; MSS_GUEST_HOME.forEach((r, i) => { const nx = r[10].next; if (nx) D.sched['guest-' + i] = { next: { s: nx[0], n: nx[1], air: nx[2] } }; });
     L = fromPreset('default');
     defineSkeletons();
-    if (typeof ResizeObserver === 'function') { let lastC = 0; new ResizeObserver(() => { const c = cols(); if (c !== lastC) { lastC = c; pack(); } }).observe($('mhGrid')); }
+    if (typeof ResizeObserver === 'function') { let lastC = 0; new ResizeObserver(() => { const c = cols(); if (c !== lastC) { lastC = c; pack(); } else fitRails(); }).observe($('mhGrid')); }
     build();
     newEpisodes();   // the shows' next dates (Harry Potter's premiere…)
   }
@@ -1021,5 +1080,5 @@ const MSSHome = (() => {
   async function otdOpen() { if (D.otd?.length) MSSOtd.open(D.otd); }
   document.addEventListener('mss:library-changed', () => { if (uid) refresh().catch(() => {}); });
 
-  return { start, guest: startGuest, act, again, pickPanel, openFriend, otdOpen, customize, done, cancel, applyPreset, setName, restore, resize, toggle, widgets, setGoal, saveGoal, moveBy, refresh, _L: () => L, _pack: pack };
+  return { start, guest: startGuest, act, again, pickPanel, openFriend, otdOpen, customize, done, cancel, applyPreset, setName, restore, resize, recount, toggle, widgets, setGoal, saveGoal, moveBy, refresh, _L: () => L, _pack: pack };
 })();

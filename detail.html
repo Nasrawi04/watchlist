@@ -1831,9 +1831,12 @@ async function _deFrameOpen() {
   const rank = _detId ? picks.indexOf(_detId) + 1 : 0;
   if (rank) {
     const [fw, fh] = _FR_FAV(rank);
-    targets.fav = { label: `Profile: Top Favorites #${rank}`, short: `Profile: Top Favorites #${rank}`, where: `Your profile › Top Favorites — this title's tile (#${rank})`, aspect: fw / fh, preview: () => _frFavHTML(fw, fh, rank) };
+    targets.fav = { label: `Profile: Top Favorites #${rank}`, short: `Profile: Top Favorites #${rank}`, where: `Your profile › Top Favorites — this title's tile (#${rank}), on a computer or tablet; Home's Top Favorites when it's wide`, aspect: fw / fh, preview: () => _frFavHTML(fw, fh, rank) };
+    // on a phone the tiles are another shape (#1 a wide strip, the rest nearly square), so they're framed on their own (owner, 27 Nov 2026)
+    const [pw, ph] = _FR_FAV_PH(rank);
+    targets.favph = { label: `Profile: Top Favorites #${rank}`, short: `Profile: Top Favorites #${rank}`, where: `Your profile › Top Favorites — this title's tile (#${rank}), on a phone; Home's Top Favorites on a phone or when it's narrow (S)`, aspect: pw / ph, preview: () => _frFavHTML(pw, ph, rank, true), device: 'phone' };
     if (rank === 1 && !prof.profile_layout?.banner?.path) targets.banner = { label: 'Profile banner', short: 'Profile banner', where: "The banner across the top of your profile (it's your #1 favourite and you haven't picked a banner)", aspect: 1600 / 540, preview: () => _frFavHTML(1600, 540, 0) };
-    ['fav', 'banner'].forEach(t => { if (targets[t]) { const p = MSSBackdrop.pos({ ratings: draftRatings }, t); if (p) ps[t] = p; } });
+    ['fav', 'favph', 'banner'].forEach(t => { if (targets[t]) { const p = MSSBackdrop.pos({ ratings: draftRatings }, t); if (p) ps[t] = p; } });
   }
   _frOn = true;
   MSSBdTools.frame({ url: _deBdUrl, title: _deEl("dTitle").value || "", targets, ps, target: _deBdWhere(),
@@ -1919,16 +1922,17 @@ function _frCcHTML(w, h, T) {
 }
 // a profile place's preview: a Top Favorites tile at its size for that rank (rank 0: the profile banner)
 const _FR_FAV = r => r === 1 ? [860, 416] : r === 2 ? [420, 416] : [420, 254];
-function _frFavHTML(w, h, rank) {
+const _FR_FAV_PH = r => r === 1 ? [366, 220] : [178, 200];   // a phone's tiles (css/profile.css, max-width 700px)
+function _frFavHTML(w, h, rank, phone) {
   const t = escHTML(_deEl("dTitle").value || "");
   return `<div style="position:relative;width:${w}px;height:${h}px;border-radius:${rank ? 20 : 24}px;overflow:hidden;background:#15151A;color:#fff">
     <span data-frimg style="position:absolute;inset:0;background:url(\x27${_deBdUrl}\x27) 50% 25% / cover no-repeat"></span>
-    <span style="position:absolute;inset:0;background:${rank ? "linear-gradient(90deg, rgba(10,10,14,.94) 0%, rgba(10,10,14,.7) 45%, rgba(10,10,14,.25) 100%)" : "linear-gradient(0deg, rgba(10,10,14,.78) 0%, rgba(10,10,14,.25) 55%, rgba(10,10,14,.05) 100%)"}"></span>
-    <div style="position:absolute;inset-inline-start:${rank ? 28 : 40}px;bottom:${rank ? 28 : 36}px;font:600 ${rank ? 30 : 48}px/1.1 var(--serif)">${rank ? t : "Your profile"}</div></div>`;
+    <span style="position:absolute;inset:0;background:${phone ? "linear-gradient(0deg, rgba(4,19,10,.95) 0%, rgba(4,19,10,.45) 50%, rgba(4,19,10,0) 78%)" : rank ? "linear-gradient(90deg, rgba(10,10,14,.94) 0%, rgba(10,10,14,.7) 45%, rgba(10,10,14,.25) 100%)" : "linear-gradient(0deg, rgba(10,10,14,.78) 0%, rgba(10,10,14,.25) 55%, rgba(10,10,14,.05) 100%)"}"></span>
+    <div style="position:absolute;inset-inline-start:${phone ? 14 : rank ? 28 : 40}px;bottom:${phone ? 14 : rank ? 28 : 36}px;font:600 ${phone ? (rank === 1 ? 24 : 17) : rank ? 30 : 48}px/1.1 var(--serif)">${rank ? t : "Your profile"}</div></div>`;
 }
 function _frApply(all) {
   const out = {};
-  const FOLLOW = { big: "card", top: "card", fav: "card", banner: "desk", ccwall: "desk", cca4: "ccwall" };   // places that follow another until framed on their own
+  const FOLLOW = { big: "card", top: "card", fav: "card", favph: "fav", banner: "desk", ccwall: "desk", cca4: "ccwall" };   // places that follow another until framed on their own
   Object.entries(all).forEach(([t, p]) => {
     if (MSSBdTools.isDef(p)) return;                                                     // the default: nothing to keep
     const c = FOLLOW[t] && all[FOLLOW[t]];

@@ -8856,10 +8856,11 @@ body:has(.tv-page.is-phone:not(.de-page)) #mainNav, body:has(.tv-page.is-phone:n
 .lf-dot { fill:var(--lib-green); stroke:var(--lib-card); stroke-width:1.5; }
 .lf-lab { font:800 9.5px var(--sans); letter-spacing:.12em; fill:var(--text-3); }
 .lf-val { font:400 20px var(--bebas); letter-spacing:.3px; fill:var(--text); }
-.lf-tiles { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+/* side by side while each gets 170px; stacked only on small screens; names always in full (owner, 27 Nov 2026) */
+.lf-tiles { display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 170px), 1fr)); gap:10px; }
 .lf-tile { display:flex; flex-direction:column; gap:4px; }
 .lf-tile small { font:800 9.5px/1.1 var(--sans); letter-spacing:.14em; text-transform:uppercase; color:var(--text-3); }
-.lf-tile b { font:600 21px/1.1 var(--serif); color:var(--text-heading); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.lf-tile b { font:600 21px/1.15 var(--serif); color:var(--text-heading); overflow-wrap:anywhere; text-wrap:balance; }
 .lf-tile span { font:600 11.5px var(--sans); color:var(--text-3); }
 .lf-tile:first-child b { color:var(--lib-green); }
 .lf-empty { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; padding:12px 8px; text-align:center; }
@@ -8879,7 +8880,7 @@ body:has(.tv-page.is-phone:not(.de-page)) #mainNav, body:has(.tv-page.is-phone:n
 .lg-page .lib-finger { padding:16px; }
 .lg-page .lib-finger .lf-body { flex-direction:column; align-items:stretch; gap:12px; }   /* stacked, whatever the screen width */
 .lg-page .lib-finger .lf-chart { flex:none; }
-.lg-page .lib-finger .lf-tiles { grid-template-columns:1fr 1fr; }
+.lg-page .lib-finger .lf-tiles { grid-template-columns:repeat(auto-fit, minmax(min(100%, 170px), 1fr)); }   /* stacked only on small phones */
 @media (max-width:1180px) {
   .lib-top { grid-template-columns:1fr; }
   .lib-finger .lf-body { flex-direction:row; align-items:center; gap:24px; }
@@ -9483,8 +9484,15 @@ a.mh-more:focus-visible { outline:2px solid var(--mc-focus); outline-offset:2px;
 .mh-skel { flex:1; min-height:120px; padding:0; }
 /* One card size for the whole home page (owner): three across a narrow (S) widget — a column of the grid, less the
    widget's padding and border and the gaps between three cards. Every rail and card grid uses it, at every width. */
-.mh-w { --mh-card:calc(((100cqw - (var(--mh-cols, 3) - 1) * var(--mh-gap)) / var(--mh-cols, 3) - 2 * var(--mh-pad) - 2px - 2 * var(--msf-gap)) / 3 - 1px); }
+.mh-w { --mh-card-fit:calc(((100cqw - (var(--mh-cols, 3) - 1) * var(--mh-gap)) / var(--mh-cols, 3) - 2 * var(--mh-pad) - 2px - 2 * var(--msf-gap)) / 3 - 1px);
+  --mh-card:var(--mh-card-fit); }
+/* computers and tablets: real-size cards (160–220px), not a third of a column (owner, 27 Nov 2026); phones keep three across */
+.mh-grid:not([data-cols="1"]) .mh-w { --mh-card:max(var(--mh-card-fit), clamp(160px, 6vw + 100px, 220px)); }
 .mh-rail { --msf-rail-w:var(--mh-card); }
+/* a box made taller by its row (home.js fitRails): the cards top to bottom in rows that fill it, the rest scroll down */
+.mh-rail.is-stack { grid-auto-flow:row; grid-auto-columns:auto;   /* its columns: home.js (the count that leaves the least empty space) */
+  overflow-x:hidden; overflow-y:auto; overscroll-behavior-y:contain; scroll-snap-type:y proximity; }
+.msf-rail-wrap.is-stack .grid-nav-btn { display:none !important; }
 /* home cards: the title on one line, cut with … (owner) — every card the same height */
 .mh-w .msf-card__title { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; -webkit-line-clamp:unset; line-clamp:unset; display:block; }
 .mh-w .msf-card__meta, .mh-w .msf-card__meta > span { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; }
@@ -9531,20 +9539,24 @@ a.mh-more:focus-visible { outline:2px solid var(--mc-focus); outline-offset:2px;
 
 /* ── Also in progress: four list rows, the hero's height; the rows' poster smaller ── */
 .mh-plist { display:flex; flex-direction:column; gap:8px; }
-.mh-prow .msf-row__poster { width:clamp(50px, 1vw + 40px, 60px); }
-.mh-prow.msf-row, .mh-prow.msf-row.has-controls { padding:6px; grid-template-columns:minmax(0, 1fr) 0 auto; }
+/* Also in progress (owner, 27 Nov 2026): the poster on the left, centred top to bottom; title, progress and the buttons
+   stacked beside it, so the text has the row's full width. The buttons share the row's cell, under the text (not inside
+   the poster + text button) */
+.mh-prow { --prow-p:clamp(64px, 1.2vw + 52px, 76px); --prow-gap:clamp(10px, .6vw + 6px, 14px); }
+.mh-prow.msf-row, .mh-prow.msf-row.has-controls { padding:8px; grid-template-columns:minmax(0, 1fr); grid-template-areas:"row"; align-items:stretch; }
+.mh-prow .msf-row__main { grid-area:row; align-items:center; gap:var(--prow-gap); }
+.mh-prow .msf-row__poster { width:var(--prow-p); align-self:center; }
+.mh-prow .msf-row__body { align-self:center; padding-bottom:calc(44px + 8px); }
+.mh-prow .msf-row__score { display:none; }
+.mh-prow .msf-row__controls { grid-area:row; align-self:end; justify-self:start; flex-direction:row; margin-inline-start:calc(var(--prow-p) + var(--prow-gap)); }
 .mh-w .msf-row__art { display:none; }                            /* the home page's list rows: no backdrop strip (owner) */
 .mh-prow .msf-row__title { max-width:100%; font-size:clamp(14.5px, .3vw + 13px, 16.5px); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .mh-prow .msf-row__year { flex:none; }
 
-/* ── Recently rated · Waiting on new episodes: a grid of the standard cards (owner: less empty space than a list / rail).
-     One row of the home page card size (as many as fit) ── */
-.mh-cgrid { display:grid; grid-template-columns:repeat(auto-fill, var(--mh-card)); justify-content:space-between; gap:0 var(--msf-gap);
-  grid-template-rows:auto; grid-auto-rows:0; overflow:hidden; padding:4px 2px 0; margin:-4px -2px 0; }   /* as many as fit in one row; the rest stay out (no bottom padding, so nothing peeks) */
 .mh-prow .msf-row__badges { flex:none; }
 .mh-prow .msf-row__pl { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.mh-prow .lc-btn, .mh-prow .lc-ep { height:40px; }
-.mh-prow .lc-btn.lc-ic { width:40px; }
+.mh-prow .lc-btn, .mh-prow .lc-ep { height:44px; }
+.mh-prow .lc-btn.lc-ic { width:44px; }
 
 /* ── At a glance (→ profile): the ring with your average, four tiles; wider: your score bands too ── */
 .mh-glance { flex:1; display:grid; grid-template-columns:auto minmax(0, 1fr); align-items:center; gap:14px 18px; color:inherit; text-decoration:none; border-radius:14px; }
@@ -9566,16 +9578,10 @@ a.mh-more:focus-visible { outline:2px solid var(--mc-focus); outline-offset:2px;
 .mh-w-glance:is([data-span="2"], [data-span="3"]) .mh-glance { grid-template-columns:auto minmax(0, 1.2fr) minmax(0, 1fr); }
 .mh-w-glance:is([data-span="2"], [data-span="3"]) .mh-bands { display:block; }
 
-/* ── Friends activity: the standard card + who (a link to their profile) under it ── */
-.mh-fcard .msf-card__controls { padding-top:4px; }
-.mh-who { flex:1; min-width:0; display:flex; align-items:center; gap:7px; min-height:44px; padding:4px 6px; border-radius:10px; color:inherit; text-decoration:none; }
-.mh-who:hover { background:var(--olive-faint); }
-.mh-who:focus-visible { outline:2px solid var(--mc-focus); outline-offset:-2px; }
-.mh-who-av { flex:none; width:24px; height:24px; border-radius:50%; overflow:hidden; display:grid; place-items:center; background:var(--olive); color:var(--text-on-brand); font:700 11px var(--sans); }
-.mh-who-av img { width:100%; height:100%; object-fit:cover; }
-.mh-who-t { min-width:0; display:flex; flex-direction:column; line-height:1.2; }
-.mh-who-t b { font:700 12px var(--sans); color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.mh-who-t small { font:600 11px var(--sans); color:var(--text-3); white-space:nowrap; }
+/* ── Friends activity: the standard card, their picture on the corner, when under it ── */
+.mh-fcard .msf-card__controls { padding-top:clamp(3px, 1.6cqi, 6px); }
+/* the time ago: the card's meta line (size grows with the card), lined up with the text above it */
+.mh-ago { flex:1; min-width:0; font:600 clamp(9.5px, 1.3cqi + 8px, 12px)/1.2 var(--sans); color:var(--mc-m); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 
 /* ── Pick for me: the green card ── */
 .mh-w-pick { --mh-pick:var(--brand); background:var(--mh-pick); border-color:color-mix(in srgb, var(--mh-pick) 70%, #fff); color:#fff; color-scheme:dark; }
@@ -9622,10 +9628,21 @@ a.mh-more:focus-visible { outline:2px solid var(--mc-focus); outline-offset:2px;
 .mh-spread-key i:not(.is-gold) { background:linear-gradient(90deg, var(--st-bad), var(--st-mixed), var(--st-great), var(--st-outstanding)); }
 
 /* ── Discover: the Discover page's tiles, a little shorter ── */
-.dk-grid.mh-dk { grid-template-columns:minmax(0, 1fr); gap:12px; }
-.mh-w-discover:is([data-span="2"], [data-span="3"]) .mh-dk { grid-template-columns:repeat(3, minmax(0, 1fr)); }
-.mh-w-discover[data-span="1"] .mh-dk .dk-tile:nth-child(n+3), .mh-w-discover[data-span="2"] .mh-dk .dk-tile:nth-child(n+4) { display:none; }
-.mh-dk .dk-tile { height:clamp(150px, 4vw + 110px, 176px); }
+/* the four Top 250s two by two (owner, 27 Nov 2026), compact tiles; four in a row when full width on a computer */
+.dk-grid.mh-dk { grid-template-columns:repeat(2, minmax(0, 1fr)); grid-auto-flow:row; gap:10px; overflow:visible; margin:0; padding:0; scroll-snap-type:none; }
+.mh-w-discover[data-span="3"] .mh-dk { grid-template-columns:repeat(4, minmax(0, 1fr)); }
+.mh-dk .dk-tile { height:128px; border-radius:var(--radius); }
+.mh-dk .dk-text { padding:10px 12px; }
+.mh-dk .dk-badge { max-width:100%; margin-bottom:6px; padding:2px 7px; font-size:8.5px; letter-spacing:1px; }
+.mh-dk .dk-title { max-width:100%; margin-bottom:0; font-size:17px; display:-webkit-box; -webkit-line-clamp:2; line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.mh-dk .dk-sub { display:none; }
+.mh-dk .dk-cta { gap:5px; padding:4px 10px; font-size:11px; }
+.mh-dk .dk-cta svg { width:11px; height:11px; }
+.mh-dk .dk-tile:hover .dk-cta { gap:5px; padding-inline-end:10px; }
+.mh-dk .dk-fan { width:64px; }
+.mh-dk .dk-p { width:38px; bottom:-12px; border-radius:6px; }
+.mh-dk .dk-p:nth-child(1) { inset-inline-end:30px; } .mh-dk .dk-p:nth-child(2) { inset-inline-end:17px; } .mh-dk .dk-p:nth-child(3) { inset-inline-end:4px; }
+.mh-dk .dk-num { font-size:84px; bottom:-14px; }
 
 /* ── This week ── */
 .mh-week { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; }
@@ -9666,20 +9683,19 @@ a.mh-medal:focus-visible { outline:2px solid var(--mc-focus); outline-offset:2px
 .mh-goal-row input:focus { outline:2px solid var(--mc-focus); outline-offset:1px; }
 .mh-goal-row .lc-btn { height:44px; }
 
-/* ── Top Favorites: the profile's tiles (css/profile.css .pf-fav) — the backdrop full bleed, a fade from the bottom, the rank in the
-   corner, details, title and score ring along the bottom; #1 the hero. A layout of its own for each size, and the widget's width
-   (container mhfav) picks the version of it:
-   S       your #1 alone, as tall as the row: the ring top right so the title has the whole width
-   M / L   narrow (phone): #1 across the top, the rest two by two
-   M / L   mid: #1 four sixths wide over two rows, #2 and #3 stacked beside it, #4 and #5 halves underneath
-   L       wide: the profile's own layout — #1 4/6 and #2 2/6 tall, #3–#5 sharing the row under ── */
+/* ── Top Favorites: the profile's tiles and layout (css/profile.css .pf-fav; owner, 27 Nov 2026) — the backdrop full bleed, a fade
+   from the bottom, the rank in the corner, details, title and score ring along the bottom; #1 the hero. How many (1 · 3 · 5) is
+   the widget's own choice; its width (container mhfav) picks the profile's layout:
+   narrow  the profile on a phone: #1 the full width, the rest two by two (a lone last one takes the row)
+   wide    the profile on a computer: #1 4/6 and #2 2/6 tall, #3–#5 sharing the row under (--span, home.js favTile) ── */
 .mh-fv { flex:1; display:flex; flex-direction:column; container:mhfav / inline-size; }
 .mh-favs { flex:1; display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:10px; }
-.mh-fav { position:relative; display:flex; flex-direction:column; justify-content:flex-end; align-items:flex-start; min-width:0; height:170px; padding:12px 14px;
+.mh-fav { position:relative; display:flex; flex-direction:column; justify-content:flex-end; align-items:flex-start; min-width:0; height:200px; padding:12px 14px;
   border:0; border-radius:16px; overflow:hidden; isolation:isolate; cursor:pointer; text-align:start; background:#121714; color:#fff; font:inherit;
   box-shadow:inset 0 0 0 1px rgba(255,255,255,.06); --tv-green:var(--p-forest-300); --tv-gold:var(--p-score-top-dark);
   transition:translate .25s var(--ease), box-shadow .25s var(--ease); }
-.mh-fav.is-r1 { grid-column:1 / -1; height:230px; padding:16px 18px; }
+.mh-fav.is-r1 { grid-column:1 / -1; height:clamp(200px, 100cqw * 9 / 16, 72vh); padding:16px 18px; }   /* the backdrop's own shape (16:9) */
+.mh-fav:not(.is-r1) { height:max(200px, (100cqw - 10px) / 2 * 9 / 16); }
 .mh-fav:not(.is-r1):nth-child(even):last-child { grid-column:1 / -1; }      /* a lone tile after the pairs takes the row */
 .mh-fav-bg { position:absolute; inset:0; z-index:-2; background-size:cover; background-position:50% 25%; opacity:0; transform-origin:50% 25%; transition:opacity .3s var(--ease), scale .4s var(--ease); }
 .mh-fav-bg.in { opacity:1; }
@@ -9704,50 +9720,33 @@ a.mh-medal:focus-visible { outline:2px solid var(--mc-focus); outline-offset:2px
 .mh-fav:focus-visible { outline:2px solid var(--olive-light); outline-offset:3px; }
 [data-theme="light"] .mh-fav:focus-visible { outline-color:var(--olive); }
 
-/* S — the #1 alone, filling the widget's height */
-.mh-favs.is-S { grid-template-columns:minmax(0, 1fr); }
-.mh-favs.is-S .mh-fav.is-r1 { height:auto; min-height:clamp(250px, 72cqw, 340px); max-height:540px; padding:20px 22px; }   /* as tall as the row, up to a point */
-.mh-favs.is-S .mh-fav.is-r1 .mh-fav-shade { background:linear-gradient(0deg, rgba(4,19,10,.94) 0%, rgba(4,19,10,.55) 32%, rgba(4,19,10,0) 62%), linear-gradient(180deg, rgba(4,19,10,.35) 0%, rgba(4,19,10,0) 26%); }
-.mh-favs.is-S .mh-fav-title { font-size:clamp(26px, 8.5cqw, 40px); }
-.mh-favs.is-S .mh-fav-meta { font-size:12px; }
-.mh-favs.is-S .mh-fav-ring { top:16px; bottom:auto; inset-inline-end:16px; }
-.mh-favs.is-S .mh-fav-ring .tv-ring { width:76px; } .mh-favs.is-S .mh-fav-ring .tv-ring b { font-size:27px; }
-.mh-favs.is-S .mh-fav.is-r1:has(.mh-fav-ring) .mh-fav-tx { padding-inline-end:0; }
-
-/* M / L mid: a six-column grid, the hero over two rows */
-@container mhfav (min-width:540px) {
-  .mh-favs:is(.is-M, .is-L) { grid-template-columns:repeat(6, minmax(0, 1fr)); grid-template-rows:repeat(2, minmax(152px, 230px)); grid-auto-rows:170px; gap:12px; }   /* the top rows grow (a little) with a tall row beside the widget */
-  .mh-favs:is(.is-M, .is-L) .mh-fav { height:auto; }
-  .mh-favs:is(.is-M, .is-L) .mh-fav.is-r1 { grid-column:1 / span 4; grid-row:1 / span 2; padding:22px 26px; }
-  .mh-favs:is(.is-M, .is-L) .mh-fav.is-r2 { grid-column:5 / span 2; grid-row:1; }
-  .mh-favs:is(.is-M, .is-L) .mh-fav.is-r3 { grid-column:5 / span 2; grid-row:2; }
-  .mh-favs:is(.is-M, .is-L) .mh-fav.is-r4 { grid-column:1 / span 3; grid-row:3; }
-  .mh-favs:is(.is-M, .is-L) .mh-fav.is-r5 { grid-column:4 / span 3; grid-row:3; }
-  .mh-favs.is-n1 .mh-fav.is-r1 { grid-column:1 / -1 !important; }
-  .mh-favs.is-n2 .mh-fav.is-r2 { grid-row:1 / span 2 !important; }
-  .mh-favs.is-n4 .mh-fav.is-r4 { grid-column:1 / -1 !important; }
-  .mh-favs:is(.is-M, .is-L) .mh-fav.is-r1 .mh-fav-title { font-size:34px; }
-  .mh-favs:is(.is-M, .is-L) .mh-fav:not(.is-r1) .mh-fav-meta { display:flex; font-size:11px; }   /* flex, so the chips keep their gap */
-  .mh-favs:is(.is-M, .is-L) .mh-fav:not(.is-r1) .mh-fav-title { font-size:19px; -webkit-line-clamp:1; }
-  .mh-favs:is(.is-M, .is-L) .mh-fav.is-r1 .mh-fav-ring { inset-inline-end:24px; bottom:22px; }
-  .mh-favs:is(.is-M, .is-L) .mh-fav.is-r1 .mh-fav-ring .tv-ring { width:92px; } .mh-favs:is(.is-M, .is-L) .mh-fav.is-r1 .mh-fav-ring .tv-ring b { font-size:32px; }
-  .mh-favs:is(.is-M, .is-L) .mh-fav.is-r1:has(.mh-fav-ring) .mh-fav-tx { padding-inline-end:110px; }
-}
-/* L wide: the profile's layout */
-@container mhfav (min-width:880px) {
-  .mh-favs.is-L { grid-template-columns:repeat(6, minmax(0, 1fr)); grid-template-rows:none; grid-auto-rows:auto; gap:14px; }
-  .mh-favs.is-L .mh-fav { grid-column:span var(--span, 2) !important; grid-row:auto !important; height:190px; padding:20px 22px; }
-  .mh-favs.is-L .mh-fav:is(.is-r1, .is-r2) { height:320px; }
-  .mh-favs.is-L .mh-fav.is-r1 { padding:30px 34px; }
-  .mh-favs.is-L .mh-fav-title { font-size:22px; -webkit-line-clamp:2; }
-  .mh-favs.is-L .mh-fav.is-r1 .mh-fav-title { font-size:46px; }
-  .mh-favs.is-L .mh-fav.is-r2 .mh-fav-title { font-size:28px; }
-  .mh-favs.is-L .mh-fav-ring { inset-inline-end:22px; bottom:20px; }
-  .mh-favs.is-L .mh-fav-ring .tv-ring.is-s { width:74px; } .mh-favs.is-L .mh-fav-ring .tv-ring.is-s circle { stroke-width:8; } .mh-favs.is-L .mh-fav-ring .tv-ring.is-s b { font-size:26px; }
-  .mh-favs.is-L .mh-fav.is-r1 .mh-fav-ring { inset-inline-end:34px; bottom:30px; }
-  .mh-favs.is-L .mh-fav.is-r1 .mh-fav-ring .tv-ring { width:116px; } .mh-favs.is-L .mh-fav.is-r1 .mh-fav-ring .tv-ring circle { stroke-width:7; } .mh-favs.is-L .mh-fav.is-r1 .mh-fav-ring .tv-ring b { font-size:40px; }
-  .mh-favs.is-L .mh-fav:has(.mh-fav-ring) .mh-fav-tx { padding-inline-end:90px; }
-  .mh-favs.is-L .mh-fav.is-r1:has(.mh-fav-ring) .mh-fav-tx { padding-inline-end:136px; }
+/* wide: the profile on a computer */
+@container mhfav (min-width:700px) {
+  .mh-favs { grid-template-columns:repeat(6, minmax(0, 1fr)); gap:14px; }
+  /* every tile as tall as its width at the backdrop's shape (16:9), so the picture shows whole, never a thin slice; sized from
+     the widget's width (cqw), not aspect-ratio (Safari) — #1 and #2 share #1's height, the small ones never under 190px */
+  .mh-favs { --col:calc((100cqw - 70px) / 6); --h1:min(calc((4 * var(--col) + 42px) * 9 / 16), 72vh, 620px); }
+  .mh-fav, .mh-fav.is-r1, .mh-fav:not(.is-r1), .mh-fav:not(.is-r1):nth-child(even):last-child { grid-column:span var(--span, 2); padding:20px 22px;
+    height:max(190px, (var(--span, 2) * var(--col) + (var(--span, 2) - 1) * 14px) * 9 / 16); }
+  .mh-fav:is(.is-r1, .is-r2) { height:var(--h1); }
+  .mh-favs.is-n1 .mh-fav.is-r1 { height:min(100cqw * 9 / 16, 72vh, 720px); }   /* your #1 alone: the full backdrop */
+  .mh-fav.is-r1 { padding:30px 34px; }
+  .mh-fav:not(.is-r1) .mh-fav-meta { display:flex; font-size:11px; }   /* flex, so the chips keep their gap */
+  .mh-fav.is-r2 .mh-fav-favs { display:flex; }   /* #2's favourite character / episode, as the profile */
+  .mh-fav-title { font-size:22px; }
+  .mh-fav.is-r1 .mh-fav-title { font-size:46px; }
+  .mh-fav.is-r2 .mh-fav-title { font-size:28px; }
+  .mh-fav-ring { inset-inline-end:22px; bottom:20px; }
+  .mh-fav-ring .tv-ring.is-s { width:74px; } .mh-fav-ring .tv-ring.is-s circle { stroke-width:8; } .mh-fav-ring .tv-ring.is-s b { font-size:26px; }
+  .mh-fav.is-r1 .mh-fav-ring { inset-inline-end:34px; bottom:30px; }
+  .mh-fav.is-r1 .mh-fav-ring .tv-ring { width:116px; } .mh-fav.is-r1 .mh-fav-ring .tv-ring circle { stroke-width:7; } .mh-fav.is-r1 .mh-fav-ring .tv-ring b { font-size:40px; }
+  .mh-fav:has(.mh-fav-ring) .mh-fav-tx { padding-inline-end:90px; }
+  .mh-fav.is-r1:has(.mh-fav-ring) .mh-fav-tx { padding-inline-end:136px; }
+  /* Top 3 (owner, 27 Nov 2026): #1 the full width and taller (2:1), #2 and #3 halves under it at 16:9 */
+  .mh-favs.is-n3 .mh-fav.is-r1 { height:min(100cqw / 2, 72vh, 640px); }
+  .mh-favs.is-n3 .mh-fav:is(.is-r2, .is-r3) { height:max(190px, (3 * var(--col) + 28px) * 9 / 16); }
+  .mh-favs.is-n3 .mh-fav.is-r3 .mh-fav-title { font-size:28px; }
+  .mh-favs.is-n3 .mh-fav.is-r3 .mh-fav-meta { font-size:11.5px; }
 }
 @media (prefers-reduced-motion:reduce) {
   .mh-fav, .mh-fav-bg { transition:opacity .2s; }
@@ -9786,7 +9785,8 @@ html.mh-editing .mh-wb { user-select:none; -webkit-user-select:none; }
 .mh-size.on { background:var(--olive); color:var(--text-on-brand); }
 .mh-hide { flex:none; width:36px; height:36px; display:grid; place-items:center; border:1px solid var(--lib-line); border-radius:9px; background:var(--lib-card); color:var(--text-2); cursor:pointer; }
 .mh-hide:hover { color:var(--danger); border-color:var(--danger); }
-.mh-grid[data-cols="1"] .mh-sizes { display:none; }                /* one column: every size is full width */
+.mh-grid[data-cols="1"] .mh-sizes:not(.mh-counts) { display:none; }   /* one column: every width is the full row (how many still counts) */
+.mh-counts .mh-size { padding:0 8px; }                                  /* Top Favorites: #1 · Top 3 · Top 5 */
 /* the widget you're moving follows the pointer; a dashed placeholder of its size shows where it lands */
 .mh-w.is-drag { position:fixed; z-index:900; margin:0; pointer-events:none; opacity:.94; outline:2px solid var(--olive-light) !important; outline-offset:0 !important; }
 .mh-ph { min-width:0; display:grid; place-items:center; border-radius:var(--mh-r); border:2px dashed var(--olive-light); background:var(--olive-faint); }
@@ -9835,12 +9835,7 @@ html.mh-dragging, html.mh-dragging * { cursor:grabbing !important; user-select:n
   .mh-hero-t { grid-column:2; font-size:clamp(26px, 6vw + 6px, 34px); }
   .mh-up, .mh-prog, .mh-hero-acts { grid-column:1 / -1; max-width:none; }
   .mh-hero-acts .lc-btn:not(.lc-ic) { flex:1 1 auto; }
-  .mh-prow.msf-row, .mh-prow.msf-row.has-controls { grid-template-columns:minmax(0, 1fr) auto; }   /* the row's own phone layout (named areas) */
   .mh-pick-poster { width:clamp(96px, 28vw, 120px); }
-  .mh-prow .lc-btn:not(.lc-ic) { width:44px; padding:0; }          /* Resume / Start / Watched: the icon (the name stays in aria-label) */
-  .mh-prow .lc-btn:not(.lc-ic) > span { display:none; }
-  .mh-prow .lc-btn, .mh-prow .lc-ep { height:44px; }
-  .mh-prow .lc-btn.lc-ic { width:44px; }
   .mh-prow .lc-row { gap:4px; }
   .mh-bars { min-height:130px; }
   .mh-more, .mh-hero-open { min-height:44px; }

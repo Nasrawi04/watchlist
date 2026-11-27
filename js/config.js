@@ -2639,17 +2639,17 @@ const MSSBackdrop = (() => {
      <img> (img = true). Every place that draws an entry's backdrop uses it, so it looks the same everywhere. */
   // t: 'desk' (a header on a computer / tablet) · 'phone' (a header on a phone) · 'big' (the Library's big Watching card, full width)
   //    · 'card' (Library cards: Watching, the list view) · 'top' (the Watched top 3 — follows 'card' until framed on its own)
-  //    · 'list' (list rows: Home, Ratings…) · 'fav' (its Top Favorites tile on the profile)
+  //    · 'list' (list rows: Home, Ratings…) · 'fav' (its Top Favorites tile on the profile) · 'favph' (that tile on a phone — another shape)
   //    · 'banner' (the profile banner, when it's the #1 favourite and no banner was chosen)
   //    · 'ccwall' / 'cca4' (Create Card's backdrop band: Wallpaper / A4). Unframed places follow a close one (FOLLOW).
   function pos(e, t = 'desk') {
     const raw = e?.ratings?._backdrop_pos;
     if (!raw || typeof raw !== 'object') return null;
     // framed for each place, or (older) one for all. Places with no framing of their own follow a close one:
-    // the big card → the card · a Top Favorites tile (profiles) → the card · the profile banner (your #1 favourite's) → the desktop header
+    // the big card → the card · a Top Favorites tile (profiles) → the card · its phone tile → the tile · the profile banner (your #1 favourite's) → the desktop header
     // · Create Card's Wallpaper → the desktop header · its A4 → the Wallpaper (then the desktop header)
-    const FOLLOW = { big: 'card', top: 'card', fav: 'card', banner: 'desk', ccwall: 'desk', cca4: 'ccwall' };
-    const keyed = ['desk', 'phone', 'big', 'card', 'top', 'list', 'fav', 'banner', 'ccwall', 'cca4'].some(k => raw[k]);
+    const FOLLOW = { big: 'card', top: 'card', fav: 'card', favph: 'fav', banner: 'desk', ccwall: 'desk', cca4: 'ccwall' };
+    const keyed = ['desk', 'phone', 'big', 'card', 'top', 'list', 'fav', 'favph', 'banner', 'ccwall', 'cca4'].some(k => raw[k]);
     let p = keyed ? raw[t] : raw;
     for (let f = t; keyed && !p && FOLLOW[f]; ) { f = FOLLOW[f]; p = raw[f]; }
     if (!p || typeof p !== 'object') return null;

@@ -165,7 +165,7 @@ async function _frRenderCompare() {
   const hero = `<section class="cp-hero2${m ? '' : ' is-empty'}" aria-label="${m ? `You and ${escHTML(name)}` : 'Pick a friend to compare with'}">
     <div class="cp-duo">
       ${_cmpSide(me, 'You')}
-      <div class="cp-ring cp-ring-big" style="--p:${m?.pct ?? 0}"><div><b>${m?.pct != null ? m.pct + '%' : '—'}</b><span>taste match</span></div></div>
+      <div class="cp-match"><div class="cp-ring cp-ring-big" style="--p:${m?.pct ?? 0}"><div><b>${m?.pct != null ? m.pct + '%' : '—'}</b></div></div><span class="cp-match-l">Taste match</span></div>
       ${_cmpSide(uid ? _frProfiles[uid] : null, uid ? name : 'Pick a friend', uid ? '' : ' is-slot')}
     </div>
     <div class="cp-hero2-body">
