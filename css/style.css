@@ -9725,7 +9725,7 @@ a.mh-medal:focus-visible { outline:2px solid var(--mc-focus); outline-offset:2px
   .mh-favs { grid-template-columns:repeat(6, minmax(0, 1fr)); gap:14px; }
   /* every tile as tall as its width at the backdrop's shape (16:9), so the picture shows whole, never a thin slice; sized from
      the widget's width (cqw), not aspect-ratio (Safari) — #1 and #2 share #1's height, the small ones never under 190px */
-  .mh-favs { --col:calc((100cqw - 70px) / 6); --h1:min(calc((4 * var(--col) + 42px) * 9 / 16), 72vh, 620px); }
+  .mh-favs { --col:calc((100cqw - 70px) / 6); --h1:min(calc((4 * var(--col) + 42px) * .48), 72vh, 540px); }   /* #1 / #2 a little wider than 16:9 (owner: slightly shorter) */
   .mh-fav, .mh-fav.is-r1, .mh-fav:not(.is-r1), .mh-fav:not(.is-r1):nth-child(even):last-child { grid-column:span var(--span, 2); padding:20px 22px;
     height:max(190px, (var(--span, 2) * var(--col) + (var(--span, 2) - 1) * 14px) * 9 / 16); }
   .mh-fav:is(.is-r1, .is-r2) { height:var(--h1); }
@@ -9742,9 +9742,9 @@ a.mh-medal:focus-visible { outline:2px solid var(--mc-focus); outline-offset:2px
   .mh-fav.is-r1 .mh-fav-ring .tv-ring { width:116px; } .mh-fav.is-r1 .mh-fav-ring .tv-ring circle { stroke-width:7; } .mh-fav.is-r1 .mh-fav-ring .tv-ring b { font-size:40px; }
   .mh-fav:has(.mh-fav-ring) .mh-fav-tx { padding-inline-end:90px; }
   .mh-fav.is-r1:has(.mh-fav-ring) .mh-fav-tx { padding-inline-end:136px; }
-  /* Top 3 (owner, 27 Nov 2026): #1 the full width and taller (2:1), #2 and #3 halves under it at 16:9 */
-  .mh-favs.is-n3 .mh-fav.is-r1 { height:min(100cqw / 2, 72vh, 640px); }
-  .mh-favs.is-n3 .mh-fav:is(.is-r2, .is-r3) { height:max(190px, (3 * var(--col) + 28px) * 9 / 16); }
+  /* Top 3 (owner, 27 Nov 2026): #1 the full width and taller, #2 and #3 halves under it — a little shorter than the backdrop's own shape */
+  .mh-favs.is-n3 .mh-fav.is-r1 { height:min(100cqw * .43, 72vh, 560px); }
+  .mh-favs.is-n3 .mh-fav:is(.is-r2, .is-r3) { height:max(190px, (3 * var(--col) + 28px) * .48); }
   .mh-favs.is-n3 .mh-fav.is-r3 .mh-fav-title { font-size:28px; }
   .mh-favs.is-n3 .mh-fav.is-r3 .mh-fav-meta { font-size:11.5px; }
 }
