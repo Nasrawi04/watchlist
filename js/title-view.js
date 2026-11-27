@@ -471,7 +471,9 @@ const MSSViews = (() => {
     const e = t.e;
     if (!e || mssCountedScore(e) == null) return;
     try {
-      const { data } = await sb.from('entries').select('id, cat, ratings, final_score, status').eq('user_id', e.user_id).eq('cat', e.cat);
+      // yours: from your library's copy on this device (getEntries — no download); someone else's: just what's needed
+      const data = e.user_id === window._navUser?.id ? await getEntries(e.user_id, { cat: e.cat })
+        : (await sb.from('entries').select('id, cat, ratings, final_score, status').eq('user_id', e.user_id).eq('cat', e.cat)).data;
       const mine = mssCountedScore(e), scores = (data || []).map(x => x.id === e.id ? mine : mssCountedScore(x)).filter(x => x != null);
       if (!scores.length) return;
       t.stats = { rank: 1 + scores.filter(x => x > mine).length, count: scores.length, avg: scores.reduce((a, b) => a + b, 0) / scores.length };
@@ -1020,13 +1022,13 @@ const MSSViews = (() => {
         const c = r.ok ? await r.json() : {}, job = type === 'movie' ? 'Director' : 'Creator';
         const ids = [...new Set((c.crew || []).filter(x => x.job === job && (x.media_type || type) === type).map(x => x.id).filter(id => id !== Number(t.it.tmdb_id)))].slice(0, 200);
         if (ids.length) {
-          const { data } = await sb.from('entries').select('*').eq('user_id', me).eq('tmdb_type', type).in('tmdb_id', ids);
+          const want = new Set(ids), data = (await getEntries(me)).filter(x => x.tmdb_type === type && want.has(Number(x.tmdb_id)));   // your library's copy
           const items = (data || []).map(x => ({ x, s: mssCountedScore(x) })).sort((a, b) => (b.s ?? -1) - (a.s ?? -1));
           if (items.length) t.dir = { name: dir.name, id: dir.id, items };
         }
       }
       if (genre) {
-        const { data } = await sb.from('entries').select('id, cat, ratings, final_score, status, genres').eq('user_id', me).eq('cat', cat);
+        const data = await getEntries(me, { cat });   // your library's copy on this device
         const sc = (data || []).filter(x => x.id !== t.e?.id && (x.genres || []).some(g => String(g).toLowerCase() === genre.toLowerCase())).map(mssCountedScore).filter(v => v != null);
         if (sc.length >= 3) t.genreAvg = { genre, cat, n: sc.length, avg: sc.reduce((a, b) => a + b, 0) / sc.length };
       }
@@ -1128,6 +1130,9 @@ const MSSViews = (() => {
   async function show(t) {
     T = t;
     if (window._navUser) MSSRecPrefs.load();   // the ⋯ says whether More / Less like this is on
+    // someone else's title from a copy without its synopsis (db.js mssOthersEntries): just this one's, now
+    if (t.e?.id && !('description' in t.e)) sb.from('entries').select('description').eq('id', t.e.id).maybeSingle()
+      .then(({ data }) => { t.e.description = data?.description ?? null; if (T === t) paint(); }, () => { t.e.description = null; });
     await mssLoadScript('js/panel.js');
     if (T !== t) return;
     if (!panel) {

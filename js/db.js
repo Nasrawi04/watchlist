@@ -49,12 +49,51 @@ async function getEntries(userId, filters = {}) {
 }
 
 async function getPublicEntries(userId) {
-  const { data, error } = await sb.from('entries')
-    .select('*')
-    .eq('user_id', userId)
-    .order('final_score', { ascending: false });
-  if (error) { console.error('getPublicEntries:', error); return []; }
-  return mssWithPrivateNotes(data || []);
+  try {
+    const rows = await mssOthersEntries('pv:' + userId, q => q.eq('user_id', userId), 5000);
+    return rows.sort((a, b) => (Number(b.final_score) || -1) - (Number(a.final_score) || -1));   // highest first, as before
+  } catch (error) { console.error('getPublicEntries:', error); return []; }
+}
+
+/* Someone else's titles — a friend's profile, everyone's on the Friends pages (owner, 27 Nov 2026 — Supabase egress).
+   They used to be downloaded whole (every column) on every visit (~1 MB a profile). Now a copy is kept on this device
+   (with "Faster pages" — MSFStore's database, deleted with it; the last 8 profiles you looked at, plus your friends'),
+   and each visit asks only which titles you can see and when each last changed, then fetches just the new or changed
+   ones. Those ids come through the same rules as everything else, so a title they hide or delete leaves at once.
+   Their synopsis isn't fetched (the title view fetches it when one is opened), and a Friends / Only me note's text
+   is never kept on the device — it's asked for each time.
+     key   the copy's name: 'friends' or 'pv:<their id>'   scope   q => q.eq('user_id', id) / q.in('user_id', ids)   max   how many */
+const MSS_OTHER_COLS = 'id,user_id,title,cat,status,year,genres,poster_url,season,episode,total_seasons,total_eps,watched,completed_date,notes,ratings,final_score,created_at,updated_at,runtime_h,runtime_m,tmdb_id,tmdb_type,completed_at,progress_at,note_visibility,visibility';
+async function mssOthersEntries(key, scope, max = 3000) {
+  const me = window._navUser?.id || (typeof getCurrentUser === 'function' ? (await getCurrentUser())?.id : null);
+  const idx = [];
+  for (let from = 0; from < max; from += 1000) {                     // 1,000 a request (the database's limit)
+    const { data, error } = await scope(sb.from('entries').select('id,updated_at')).order('updated_at', { ascending: false }).range(from, Math.min(max, from + 1000) - 1);
+    if (error) throw error;
+    idx.push(...(data || []));
+    if ((data || []).length < 1000) break;
+  }
+  const store = typeof MSFStore !== 'undefined' && me ? MSFStore : null;
+  const kept = store ? await store.side(me, key).catch(() => null) : null;
+  const have = new Map((Array.isArray(kept) ? kept : []).map(r => [r.id, r]));
+  const need = idx.filter(r => have.get(r.id)?.updated_at !== r.updated_at).map(r => r.id);
+  for (let i = 0; i < need.length; i += 300) {
+    const { data, error } = await sb.from('entries').select(MSS_OTHER_COLS).in('id', need.slice(i, i + 300));
+    if (error) throw error;
+    (data || []).forEach(r => have.set(r.id, r));
+  }
+  const priv = e => e.note_visibility && e.note_visibility !== 'anyone';
+  const rows = idx.map(r => have.get(r.id)).filter(Boolean).map(e => priv(e) ? { ...e, notes: null } : { ...e });   // only what you can see now, in order
+  if (store) {
+    store.putSide(me, key, rows).catch(() => {});                    // never a Friends / Only me note on the device
+    if (key.startsWith('pv:')) {                                     // the last 8 profiles you looked at
+      const recent = ((await store.side(me, 'pv-recent').catch(() => null)) || []).filter(k => k !== key);
+      recent.unshift(key);
+      recent.slice(8).forEach(k => store.putSide(me, k, null).catch(() => {}));
+      store.putSide(me, 'pv-recent', recent.slice(0, 8)).catch(() => {});
+    }
+  }
+  return mssWithPrivateNotes(rows);
 }
 
 /* ── Upsert entry ── */

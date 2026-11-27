@@ -92,6 +92,13 @@ function _frPaintSub() {
 }
 
 /* ── Loading ── */
+/* Your friends' titles (owner, 27 Nov 2026 — Supabase egress): every Friends / Activity / Compare / Blend / Challenges /
+   Movie Night visit used to download all of them again (~1 MB for 7 friends). Now a copy is kept on this device (with
+   "Faster pages" — MSFStore's database, deleted with it) and each visit only asks which titles you can see and when
+   each last changed (~60 KB), then fetches the new or changed ones. The ids come through the same rules as before, so a
+   title a friend hides or deletes leaves at once. Their synopsis isn't fetched (these pages never show it — a title's
+   page fetches its own), and a Friends / Only me note's text is never kept on the device: it's asked for each time. */
+const _frLibrary = ids => mssOthersEntries('friends', q => q.in('user_id', ids), 3000);   // db.js
 async function loadFriends() {
   // Friends = people you follow who follow you back (083) — the friendships table keeps them;
   // follow requests (yours waiting / sent), people who follow you that you could follow back, your counts
@@ -105,7 +112,7 @@ async function loadFriends() {
   const ids = _frAccepted.map(f => f.friendId);
   if (ids.length) {
     const [ents, lists, eps] = await Promise.all([
-      sb.from('entries').select('*').in('user_id', ids).order('updated_at', { ascending: false }).limit(3000).then(r => mssWithPrivateNotes(r.data || []), () => []),
+      _frLibrary(ids).catch(err => { console.warn('Friends’ titles:', err); return []; }),
       sb.from('favorite_lists').select('*').in('user_id', ids).eq('cat', 'custom').order('created_at', { ascending: false }).then(r => r.data || [], () => []),
       sb.from('episode_ratings').select('id,user_id,entry_id,season_number,episode_number,score,updated_at').in('user_id', ids).order('updated_at', { ascending: false }).limit(150).then(r => r.data || [], () => []),
     ]);

@@ -24,6 +24,9 @@
      await MSFStore.entries(userId)   → your titles (copies), newest first — null when userId isn't you
      MSFStore.dirty()                 → this device changed something
      MSFStore.forget(userId)          → delete that account's copy on this device
+     await MSFStore.side(userId, key) / MSFStore.putSide(userId, key, value)
+                                      → other copies kept in the same database (null / nothing without "Faster pages"):
+                                        'friends' — your friends' titles you can see (social-core.js _frLibrary)
    Requires config.js (sb, MSSConsent, mssPerfMark), db.js (mssWithPrivateNotes).
 ══════════════════════════════════════════════════════════════════════ */
 const MSFStore = (() => {
@@ -168,5 +171,19 @@ const MSFStore = (() => {
     if (id && id === uid) { rows = null; meta = null; }
     try { indexedDB.deleteDatabase(dbName(id)); } catch {}
   }
-  return { entries, dirty, forget };
+  // other copies in the same per-account database (deleted with it): only with "Faster pages"
+  async function side(id, key) {
+    if (!persist() || !id) return null;
+    const d = await idb(id); if (!d) return null;
+    return new Promise(ok => {
+      try { const t = d.transaction('kv'), r = t.objectStore('kv').get(key); t.oncomplete = () => { d.close(); ok(r.result ?? null); }; t.onerror = () => { d.close(); ok(null); }; }
+      catch { d.close(); ok(null); }
+    });
+  }
+  async function putSide(id, key, value) {
+    if (!persist() || !id) return;
+    const d = await idb(id); if (!d) return;
+    try { const t = d.transaction('kv', 'readwrite'); t.objectStore('kv').put(value, key); t.oncomplete = t.onerror = () => d.close(); } catch { d.close(); }
+  }
+  return { entries, dirty, forget, side, putSide };
 })();
