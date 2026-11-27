@@ -17,15 +17,16 @@
               .tabCount(key, n). Your own Overview: "Make it yours" in #pfPrompts (what's left to personalise).
    Overview   MSSProfile.overview(el, ctx)   ctx = { profile, entries, editable, openEntry(id), save(key, value), user (theirs) }
               Top Favorites (#1 widest, #2 beside it, #3–#5 under), Top 5 by category (Movies, TV Shows, Anime,
-              Cartoons, Actors, Directors: four side by side, slide for the rest; one per screen on phones) and the
-              side column: Library, Ratings (MSSCurve), Entertainment identity.
+              Cartoons), Favorite People (Actors, Actresses, Directors) and Seasons, Episodes & Characters: four side by side,
+              slide for the rest; one per screen on phones) and the side column: Library, Ratings (MSSCurve), Entertainment identity.
    Editing    MSSProfile.editProfile()  (your own) — Photo · Name · Username · Quote · Bio · Banner → · Stats →
               Banner: search a title, pick one of its backdrops (the Details Page's picker), Adjust framing (the
               same tool, backdrop-tools.js), save. Stats: tick 3–6, drag to order, live preview, Reset, Save.
               Rankings (Top Favorites, each Top 5): a panel to re-rank (drag), replace (tap) and remove (✕);
-              titles come from your library, actors / directors from TMDB.
+              titles come from your library, actors / directors from TMDB. The people, season, episode and character pickers
+              open on suggestions (js/fav-suggest.js) with a search at the top.
    Stored     profiles.top_picks, fav_tv / fav_movies / fav_anime / fav_cartoons (entry ids, as before),
-              fav_actors / fav_directors, profile_layout (127_profiles_v2.sql). Would Recommend isn't shown any more
+              fav_actors / fav_directors, profile_layout (127_profiles_v2.sql), fav_seasons / fav_episodes / fav_characters (149). Would Recommend isn't shown any more
               (profiles.recommended is kept — Discover still uses it).
 
    Requires config.js, db.js, nav.js (tmdbFetch), rating-curve.js, follows.js; panels load js/panel.js and
@@ -41,8 +42,9 @@ const MSSProfile = (() => {
   const isMovie = e => typeof mssIsMovieEntry === 'function' ? mssIsMovieEntry(e) : e.cat === 'movies';
   const layoutOf = p => (p && p.profile_layout && typeof p.profile_layout === 'object') ? p.profile_layout : {};
   const fmt = n => Number(n || 0).toLocaleString(typeof MSSI18n !== 'undefined' ? MSSI18n.locale : undefined);
-  const missingCol = err => /profile_layout|fav_actors|fav_directors/.test(err?.message || '') || err?.code === 'PGRST204' || err?.code === '42703';
+  const missingCol = err => /profile_layout|fav_actors|fav_directors|fav_seasons|fav_episodes|fav_characters/.test(err?.message || '') || err?.code === 'PGRST204' || err?.code === '42703';
   const NEED_DB = 'This needs the 127 profile database update — run sql/127_profiles_v2.sql in Supabase first.';
+  const NEED_149 = 'This needs the 149 profile database update — run sql/149_profile_fav_moments.sql in Supabase first.';
 
   /* ══ Stats you can show under the banner (profile-stats.js — the people cards on the Social pages use them too) ══ */
   const { STATS, DEF_STATS, keys: statKeys, timeOf, span, values: statValues, label } = MSSProfileStats;
@@ -328,15 +330,23 @@ const MSSProfile = (() => {
     fav_actors:   { title: 'Actors',    people: 'Acting',    gender: 2, one: 'actor', many: 'actors' },
     fav_actresses:{ title: 'Actresses', people: 'Acting',    gender: 1, one: 'actress', many: 'actresses', inLayout: true },
     fav_directors:{ title: 'Directors', people: 'Directing', one: 'director', many: 'directors' },
+    // Seasons, Episodes & Characters (owner, 27 Nov 2026 — testers' feedback): their own section under Favorite People (149)
+    fav_seasons:   { title: 'Seasons',    moment: 'season',    one: 'season',    many: 'seasons',    ic: 'layers' },
+    fav_episodes:  { title: 'Episodes',   moment: 'episode',   one: 'episode',   many: 'episodes',   ic: 'episodes' },
+    fav_characters:{ title: 'Characters', moment: 'character', one: 'character', many: 'characters', ic: 'user' },
   };
-  const T5 = ['fav_movies', 'fav_tv', 'fav_anime', 'fav_cartoons', 'fav_actors', 'fav_actresses', 'fav_directors'];
+  const T5 = ['fav_movies', 'fav_tv', 'fav_anime', 'fav_cartoons', 'fav_actors', 'fav_actresses', 'fav_directors', 'fav_seasons', 'fav_episodes', 'fav_characters'];
   const O = () => P.ov;
   const byId = id => O().entries.find(e => e.id === id);
   const idsOf = key => (Array.isArray(O().profile?.[key]) ? O().profile[key] : []).filter(id => byId(id)).slice(0, MAX);
   // a list as stored: its own column, or (inLayout) a key inside profile_layout
   const rawOf = key => SECTIONS[key]?.inLayout ? layoutOf(O().profile)[key] : O().profile?.[key];
-  const peopleOf = key => (Array.isArray(rawOf(key)) ? rawOf(key) : []).filter(x => x && Number(x.id) && x.name).slice(0, MAX);
-  const itemsOf = key => SECTIONS[key].people ? peopleOf(key) : idsOf(key).map(byId);
+  // people, seasons, episodes and characters are saved as objects (titles as entry ids)
+  const VALID = { season: x => Number(x.tv) && Number(x.s) > 0 && x.show, episode: x => Number(x.tv) && Number(x.s) > 0 && Number(x.e) > 0 && x.show, character: x => x.name && x.title };
+  const isObj = key => !!(SECTIONS[key].people || SECTIONS[key].moment);
+  const peopleOf = key => { const sec = SECTIONS[key], ok = sec.people ? (x => Number(x.id) && x.name) : VALID[sec.moment];
+    return (Array.isArray(rawOf(key)) ? rawOf(key) : []).filter(x => x && ok(x)).slice(0, MAX); };
+  const itemsOf = key => isObj(key) ? peopleOf(key) : idsOf(key).map(byId);
   const yearOf = e => e && e.year ? String(e.year).slice(0, 4) : '';
   const rankBadge = r => `<span class="cg-rank-badge ${r === 1 ? 'cg-rank-1' : r === 2 ? 'cg-rank-2' : r === 3 ? 'cg-rank-3' : 'cg-rank-other'}" aria-hidden="true">${r}</span>`;
 
@@ -350,16 +360,18 @@ const MSSProfile = (() => {
     // Top Favorites beside the side column; Top 5 by category under both, the full width (four panels need the room)
     // Top 5 titles (Movies, TV, Anime, Cartoons), then the people (Actors, Actresses, Directors) in their own section under it
     const fav = favHTML(), keys = t5Keys(), t5 = top5HTML(keys.filter(k => !SECTIONS[k].people), 'pfT5Rail', 'Top 5', 'Favorite Titles'),
-      t5p = top5HTML(keys.filter(k => SECTIONS[k].people), 'pfT5PRail', 'Top 5', 'Favorite People');
+      t5p = top5HTML(keys.filter(k => SECTIONS[k].people), 'pfT5PRail', 'Top 5', 'Favorite People'),
+      t5m = top5HTML(keys.filter(k => SECTIONS[k].moment), 'pfT5MRail', 'Top 5', 'Seasons, Episodes & Characters');
     o.el.innerHTML = `<div class="pf-ov">
       <div class="pf-main">${fav || (t5 || o.editable ? '' : mssEmpty({ compact: true, art: 'watched', title: 'Nothing picked yet', text: 'No favourites on show here. Yet.' }))}</div>
       <aside class="pf-side" aria-label="Library and ratings">${libraryHTML()}${MSSCurve.html(o.entries, { user: o.editable ? null : o.user })}${identityHTML()}</aside>
       ${t5 ? `<div class="pf-t5-wrap">${t5}</div>` : ''}
       ${t5p ? `<div class="pf-t5-wrap pf-t5p-wrap">${t5p}</div>` : ''}
+      ${t5m ? `<div class="pf-t5-wrap pf-t5p-wrap pf-t5m-wrap">${t5m}</div>` : ''}
     </div>`;
     paintFavArt();
     if (typeof mssPaintLogo === 'function') o.el.querySelectorAll('.pf-fav[data-fav]').forEach(t => mssPaintLogo(t.querySelector('.pf-fav-title'), byId(t.dataset.fav)));   // the titles' name artwork
-    t5Wire('pfT5Rail'); t5Wire('pfT5PRail');
+    t5Wire('pfT5Rail'); t5Wire('pfT5PRail'); t5Wire('pfT5MRail');
     requestAnimationFrame(balance);
   }
   // two columns (computers): the favourite tiles grow a little (up to 160px in all) so they end with the side column,
@@ -450,24 +462,37 @@ const MSSProfile = (() => {
     const edit = o.editable ? `<button type="button" class="pf-t5-edit" onclick="MSSProfile.rank('${key}')" aria-label="Edit Top 5 ${esc(sec.title)}">${icon('edit', 14)}</button>` : '';
     const head = `<header class="pf-t5-h"><span class="pf-t5-k">Top 5</span><h3>${esc(sec.title)}</h3>${edit}</header>`;
     if (!list.length) return `<article class="pf-t5 is-empty" data-t5="${key}">${head}<div class="pf-t5-none">
-        <span class="pf-t5-none-ic" aria-hidden="true">${icon(sec.people ? 'users' : 'trophy', 22)}</span>
-        <b>Your top 5 ${esc(sec.title.toLowerCase())}</b><small>${sec.people ? `Search TMDB for the ${esc(sec.many)} you rate highest` : `Rank the ${esc(sec.many)} you love most`}</small>
+        <span class="pf-t5-none-ic" aria-hidden="true">${icon(sec.ic || (sec.people ? 'users' : 'trophy'), 22)}</span>
+        <b>Your top 5 ${esc(sec.title.toLowerCase())}</b><small>${sec.people ? `Search TMDB for the ${esc(sec.many)} you rate highest` : sec.moment ? `Pick from what you’ve watched, or search` : `Rank the ${esc(sec.many)} you love most`}</small>
         <button type="button" class="pf-btn-soft" onclick="MSSProfile.rank('${key}')">${icon('plus', 14)} Pick 5</button></div></article>`;
     return `<article class="pf-t5" data-t5="${key}">${head}<ol class="pf-t5-list">${list.map((x, i) => t5Row(key, x, i)).join('')}</ol></article>`;
   }
-  // one ranked row: a title (poster, year, your score → its panel) or a person (photo, known for → their page)
+  // what a saved person / season / episode / character shows: picture, name, the line under it, where it opens
+  const letter = n => `<span class="pf-t5-letter">${esc((String(n || '?').trim() || '?')[0])}</span>`;
+  const tmdbImg = path => `<img src="${IMG}w185${esc(path)}" alt="" loading="lazy">`;
+  function bitsOf(key, x) {
+    const m = SECTIONS[key].moment;
+    if (SECTIONS[key].people) return { img: x.path ? tmdbImg(x.path) : letter(x.name), title: x.name, sub: x.known ? `Known for ${x.known}` : '', href: `person.html?id=${Number(x.id)}`, person: true };
+    if (m === 'season') return { img: x.path ? tmdbImg(x.path) : letter(x.show), title: mssSeasonLabel(x.s, x.name), sub: [x.show, x.year].filter(Boolean).join(' · '),
+      href: `season.html?show=${Number(x.tv)}&s=${Number(x.s)}` };
+    if (m === 'episode') return { img: x.path ? tmdbImg(x.path) : letter(x.show), title: x.name || `Episode ${x.e}`, sub: `${x.show} · S${Number(x.s)} E${Number(x.e)}`,
+      href: `episode.html?show=${Number(x.tv)}&s=${Number(x.s)}&e=${Number(x.e)}` };
+    // TMDB has no pictures of characters: the name only (owner, 27 Nov 2026), opening its title
+    return { img: letter(x.name), title: x.name, sub: [x.title, x.actor].filter(Boolean).join(' · '), href: Number(x.tmdb) && (x.type === 'movie' || x.type === 'tv') ? `title.html?type=${x.type}&id=${Number(x.tmdb)}` : '', person: true };
+  }
+  // one ranked row: a title (poster, year, your score → its panel), or a person / season / episode / character (→ its page)
   function t5Row(key, x, i) {
-    const r = i + 1, people = !!SECTIONS[key].people;
-    const img = people ? (x.path ? `<img src="${IMG}w185${esc(x.path)}" alt="" loading="lazy">` : `<span class="pf-t5-letter">${esc((x.name || '?')[0])}</span>`)
-      : posterHTML(x, r === 1 ? 'big' : '', r === 1 ? '64px' : '40px');
-    const title = people ? x.name : x.title, sub = people ? (x.known ? `Known for ${x.known}` : '') : yearOf(x);
-    const sv = people ? null : liveScore(x);
-    const act = people ? `href="person.html?id=${Number(x.id)}"` : `href="#" onclick="event.preventDefault();MSSProfile._open(${attrJSON(x.id)})"`;
-    return `<li class="pf-t5-row${r === 1 ? ' is-lead' : ''}"><a class="pf-t5-a" ${act} aria-label="#${r} ${esc(title)}">
+    const r = i + 1, obj = isObj(key), b = obj ? bitsOf(key, x) : null;
+    const img = obj ? b.img : posterHTML(x, r === 1 ? 'big' : '', r === 1 ? '64px' : '40px');
+    const title = obj ? b.title : x.title, sub = obj ? b.sub : yearOf(x);
+    const sv = obj ? null : liveScore(x);
+    const act = obj ? (b.href ? `href="${b.href}"` : '') : `href="#" onclick="event.preventDefault();MSSProfile._open(${attrJSON(x.id)})"`;
+    const tag = act ? 'a' : 'span';
+    return `<li class="pf-t5-row${r === 1 ? ' is-lead' : ''}"><${tag} class="pf-t5-a" ${act} aria-label="#${r} ${esc(title)}">
       <span class="pf-rk is-${r}" aria-hidden="true">${r}</span>
-      <span class="pf-t5-img${people ? ' is-person' : ''}">${img}</span>
+      <span class="pf-t5-img${b?.person ? ' is-person' : ''}">${img}</span>
       <span class="pf-t5-tx"><b translate="no">${esc(title)}</b>${sub ? `<small>${esc(sub)}</small>` : ''}</span>
-      ${sv != null ? mssScoreRing(sv, 'pf-t5-ring') : ''}</a></li>`;   // the score as the site's rating ring (owner, 19 Nov 2026)
+      ${sv != null ? mssScoreRing(sv, 'pf-t5-ring') : ''}</${tag}></li>`;   // the score as the site's rating ring (owner, 19 Nov 2026)
   }
   // four side by side (one on phones), slide for the rest: arrows on a computer, swipe + tabs on a phone
   function t5Wire(rid) {
@@ -597,7 +622,7 @@ const MSSProfile = (() => {
     catch (err) {
       prof[key] = before;
       console.error(err);
-      showToast(missingCol(err) ? NEED_DB : 'Couldn’t save — try again.', 'err');
+      showToast(missingCol(err) ? (SECTIONS[key]?.moment ? NEED_149 : NEED_DB) : 'Couldn’t save — try again.', 'err');
       throw err;
     } finally { if (P.ov) draw(); paintPrompts(); }
   }
@@ -616,23 +641,24 @@ const MSSProfile = (() => {
   }
   function rankDraw() {
     const body = document.getElementById('pfRankBody'); if (!body || !R) return;
-    const key = R.key, sec = SECTIONS[key], list = itemsOf(key), people = !!sec.people;
+    const key = R.key, sec = SECTIONS[key], list = itemsOf(key), people = !!sec.people, obj = isObj(key);
     const row = (x, i) => {
-      const title = people ? x.name : x.title, sub = people ? (x.known ? `Known for ${x.known}` : '') : [mssTypeOf(x.cat, isMovie(x)).label, yearOf(x)].filter(Boolean).join(' · ');
-      const img = people ? (x.path ? `<img src="${IMG}w185${esc(x.path)}" alt="">` : esc((x.name || '?')[0])) : posterHTML(x, '', '44px');
-      const sv = people ? null : liveScore(x);
+      const b = obj ? bitsOf(key, x) : null;
+      const title = obj ? b.title : x.title, sub = obj ? b.sub : [mssTypeOf(x.cat, isMovie(x)).label, yearOf(x)].filter(Boolean).join(' · ');
+      const img = obj ? b.img : posterHTML(x, '', '44px');
+      const sv = obj ? null : liveScore(x);
       return `<li class="pf-rk-row" data-i="${i}">
         <span class="pf-rk-handle" data-drag="${i}" aria-hidden="true">${icon('grip', 16)}</span>
         <span class="pf-rk is-${i + 1}" aria-hidden="true">${i + 1}</span>
         <button type="button" class="pf-rk-main" data-replace="${i}" aria-label="Replace #${i + 1}, ${esc(title)}">
-          <span class="pf-t5-img${people ? ' is-person' : ''}">${img}</span><span class="pf-t5-tx"><b translate="no">${esc(title)}</b>${sub ? `<small>${esc(sub)}</small>` : ''}</span>
+          <span class="pf-t5-img${b?.person ? ' is-person' : ''}">${img}</span><span class="pf-t5-tx"><b translate="no">${esc(title)}</b>${sub ? `<small>${esc(sub)}</small>` : ''}</span>
           ${sv != null ? mssScoreRing(sv, 'pf-t5-ring') : ''}</button>
         <span class="pf-rk-moves"><button type="button" class="pf-rk-mv" data-up="${i}" aria-label="Move up"${i ? '' : ' disabled'}>${icon('chevup', 14)}</button><button type="button" class="pf-rk-mv" data-down="${i}" aria-label="Move down"${i < list.length - 1 ? '' : ' disabled'}>${icon('chevdown', 14)}</button></span>
         <button type="button" class="pf-rk-x" data-rm="${i}" aria-label="Remove ${esc(title)}">${icon('x', 14)}</button></li>`;
     };
     body.innerHTML = `<ol class="pf-rk-list" id="pfRkList">${list.map(row).join('')}</ol>
-      ${list.length < MAX ? `<button type="button" class="pf-empty-row is-add" data-add="${list.length}"><span class="pf-empty-plus">${icon('plus', 16)}</span><span><b>Add #${list.length + 1}</b><small>${people ? `Search TMDB for ${sec.many}` : `From the ${key === 'top_picks' ? 'titles' : sec.title.toLowerCase()} you’ve watched`}</small></span></button>` : ''}
-      <p class="pf-muted pf-rk-note">${people ? 'Pictures and names come from TMDB.' : 'Only titles you’ve watched or are watching can be picked.'} Changes save straight away.</p>`;
+      ${list.length < MAX ? `<button type="button" class="pf-empty-row is-add" data-add="${list.length}"><span class="pf-empty-plus">${icon('plus', 16)}</span><span><b>Add #${list.length + 1}</b><small>${people ? `Suggestions, or search TMDB for ${sec.many}` : sec.moment ? `From what you’ve watched, or search` : `From the ${key === 'top_picks' ? 'titles' : sec.title.toLowerCase()} you’ve watched`}</small></span></button>` : ''}
+      <p class="pf-muted pf-rk-note">${people || sec.moment ? 'Pictures and names come from TMDB.' : 'Only titles you’ve watched or are watching can be picked.'} Changes save straight away.</p>`;
     if (!R.wired) {
       R.wired = true;
       body.addEventListener('click', ev => {
@@ -645,7 +671,14 @@ const MSSProfile = (() => {
       body.addEventListener('pointerdown', dragStart);
     }
   }
-  const valueOf = (key, list) => SECTIONS[key].people ? list.map(x => ({ id: Number(x.id), name: x.name, path: x.path || null, known: x.known || null, ...(x.gender ? { gender: Number(x.gender) } : {}) })) : list.map(x => x.id);
+  const cut = (v, n) => v == null || v === '' ? null : String(v).slice(0, n);
+  const CLEAN = {
+    season: x => ({ tv: Number(x.tv), show: cut(x.show, 120), s: Number(x.s), name: cut(x.name, 80), path: cut(x.path, 80), year: cut(x.year, 4) }),
+    episode: x => ({ tv: Number(x.tv), show: cut(x.show, 120), s: Number(x.s), e: Number(x.e), name: cut(x.name, 120), path: cut(x.path, 80), year: cut(x.year, 4) }),
+    character: x => ({ name: cut(x.name, 80), title: cut(x.title, 120), actor: cut(x.actor, 80), tmdb: Number(x.tmdb) || null, type: x.type === 'movie' || x.type === 'tv' ? x.type : null }),
+  };
+  const valueOf = (key, list) => SECTIONS[key].people ? list.map(x => ({ id: Number(x.id), name: x.name, path: x.path || null, known: x.known || null, ...(x.gender ? { gender: Number(x.gender) } : {}) }))
+    : SECTIONS[key].moment ? list.map(CLEAN[SECTIONS[key].moment]) : list.map(x => x.id);
   async function commit(list) {
     const key = R?.key || pk?.key; if (!key) return;
     try { await save(key, valueOf(key, list.slice(0, MAX))); } catch {}
@@ -679,29 +712,52 @@ const MSSProfile = (() => {
     addEventListener('pointermove', move, { passive: true }); addEventListener('pointerup', up); addEventListener('pointercancel', up);
   }
 
-  /* ── Pickers: a title from your library, or a person from TMDB (a panel over the editor; Back returns to it) ── */
+  /* ── Pickers: a title from your library, a person from TMDB, or a season / episode / character (a panel over the editor;
+     Back returns to it). People, seasons, episodes and characters open on suggestions (js/fav-suggest.js), the search at
+     the top finds anything else (owner, 27 Nov 2026). ── */
   let pk = null;
   const PICK_PAGE = 60;
+  const SEARCH_MS = () => typeof MSS_SEARCH_MS !== 'undefined' ? MSS_SEARCH_MS : 300;
+  const PEOPLE_KIND = { fav_actors: 'actors', fav_actresses: 'actresses', fav_directors: 'directors' };
+  const PICK_PH = { season: 'Search your shows, or any show…', episode: 'Search your shows, or any show…', character: 'Search a character, or a title…' };
+  const resBox = () => document.getElementById('pfPickRes');
+  const hint = t => `<p class="pf-muted pf-pick-hint">${esc(t)}</p>`;
+  const CHEV = () => `<span class="pf-pick-go" aria-hidden="true">${icon('chevright', 16)}</span>`;
+  const ringOf = v => v != null ? mssScoreRing(v, 'pf-t5-ring') : '';
+  // one row in a picker: picture, name, the line under it, and a score ring or › at the end
+  const pickRow = (attr, img, title, sub, end = '', person = false) => `<li><button type="button" class="pf-person" ${attr}>
+      <span class="pf-t5-img${person ? ' is-person' : ''}">${img}</span><span class="pf-t5-tx"><b translate="no">${esc(title)}</b>${sub ? `<small>${esc(sub)}</small>` : ''}</span>${end}</button></li>`;
+  const pickGroup = (label, rows) => rows.length ? `<p class="pf-eyebrow pf-pick-eb">${esc(label)}</p><ul class="lyr-rows">${rows.join('')}</ul>` : '';
+  const tmdbJSON = url => tmdbFetch(url).then(r => r.ok ? r.json() : null).catch(() => null);
+  const myId = () => window._navUser?.id || null;
+
   async function pick(key, idx) {
-    const sec = SECTIONS[key], people = !!sec.people;
+    const sec = SECTIONS[key], people = !!sec.people, m = sec.moment;
     await mssLoadScript('js/panel.js');
-    pk = { key, idx, limit: PICK_PAGE, hits: [] };
+    pk = { key, idx, limit: PICK_PAGE, hits: [], opts: [], stack: [], view: null };
+    pQ = '';
     const at = pk;
     const h = MSSPanel.open({ size: 'S', kind: 'generic', title: idx < itemsOf(key).length ? `Replace #${idx + 1}` : `Pick #${idx + 1}`,
       subtitle: key === 'top_picks' ? 'Top Favorites' : `Top 5 ${sec.title}`,
       body: `<div class="lyr-search"><span class="lyr-search-ic" aria-hidden="true">${icon('search', 16)}</span>
-          <input id="pfPickQ" class="lyr-field" type="search" placeholder="${people ? `Search ${sec.many} on TMDB…` : 'Search your library…'}" aria-label="Search" autocomplete="off" spellcheck="false" enterkeyhint="search"></div>
-        <div id="pfPickRes" class="${people ? '' : 'dp-grid'}"></div>`,
+          <input id="pfPickQ" class="lyr-field" type="search" placeholder="${people ? `Search ${sec.many} on TMDB…` : m ? PICK_PH[m] : 'Search your library…'}" aria-label="Search" autocomplete="off" spellcheck="false" enterkeyhint="search"></div>
+        <div id="pfPickRes" class="${people || m ? 'pf-pick-res' : 'dp-grid'}"></div>`,
       onClose: () => { if (pk === at) pk = null; } });
     pk.h = h;
     const q = h.body.querySelector('#pfPickQ');
-    q.addEventListener('input', () => { pk.limit = PICK_PAGE; people ? personSearch(q.value) : pickDraw(); });
+    q.addEventListener('input', () => { pk.limit = PICK_PAGE; people ? personSearch(q.value) : m ? momentSearch(q.value) : pickDraw(); });
     h.body.addEventListener('click', ev => {
       const t = ev.target.closest('[data-pick]'); if (t) return choose(t.dataset.pick);
+      const mo = ev.target.closest('[data-mo]'); if (mo) return momentGo(+mo.dataset.mo);
+      if (ev.target.closest('[data-moback]')) return momentBack();
       if (ev.target.closest('[data-more]')) { pk.limit += PICK_PAGE; pickDraw(); }
     });
-    if (people) h.body.querySelector('#pfPickRes').innerHTML = `<p class="pf-muted pf-pick-hint">Type a name to search TMDB.</p>`; else pickDraw();
     if (!h.isPage) q.focus();
+    if (!people && !m) return pickDraw();
+    resBox().innerHTML = hint('Finding suggestions…');
+    await mssLoadScript('js/fav-suggest.js');
+    if (pk !== at || typeof MSSFavSuggest === 'undefined') { if (pk === at) resBox().innerHTML = hint(people ? 'Type a name to search TMDB.' : 'Search above.'); return; }
+    people ? peopleSuggest() : momentRoot();
   }
   function pickDraw() {
     if (!pk) return;
@@ -711,46 +767,207 @@ const MSSProfile = (() => {
     const PICKABLE = { completed: 0, ongoing: 0, watching: 1, paused: 1 };
     const list = O().entries.filter(e => e.status in PICKABLE && (!sec.cat || e.cat === sec.cat) && !taken.has(e.id) && (!q || (e.title || '').toLowerCase().includes(q)))
       .sort((a, b) => PICKABLE[a.status] - PICKABLE[b.status] || (liveScore(b) || 0) - (liveScore(a) || 0));
-    const shown = list.slice(0, pk.limit), box = document.getElementById('pfPickRes');
+    const shown = list.slice(0, pk.limit), box = resBox();
     box.innerHTML = list.length ? shown.map(e => `<button type="button" class="dp-item" data-pick="${esc(e.id)}">
         <span class="dp-poster">${posterHTML(e, 'big')}</span><span class="dp-name" translate="no">${esc(e.title)}</span>
         ${liveScore(e) != null ? `<span class="dp-score${mssTierCls(liveScore(e))}">★ ${Number(liveScore(e)).toFixed(2)}</span>` : ''}</button>`).join('')
       + (list.length > shown.length ? `<button type="button" class="dp-more" data-more>View more <span>(${list.length - shown.length} left)</span></button>` : '')
       : `<div class="dp-empty">${q ? `No titles match “${esc(q)}”.` : `No watched ${sec.cat ? esc(sec.title) : 'titles'} yet.`}</div>`;
   }
+
+  /* People: suggestions under the search — "From your top titles" (who keeps coming up in your best-scored titles),
+     then "Popular picks" (20 well-known names) when that's fewer than 4. Typing searches TMDB as before. */
+  const knownLine = x => [x.known_for_department, (x.known_for || []).map(k => k.title || k.name).filter(Boolean)[0] || ''].filter(Boolean).join(' · ');
+  const personRow = (x, sub) => pickRow(`data-pick="${Number(x.id)}"`, x.profile_path ? tmdbImg(x.profile_path) : letter(x.name), x.name, sub, '', true);
+  async function peopleSuggest() {
+    const at = pk, box = resBox(); if (!at) return;
+    if (!at.sug) {
+      box.innerHTML = hint('Finding suggestions…');
+      at.sug = await MSSFavSuggest.people(PEOPLE_KIND[at.key], O().entries, peopleOf(at.key).map(x => x.id)).catch(() => ({ mine: [], popular: [] }));
+    }
+    if (pk !== at || pQ.trim().length >= 2) return;
+    const { mine, popular } = at.sug;
+    at.hits = [...mine, ...popular];
+    box.innerHTML = at.hits.length ? pickGroup('From your top titles', mine.map(x => personRow(x, x.why))) + pickGroup('Popular picks', popular.map(x => personRow(x, knownLine(x))))
+      : hint('Type a name to search TMDB.');
+  }
   let pT = null, pQ = '';
   function personSearch(q) {
     clearTimeout(pT); pQ = q;
     pT = setTimeout(async () => {
       if (!pk) return;
-      const box = document.getElementById('pfPickRes'), dept = SECTIONS[pk.key].people;
-      if (q.trim().length < 2) { box.innerHTML = `<p class="pf-muted pf-pick-hint">Type a name to search TMDB.</p>`; return; }
-      // Actors: men only · Actresses: women only (TMDB gender 2 / 1)
+      const box = resBox(), dept = SECTIONS[pk.key].people;
+      if (q.trim().length < 2) return peopleSuggest();
+      // Actors / Actresses by TMDB's gender — people without one are in both (mssGenderFits, nav.js)
       const hits = await mssPersonSearch(q, { dept, gender: SECTIONS[pk.key].gender, skip: peopleOf(pk.key).map(x => x.id) });
       if (!pk || pQ !== q) return;
       pk.hits = hits;
-      box.innerHTML = hits.length ? `<ul class="lyr-rows">${hits.map(x => {
-        const known = (x.known_for || []).map(k => k.title || k.name).filter(Boolean)[0] || '';
-        return `<li><button type="button" class="pf-person" data-pick="${Number(x.id)}">
-          <span class="pf-t5-img is-person">${x.profile_path ? `<img src="${IMG}w185${esc(x.profile_path)}" alt="" loading="lazy">` : `<span class="pf-t5-letter">${esc((x.name || '?')[0])}</span>`}</span>
-          <span class="pf-t5-tx"><b>${esc(x.name)}</b><small>${esc([x.known_for_department, known].filter(Boolean).join(' · '))}</small></span></button></li>`; }).join('')}</ul>`
+      box.innerHTML = hits.length ? `<ul class="lyr-rows">${hits.map(x => personRow(x, knownLine(x))).join('')}</ul>`
         : `<div class="dp-empty">${SECTIONS[pk.key].gender ? `No ${esc(SECTIONS[pk.key].many)} match` : 'No one matches'} “${esc(q.trim())}”.</div>`;
-    }, typeof MSS_SEARCH_MS !== 'undefined' ? MSS_SEARCH_MS : 300);
+    }, SEARCH_MS());
   }
   async function choose(val) {
     if (!pk) return;
-    const { key, idx } = pk, people = !!SECTIONS[key].people, cur = itemsOf(key);
+    const { key } = pk, people = !!SECTIONS[key].people;
     let item;
     if (people) {
       const x = pk.hits.find(h => String(h.id) === String(val)); if (!x) return;
       item = mssPersonItem(x);
     } else item = byId(val);
-    if (!item) return;
+    place(item);
+  }
+  async function place(item) {
+    if (!pk || !item) return;
+    const { key, idx } = pk, cur = itemsOf(key);
     if (idx < cur.length) cur[idx] = item; else cur.push(item);
     pk.h.closeNow();
     if (!R) R = { key };
     await commit(cur);
   }
+
+  /* Seasons, episodes, characters: a few steps inside the picker (a show → its seasons → its episodes), with Back.
+     Each view is built with its own list of choices (opt), so a slow one can't mix up a newer one's rows. */
+  const same = {
+    season: (a, b) => Number(a.tv) === Number(b.tv) && Number(a.s) === Number(b.s),
+    episode: (a, b) => Number(a.tv) === Number(b.tv) && Number(a.s) === Number(b.s) && Number(a.e) === Number(b.e),
+    character: (a, b) => MSSFavSuggest.sameChar(a, b),
+  };
+  const isTaken = x => { const m = SECTIONS[pk.key].moment; return peopleOf(pk.key).some((y, i) => i !== pk.idx && same[m](x, y)); };
+  async function momentShow(view, push) {
+    const at = pk; if (!at) return;
+    if (push && at.view) at.stack.push(at.view);
+    at.view = view;
+    const box = resBox(), opts = [], opt = o => (opts.push(o), opts.length - 1);
+    box.innerHTML = hint('Loading…');
+    let html;
+    try { html = await view(opt); } catch { html = hint('Couldn’t load this — check your connection and try again.'); }
+    if (pk !== at || at.view !== view) return;
+    at.opts = opts;
+    box.innerHTML = (at.stack.length ? `<button type="button" class="pf-pick-back" data-moback>${icon('chevleft', 14)} Back</button>` : '') + html;
+  }
+  function momentBack() { if (pk?.stack.length) momentShow(pk.stack.pop(), false); }
+  async function momentGo(i) {
+    const o = pk?.opts[i]; if (!o) return;
+    if (o.view) return momentShow(o.view, true);
+    const item = typeof o.item === 'function' ? await o.item() : o.item;
+    if (item && isTaken(item)) return showToast('That’s already in your Top 5.');
+    place(item);
+  }
+  function momentRoot() {
+    if (!pk) return;
+    pk.stack = []; pk.view = null;
+    momentShow(SECTIONS[pk.key].moment === 'character' ? charRoot : epRoot, false);
+  }
+  let mT = null;
+  function momentSearch(q) {
+    clearTimeout(mT);
+    mT = setTimeout(() => {
+      if (!pk || typeof MSSFavSuggest === 'undefined') return;
+      if (!q.trim()) return momentRoot();
+      pk.stack = []; pk.view = null;
+      momentShow(SECTIONS[pk.key].moment === 'character' ? charSearch(q.trim()) : showSearch(q.trim()), false);
+    }, SEARCH_MS());
+  }
+
+  // Seasons / Episodes: your highest-rated one of each show, then every show you've watched (tap → its seasons);
+  // the Top 250 only when you haven't watched any shows (owner, 27 Nov 2026)
+  async function epRoot(opt) {
+    const kind = SECTIONS[pk.key].moment, es = O().entries;
+    const rated = (await MSSFavSuggest.rated(myId(), es, kind)).slice(0, 20), shows = MSSFavSuggest.shows(es);
+    let html = pickGroup('Your highest rated', rated.map(r => pickRow(`data-mo="${opt({ item: () => fillRated(r, kind) })}"`, posterHTML(r.e, '', '40px'),
+      kind === 'season' ? `Season ${r.s}` : `S${r.s} E${r.n}`, r.e.title, ringOf(r.score))));
+    html += pickGroup('Shows you’ve watched', shows.map(e => showRow(opt, e)));
+    if (!rated.length && !shows.length) {
+      const top = (await MSSFavSuggest.top(kind)).map(x => topItem(x, kind)).filter(x => !isTaken(x));
+      html += top.length ? pickGroup('Popular picks · Top 250', top.map(x => pickRow(`data-mo="${opt({ item: x })}"`, x.path ? tmdbImg(x.path) : letter(x.show),
+        kind === 'season' ? mssSeasonLabel(x.s, x.name) : x.name || `Episode ${x.e}`, kind === 'season' ? x.show : `${x.show} · S${x.s} E${x.e}`))) : '';
+    }
+    return html || hint('Search for a show above.');
+  }
+  const showRow = (opt, e) => pickRow(`data-mo="${opt({ view: seasonsView({ tv: e.tmdb_id, e }) })}"`, posterHTML(e, '', '40px'), e.title,
+    (typeof mssMetaOf === 'function' && mssMetaOf(e).long) || yearOf(e), CHEV());
+  const topItem = (x, kind) => ({ tv: x.show_id, show: x.show, s: x.s, ...(kind === 'episode' ? { e: x.n } : {}), name: x.name || null, path: x.poster || x.show_poster || null, year: (x.air || '').slice(0, 4) });
+  // a rated row only knows its numbers: the name and poster are looked up when you pick it
+  async function fillRated(r, kind) {
+    const show = { tv: r.e.tmdb_id }, d = await MSSFavSuggest.seasons(show);
+    const sn = d?.list.find(x => x.s === r.s), base = { tv: r.e.tmdb_id, show: d?.show || r.e.title, s: r.s, path: sn?.path || d?.path || null, year: sn?.year || null };
+    if (kind === 'season') return { ...base, name: sn?.name || null };
+    const eps = await MSSFavSuggest.episodes(show, r.s), ep = eps?.list.find(x => x.n === r.n);
+    return { ...base, e: r.n, name: ep?.name || null, year: ep?.year || base.year };
+  }
+  const seasonsView = show => async opt => {
+    const kind = SECTIONS[pk.key].moment, d = await MSSFavSuggest.seasons(show, myId());
+    if (!d) return hint('Couldn’t load this show’s seasons — try again.');
+    const rows = d.list.map(x => {
+      const sub = [x.year, x.eps ? `${x.eps} episodes` : ''].filter(Boolean).join(' · '), img = x.path ? tmdbImg(x.path) : letter(d.show);
+      if (kind === 'episode') return pickRow(`data-mo="${opt({ view: episodesView(show, x, d) })}"`, img, mssSeasonLabel(x.s, x.name), sub, CHEV());
+      const item = { tv: show.tv, show: d.show, s: x.s, name: x.name, path: x.path, year: x.year };
+      return isTaken(item) ? '' : pickRow(`data-mo="${opt({ item })}"`, img, mssSeasonLabel(x.s, x.name), sub, ringOf(x.score));
+    }).filter(Boolean);
+    return pickGroup(d.show + (show.e ? ' · what you’ve watched' : ''), rows) || hint('No seasons to pick here.');
+  };
+  const episodesView = (show, sn, d) => async opt => {
+    const r = await MSSFavSuggest.episodes(show, sn.s, myId());
+    if (!r) return hint('Couldn’t load this season’s episodes — try again.');
+    const rows = r.list.map(x => {
+      const item = { tv: show.tv, show: d.show, s: sn.s, e: x.n, name: x.name, path: sn.path || r.path || d.path, year: x.year };
+      return isTaken(item) ? '' : pickRow(`data-mo="${opt({ item })}"`, `<span class="pf-t5-letter">${x.n}</span>`, x.name || `Episode ${x.n}`, `S${sn.s} E${x.n}${x.year ? ' · ' + x.year : ''}`, ringOf(x.score));
+    }).filter(Boolean);
+    return pickGroup(`${d.show} · ${mssSeasonLabel(sn.s, sn.name)}`, rows) || hint('No episodes to pick here.');
+  };
+  // search: your shows first, then any show on TMDB
+  const showSearch = q => async opt => {
+    const n = MSSFavSuggest.norm, ql = n(q), es = O().entries;
+    const mine = es.filter(e => e.tmdb_id && !isMovie(e) && n(e.title).includes(ql)).slice(0, 12);
+    let html = pickGroup('Your shows', mine.map(e => showRow(opt, e)));
+    const d = await tmdbJSON(`${TMDB_BASE}/search/tv?query=${encodeURIComponent(q)}&language=en-US&include_adult=false&page=1`);
+    const have = new Set(mine.map(e => Number(e.tmdb_id)));
+    const more = (d?.results || []).filter(x => !have.has(Number(x.id))).slice(0, 12);
+    html += pickGroup('More shows', more.map(x => {
+      const e = es.find(y => Number(y.tmdb_id) === Number(x.id) && !isMovie(y));   // in your library, not watched yet
+      return pickRow(`data-mo="${opt({ view: seasonsView({ tv: x.id, e }) })}"`, x.poster_path ? tmdbImg(x.poster_path) : letter(x.name), x.name, (x.first_air_date || '').slice(0, 4), CHEV());
+    }));
+    return html || hint(`No shows match “${q}”.`);
+  };
+
+  // Characters: the favourite characters you picked when rating titles, then the main characters of your best titles;
+  // a fixed list of famous ones only when your library has none. No pictures — TMDB has none of characters.
+  const charRow = (opt, c) => pickRow(`data-mo="${opt({ item: c })}"`, letter(c.name), c.name, [c.title, c.actor].filter(Boolean).join(' · '), '', true);
+  async function charRoot(opt) {
+    const at = pk, es = O().entries;
+    const fav = MSSFavSuggest.favourites(es).filter(c => !isTaken(c));
+    at.known = fav.slice();
+    let html = pickGroup('Your favourite characters', fav.slice(0, 20).map(c => charRow(opt, c)));
+    // the main characters of your best titles take a moment the first time: they fill in under the rest
+    if (es.some(e => e.tmdb_id)) {
+      html += `<div id="pfPickMore">${hint('Finding characters from your top titles…')}</div>`;
+      MSSFavSuggest.fromTop(es).then(list => {
+        const box = document.getElementById('pfPickMore'); if (!box || pk !== at) return;
+        const top = list.filter(c => !isTaken(c) && !at.known.some(k => MSSFavSuggest.sameChar(k, c)) && at.known.push(c));
+        box.outerHTML = pickGroup('From your top titles', top.map(c => charRow(opt, c))) || (fav.length ? '' : hint('Search a character, or a title to see its characters.'));
+      }).catch(() => document.getElementById('pfPickMore')?.remove());
+    } else html += pickGroup('Popular picks', MSSFavSuggest.POPULAR_CHARACTERS.filter(c => !isTaken(c)).map(c => charRow(opt, c)));
+    return html;
+  }
+  // search: the characters above by name or title, your titles (tap → their characters), then any title on TMDB
+  const charSearch = q => async opt => {
+    const n = MSSFavSuggest.norm, ql = n(q), es = O().entries;
+    const known = [...(pk.known || MSSFavSuggest.favourites(es)), ...MSSFavSuggest.POPULAR_CHARACTERS]
+      .filter((c, i, a) => a.findIndex(x => MSSFavSuggest.sameChar(x, c)) === i && !isTaken(c) && (n(c.name).includes(ql) || n(c.title).includes(ql)));
+    let html = pickGroup('Characters', known.slice(0, 12).map(c => charRow(opt, c)));
+    const mine = es.filter(e => e.tmdb_id && n(e.title).includes(ql)).slice(0, 8);
+    const go = (type, id, title) => opt({ view: castView({ type, id, title }) });
+    html += pickGroup('Your titles', mine.map(e => pickRow(`data-mo="${go(e.tmdb_type === 'movie' || isMovie(e) ? 'movie' : 'tv', e.tmdb_id, e.title)}"`, posterHTML(e, '', '40px'), e.title, 'See its characters', CHEV())));
+    const have = new Set(mine.map(e => Number(e.tmdb_id)));
+    const more = (await _tmdbSearch(q, 10)).filter(r => !have.has(Number(r.id))).slice(0, 8);
+    html += pickGroup('More titles', more.map(r => { const t = r.title || r.name;
+      return pickRow(`data-mo="${go(r.media_type, r.id, t)}"`, r.poster_path ? tmdbImg(r.poster_path) : letter(t), t, [(r.release_date || r.first_air_date || '').slice(0, 4), 'See its characters'].filter(Boolean).join(' · '), CHEV()); }));
+    return html || hint(`Nothing matches “${q}”.`);
+  };
+  const castView = t => async opt => {
+    const list = (await MSSFavSuggest.cast(t.type, t.id, t.title)).filter(c => !isTaken(c));
+    return pickGroup(t.title, list.map(c => charRow(opt, c))) || hint('TMDB lists no characters for this title.');
+  };
 
   /* ══ Edit profile (your own) ══ */
   let E = null;

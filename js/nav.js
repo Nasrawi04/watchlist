@@ -2507,7 +2507,9 @@ async function _tmdbSearch(query, limit = 6, includePersons = false) {
 }
 
 /* ── People on TMDB for the favourite-people lists (profile editor, Set up your folio): dept puts people known for it
-   first ('Acting' · 'Directing'); gender keeps only Actors (2) or Actresses (1); skip = ids already picked ── */
+   first ('Acting' · 'Directing'); gender keeps Actors (2) or Actresses (1) — people TMDB has no gender for, or lists as
+   non-binary, are in both (owner, 27 Nov 2026); skip = ids already picked ── */
+const mssGenderFits = (g, want) => !want || Number(g) === want || (Number(g) !== 1 && Number(g) !== 2);
 async function mssPersonSearch(q, { dept, gender, skip } = {}) {
   let hits = [];
   try {
@@ -2515,7 +2517,7 @@ async function mssPersonSearch(q, { dept, gender, skip } = {}) {
     hits = r.ok ? ((await r.json()).results || []) : [];
   } catch {}
   const taken = new Set((skip || []).map(Number));
-  return hits.filter(x => !taken.has(Number(x.id)) && (!gender || Number(x.gender) === gender))
+  return hits.filter(x => !taken.has(Number(x.id)) && mssGenderFits(x.gender, gender))
     .sort((a, b) => (b.known_for_department === dept) - (a.known_for_department === dept) || (b.popularity || 0) - (a.popularity || 0)).slice(0, 20);
 }
 // a TMDB person → how the favourite-people lists save them

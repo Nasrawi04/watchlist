@@ -690,24 +690,26 @@ function compressImage(file, maxWidth = 800, quality = 0.85) {
 /* ── Profile helpers ── */
 // What anyone may read of someone's profile — the columns a profile page shows. Signed out, it's all there is (131:
 // account settings like time zone, language and notification choices are private to signed-out visitors).
-const MSS_PUBLIC_PROFILE = 'id, username, display_name, bio, avatar_url, quote, is_public, is_private, is_official, created_at, updated_at, '
+const MSS_PUBLIC_PROFILE_BASE = 'id, username, display_name, bio, avatar_url, quote, is_public, is_private, is_official, created_at, updated_at, '
   + 'top_picks, recommended, fav_tv, fav_movies, fav_anime, fav_cartoons, fav_actors, fav_directors, showcase, profile_layout, pinned_note_id';
+const MSS_PUBLIC_PROFILE = MSS_PUBLIC_PROFILE_BASE + ', fav_seasons, fav_episodes, fav_characters';   // 149
+// run(cols) → a profiles query. Until sql/149 runs its three columns don't exist: asked again without them.
+async function mssPublicProfileQuery(run) {
+  const r = await run(MSS_PUBLIC_PROFILE);
+  return r.error && /fav_(seasons|episodes|characters)/.test(r.error.message || '') ? run(MSS_PUBLIC_PROFILE_BASE) : r;
+}
 // every column when signed in (your own settings), the public ones when signed out
-const _profileCols = async () => (await sb.auth.getSession()).data?.session ? '*' : MSS_PUBLIC_PROFILE;
+const _profileSignedIn = async () => !!(await sb.auth.getSession()).data?.session;
 async function getProfileByUsername(username) {
-  const { data, error } = await sb.from('profiles')
-    .select(await _profileCols())
-    .eq('username', username)
-    .single();
+  const q = cols => sb.from('profiles').select(cols).eq('username', username).single();
+  const { data, error } = await (await _profileSignedIn() ? q('*') : mssPublicProfileQuery(q));
   if (error) return null;
   return data;
 }
 
 async function getProfile(userId) {
-  const { data, error } = await sb.from('profiles')
-    .select(await _profileCols())
-    .eq('id', userId)
-    .single();
+  const q = cols => sb.from('profiles').select(cols).eq('id', userId).single();
+  const { data, error } = await (await _profileSignedIn() ? q('*') : mssPublicProfileQuery(q));
   if (error) return null;
   return data;
 }

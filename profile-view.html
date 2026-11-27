@@ -121,7 +121,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Start loading the friend's profile + library while the nav is still
   // signing in — these don't depend on who's viewing.
   const profileP = _pvUserId || _pvUsername
-    ? sb.from('profiles').select(MSS_PUBLIC_PROFILE).eq(_pvUserId ? 'id' : 'username', _pvUserId || _pvUsername).maybeSingle()
+    ? mssPublicProfileQuery(cols => sb.from('profiles').select(cols).eq(_pvUserId ? 'id' : 'username', _pvUserId || _pvUsername).maybeSingle())
     : Promise.resolve({ data: null });
   const earlyP = _pvUserId ? Promise.all([
     getPublicEntries(_pvUserId),
@@ -139,13 +139,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   _pvProfile = found || null;
   // asked before sign-in finished (a private account isn't visible signed out): ask again now that we know who you are
   if (!_pvProfile && _pvMe) {
-    const { data: again } = await sb.from('profiles').select(MSS_PUBLIC_PROFILE).eq(_pvUserId ? 'id' : 'username', _pvUserId || _pvUsername).maybeSingle();
+    const { data: again } = await mssPublicProfileQuery(cols => sb.from('profiles').select(cols).eq(_pvUserId ? 'id' : 'username', _pvUserId || _pvUsername).maybeSingle());
     _pvProfile = again || null;
   }
   if (!_pvProfile && _pvUsername && !_pvUserId) {    // an old link: they changed their username in the last 14 days
     const now = await mssUsernameNow(_pvUsername);
     if (now) {
-      const { data: moved } = await sb.from('profiles').select(MSS_PUBLIC_PROFILE).eq('username', now).maybeSingle();
+      const { data: moved } = await mssPublicProfileQuery(cols => sb.from('profiles').select(cols).eq('username', now).maybeSingle());
       _pvProfile = moved || null;
       if (moved) { _pvUsername = now; const u = new URL(location.href); u.searchParams.set('u', now); history.replaceState(null, '', u); }
     }
