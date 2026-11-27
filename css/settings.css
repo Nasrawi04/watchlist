@@ -80,6 +80,7 @@ button.set-nav { width:100%; border:0; background:none; text-align:start; cursor
 .set-door-page .set-back { display:flex; }
 .set-pane { display:flex; flex-direction:column; gap:12px; scroll-margin-top:calc(var(--nav-h) + 16px); }
 .set-pane + .set-pane { margin-top:12px; }
+.set-pane-lede { margin:-6px 0 0; font:500 13px/1.5 'Manrope',var(--sans); color:var(--text-2); }   /* a line under a section's name (Recommendations) */
 .set-sub { margin:14px 0 0; font:500 20px/1.2 var(--serif); color:var(--text-heading); }
 .set-pane > .set-sub:first-child { margin-top:4px; }
 

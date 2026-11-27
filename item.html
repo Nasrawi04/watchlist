@@ -59,6 +59,7 @@ initPageGuest(async () => {
     edit: q.get('edit') === '1',
     note: q.get('note') === '1',
     rec: q.get('rec') === '1',        // opened from a recommendation: ⋯ has Not interested
+    seed: /^(movie|tv):\d{1,10}$/.test(q.get('seed') || '') ? { k: q.get('seed'), title: (q.get('st') || 'that title').slice(0, 120) } : null,   // …and Less like <the title behind its reason>
   }).catch(err => { console.error(err); return false; });
   document.getElementById('tvLoading').remove();
   if (!ok) document.getElementById('tvRoot').innerHTML = mssEmpty({ art: 'search', title: 'This title isn’t available',

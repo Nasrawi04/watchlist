@@ -9501,6 +9501,8 @@ html.mh-guest .mh-join { display:block; margin:clamp(28px, 3vw + 12px, 56px) aut
 [data-theme="light"] .mh-more { color:var(--olive); }
 a.mh-more:hover { text-decoration:underline; text-underline-offset:3px; }
 a.mh-more:focus-visible { outline:2px solid var(--mc-focus); outline-offset:2px; border-radius:6px; }
+.mh-tune { color:var(--text-2); }   /* Tune: quieter than See all */
+[data-theme="light"] .mh-tune { color:var(--text-2); }
 .mh-empty.mss-es { flex:1; justify-content:center; padding:1rem .5rem 1.2rem; }
 .mh-empty .mss-es-art { width:120px; height:90px; margin-bottom:10px; }
 .mh-empty .mss-es-title { font-size:18px; }

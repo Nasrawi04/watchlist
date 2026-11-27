@@ -33,7 +33,7 @@ const MSSConsent = (() => {
     [/^msf_pub_/, 'necessary'], [/^mss_age_/, 'necessary'], ['msf_pending_deletes', 'necessary'], ['mss_data_at', 'necessary'],
     // necessary — settings you change on purpose
     ['wl-theme', 'necessary'], ['mss_lang', 'necessary'], ['mss_notif_popups', 'necessary'], ['mss_wtw_region', 'necessary'],
-    ['msf_ep_spoilers', 'necessary'], ['mss_screensaver', 'necessary'], [/^msf_not_interested_/, 'necessary'] /* until sql/136 runs */,
+    ['msf_ep_spoilers', 'necessary'], ['mss_screensaver', 'necessary'], [/^msf_not_interested_/, 'necessary'] /* until sql/136 runs */, [/^msf_rec_prefs_/, 'necessary'] /* until sql/148 runs */,
     [/^msf_watch_priority_/, 'necessary'] /* Watchlist priority, until sql/144 runs */,
     // necessary — one-time messages you've already seen, and checks that run at most every few minutes / once a day
     ['msf_guest_intro', 'necessary'], [/^mss_welcomed_/, 'necessary'], [/^mss_member_seen_/, 'necessary'], ['mss_pick_asked', 'necessary'],

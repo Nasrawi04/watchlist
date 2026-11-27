@@ -2775,6 +2775,98 @@ const MSSNotInterested = (() => {
 })();
 
 /* ══════════════════════════════════════════
+   TUNE YOUR RECOMMENDATIONS — MSSRecPrefs (owner, 27 Nov 2026)
+   Choices that steer MSSRecs (Discover's Picked for your taste, Home's Recommended for you, its See all):
+     a title → More like this (a strong starting point, whatever you scored it — even one you're still watching)
+             · Less like this (never a starting point, even a favourite or a 9+; what's only like it is left out)
+     a category → off as a source ("Recommend from": Movies · TV Shows · Anime · Cartoons) — its titles don't drive
+             picks; a great one can still be recommended
+   Kept on your account (public.rec_prefs, sql/148 — only you can read it); until that SQL has run, on this device
+   (msf_rec_prefs_<your id>), moved to your account the first time the table is there. Guests: nothing is kept.
+     await MSSRecPrefs.load()                 once per page (later calls reuse it)
+     MSSRecPrefs.of(type, id)                 → 'more' | 'less' | null (after load)
+     MSSRecPrefs.set({ type, id, title, poster }, mode)   mode 'more' | 'less' | null (back to normal)
+     MSSRecPrefs.on(cat) / setOn(cat, on)     a category as a source (cat: 'movies' | 'tv' | 'anime' | 'cartoons')
+     MSSRecPrefs.titles(mode)                 → [{ type, id, title, poster, at }] newest first
+     MSSRecPrefs.sig()                        a short fingerprint of every choice (MSSRecs rebuilds when it changes)
+   Each change fires 'mss:rec-prefs' on document.
+══════════════════════════════════════════ */
+const MSSRecPrefs = (() => {
+  const T = 'rec_prefs', CATS = ['movies', 'tv', 'anime', 'cartoons'];
+  const tk = (type, id) => `${type === 'movie' ? 'movie' : 'tv'}:${Number(id)}`;
+  let titles = new Map(), off = new Set(), loading = null, remote = null;
+  const uid = () => window._navUser?.id || null;
+  const LKEY = () => 'msf_rec_prefs_' + uid();
+  const missing = err => !!err && (['42P01', 'PGRST205', 'PGRST202'].includes(err.code) || err.status === 404 || /rec_prefs/.test(err.message || '') && /does not exist|schema cache/.test(err.message || ''));
+  const pathOf = p => { const m = String(p || '').match(/\/[A-Za-z0-9_-]{5,64}\.(jpg|jpeg|png)$/); return m ? m[0] : null; };
+  const rowsNow = () => [...[...titles.values()].map(t => ({ kind: 'title', key: tk(t.type, t.id), mode: t.mode, title: t.title, poster_path: t.poster, created_at: t.at })),
+    ...[...off].map(c => ({ kind: 'source', key: c, mode: 'off', title: null, poster_path: null, created_at: new Date().toISOString() }))];
+  const readLocal = () => { try { return JSON.parse(localStorage.getItem(LKEY()) || '[]'); } catch { return []; } };
+  const writeLocal = () => { try { localStorage.setItem(LKEY(), JSON.stringify(rowsNow())); } catch {} };
+  const fire = () => document.dispatchEvent(new CustomEvent('mss:rec-prefs'));
+  function put(r) {
+    if (r.kind === 'source') { if (CATS.includes(r.key) && r.mode === 'off') off.add(r.key); return; }
+    const [type, id] = String(r.key || '').split(':');
+    if (!Number(id) || !['more', 'less'].includes(r.mode)) return;
+    titles.set(tk(type, id), { type: type === 'movie' ? 'movie' : 'tv', id: Number(id), mode: r.mode, title: String(r.title || '').slice(0, 300) || 'Untitled', poster: pathOf(r.poster_path), at: r.created_at || new Date().toISOString() });
+  }
+  function load(fresh) {
+    if (loading && !fresh) return loading;
+    return (loading = (async () => {
+      titles = new Map(); off = new Set();
+      if (!uid() || typeof sb === 'undefined' || !sb) return;
+      const local = readLocal();
+      const { data, error } = await sb.from(T).select('kind, key, mode, title, poster_path, created_at').eq('user_id', uid());
+      if (error) {
+        remote = missing(error) ? false : null;
+        if (!remote) console.warn('Recommendation choices:', error.message || error);
+        local.forEach(put);                                       // the device's choices meanwhile
+        return;
+      }
+      remote = true;
+      (data || []).forEach(put);
+      // choices kept on this device before the table existed: onto your account, then off the device
+      const have = new Set((data || []).map(r => r.kind + '|' + r.key)), move = local.filter(r => !have.has(r.kind + '|' + r.key));
+      if (move.length) {
+        const { error: e2 } = await sb.from(T).upsert(move.map(r => ({ user_id: uid(), kind: r.kind, key: r.key, mode: r.mode, title: r.title || null, poster_path: pathOf(r.poster_path) })), { onConflict: 'user_id,kind,key', ignoreDuplicates: true });
+        if (!e2) { move.forEach(put); try { localStorage.removeItem(LKEY()); } catch {} }
+      } else if (local.length) { try { localStorage.removeItem(LKEY()); } catch {} }
+    })());
+  }
+  const of = (type, id) => titles.get(tk(type, id))?.mode || null;
+  const on = cat => !off.has(cat);
+  const list = mode => [...titles.values()].filter(t => t.mode === mode).sort((a, b) => String(b.at).localeCompare(String(a.at)));
+  const sig = () => [...[...titles.entries()].map(([k, t]) => k + t.mode[0]).sort(), ...[...off].sort()].join(',');
+  async function save(row, del) {        // row: { kind, key, mode, title, poster_path }
+    if (remote === false) { writeLocal(); return; }
+    const q = del ? sb.from(T).delete().eq('user_id', uid()).eq('kind', row.kind).eq('key', row.key)
+      : sb.from(T).upsert({ user_id: uid(), ...row }, { onConflict: 'user_id,kind,key' });
+    const { error } = await q;
+    if (error) { if (missing(error)) { remote = false; writeLocal(); return; } throw error; }
+  }
+  async function set(t, mode) {
+    if (!uid() || !t || !Number(t.id)) return false;
+    await load();
+    const key = tk(t.type, t.id), was = titles.get(key);
+    if (mode) put({ kind: 'title', key, mode, title: t.title, poster_path: t.poster }); else titles.delete(key);
+    fire();
+    try { await save({ kind: 'title', key, mode: mode || was?.mode, title: titles.get(key)?.title || null, poster_path: titles.get(key)?.poster || null }, !mode); }
+    catch (err) { if (was) titles.set(key, was); else titles.delete(key); fire(); throw err; }
+    return true;
+  }
+  async function setOn(cat, yes) {
+    if (!uid() || !CATS.includes(cat)) return false;
+    await load();
+    if (yes) off.delete(cat); else off.add(cat);
+    fire();
+    try { await save({ kind: 'source', key: cat, mode: 'off', title: null, poster_path: null }, yes); }
+    catch (err) { if (yes) off.add(cat); else off.delete(cat); fire(); throw err; }
+    return true;
+  }
+  return { load, of, set, on, setOn, titles: list, sig, CATS };
+})();
+
+/* ══════════════════════════════════════════
    WATCHLIST PRIORITY — MSSPriority (member's survey idea, owner-approved names 26 Nov 2026)
    A title on your Watchlist (status 'queue') can have a priority: Must Watch · Want to Watch · Eventually.
    Not every title needs one (owner): no priority = no tag anywhere; it sorts between Want to Watch and

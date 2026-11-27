@@ -577,8 +577,11 @@ const MSSHome = (() => {
     empty: () => draw('recs'),
     undo: () => loadRecs().then(r => { D.recs = r; draw('recs'); }).catch(() => {}),
   });
+  // More / Less like this, Recommend from (MSSRecPrefs): worked out again (owner, 27 Nov 2026)
+  let recT = 0;
+  document.addEventListener('mss:rec-prefs', () => { clearTimeout(recT); recT = setTimeout(() => { if (uid && D.recs != null) loadRecs().then(r => { D.recs = r; draw('recs'); }).catch(() => {}); }, 400); });
   function wRecs() {
-    const h = head('recs', '', more(MSSRecs.category.href, 'See all'));
+    const h = head('recs', `<a class="mh-more mh-tune" href="settings.html#preferences/recommendations" aria-label="Tune your recommendations">${icon('settings', 13)}<span>Tune</span></a>`, more(MSSRecs.category.href, 'See all'));
     if (D.recs == null) return h + skel('recs');
     if (!D.recs.length) return h + empty('search', 'No recommendations yet', 'Rate what you watch and pick favourites on your profile, and we’ll suggest titles you’ll like.');
     return h + rail('mhRecsRail', D.recs.map(it => MSSResults.recCard(it, 'home')).join(''));

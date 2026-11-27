@@ -909,6 +909,9 @@ const _SEE_ALL_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
    that, so it works through your own titles. Genres count by how you SCORE them against your average: one you
    score low counts against a title. Cartoons are treated like every other category.
    Never recommended: anything in your library (any status) or on your Not interested list (MSSNotInterested).
+   You can steer it (MSSRecPrefs, owner 27 Nov 2026): More like this makes a title a strong starting point (as strong as a
+   Top 5 favourite) whatever you scored it; Less like this keeps a title from being one — even a favourite or a 9+ — and
+   leaves out what TMDB only suggests because of it; a category turned off ("Recommend from") isn't used as a source.
    The mix, in every 10: about 7 close matches, 2 neighbouring picks (well rated, a step from your usual genres)
    and 1 wild card (outside your usual genres, very well rated, tied to someone or something you love) — each with
    its reason. New accounts: what they have, plus well-rated popular titles in their genres (or MSF's well-rated
@@ -962,7 +965,7 @@ const MSSRecs = (() => {
      them at once on the server, and each answer is shared with everyone. Anything it doesn't return (or an older
      function without /recs) is then asked for on its own, as before. */
   async function prime(T) {
-    let seeds = T.seeds.filter(s => !fresh(recsKey(s))), people = T.people.filter(p => !fresh(worksKey(p)));
+    let seeds = [...T.seeds, ...T.less].filter(s => !fresh(recsKey(s))), people = T.people.filter(p => !fresh(worksKey(p)));
     if (!seeds.length && !people.length) return;
     // first the copies already shared by everyone (public.tmdb_cache "recs:…" / "credits:…", 2 days), read straight
     // from the database in one request (~0.4 s); the tmdb function (~1.3 s, more when it has to ask TMDB) only for the rest
@@ -1005,13 +1008,18 @@ const MSSRecs = (() => {
     rated.forEach(({ e }) => mssRatedGroups(e.ratings, e.cat, mssIsMovieEntry(e)).filter(g => g.kind === 'core').forEach(g => (grp[g.name] ||= []).push(g.avg)));
     const reward = Object.entries(grp).filter(([, v]) => v.length >= 3).map(([name, v]) => ({ name, avg: mean(v) })).sort((a, b) => b.avg - a.avg)[0]?.name || null;
     // starting points
-    const byId = new Map(entries.map(e => [e.id, e])), seeds = new Map();
+    const byId = new Map(entries.map(e => [e.id, e])), seeds = new Map(), P = MSSRecPrefs;
+    // your choices: Less like this → never a starting point; a category turned off → its titles aren't either
+    const muted = e => P.of(typeOf(e), e.tmdb_id) === 'less' || (e.cat && !P.on(e.cat));
     const seed = (e, w, why) => {   // why: the whole reason shown on the card
-      if (!e?.tmdb_id) return;
+      if (!e?.tmdb_id || muted(e)) return;
       const k = keyOf(typeOf(e), e.tmdb_id), had = seeds.get(k);
       if (had) { had.w += w * .5; return; }
-      seeds.set(k, { k, type: typeOf(e), id: Number(e.tmdb_id), w, why });
+      seeds.set(k, { k, type: typeOf(e), id: Number(e.tmdb_id), w, why, title: e.title });
     };
+    // More like this: as strong as a Top 5 favourite, whatever you scored it (in your library or not)
+    P.titles('more').forEach(t => { const k = keyOf(t.type, t.id); seeds.delete(k); seeds.set(k, { k, type: t.type, id: t.id, w: 2.4, why: `More like ${t.title}`, title: t.title }); });
+    const less = P.titles('less').map(t => ({ k: keyOf(t.type, t.id), type: t.type, id: t.id, title: t.title }));
     const love = e => e && `Because you love ${e.title}`;
     FAVS.forEach(([key, w]) => (Array.isArray(profile?.[key]) ? profile[key] : []).forEach(id => seed(byId.get(id), w, love(byId.get(id)))));
     const scores = rated.map(x => x.s).sort((a, b) => b - a);
@@ -1025,7 +1033,9 @@ const MSSRecs = (() => {
       .forEach(e => seed(e, .7, e.status === 'queue' ? `Because ${e.title} is on your watchlist` : `Because you're watching ${e.title}`));
     const people = [];
     PEOPLE.forEach(([key, role]) => (Array.isArray(profile?.[key]) ? profile[key] : []).forEach(x => { if (Number(x?.id) && x.name && people.length < MAX_PEOPLE) people.push({ id: Number(x.id), name: x.name, role }); }));
-    return { rated, avg, fit, genres, reward, seeds: [...seeds.values()].sort((a, b) => b.w - a.w).slice(0, MAX_SEEDS), people,
+    // the More like this ones always make the cut (they're first in line), then the strongest of the rest
+    const all = [...seeds.values()].sort((a, b) => (b.why.startsWith('More like') - a.why.startsWith('More like')) || b.w - a.w);
+    return { rated, avg, fit, genres, reward, seeds: all.slice(0, MAX_SEEDS), less, people,
       favs: FAVS.reduce((n, [key]) => n + (Array.isArray(profile?.[key]) ? profile[key].length : 0), 0) };
   }
 
@@ -1036,7 +1046,7 @@ const MSSRecs = (() => {
   function sigOf(T) {
     const r1 = v => Math.round(v * 10) / 10;
     const parts = [T.seeds.map(x => `${x.k}:${r1(x.w)}`).join(','), T.people.map(p => `${p.role}:${p.id}`).join(','),
-      Object.entries(T.fit).sort().map(([g, v]) => `${g}:${r1(v)}`).join(','), T.genres.join(','), T.reward || '', T.rated.length >= 5 ? 'n' : 'b'];
+      Object.entries(T.fit).sort().map(([g, v]) => `${g}:${r1(v)}`).join(','), T.genres.join(','), T.reward || '', T.rated.length >= 5 ? 'n' : 'b', 'p2:' + MSSRecPrefs.sig()];
     let h = 5381; const str = parts.join('|');
     for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) | 0;
     return String(h >>> 0);
@@ -1044,7 +1054,7 @@ const MSSRecs = (() => {
 
   async function build(entries, profile) {
     entries = entries || []; profile = profile || {};
-    await MSSNotInterested.load();
+    await Promise.all([MSSNotInterested.load(), MSSRecPrefs.load()]);
     const uid = window._navUser?.id || '', st = store();
     const T = taste(entries, profile), sig = sigOf(T);
     const have = new Set(entries.filter(e => e.tmdb_id).map(e => keyOf(typeOf(e), e.tmdb_id)));
@@ -1060,10 +1070,13 @@ const MSSRecs = (() => {
       if (!it || skip(it)) return;
       const k = keyOf(it.media_type, it.id), p = pool.get(k) || { it, w: 0, srcs: new Map() };
       p.w += w; p.srcs.set(src.name, (p.srcs.get(src.name) || 0) + w); if (src.person) p.person = true; if (src.start) p.start = true;
+      if (src.seed) (p.seeds ||= new Map()).set(src.name, src.seed);   // the title behind a reason (its ⋯: Less like …)
       pool.set(k, p);
     };
     // what TMDB recommends for each starting point (higher on its list = more), a few at a time
-    const jobs = [...T.seeds.map(s => () => recsOf(s).then(items => items.forEach((it, i) => add(it, s.w * (1 + (20 - Math.min(i, 20)) / 20) / 2, { name: s.why || 'Picked for your taste' }))).catch(() => {})),
+    const lessKeys = new Set();   // what TMDB suggests because of a Less like this title
+    const jobs = [...T.seeds.map(s => () => recsOf(s).then(items => items.forEach((it, i) => add(it, s.w * (1 + (20 - Math.min(i, 20)) / 20) / 2, { name: s.why || 'Picked for your taste', seed: { k: s.k, title: s.title } }))).catch(() => {})),
+      ...T.less.map(s => () => recsOf(s).then(items => items.forEach(it => it && lessKeys.add(keyOf(it.media_type, it.id)))).catch(() => {})),
       ...T.people.map(p => () => worksOf(p).then(items => items.forEach((it, i) => add(it, 1.5 * (1 - i / 16), { name: `From ${p.name}`, person: true }))).catch(() => {}))];
     // a thin library: well-rated popular titles in your genres (or MSF-wide), so there's always something good to start from
     const newbie = T.seeds.length + T.people.length < 3 || T.rated.length < 5;
@@ -1086,8 +1099,10 @@ const MSSRecs = (() => {
       // trust: how many people rated it (log scale — 150 votes is thin, 10,000 is solid); it scales everything else
       const fit = fitOf(p.it), q = Math.max(-1.4, Math.min(1.8, ((p.it.score || 0) - 7) * .9)), trust = Math.max(.35, Math.min(1, (Math.log10((p.it.votes || 0) + 1) - 2) / 2));
       const why = [...p.srcs.entries()].sort((a, b) => b[1] - a[1])[0][0];
-      return { ...p, fit, q, n: p.srcs.size, why, total: (p.w + fit * 2.2 + q + (p.srcs.size >= 2 ? .6 : 0)) * trust };
-    }).filter(p => p.person || p.start || p.fit > -.6)   // a genre you score low counts against it — far enough, it's out
+      // like a Less like this title: out, unless at least two other things you love point to it (then it just counts less)
+      const less = lessKeys.has(keyOf(p.it.media_type, p.it.id));
+      return { ...p, fit, q, n: p.srcs.size, why, less, total: (p.w + fit * 2.2 + q + (p.srcs.size >= 2 ? .6 : 0) - (less ? 2 : 0)) * trust };
+    }).filter(p => (p.person || p.start || p.fit > -.6) && !(p.less && p.srcs.size < 2))   // a genre you score low counts against it — far enough, it's out
       .sort((a, b) => b.total - a.total);
     // the mix: in every 10, slots 4 and 8 a neighbouring pick, slot 10 a wild card; the rest the closest matches.
     // No one favourite takes over: each reason gives at most 2 of every 10 (more only when nothing else is left)
@@ -1108,7 +1123,8 @@ const MSSRecs = (() => {
       const slot = i % 10, pick = (slot === 3 || slot === 7 ? take(near, 'near') : slot === 9 ? take(wild, 'wild') : null) || take(ranked, 'close');
       if (!pick) break;
       const kind = pick.p.start && pick.kind === 'close' ? 'start' : pick.kind;
-      items.push({ ...pick.p.it, kind, why: pick.p.why });
+      const sd = pick.p.seeds?.get(pick.p.why);
+      items.push({ ...pick.p.it, kind, why: pick.p.why, ...(sd ? { seed: sd } : {}) });
     }
     const data = { items, genres: T.genres, basis: { favs: T.favs, rated: T.rated.length, people: T.people.length }, newbie };
     st.result = { uid, sig, t: Date.now(), data };
@@ -1117,6 +1133,7 @@ const MSSRecs = (() => {
     return out(data);
   }
   let ranked = null;
+  document.addEventListener('mss:rec-prefs', () => { ranked = null; });   // a choice changed: the See all list is worked out again
   const category = {
     key: 'recommended',
     title: 'Recommended for You',

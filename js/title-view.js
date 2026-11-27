@@ -202,6 +202,7 @@ const MSSViews = (() => {
       if (rd && e.status === 'watching') add('Taking a break', 'pause', () => act('pause'));
       if (rd && canList()) add('Add to list', 'layers', () => act('list'));
       if (it.tmdb_id) add('Recommend', 'send', () => act('recommend'));
+      recPrefItems(t, add);
       add(hasReview(e) ? 'Edit review' : rd ? 'Write a review' : 'Write a note', 'edit', () => act('editReview'));
       if (hasReview(e)) add(t.pinned ? 'Unpin note' : 'Pin note', 'pin', () => act('pin'));   // one pinned note: the top of your Notes (Notes redesign)
       if (!it.tmdb_id) add('Discover', 'compass', () => act('discover'));   // a linked title has Discover in the bar (owner, 14 Nov 2026)
@@ -221,6 +222,13 @@ const MSSViews = (() => {
     if (!isMovie(t) && it.tmdb_id) add('Episode chart', 'episodes', () => { location.href = `episodes.html?show=${Number(it.tmdb_id)}`; });
     // opened from a recommendation (Discover, Home, See all): Not interested is here, not on the card (owner, 19 Nov 2026)
     if (t.rec && user && it.tmdb_id) add(t.rec.hidden ? 'Recommend it again' : 'Not interested', t.rec.hidden ? 'eye' : 'eyeOff', () => act('notInt'));
+    // …and "Less like Fight Club": stop using the title behind its reason (owner, 27 Nov 2026)
+    const sd = t.rec?.seed;
+    if (sd && user && sd.k !== `${it.media_type}:${Number(it.tmdb_id)}`) {
+      const [st, sid] = sd.k.split(':');
+      add(MSSRecPrefs.of(st, sid) === 'less' ? `Back to normal for ${sd.title}` : `Less like ${sd.title}`, 'thumbsDown', () => act('seedLess'));
+    }
+    if (user && it.tmdb_id) recPrefItems(t, add);
     return items;
   }
 
@@ -1055,7 +1063,8 @@ const MSSViews = (() => {
 
   /* ── addresses ── */
   function pageURL(t, tab) {
-    const q = t.e ? `id=${encodeURIComponent(t.e.id)}` : `t=${t.it.media_type}:${Number(t.it.tmdb_id)}${t.rec ? '&rec=1' : ''}`;
+    const sd = t.rec?.seed && /^(movie|tv):\d+$/.test(t.rec.seed.k) ? `&seed=${t.rec.seed.k}&st=${encodeURIComponent(String(t.rec.seed.title || '').slice(0, 120))}` : '';
+    const q = t.e ? `id=${encodeURIComponent(t.e.id)}` : `t=${t.it.media_type}:${Number(t.it.tmdb_id)}${t.rec ? '&rec=1' + sd : ''}`;
     const x = tab || t.tab || '';
     if (t.noteView) return `item.html?${q}&note=1${x && x !== 'review' ? '&tab=' + x : ''}`;
     return `item.html?${q}${x && x !== (ratingDesign(t) ? 'ratings' : 'info') ? '&tab=' + x : ''}`;
@@ -1112,12 +1121,13 @@ const MSSViews = (() => {
     const it = { ...item, tmdb_id: item.tmdb_id || item.id || null, media_type: item.media_type === 'movie' ? 'movie' : 'tv' };
     if (!it.tmdb_id) return;
     if (!(await MSSAge.guard(it.media_type, it.tmdb_id))) return;
-    const t = { e: null, it, own: false, o: {}, mine: undefined, tab: null, rec: item.why || lastCard?.matches?.('.dz-rec') ? {} : null };   // a recommendation's card
+    const t = { e: null, it, own: false, o: {}, mine: undefined, tab: null, rec: item.why || lastCard?.matches?.('.dz-rec') ? { seed: item.seed || null } : null };   // a recommendation's card (seed: the title behind its reason)
     if (!sideFits()) { goPage(pageURL(t)); return; }
     show(t);
   }
   async function show(t) {
     T = t;
+    if (window._navUser) MSSRecPrefs.load();   // the ⋯ says whether More / Less like this is on
     await mssLoadScript('js/panel.js');
     if (T !== t) return;
     if (!panel) {
@@ -1134,6 +1144,7 @@ const MSSViews = (() => {
   /* ── item.html ── */
   async function mountPage(root, q) {
     page = root;
+    MSSRecPrefs.load();
     let t;
     if (q.entryId) {
       const { data } = await sb.from('entries').select('*').eq('id', q.entryId).maybeSingle();
@@ -1152,7 +1163,7 @@ const MSSViews = (() => {
       const d = await details(q.item);
       if (!d) return false;
       const movie = q.item.media_type === 'movie';
-      t = { e: null, it: { ...q.item, title: movie ? d.title : d.name, year: ((movie ? d.release_date : d.first_air_date) || '').slice(0, 4), poster_url: d.poster_path ? TMDB_FULL + d.poster_path : null, overview: d.overview }, own: false, o: {}, mine: null, d, rec: q.rec ? {} : null };
+      t = { e: null, it: { ...q.item, title: movie ? d.title : d.name, year: ((movie ? d.release_date : d.first_air_date) || '').slice(0, 4), poster_url: d.poster_path ? TMDB_FULL + d.poster_path : null, overview: d.overview }, own: false, o: {}, mine: null, d, rec: q.rec ? { seed: q.seed || null } : null };
       if (t.rec) { await MSSNotInterested.load(); t.rec.hidden = MSSNotInterested.has(t.it.media_type, t.it.tmdb_id); }
     } else return false;
     t.noteView = !!q.note && !!t.e && hasReview(t.e);
@@ -1274,6 +1285,9 @@ const MSSViews = (() => {
       case 'mine': if (!t.mine) return;   // your own copy: here, or on its page where this page has no note editor
         return typeof MSSNote === 'undefined' ? goPage(`item.html?id=${encodeURIComponent(t.mine.id)}`) : open(t.mine, { own: true });
       case 'notInt': return notInterested(t);
+      case 'recMore': return recPref(t, 'more');
+      case 'recLess': return recPref(t, 'less');
+      case 'seedLess': return seedLess(t);
       case 'recommend': return mssRecommend({ tmdb_id: it.tmdb_id, media_type: it.media_type, title: it.title, poster_url: posterURL(t), year: it.year });
       case 'discover': return MSSInfo.discover(e || it, el);
       case 'list': return e && MSSList.addTo(e);
@@ -1493,6 +1507,36 @@ const MSSViews = (() => {
       t.rec.hidden = false; if (t === T && page) paint();
       if (wheres.length) MSSResults.recBack(type, id, wheres);
     });
+  }
+
+  /* ── Tune your recommendations (MSSRecPrefs, owner 27 Nov 2026): More like this / Less like this on any title —
+     a title you love but scored a 7, or a 9 you don't want more of. Tap the one that's on again for back to normal. ── */
+  function recPrefItems(t, add) {
+    const it = t.it; if (!it.tmdb_id || !window._navUser) return;
+    const m = MSSRecPrefs.of(it.media_type, it.tmdb_id);
+    add(m === 'more' ? 'More like this · on' : 'More like this', m === 'more' ? 'thumbsUpFilled' : 'thumbsUp', () => act('recMore'));
+    add(m === 'less' ? 'Less like this · on' : 'Less like this', m === 'less' ? 'thumbsDownFilled' : 'thumbsDown', () => act('recLess'));
+  }
+  async function recPref(t, mode) {
+    const it = t.it, type = it.media_type, id = it.tmdb_id, was = MSSRecPrefs.of(type, id), next = was === mode ? null : mode;
+    const who = { type, id, title: it.title, poster: posterURL(t) };
+    try { await MSSRecPrefs.set(who, next); }
+    catch (err) { console.warn('Recommendation choice:', err); return showToast('Couldn’t save that — try again.', 'err'); }
+    if (t === T) paint();
+    const msg = next === 'more' ? `More picks like “${it.title}” on Discover and Home` : next === 'less' ? `Fewer picks like “${it.title}” — it won’t be used to recommend`
+      : `“${it.title}” is back to normal for recommendations`;
+    showUndoToast(msg, async () => { await MSSRecPrefs.set(who, was); if (t === T) paint(); });
+  }
+  async function seedLess(t) {
+    const sd = t.rec?.seed; if (!sd) return;
+    const [type, id] = sd.k.split(':'), was = MSSRecPrefs.of(type, id), next = was === 'less' ? null : 'less';
+    const mine = typeof MSSMine !== 'undefined' ? MSSMine.get(type, Number(id)) : null;   // your copy, for its poster in Settings
+    const who = { type, id: Number(id), title: sd.title, poster: mine?.poster_url || null };
+    try { await MSSRecPrefs.set(who, next); }
+    catch (err) { console.warn('Recommendation choice:', err); return showToast('Couldn’t save that — try again.', 'err'); }
+    if (t === T) paint();
+    showUndoToast(next ? `No more picks because of “${sd.title}”` : `“${sd.title}” is back to normal for recommendations`,
+      async () => { await MSSRecPrefs.set(who, was); if (t === T) paint(); });
   }
 
   // ?panel=title&id=… (a reload or Forward onto the panel's address) → open it again

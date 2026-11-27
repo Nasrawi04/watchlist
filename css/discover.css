@@ -288,6 +288,9 @@ button.dh-prog-next:hover b { text-decoration:underline; text-underline-offset:3
 .dz-see { display:inline-flex; align-items:center; gap:6px; font:700 13px 'Manrope',var(--sans); color:var(--olive-light); white-space:nowrap; }
 .dz-see svg { width:13px; height:13px; transition:transform .2s; }
 .dz-see:hover svg { transform:translateX(3px); }
+.dz-sec-links { display:flex; align-items:center; gap:18px; }
+.dz-tune svg { width:15px; height:15px; }
+.dz-tune:hover svg { transform:none; }
 
 /* the featured title + Also trending */
 .dz-top { display:grid; grid-template-columns:minmax(0, 1fr) minmax(300px, 360px); gap:16px; margin-bottom:16px; }

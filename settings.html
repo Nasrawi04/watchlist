@@ -322,8 +322,8 @@
               <div class="set-ctl set-ctl-dd"><div id="setRegionPick"></div></div>
             </div>
             <a class="set-row is-door" id="setNotInt" href="#preferences/recommendations">
-              <span class="set-ic" data-ic="eyeOff"></span>
-              <div class="set-txt"><div class="set-name">Recommendations</div><div class="set-desc">Titles you marked Not interested — they’re never recommended to you.</div></div>
+              <span class="set-ic" data-ic="sparkles"></span>
+              <div class="set-txt"><div class="set-name">Recommendations</div><div class="set-desc">Tune them: more or less like a title, which categories they come from, and titles you hid.</div></div>
               <div class="set-ctl"><span class="set-val" id="notIntVal"></span><span class="set-go" data-ic="chevright"></span></div>
             </a>
             <div class="set-row" id="setScreensaver">
@@ -353,9 +353,26 @@
       <div class="set-page set-door-page" id="page-notint" data-door="preferences/recommendations" hidden>
         <header class="set-head">
           <a class="set-back" href="#preferences" aria-label="Back to Preferences"><span data-ic="chevleft"></span></a>
-          <div><p class="set-trail"><a href="#preferences">Preferences</a></p><h1 class="set-title" id="pgT-notint" tabindex="-1">Not interested</h1><p class="set-lede">Titles you hid from Picked for your taste and Recommended for you. Show one again and it can come back.</p></div>
+          <div><p class="set-trail"><a href="#preferences">Preferences</a></p><h1 class="set-title" id="pgT-notint" tabindex="-1">Recommendations</h1><p class="set-lede">Steer Picked for your taste on Discover and Recommended for you on Home. Changes show the next time they’re worked out — straight away on those pages.</p></div>
         </header>
-        <section class="set-pane" aria-labelledby="pgT-notint">
+        <section class="set-pane" aria-labelledby="recFromH">
+          <h2 class="set-sub" id="recFromH">Recommend from</h2>
+          <p class="set-pane-lede">Which of your titles we start from. Turn one off and those titles don’t steer your picks — a great one can still be recommended.</p>
+          <div class="set-card" id="recFrom"></div>
+        </section>
+        <section class="set-pane" aria-labelledby="recMoreH">
+          <h2 class="set-sub" id="recMoreH">More like this</h2>
+          <p class="set-pane-lede">Titles you asked for more of — they count as much as a favourite, whatever you scored them. Choose it from a title’s ⋯.</p>
+          <ul class="set-card set-list-card" id="recMoreList" aria-live="polite"></ul>
+        </section>
+        <section class="set-pane" aria-labelledby="recLessH">
+          <h2 class="set-sub" id="recLessH">Less like this</h2>
+          <p class="set-pane-lede">Titles we don’t recommend from — even a favourite or a 9+. Choose it from a title’s ⋯, or from a recommendation’s ⋯ (“Less like …”).</p>
+          <ul class="set-card set-list-card" id="recLessList" aria-live="polite"></ul>
+        </section>
+        <section class="set-pane" aria-labelledby="notIntH">
+          <h2 class="set-sub" id="notIntH">Not interested</h2>
+          <p class="set-pane-lede">Titles you hid — they’re never recommended to you. Show one again and it can come back.</p>
           <ul class="set-card set-list-card" id="notIntList" aria-live="polite"></ul>
           <div id="notIntEmpty" hidden></div>
         </section>
@@ -462,6 +479,7 @@ document.addEventListener('DOMContentLoaded', () => {
     _sessLoad();
     _blocksLoad();
     _notIntLoad();
+    _recPrefsLoad();
     _lockPaint();
     _usernamePaint();
     _bannerPaint();
@@ -567,8 +585,8 @@ function settingsValues() {
   const n = document.querySelectorAll('#blockList .sess-row').length;
   document.getElementById('blockVal').textContent = n === 1 ? '1 person' : n ? `${n} people` : 'None';
   document.getElementById('uploadsVal').textContent = MSSUploads.value();
-  const ni = document.querySelectorAll('#notIntList .sess-row').length;
-  document.getElementById('notIntVal').textContent = ni === 1 ? '1 title' : ni ? `${ni} titles` : 'None';
+  const ni = document.querySelectorAll('#notIntList .sess-row, #recMoreList .sess-row, #recLessList .sess-row').length + MSSRecPrefs.CATS.filter(c => !MSSRecPrefs.on(c)).length;
+  document.getElementById('notIntVal').textContent = ni === 1 ? '1 choice' : ni ? `${ni} choices` : 'None';
   const d = document.querySelectorAll('#sessList .set-dev').length;
   document.querySelectorAll('.sess-count').forEach(e => { e.textContent = d === 1 ? '1 device' : d ? `${d} devices` : ''; });
   document.getElementById('cookiesVal').textContent = MSSConsent.summary();
@@ -932,6 +950,37 @@ async function _blockUndo(btn, id) {
   btn.disabled = true;
   try { await unblockUser(id); showToast('Unblocked'); _blocksLoad(); }
   catch (err) { btn.disabled = false; showToast(err?.hint || 'Couldn’t unblock them — try again.', 'err'); }
+}
+
+/* ── Tune your recommendations (148, MSSRecPrefs): Recommend from (a switch per category), More / Less like this ── */
+const _REC_CATS = [['movies', 'Movies', 'film'], ['tv', 'TV Shows', 'tv'], ['anime', 'Anime', 'smile'], ['cartoons', 'Cartoons', 'crown']];   // the Library menu's icons
+async function _recPrefsLoad() {
+  try { await MSSRecPrefs.load(); } catch {}
+  document.getElementById('recFrom').innerHTML = _REC_CATS.map(([k, l, ic]) => `<div class="set-row">
+      <span class="set-ic">${icon(ic, 18)}</span>
+      <div class="set-txt"><div class="set-name" id="recFromL-${k}">${l}</div></div>
+      <div class="set-ctl"><button type="button" class="push-switch" role="switch" aria-checked="${MSSRecPrefs.on(k)}" aria-labelledby="recFromL-${k}" onclick="_recFromTap(this, '${k}')"><span aria-hidden="true"></span></button></div></div>`).join('');
+  const row = r => `<li class="sess-row">
+      <span class="ni-poster" aria-hidden="true">${r.poster ? `<img src="https://image.tmdb.org/t/p/w92${escHTML(r.poster)}" alt="" loading="lazy">` : ''}</span>
+      <span class="sess-info"><span class="sess-name" translate="no">${escHTML(r.title)}</span><span class="sess-when">${r.type === 'movie' ? 'Movie' : 'TV Show'} · Since ${escHTML(_sessDate(r.at))}</span></span>
+      <button type="button" class="sess-out ni-again" aria-label="Back to normal for ${escHTML(r.title)}" onclick="_recPrefUndo(this, ${attrJSON(r.type)}, ${Number(r.id)}, ${attrJSON(r.title)})">Remove</button>
+    </li>`;
+  const none = t => `<li class="sess-note">${t}</li>`;
+  const more = MSSRecPrefs.titles('more'), less = MSSRecPrefs.titles('less');
+  document.getElementById('recMoreList').innerHTML = more.length ? more.map(row).join('') : none('None yet — open a title you love and choose ⋯ › More like this.');
+  document.getElementById('recLessList').innerHTML = less.length ? less.map(row).join('') : none('None yet — choose ⋯ › Less like this on a title you don’t want more of.');
+  MSSSettingsNav.refresh();
+}
+async function _recFromTap(btn, cat) {
+  const on = btn.getAttribute('aria-checked') !== 'true';
+  btn.setAttribute('aria-checked', on);
+  try { await MSSRecPrefs.setOn(cat, on); showToast(on ? 'Back in your recommendations' : 'Not used to recommend any more'); }
+  catch { btn.setAttribute('aria-checked', !on); showToast('Couldn’t change that — try again.', 'err'); }
+}
+async function _recPrefUndo(btn, type, id, title) {
+  btn.disabled = true;
+  try { await MSSRecPrefs.set({ type, id, title }, null); showToast(`“${title}” is back to normal for recommendations`); _recPrefsLoad(); }
+  catch { btn.disabled = false; showToast('Couldn’t change that — try again.', 'err'); }
 }
 
 /* ── Not interested (136): titles hidden from your recommendations — Show again brings one back ── */

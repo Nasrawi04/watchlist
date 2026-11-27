@@ -217,6 +217,9 @@ const MSSDiscoverHome = (() => {
     paintTaste(t);
   }
   MSSResults.recHooks('discover', { empty: () => { $('dzTaste').hidden = true; }, undo: () => { tasteShown = ''; renderTaste(); } });
+  // More / Less like this, Recommend from (MSSRecPrefs): worked out again (owner, 27 Nov 2026)
+  let recT = 0;
+  document.addEventListener('mss:rec-prefs', () => { clearTimeout(recT); recT = setTimeout(() => { if (!$('dzTaste').hidden) { tasteShown = ''; renderTaste(); } }, 400); });
 
   /* ══ 4. Browse by list ══ */
   // six groups of up to four (owner, 25 Nov 2026): what's on now · MSF's Top 250s · TMDB's Top 250s · seasons &
