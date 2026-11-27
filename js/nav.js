@@ -21,16 +21,36 @@ addEventListener('pagehide', () => {
   try { sessionStorage.setItem('mssPrevPage', JSON.stringify({ url: _navFile(location) + location.search, label: _navPageLabel() })); } catch {}
 });
 // → { href, label } for the page you came from on this site, or null (opened directly / from another site)
+// Each page also keeps the page you first came to it from (sessionStorage 'mssBackTo', this tab only): coming back
+// from the Edit page (or when the browser forgets the referrer, as Safari can after Back) still leads to it —
+// Diary › title › Edit › Back › Back = the Diary, not the title's own area (Discover).
+const _navKey = u => { const x = new URL(u, location.href); x.searchParams.delete('tab'); return _navFile(x) + x.search; };
+const _NAV_PASS = ['detail.html', 'login.html'];   // pages you pass through: never the place Back returns to
 function mssCameFrom() {
+  let came = null;
   try {
-    if (!document.referrer) return null;
-    const r = new URL(document.referrer);
-    if (r.origin !== location.origin) return null;
-    const href = _navFile(r) + r.search;
-    if (href === _navFile(location) + location.search) return null;
-    const p = JSON.parse(sessionStorage.getItem('mssPrevPage') || 'null');
-    return { href, label: p && p.url === href && p.label ? p.label : (_NAV_PAGE_NAMES[_navFile(r)] || 'Previous page') };
-  } catch { return null; }
+    const r = document.referrer ? new URL(document.referrer) : null;
+    if (r && r.origin === location.origin) {
+      const href = _navFile(r) + r.search;
+      if (_navKey(r) !== _navKey(location)) {
+        const p = JSON.parse(sessionStorage.getItem('mssPrevPage') || 'null');
+        came = { href, label: p && p.url === href && p.label ? p.label : (_NAV_PAGE_NAMES[_navFile(r)] || 'Previous page') };
+      }
+    }
+  } catch {}
+  try {
+    const all = JSON.parse(sessionStorage.getItem('mssBackTo') || '{}'), me = _navKey(location);
+    if (came && !_NAV_PASS.includes(came.href.split('?')[0])) {
+      if (all[me]?.href !== came.href) {
+        delete all[me]; all[me] = came;
+        const keys = Object.keys(all); keys.slice(0, Math.max(0, keys.length - 40)).forEach(k => delete all[k]);
+        sessionStorage.setItem('mssBackTo', JSON.stringify(all));
+      }
+      return came;
+    }
+    if (all[me]?.href) return { ...all[me], kept: true };
+  } catch {}
+  return came && !_NAV_PASS.includes(came.href.split('?')[0]) ? came : null;
 }
 // The trail itself: ‹ Back / <where you came from> / <this page>. fallback = { href, label } when you came from nowhere on the site.
 // back: the Back link's onclick (it goes back in history when there is a page to go back to)
@@ -43,7 +63,9 @@ function mssCrumbHTML(current, fallback, back = 'return mssGoBack()') {
     <span aria-hidden="true">/</span><span aria-current="page" translate="no">${escHTML(current || '')}</span></div>`;
 }
 function mssGoBack() {
-  if (mssCameFrom() && history.length > 1) { history.back(); return false; }
+  const f = mssCameFrom();
+  if (f?.kept) { location.href = f.href; return false; }   // the browser lost the way back (or it's the Edit page): go there
+  if (f && history.length > 1) { history.back(); return false; }
   return true;
 }
 
