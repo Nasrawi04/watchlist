@@ -1,15 +1,16 @@
 /* ══════════════════════════════════════════════════════════════
    fav-suggest.js — suggestions for the profile's Top 5 pickers (MSSFavSuggest), loaded when one opens
-   (profile-v2.js). Everything comes from your own library and TMDB; nothing new is stored — TMDB answers
-   are kept by tmdbFetch like every other page's (Cookies › Faster pages › Title details).
+   (profile-v2.js). Everything comes from your own library and TMDB; TMDB answers are kept by tmdbFetch like every
+   other page's, and the people suggestions are saved on the device (Cookies › Faster pages › Suggestions).
 
    People   await people(kind, entries, skip)  kind 'actors' | 'actresses' | 'directors'
               → { mine: [TMDB person + why], popular: [TMDB person] }
-              mine: who keeps coming up in your best titles (your ~12 highest-scored; a title counts more the higher
-              you scored it): the main cast (top 8 billed in a film, the most-seen in a show), or the director of a
-              film and the creator of a show (Vince Gilligan for Breaking Bad — owner, 27 Nov 2026). Actors / Actresses
+              mine: ONE person from each of your best titles, one per film series (owner, 27 Nov 2026 — not four from
+              Kung Fu Panda), up to 20, best title first: the main cast (top-billed in a film, the most-seen in a show),
+              or the director of a film and the creator of a show (Vince Gilligan for Breaking Bad). Actors / Actresses
               follow TMDB's gender; people without one (or non-binary) are in both (mssGenderFits, nav.js).
-              popular: a fixed list of 20 well-known names (not TMDB's trending), when yours are fewer than 4.
+              popular: a fixed list of 20 well-known names (not TMDB's trending), filling the list up to 20.
+              Saved on the device after the first time (mss_fav_people_v1, two weeks) so it doesn't keep changing.
    Seasons / episodes (your scores first, then what you've watched; Top 250 only when you've watched no shows)
             await rated(userId, entries, 'season' | 'episode') → [{ e, s, n, score }]   your best one per show
             shows(entries)                → your shows you've watched something of, best-scored first
@@ -19,7 +20,7 @@
             await myScores(userId)        → { [entryId]: { 's:n': score } }   (n 0 = the whole season)
    Characters (TMDB has no characters: a name, with its title)
             favourites(entries)           → the favourite character you picked on each title, best-scored first
-            await fromTop(entries)        → the main characters of your best titles (mssFetchCast, nav.js)
+            await fromTop(entries)        → the main character of each of your 20 best titles, one per series (mssFetchCast)
             await cast(type, id)          → a title's characters, for search
             POPULAR_CHARACTERS            → when your library has nothing
    Requires config.js, nav.js (tmdbFetch, mssFetchCast, mssGenderFits), db.js (sb).
@@ -58,34 +59,63 @@ const MSSFavSuggest = (() => {
     }));
     return found.filter(x => x && !skip.has(Number(x.id)));
   }
-  async function people(kind, entries, skipIds) {
-    const skip = new Set((skipIds || []).map(Number)), gender = GENDER[kind], P = new Map();
-    await Promise.all(best(entries, 12).map(async ({ e, sc }) => {
-      const type = typeOf(e), id = Number(e.tmdb_id), w = sc == null ? 1 : Math.max(0.5, sc - 6);
-      let found;
+  // one per film series: "Kung Fu Panda 2" and "Kung Fu Panda: The Kaboom of Doom" count as "Kung Fu Panda"
+  const series = t => norm(String(t || '').split(/[:–—]/)[0]).replace(/\s+(\d+|ii|iii|iv|v|vi)$/, '').replace(/^the /, '');
+  function bestSeries(entries, n) {
+    const seen = new Set();
+    return best(entries, 200).filter(({ e }) => { const k = series(e.title); return k && !seen.has(k) && seen.add(k); }).slice(0, n);
+  }
+  // Saved on this device after the first time (Cookies › Faster pages › Suggestions), so the list stays put while you
+  // pick; worked out again after two weeks. Your picks are left out when it's shown, not when it's saved.
+  const STORE = 'mss_fav_people_v1', KEEP = 14 * 864e5, MAX = 20;
+  const saved = () => { try { return JSON.parse(localStorage.getItem(STORE) || '{}'); } catch { return {}; } };
+  const keyOf = kind => `${window._navUser?.id || 'me'}:${kind}`;
+  function remember(kind, val) {
+    try {
+      const all = saved(); all[keyOf(kind)] = { t: Date.now(), ...val };
+      Object.keys(all).filter(k => Date.now() - all[k].t > KEEP).forEach(k => delete all[k]);
+      localStorage.setItem(STORE, JSON.stringify(all));
+    } catch {}
+  }
+  const slim = (p, why) => ({ id: p.id, name: p.name, profile_path: p.profile_path || null, gender: p.gender || 0,
+    known_for_department: p.known_for_department || null, known_for: why ? [{ title: why }] : (p.known_for || []).slice(0, 1).map(k => ({ title: k.title || k.name })), why: why ? `In ${why}` : null });
+  // one person from each of your best titles (and one per film series): up to 20, best title first — on each title the
+  // one who also comes up most across your other titles (Brad Pitt for Fight Club when you love Se7en too), else top-billed
+  async function work(kind, entries) {
+    const gender = GENDER[kind];
+    const titles = await Promise.all(bestSeries(entries, 30).map(async ({ e }) => {
+      const type = typeOf(e), id = Number(e.tmdb_id);
       if (kind === 'directors') {
         // a film's director; a show's creator (the title page shows the same)
         const d = await json(type === 'movie' ? `${TMDB_BASE}/movie/${id}/credits?language=en-US` : `${TMDB_BASE}/tv/${id}?language=en-US`);
-        found = (type === 'movie' ? (d?.crew || []).filter(c => c.job === 'Director') : (d?.created_by || [])).map(p => [p, w]);
-      } else {
-        // the same requests as a title's cast everywhere else (mssFetchCast)
-        const d = await json(`${TMDB_BASE}/${type}/${id}/${type === 'movie' ? 'credits' : 'aggregate_credits'}?language=en-US`);
-        const cast = (d?.cast || []).filter(c => !SELF.test(c.character || c.roles?.[0]?.character || ''))
-          .sort(type === 'movie' ? (a, b) => (a.order ?? 99) - (b.order ?? 99) : (a, b) => (b.total_episode_count || 0) - (a.total_episode_count || 0));
-        found = cast.slice(0, 8).map((p, i) => [p, w * (i < 3 ? 1 : 0.6)]).filter(([p]) => mssGenderFits(p.gender, gender));
+        return { e, list: type === 'movie' ? (d?.crew || []).filter(c => c.job === 'Director') : (d?.created_by || []) };
       }
-      found.forEach(([p, pw]) => {
-        if (!p.id || !p.name || skip.has(Number(p.id))) return;
-        const x = P.get(p.id) || P.set(p.id, { p, w: 0, titles: [] }).get(p.id);
-        x.w += pw;
-        if (!x.titles.includes(e.title)) x.titles.push(e.title);
-      });
+      // the same requests as a title's cast everywhere else (mssFetchCast)
+      const d = await json(`${TMDB_BASE}/${type}/${id}/${type === 'movie' ? 'credits' : 'aggregate_credits'}?language=en-US`);
+      const cast = (d?.cast || []).filter(c => !SELF.test(c.character || c.roles?.[0]?.character || ''))
+        .sort(type === 'movie' ? (a, b) => (a.order ?? 99) - (b.order ?? 99) : (a, b) => (b.total_episode_count || 0) - (a.total_episode_count || 0));
+      return { e, list: cast.slice(0, 8).filter(p => mssGenderFits(p.gender, gender)).slice(0, 3) };
     }));
-    const mine = [...P.values()].sort((a, b) => b.w - a.w || b.titles.length - a.titles.length).slice(0, 8)
-      .map(({ p, titles }) => ({ id: p.id, name: p.name, profile_path: p.profile_path || null, gender: p.gender || 0,
-        known_for: [{ title: titles[0] }], why: `In ${titles.slice(0, 2).join(' and ')}${titles.length > 2 ? ` +${titles.length - 2}` : ''}` }));
-    const taken = new Set([...skip, ...mine.map(x => Number(x.id))]);
-    return { mine, popular: mine.length < 4 ? await popular(kind, taken) : [] };
+    const times = {};
+    titles.forEach(t => t.list.forEach(p => { times[p.id] = (times[p.id] || 0) + 1; }));
+    const used = new Set(), out = [];
+    titles.forEach(({ e, list }) => {
+      const p = list.filter(x => x.id && x.name && !used.has(x.id)).sort((a, b) => (times[b.id] || 0) - (times[a.id] || 0))[0];
+      if (p && out.length < MAX + 5) { used.add(p.id); out.push(slim(p, e.title)); }
+    });
+    return out;
+  }
+  async function people(kind, entries, skipIds) {
+    const skip = new Set((skipIds || []).map(Number)), free = x => !skip.has(Number(x.id));
+    let hit = saved()[keyOf(kind)];
+    if (!hit || Date.now() - hit.t > KEEP || !Array.isArray(hit.mine)) {
+      const mine = await work(kind, entries);
+      // 20 well-known names fill what's left (all 20 with an empty library)
+      hit = { mine, popular: mine.length < MAX ? (await popular(kind, new Set(mine.map(x => Number(x.id))))).map(p => slim(p)) : [] };
+      if (mine.length || hit.popular.length) remember(kind, hit);
+    }
+    const mine = hit.mine.filter(free).slice(0, MAX);
+    return { mine, popular: (hit.popular || []).filter(x => free(x) && !mine.some(m => m.id === x.id)).slice(0, Math.max(0, MAX - mine.length)) };
   }
 
   /* ── Seasons and episodes ── */
@@ -185,9 +215,9 @@ const MSSFavSuggest = (() => {
     .map(e => ({ e, sc: score(e) })).sort(byScore).map(({ e }) => charOf(e.ratings._favorites.character, e));
   const usable = c => c.character && !SELF.test(c.character) && !/^(various|additional voices|uncredited)/i.test(c.character);
   async function fromTop(entries) {
-    const lists = await Promise.all(best(entries, 8).map(async ({ e }) => {
+    const lists = await Promise.all(bestSeries(entries, 20).map(async ({ e }) => {
       const cast = await mssFetchCast({ tmdb_id: e.tmdb_id, tmdb_type: typeOf(e), title: e.title, year: String(e.year || '').slice(0, 4), animated: e.cat === 'anime' || e.cat === 'cartoons' }).catch(() => []);
-      return (cast || []).filter(usable).slice(0, 3).map(c => charOf(c.character, e, c.actor));
+      return (cast || []).filter(usable).slice(0, 1).map(c => charOf(c.character, e, c.actor));   // one per title
     }));
     return lists.flat();
   }

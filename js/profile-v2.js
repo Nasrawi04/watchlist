@@ -775,8 +775,8 @@ const MSSProfile = (() => {
       : `<div class="dp-empty">${q ? `No titles match “${esc(q)}”.` : `No watched ${sec.cat ? esc(sec.title) : 'titles'} yet.`}</div>`;
   }
 
-  /* People: suggestions under the search — "From your top titles" (who keeps coming up in your best-scored titles),
-     then "Popular picks" (20 well-known names) when that's fewer than 4. Typing searches TMDB as before. */
+  /* People: suggestions under the search — "From your top titles" (one person from each of your best titles, up to 20),
+     then "Popular picks" (well-known names) filling it up to 20. Saved on the device. Typing searches TMDB as before. */
   const knownLine = x => [x.known_for_department, (x.known_for || []).map(k => k.title || k.name).filter(Boolean)[0] || ''].filter(Boolean).join(' · ');
   const personRow = (x, sub) => pickRow(`data-pick="${Number(x.id)}"`, x.profile_path ? tmdbImg(x.profile_path) : letter(x.name), x.name, sub, '', true);
   async function peopleSuggest() {
