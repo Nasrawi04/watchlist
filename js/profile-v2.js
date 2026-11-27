@@ -372,6 +372,7 @@ const MSSProfile = (() => {
     paintFavArt();
     if (typeof mssPaintLogo === 'function') o.el.querySelectorAll('.pf-fav[data-fav]').forEach(t => mssPaintLogo(t.querySelector('.pf-fav-title'), byId(t.dataset.fav)));   // the titles' name artwork
     t5Wire('pfT5Rail'); t5Wire('pfT5PRail'); t5Wire('pfT5MRail');
+    paintChars(document.querySelector('#pfT5MRail [data-t5="fav_characters"]'), el => itemsOf('fav_characters')[+el.dataset.cpk]);
     requestAnimationFrame(balance);
   }
   // two columns (computers): the favourite tiles grow a little (up to 160px in all) so they end with the side column,
@@ -469,6 +470,25 @@ const MSSProfile = (() => {
   }
   // what a saved person / season / episode / character shows: picture, name, the line under it, where it opens
   const letter = n => `<span class="pf-t5-letter">${esc((String(n || '?').trim() || '?')[0])}</span>`;
+  const charImg = c => okPhoto(c.photo) ? `<img src="${esc(okPhoto(c.photo))}" alt="" loading="lazy">` : letter(c.name);
+  // a character still without its picture (or an anime one with only the voice actor's): looked up (mssCharacterPhoto, nav.js)
+  const needsPhoto = c => !okPhoto(c.photo) || (!!c.anim && !c.art);
+  const charIt = c => {
+    const e = c.anim == null && O()?.entries?.find(y => Number(y.tmdb_id) === Number(c.tmdb));
+    return { tmdb_id: c.tmdb, tmdb_type: c.type, title: c.title, year: '', animated: !!(c.anim || (e && (e.cat === 'anime' || e.cat === 'cartoons'))) };
+  };
+  // root's rows marked data-cp (a picker's choice) or data-cpk (a saved character): their pictures, as they arrive
+  function paintChars(root, itemOf) {
+    root?.querySelectorAll('[data-cp],[data-cpk]').forEach(el => {
+      const c = itemOf(el); el.removeAttribute('data-cp'); el.removeAttribute('data-cpk');
+      if (!c || !c.tmdb || !c.type || typeof mssCharacterPhoto !== 'function') return;
+      mssCharacterPhoto(charIt(c), c.name).then(x => {
+        if (!x?.photo || !okPhoto(x.photo)) return;
+        c.photo = x.photo; c.art = !!x.isCharacterImage; if (!c.actor && x.actor) c.actor = x.actor;
+        const box = el.querySelector('.pf-t5-img'); if (box) box.innerHTML = charImg(c);
+      });
+    });
+  }
   const tmdbImg = path => `<img src="${IMG}w185${esc(path)}" alt="" loading="lazy">`;
   function bitsOf(key, x) {
     const m = SECTIONS[key].moment;
@@ -477,8 +497,8 @@ const MSSProfile = (() => {
       href: `season.html?show=${Number(x.tv)}&s=${Number(x.s)}` };
     if (m === 'episode') return { img: x.path ? tmdbImg(x.path) : letter(x.show), title: x.name || `Episode ${x.e}`, sub: `${x.show} · S${Number(x.s)} E${Number(x.e)}`,
       href: `episode.html?show=${Number(x.tv)}&s=${Number(x.s)}&e=${Number(x.e)}` };
-    // TMDB has no pictures of characters: the name only (owner, 27 Nov 2026), opening its title
-    return { img: letter(x.name), title: x.name, sub: [x.title, x.actor].filter(Boolean).join(' · '), href: Number(x.tmdb) && (x.type === 'movie' || x.type === 'tv') ? `title.html?type=${x.type}&id=${Number(x.tmdb)}` : '', person: true };
+    // the actor's photo, or AniList's character art for anime (owner, 27 Nov 2026), opening its title; a missing one is looked up
+    return { img: charImg(x), title: x.name, sub: [x.title, x.actor].filter(Boolean).join(' · '), href: Number(x.tmdb) && (x.type === 'movie' || x.type === 'tv') ? `title.html?type=${x.type}&id=${Number(x.tmdb)}` : '', person: true };
   }
   // one ranked row: a title (poster, year, your score → its panel), or a person / season / episode / character (→ its page)
   function t5Row(key, x, i) {
@@ -488,7 +508,8 @@ const MSSProfile = (() => {
     const sv = obj ? null : liveScore(x);
     const act = obj ? (b.href ? `href="${b.href}"` : '') : `href="#" onclick="event.preventDefault();MSSProfile._open(${attrJSON(x.id)})"`;
     const tag = act ? 'a' : 'span';
-    return `<li class="pf-t5-row${r === 1 ? ' is-lead' : ''}"><${tag} class="pf-t5-a" ${act} aria-label="#${r} ${esc(title)}">
+    const cpk = SECTIONS[key].moment === 'character' && needsPhoto(x) ? ` data-cpk="${i}"` : '';
+    return `<li class="pf-t5-row${r === 1 ? ' is-lead' : ''}"${cpk}><${tag} class="pf-t5-a" ${act} aria-label="#${r} ${esc(title)}">
       <span class="pf-rk is-${r}" aria-hidden="true">${r}</span>
       <span class="pf-t5-img${b?.person ? ' is-person' : ''}">${img}</span>
       <span class="pf-t5-tx"><b translate="no">${esc(title)}</b>${sub ? `<small>${esc(sub)}</small>` : ''}</span>
@@ -647,7 +668,7 @@ const MSSProfile = (() => {
       const title = obj ? b.title : x.title, sub = obj ? b.sub : [mssTypeOf(x.cat, isMovie(x)).label, yearOf(x)].filter(Boolean).join(' · ');
       const img = obj ? b.img : posterHTML(x, '', '44px');
       const sv = obj ? null : liveScore(x);
-      return `<li class="pf-rk-row" data-i="${i}">
+      return `<li class="pf-rk-row" data-i="${i}"${sec.moment === 'character' && needsPhoto(x) ? ` data-cpk="${i}"` : ''}>
         <span class="pf-rk-handle" data-drag="${i}" aria-hidden="true">${icon('grip', 16)}</span>
         <span class="pf-rk is-${i + 1}" aria-hidden="true">${i + 1}</span>
         <button type="button" class="pf-rk-main" data-replace="${i}" aria-label="Replace #${i + 1}, ${esc(title)}">
@@ -658,7 +679,8 @@ const MSSProfile = (() => {
     };
     body.innerHTML = `<ol class="pf-rk-list" id="pfRkList">${list.map(row).join('')}</ol>
       ${list.length < MAX ? `<button type="button" class="pf-empty-row is-add" data-add="${list.length}"><span class="pf-empty-plus">${icon('plus', 16)}</span><span><b>Add #${list.length + 1}</b><small>${people ? `Suggestions, or search TMDB for ${sec.many}` : sec.moment ? `From what you’ve watched, or search` : `From the ${key === 'top_picks' ? 'titles' : sec.title.toLowerCase()} you’ve watched`}</small></span></button>` : ''}
-      <p class="pf-muted pf-rk-note">${people || sec.moment ? 'Pictures and names come from TMDB.' : 'Only titles you’ve watched or are watching can be picked.'} Changes save straight away.</p>`;
+      <p class="pf-muted pf-rk-note">${people || sec.moment ? `Pictures and names come from TMDB${sec.moment === 'character' ? ' (anime characters: AniList)' : ''}.` : 'Only titles you’ve watched or are watching can be picked.'} Changes save straight away.</p>`;
+    if (sec.moment === 'character') paintChars(body, el => list[+el.dataset.cpk]);
     if (!R.wired) {
       R.wired = true;
       body.addEventListener('click', ev => {
@@ -672,10 +694,13 @@ const MSSProfile = (() => {
     }
   }
   const cut = (v, n) => v == null || v === '' ? null : String(v).slice(0, n);
+  // a character's picture: a TMDB photo or AniList's character art, nothing else
+  const okPhoto = u => /^https:\/\/(image\.tmdb\.org\/t\/p\/|s4\.anilist\.co\/)[\w./-]+$/.test(String(u || '')) ? String(u).slice(0, 200) : null;
   const CLEAN = {
     season: x => ({ tv: Number(x.tv), show: cut(x.show, 120), s: Number(x.s), name: cut(x.name, 80), path: cut(x.path, 80), year: cut(x.year, 4) }),
     episode: x => ({ tv: Number(x.tv), show: cut(x.show, 120), s: Number(x.s), e: Number(x.e), name: cut(x.name, 120), path: cut(x.path, 80), year: cut(x.year, 4) }),
-    character: x => ({ name: cut(x.name, 80), title: cut(x.title, 120), actor: cut(x.actor, 80), tmdb: Number(x.tmdb) || null, type: x.type === 'movie' || x.type === 'tv' ? x.type : null }),
+    character: x => ({ name: cut(x.name, 80), title: cut(x.title, 120), actor: cut(x.actor, 80), tmdb: Number(x.tmdb) || null, type: x.type === 'movie' || x.type === 'tv' ? x.type : null,
+      photo: okPhoto(x.photo), anim: x.anim ? true : null, art: x.art ? true : null }),
   };
   const valueOf = (key, list) => SECTIONS[key].people ? list.map(x => ({ id: Number(x.id), name: x.name, path: x.path || null, known: x.known || null, ...(x.gender ? { gender: Number(x.gender) } : {}) }))
     : SECTIONS[key].moment ? list.map(CLEAN[SECTIONS[key].moment]) : list.map(x => x.id);
@@ -844,6 +869,7 @@ const MSSProfile = (() => {
     if (pk !== at || at.view !== view) return;
     at.opts = opts;
     box.innerHTML = (at.stack.length ? `<button type="button" class="pf-pick-back" data-moback>${icon('chevleft', 14)} Back</button>` : '') + html;
+    paintPick();
   }
   function momentBack() { if (pk?.stack.length) momentShow(pk.stack.pop(), false); }
   async function momentGo(i) {
@@ -930,9 +956,12 @@ const MSSProfile = (() => {
     return html || hint(`No shows match “${q}”.`);
   };
 
-  // Characters: the favourite characters you picked when rating titles, then the main characters of your best titles;
-  // a fixed list of famous ones only when your library has none. No pictures — TMDB has none of characters.
-  const charRow = (opt, c) => pickRow(`data-mo="${opt({ item: c })}"`, letter(c.name), c.name, [c.title, c.actor].filter(Boolean).join(' · '), '', true);
+  // Characters: the favourite characters you picked when rating titles, then the main character of each of your best titles;
+  // a fixed list of famous ones only when your library has none. Each with the actor's photo — AniList's character art for
+  // anime (owner, 27 Nov 2026), filled in as it arrives (paintChars).
+  const charRow = (opt, c) => { const i = opt({ item: c });
+    return pickRow(`data-mo="${i}"${needsPhoto(c) ? ` data-cp="${i}"` : ''}`, charImg(c), c.name, [c.title, c.actor].filter(Boolean).join(' · '), '', true); };
+  const paintPick = () => paintChars(resBox(), el => pk?.opts[+el.dataset.cp]?.item);
   async function charRoot(opt) {
     const at = pk, es = O().entries;
     const fav = MSSFavSuggest.favourites(es).filter(c => !isTaken(c));
@@ -945,6 +974,7 @@ const MSSProfile = (() => {
         const box = document.getElementById('pfPickMore'); if (!box || pk !== at) return;
         const top = list.filter(c => !isTaken(c) && !at.known.some(k => MSSFavSuggest.sameChar(k, c)) && at.known.push(c));
         box.outerHTML = pickGroup('From your top titles', top.map(c => charRow(opt, c))) || (fav.length ? '' : hint('Search a character, or a title to see its characters.'));
+        paintPick();
       }).catch(() => document.getElementById('pfPickMore')?.remove());
     } else html += pickGroup('Popular picks', MSSFavSuggest.POPULAR_CHARACTERS.filter(c => !isTaken(c)).map(c => charRow(opt, c)));
     return html;
@@ -956,16 +986,16 @@ const MSSProfile = (() => {
       .filter((c, i, a) => a.findIndex(x => MSSFavSuggest.sameChar(x, c)) === i && !isTaken(c) && (n(c.name).includes(ql) || n(c.title).includes(ql)));
     let html = pickGroup('Characters', known.slice(0, 12).map(c => charRow(opt, c)));
     const mine = es.filter(e => e.tmdb_id && n(e.title).includes(ql)).slice(0, 8);
-    const go = (type, id, title) => opt({ view: castView({ type, id, title }) });
-    html += pickGroup('Your titles', mine.map(e => pickRow(`data-mo="${go(e.tmdb_type === 'movie' || isMovie(e) ? 'movie' : 'tv', e.tmdb_id, e.title)}"`, posterHTML(e, '', '40px'), e.title, 'See its characters', CHEV())));
+    const go = (type, id, title, anim) => opt({ view: castView({ type, id, title, anim }) });
+    html += pickGroup('Your titles', mine.map(e => pickRow(`data-mo="${go(e.tmdb_type === 'movie' || isMovie(e) ? 'movie' : 'tv', e.tmdb_id, e.title, e.cat === 'anime' || e.cat === 'cartoons')}"`, posterHTML(e, '', '40px'), e.title, 'See its characters', CHEV())));
     const have = new Set(mine.map(e => Number(e.tmdb_id)));
     const more = (await _tmdbSearch(q, 10)).filter(r => !have.has(Number(r.id))).slice(0, 8);
     html += pickGroup('More titles', more.map(r => { const t = r.title || r.name;
-      return pickRow(`data-mo="${go(r.media_type, r.id, t)}"`, r.poster_path ? tmdbImg(r.poster_path) : letter(t), t, [(r.release_date || r.first_air_date || '').slice(0, 4), 'See its characters'].filter(Boolean).join(' · '), CHEV()); }));
+      return pickRow(`data-mo="${go(r.media_type, r.id, t, (r.genre_ids || []).includes(16))}"`, r.poster_path ? tmdbImg(r.poster_path) : letter(t), t, [(r.release_date || r.first_air_date || '').slice(0, 4), 'See its characters'].filter(Boolean).join(' · '), CHEV()); }));
     return html || hint(`Nothing matches “${q}”.`);
   };
   const castView = t => async opt => {
-    const list = (await MSSFavSuggest.cast(t.type, t.id, t.title)).filter(c => !isTaken(c));
+    const list = (await MSSFavSuggest.cast(t.type, t.id, t.title, t.anim)).filter(c => !isTaken(c));
     return pickGroup(t.title, list.map(c => charRow(opt, c))) || hint('TMDB lists no characters for this title.');
   };
 

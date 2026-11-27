@@ -4365,3 +4365,49 @@ async function mssFetchCast(it) {
   _mssCastSave(key, cast);
   return cast;
 }
+
+/* ── A character's picture — always one (owner, 27 Nov 2026) ──
+   mssCharacterPhoto(it, name) → { character, actor, personId, photo, isCharacterImage } | null    it: as mssFetchCast
+   1. the title's cast (mssFetchCast: its top 5, with AniList's character art for anime)
+   2. an animated title: AniList's characters (up to 25) — the character's own picture
+   3. the title's full TMDB cast — the actor's (or voice actor's) photo
+   Names match loosely ("Walter White" finds "Walter White / Heisenberg"; "Jinx (voice)" finds "Jinx"; "Monkey D. Luffy" finds
+   AniList's "Luffy Monkey"). Answers are kept
+   for this visit; the requests behind them as usual (mssFetchCast 7 days, tmdbFetch). */
+const _mssCharPhotos = new Map();
+const _mssCharKey = s => _mssNorm(String(s || '').replace(/\((voice|uncredited)?\)/gi, ''));
+// every name a character goes by: "Walter White / Heisenberg" → both; AniList's alternative names too (c.alt)
+const _mssCharNames = c => [...String(c.character || '').split(/\s*\/\s*|\s+aka\s+/i), c.character, ...(c.alt || [])].map(_mssCharKey).filter(Boolean);
+// the same name in any order ("Monkey D. Luffy" = AniList's "Luffy Monkey"): every word of the shorter one in the other
+const _mssSameWords = (a, b) => {
+  const A = a.split(' ').filter(Boolean), B = b.split(' ').filter(Boolean);
+  const [s, l] = A.length <= B.length ? [A, B] : [B, A];
+  return s.length > 0 && s.every(w => l.includes(w)) && (s.length > 1 || s[0].length > 2);
+};
+function _mssCharFind(list, name) {
+  const want = _mssCharKey(name); if (!want) return null;
+  return list.find(c => _mssCharNames(c).includes(want))
+    || list.find(c => _mssCharNames(c).some(k => _mssSameWords(k, want))) || null;
+}
+function mssCharacterPhoto(it, name) {
+  if (!it?.tmdb_id || !it?.tmdb_type || !String(name || '').trim()) return Promise.resolve(null);
+  const k = `${it.tmdb_type}:${it.tmdb_id}|${_mssCharKey(name)}`;
+  if (!_mssCharPhotos.has(k)) _mssCharPhotos.set(k, (async () => {
+    const top = _mssCharFind(await mssFetchCast(it).catch(() => []) || [], name);
+    if (top?.photo && (top.isCharacterImage || !it.animated)) return top;
+    if (it.animated && it.title) {
+      const m = await _mssAniListFind(it.title, it.year, `characters(sort: [ROLE, RELEVANCE, ID], perPage: 25) { edges { node { name { full alternative } image { large } } } }`);
+      const ani = (m?.characters?.edges || []).map(ed => ({ character: ed.node?.name?.full || '', alt: ed.node?.name?.alternative || [], photo: ed.node?.image?.large || null, isCharacterImage: true }));
+      const a = _mssCharFind(ani, name);
+      if (a?.photo) return { ...a, actor: top?.actor || null, personId: top?.personId || null };
+    }
+    if (top?.photo) return top;
+    try {
+      const r = await tmdbFetch(`${TMDB_BASE}/${it.tmdb_type}/${it.tmdb_id}/${it.tmdb_type === 'movie' ? 'credits' : 'aggregate_credits'}?language=en-US`);
+      const all = r.ok ? ((await r.json()).cast || []).map(c => ({ character: c.character || c.roles?.[0]?.character || '', actor: c.name || '', personId: c.id || null,
+        photo: c.profile_path ? `https://image.tmdb.org/t/p/w185${c.profile_path}` : null, isCharacterImage: false })) : [];
+      return _mssCharFind(all, name) || top || null;
+    } catch { return top || null; }
+  })().catch(() => null).then(x => { if (!x?.photo) _mssCharPhotos.delete(k); return x; }));   // nothing found: asked again next time
+  return _mssCharPhotos.get(k);
+}

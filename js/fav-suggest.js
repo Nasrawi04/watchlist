@@ -18,10 +18,11 @@
             await episodes(show, s)       → [{ n, name, year, seen }]
             await top(kind)               → Top 250 seasons / episodes, one per show (Discover's shared list)
             await myScores(userId)        → { [entryId]: { 's:n': score } }   (n 0 = the whole season)
-   Characters (TMDB has no characters: a name, with its title)
+   Characters (TMDB has no characters: a name, with its title; the picture is the actor's photo, or AniList's character
+            art for anime — mssCharacterPhoto, nav.js, fills in any that's missing)
             favourites(entries)           → the favourite character you picked on each title, best-scored first
             await fromTop(entries)        → the main character of each of your 20 best titles, one per series (mssFetchCast)
-            await cast(type, id)          → a title's characters, for search
+            await cast(type, id, title, anim) → a title's characters, for search (actors' photos)
             POPULAR_CHARACTERS            → when your library has nothing
    Requires config.js, nav.js (tmdbFetch, mssFetchCast, mssGenderFits), db.js (sb).
 ══════════════════════════════════════════════════════════════ */
@@ -206,27 +207,31 @@ const MSSFavSuggest = (() => {
     ['Rick Sanchez', 'Rick and Morty', 'tv', 60625, 'Justin Roiland'], ['Monkey D. Luffy', 'One Piece', 'tv', 37854, 'Mayumi Tanaka'],
     ['Levi Ackerman', 'Attack on Titan', 'tv', 1429, 'Hiroshi Kamiya'], ['Tony Stark', 'Iron Man', 'movie', 1726, 'Robert Downey Jr.'],
     ['Jack Sparrow', 'Pirates of the Caribbean: The Curse of the Black Pearl', 'movie', 22, 'Johnny Depp'], ['Gandalf', 'The Lord of the Rings: The Fellowship of the Ring', 'movie', 120, 'Ian McKellen'],
-  ].map(([name, title, type, tmdb, actor]) => ({ name, title, type, tmdb, actor }));
+  ].map(([name, title, type, tmdb, actor]) => ({ name, title, type, tmdb, actor, anim: [456, 60625, 37854, 1429].includes(tmdb) || null }));
   // "Jinx (voice)", "Simba ()" → the name alone
   const cleanName = n => String(n || '').replace(/\s*\((voice|uncredited|archive footage)?\)/gi, '').replace(/\s+/g, ' ').trim();
-  const charOf = (name, e, actor) => ({ name: cleanName(name), title: e.title, actor: actor || null, tmdb: Number(e.tmdb_id) || null, type: e.tmdb_id ? typeOf(e) : null });
+  // anim: an anime or cartoon — its picture is AniList's character art when AniList has it (photo: the picture, if known yet)
+  const animOf = e => e.cat === 'anime' || e.cat === 'cartoons' || null;
+  const charOf = (name, e, actor, photo, art) => ({ name: cleanName(name), title: e.title, actor: actor || null, tmdb: Number(e.tmdb_id) || null, type: e.tmdb_id ? typeOf(e) : null,
+    anim: animOf(e), photo: photo || null, art: !!art });
   // the favourite character you picked when rating each title (Favorites & Lowlights)
   const favourites = entries => (entries || []).filter(e => cleanName(e.ratings?._favorites?.character))
     .map(e => ({ e, sc: score(e) })).sort(byScore).map(({ e }) => charOf(e.ratings._favorites.character, e));
   const usable = c => c.character && !SELF.test(c.character) && !/^(various|additional voices|uncredited)/i.test(c.character);
   async function fromTop(entries) {
     const lists = await Promise.all(bestSeries(entries, 20).map(async ({ e }) => {
-      const cast = await mssFetchCast({ tmdb_id: e.tmdb_id, tmdb_type: typeOf(e), title: e.title, year: String(e.year || '').slice(0, 4), animated: e.cat === 'anime' || e.cat === 'cartoons' }).catch(() => []);
-      return (cast || []).filter(usable).slice(0, 1).map(c => charOf(c.character, e, c.actor));   // one per title
+      const cast = await mssFetchCast({ tmdb_id: e.tmdb_id, tmdb_type: typeOf(e), title: e.title, year: String(e.year || '').slice(0, 4), animated: !!animOf(e) }).catch(() => []);
+      return (cast || []).filter(usable).slice(0, 1).map(c => charOf(c.character, e, c.actor, c.photo, c.isCharacterImage));   // one per title
     }));
     return lists.flat();
   }
   // a title's characters (top 15): for a show, the ones in the most episodes
-  async function cast(type, id, title) {
+  async function cast(type, id, title, anim) {
     const d = await json(`${TMDB_BASE}/${type}/${Number(id)}/${type === 'movie' ? 'credits' : 'aggregate_credits'}?language=en-US`);
-    const list = (d?.cast || []).map(c => ({ character: cleanName(c.character || c.roles?.[0]?.character), actor: c.name, n: c.total_episode_count || 0, order: c.order ?? 99 }))
+    const list = (d?.cast || []).map(c => ({ character: cleanName(c.character || c.roles?.[0]?.character), actor: c.name, n: c.total_episode_count || 0, order: c.order ?? 99,
+      photo: c.profile_path ? `https://image.tmdb.org/t/p/w185${c.profile_path}` : null }))
       .filter(usable).sort(type === 'movie' ? (a, b) => a.order - b.order : (a, b) => b.n - a.n).slice(0, 15);
-    return list.map(c => ({ name: c.character, title, actor: c.actor || null, tmdb: Number(id), type }));
+    return list.map(c => ({ name: c.character, title, actor: c.actor || null, tmdb: Number(id), type, anim: anim || null, photo: c.photo, art: false }));
   }
   const sameChar = (a, b) => norm(a.name) === norm(b.name) && norm(a.title) === norm(b.title);
 

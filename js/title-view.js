@@ -776,7 +776,8 @@ const MSSViews = (() => {
     return rows.length ? sec('At a glance', `<dl class="tv-dl">${rows.map(([l, v]) => `<div><dt>${l}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>`) : '';
   }
   /* Favourites and least favourites (Edit page → Review: ratings._favorites / _lowlights { character, episode, season }) —
-     yours or theirs, read-only here. A character gets its actor's photo when it's in the cast, a season its poster,
+     yours or theirs, read-only here. A character gets its actor's photo (an anime's: AniList's character picture), looked up
+     beyond the top 5 when needed (mssCharacterPhoto, nav.js), a season its poster,
      an episode its number; a season / an episode links to its page. Movies: the character only. */
   // an episode's still for the favourites: undefined while its season loads (then a repaint), null when TMDB has none.
   // The episode number is its place in the season (as everywhere), not TMDB's running number.
@@ -800,7 +801,13 @@ const MSSViews = (() => {
       let img = '', href = '', name = v, cls = '';
       if (k === 'character') {
         const key = v.toLowerCase().split(/[\s,(]+/)[0];
-        const c = (t.cast || []).find(x => (x.character || '').toLowerCase() === v.toLowerCase()) || (key.length > 2 ? (t.cast || []).find(x => (x.character || '').toLowerCase().split(/[\s,(]+/).includes(key)) : null);
+        let c = (t.cast || []).find(x => (x.character || '').toLowerCase() === v.toLowerCase()) || (key.length > 2 ? (t.cast || []).find(x => (x.character || '').toLowerCase().split(/[\s,(]+/).includes(key)) : null);
+        // not in the top 5 (or an anime without its own picture there): looked up once — always a picture (owner, 27 Nov 2026)
+        if (t.castIt && t.cast && (!c?.photo || (t.castIt.animated && !c.isCharacterImage))) {
+          const fp = t.favPhotos ||= {};
+          if (!(v in fp)) { fp[v] = null; mssCharacterPhoto(t.castIt, v).then(x => { if (x?.photo) { fp[v] = x; repaint(t); } }); }
+          if (fp[v]) c = fp[v];
+        }
         img = c?.photo ? `<img src="${esc(safeURL(c.photo))}" alt="" loading="lazy">` : icon('user', 18); cls = ' is-face';
         if (c?.actor && c.actor !== v) name = v;
         if (c?.personId) href = `person.html?id=${encodeURIComponent(c.personId)}`;
@@ -982,8 +989,9 @@ const MSSViews = (() => {
     tasks[0].then(d => {
       if (!t.it.tmdb_id) { t.cast = []; return; }
       const animated = t.it.cat === 'anime' || t.it.cat === 'cartoons' || (d?.genres || []).some(g => g.id === 16);
-      return mssFetchCast({ tmdb_id: t.it.tmdb_id, tmdb_type: t.it.media_type, title: t.it.title, year: String(t.it.year || d?.release_date || d?.first_air_date || '').slice(0, 4), animated,
-        origin_country: d?.origin_country, original_language: d?.original_language }).catch(() => []).then(c => { t.cast = c; repaint(t); });
+      t.castIt = { tmdb_id: t.it.tmdb_id, tmdb_type: t.it.media_type, title: t.it.title, year: String(t.it.year || d?.release_date || d?.first_air_date || '').slice(0, 4), animated,
+        origin_country: d?.origin_country, original_language: d?.original_language };
+      return mssFetchCast(t.castIt).catch(() => []).then(c => { t.cast = c; repaint(t); });
     }).then(() => Promise.all([loadDirector(t), loadCollection(t)])).catch(() => {});
     const uid = (await getCurrentUser())?.id;
     // the photos beside the review and the comment box: yours, and theirs when the page didn't pass a full profile
