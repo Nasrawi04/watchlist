@@ -104,7 +104,7 @@ const MSSRateForm = (() => {
     let drag = null;
     el.addEventListener('pointerdown', ev => {
       const bar = ev.target.closest('.rf-bar'); if (!bar || ev.button > 0) return;
-      ev.preventDefault(); bar.focus();
+      ev.preventDefault(); bar.focus({ preventScroll: true });
       drag = bar; bar.setPointerCapture?.(ev.pointerId);
       set(bar.closest('.rf-row'), segAt(bar, ev.clientX));
     });
@@ -169,6 +169,15 @@ const MSSRateForm = (() => {
       });
     };
 
+    // re-draws the form with the box you tapped held where it was on screen, then focuses without scrolling
+    // (Safari loses the place when the form is rebuilt, and a plain focus() slid the page up and down)
+    const redraw = (box, focus) => {
+      const top = el.querySelector(box)?.getBoundingClientRect().top;
+      mount(el, o);
+      const now = el.querySelector(box)?.getBoundingClientRect().top;
+      if (top != null && now != null && Math.abs(now - top) > 1) scrollBy({ top: now - top, behavior: 'instant' });
+      el.querySelector(focus)?.focus({ preventScroll: true });
+    };
     wire(el, (key, v, how) => {
       if (v == null) delete R[key]; else R[key] = v;
       const rowEl = el.querySelector(`.rf-row[data-key="${key}"]`);
@@ -178,9 +187,8 @@ const MSSRateForm = (() => {
       // a bonus rating cleared with × goes back to its "+ name" chip
       if (how?.cleared && groups.some(g => g.kind === 'bonus' && g.items.some(x => x.key === key))) {
         el._rfAdded.delete(key);
-        mount(el, o);
-        el.querySelector(`[data-add="${key}"]`)?.focus();
-      } else if (how?.cleared && !how.step) rowEl?.querySelector('.rf-bar')?.focus();
+        redraw(`[data-group="${rowEl?.closest('[data-group]')?.dataset.group}"]`, `[data-add="${key}"]`);
+      } else if (how?.cleared && !how.step) rowEl?.querySelector('.rf-bar')?.focus({ preventScroll: true });
     });
     el.onclick = ev => {
       const add = ev.target.closest('[data-add]'), fold = ev.target.closest('[data-fold]');
@@ -188,14 +196,12 @@ const MSSRateForm = (() => {
         const k = add.dataset.add;
         if (groups.some(g => g.kind === 'core' && g.items.some(x => x.key === k && x.toggle))) { R._animEnabled = true; o.onChange?.(R); }
         else el._rfAdded.add(k);
-        mount(el, o);
-        el.querySelector(`.rf-row[data-key="${k}"] .rf-bar`)?.focus();
+        redraw(`[data-group="${add.closest('[data-group]').dataset.group}"]`, `.rf-row[data-key="${k}"] .rf-bar`);
       }
       if (fold) {
         const id = fold.dataset.fold;
         if (!el._rfOpen.delete(id)) el._rfOpen.add(id);
-        mount(el, o);
-        el.querySelector(`[data-fold="${id}"]`)?.focus();
+        redraw(`[data-group="${id}"]`, `[data-fold="${id}"]`);
       }
     };
     paint();
