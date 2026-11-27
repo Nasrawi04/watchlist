@@ -136,15 +136,8 @@ const MSSViews = (() => {
   }
   const SECTION = { queue: 'Watchlist', up_next: 'Up Next', watching: 'Watching', paused: 'Taking a Break', completed: 'Watched', ongoing: 'To Be Continued', dropped: 'Dropped' };
 
-  /* ── the score ring: fills to score / 10 in its tier's colour (mssScoreTier) — Masterpiece gold never for a dropped title.
-     ringOf is shared (MSSViews.ring — the Edit page): no score → an empty ring with "—" ── */
-  function ringOf(v, size, dropped) {
-    const has = v != null, r = 44, c = 2 * Math.PI * r, f = has ? Math.max(0, Math.min(1, v / 10)) : 0;
-    const gold = has && !dropped && mssIsGold(v);
-    return `<div class="tv-ring${has ? mssTierCls(v, { dropped }) : ''}${gold ? ' is-gold' : ''}${size ? ' is-' + size : ''}${has ? '' : ' is-empty'}" role="img" aria-label="${has ? `Score ${two(v)} out of 10` : 'Not rated yet'}">
-      <svg viewBox="0 0 100 100" aria-hidden="true"><circle class="tv-ring-track" cx="50" cy="50" r="${r}"/><circle class="tv-ring-fill" cx="50" cy="50" r="${r}" stroke-dasharray="${(c * f).toFixed(2)} ${c.toFixed(2)}"/></svg>
-      <b aria-hidden="true">${has ? two(v) : '—'}</b></div>`;
-  }
+  /* ── the score ring (mssRingHTML, config.js — also the nav menus); MSSViews.ring is the same ── */
+  const ringOf = mssRingHTML;
   const ringHTML = (t, size) => liveScore(t.e) == null ? '' : ringOf(liveScore(t.e), size, t.e.status === 'dropped');
 
   /* ── buttons ── */

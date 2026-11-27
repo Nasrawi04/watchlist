@@ -1168,6 +1168,7 @@ function _dmCard(kind) {
   mssFillEpNames(box);
   _dmBackdrops(box);
   _dmTopPosters(box);
+  _dmListBd(box);
 }
 /* TV Shows / Movies / Anime / Cartoons: only that category — what you're watching, else the last one you
    finished, else the newest on your Watchlist; with none of it yet, its Top 250 like Home's Explore cards */
@@ -1277,7 +1278,7 @@ function _dmDoneCard(e) {
   const sc = liveScore(e);
   const when = e.completed_date ? ' · ' + escHTML(new Date(e.completed_date + 'T12:00').toLocaleDateString(MSSI18n.locale, { day: 'numeric', month: 'short' })) : '';
   return _dmHero(e, 'Last finished', `${_dmHeroTitle(_dmTitleHref(e), e.title)}<span class="dm-hero-sub">${e.status === 'ongoing' ? 'To Be Continued' : 'Watched'}${when}</span>
-      ${sc != null ? `<span class="dm-score">${scoreBadge(sc, 'sm')}<span class="dm-hero-sub">your score</span></span>` : '<span class="dm-hero-sub">Not rated yet</span>'}`,
+      ${sc != null ? `<span class="dm-score">${mssRingHTML(sc, 's', e.status === 'dropped')}</span>` : '<span class="dm-hero-sub">Not rated yet</span>'}`,
     `<a class="dm-btn is-ghost" href="library.html?sec=watched">All watched ${icon('arrowRight', 13)}</a>`);
 }
 function _dmDiaryCard(d) {
@@ -1481,11 +1482,34 @@ function _dmListCard() {
   const l = _shellSum?.list;
   if (!l) return _dmPlain('Lists', 'No lists yet', 'Rank your favourites, plan a marathon, share it.', '', _dmGo('lists.html?new=1', 'New list', true));
   const covers = (l.posters || []).map(safeURL).filter(Boolean), n = Number(l.count) || 0;
-  return `<div class="dm-card-in dm-plain dm-listcard"><div class="dm-eyebrow">Your latest list</div>
-      <div class="dm-plain-t" translate="no">${escHTML(l.title)}</div>
-      <div class="dm-plain-s">${n} title${n === 1 ? '' : 's'}</div>
+  // the list's backdrop behind it (as its page heads it — _dmListBd), its first posters fanned at the right, middle (owner, 27 Nov 2026)
+  return `<div class="dm-card-in dm-hero dm-listcard"><img class="dm-hero-bg is-bd" data-listbd="${escHTML(l.id)}" alt="">
+      <div class="dm-eyebrow">Your latest list</div>
+      <div class="dm-hero-body"><a class="dm-hero-t" href="list-view.html?list=${encodeURIComponent(l.id)}" translate="no">${escHTML(l.title)}</a>
+        <span class="dm-hero-sub">${n} title${n === 1 ? '' : 's'}</span></div>
       ${covers.length ? `<span class="dm-top-fan dm-list-fan" aria-hidden="true">${covers.map(u => `<span class="dm-top-p"><img src="${u}" alt=""></span>`).join('')}</span>` : ''}
       <div class="dm-acts">${_dmGo('lists.html', 'Your lists', true)}<a class="dm-btn" href="lists.html?new=1">${icon('plus', 13)} New list</a></div></div>`;
+}
+/* The list's picture, as its own page heads it (list-view.html _lvPaintBackdrop): your pick (favorite_lists.backdrop_item,
+   sql/124 — "<item id>|<path>" or "<item id>"), else its first title's backdrop (the entry owner's choice — MSSBackdrop) */
+const _dmListBdOf = {};
+function _dmListBd(box) {
+  const img = box.querySelector('img[data-listbd]'); if (!img) return;
+  const id = img.dataset.listbd, ok = p => /^\/[\w.-]{1,120}$/.test(p || '');
+  (_dmListBdOf[id] ||= (async () => {
+    let r = await sb.from('favorite_lists').select('items, backdrop_item').eq('id', id).maybeSingle();
+    if (r.error) r = await sb.from('favorite_lists').select('items').eq('id', id).maybeSingle();     // before sql/124
+    const row = r.data; if (!row) return null;
+    const [pick, path] = String(row.backdrop_item || '').split('|');
+    if (ok(path)) return `https://image.tmdb.org/t/p/w780${path}`;
+    const item = pick || (row.items || [])[0]; if (!item) return null;
+    if (String(item).startsWith('tmdb:')) { const [, type, tid] = String(item).split(':'); return MSSBackdrop.url({ tmdb_id: Number(tid), tmdb_type: type }, 'w780'); }
+    const { data: e } = await sb.from('entries').select('id, tmdb_id, tmdb_type, cat, ratings, poster_url').eq('id', item).maybeSingle();
+    return e ? MSSBackdrop.url(e, 'w780') : null;
+  })().catch(() => null)).then(u => {
+    if (!u || !img.isConnected) return;
+    img.onload = () => img.classList.add('in'); img.src = u;
+  });
 }
 function _dmNoteCard() {
   const n = _shellSum?.note;
@@ -1509,11 +1533,15 @@ function _dmMedalsCard() {
     : b.kind === 'achievement' ? MSSMedal.achievement(b.ach_key, b.ach_level, { size: 58, at: b.at })
     : b.kind === 'official' ? MSSMedal.official(b.medal, { size: 58 }) : MSSMedal.challenge(b.place, b.cat, { size: 48 });
   const name = b => b.kind === 'achievement' ? (typeof MSSMedal !== 'undefined' && MSSMedal.ACH?.[b.ach_key]?.name) || b.title : b.title;
-  return `<div class="dm-card-in dm-plain"><div class="dm-eyebrow">Medals</div>
-      <div class="dm-plain-t">${n ? `${n} medal${n === 1 ? '' : 's'}` : 'Your cabinet is waiting'}</div>
-      ${n ? `<div class="dm-shelf" aria-hidden="true">${all.slice(0, 4).map(b => `<span class="dm-shelf-m">${draw(b)}</span>`).join('')}</div>
-        <div class="dm-plain-s">Newest: <span translate="no">${escHTML(name(last) || 'a medal')}</span> · ${_dmWhen(last.earned_at)}</div>`
-        : '<div class="dm-plain-s">Earn them by watching, rating and finishing challenges.</div>'}
+  // your Showcase's picture behind it, softened as the Showcase softens it; the count, the newest four on a lit shelf (owner, 27 Nov 2026)
+  const p = window._navUserProfile || {}, sc = p.showcase || {};
+  const path = sc.use_profile_backdrop ? p.profile_layout?.banner?.path : sc.bg, blur = ['none', 'strong'].includes(sc.blur) ? sc.blur : 'soft';
+  const pic = /^\/[\w.-]{1,120}$/.test(path || '') ? `<img class="dm-hero-bg is-pic is-blur-${blur}" src="https://image.tmdb.org/t/p/w780${path}" alt="" onload="this.classList.add('in')">` : '';
+  return `<div class="dm-card-in dm-hero dm-medals">${pic}<div class="dm-eyebrow">Medals</div>
+      ${n ? `<div class="dm-medals-head"><span class="dm-medals-n">${n}</span><span class="dm-medals-l">medal${n === 1 ? '' : 's'}<small>in your cabinet</small></span></div>
+        <div class="dm-shelf" aria-hidden="true">${all.slice(0, 4).map(b => `<span class="dm-shelf-m">${draw(b)}</span>`).join('')}</div>
+        <div class="dm-hero-sub">Newest: <b translate="no">${escHTML(name(last) || 'a medal')}</b> · ${_dmWhen(last.earned_at)}</div>`
+        : `<div class="dm-hero-t">Your cabinet is waiting</div><div class="dm-hero-sub">Earn them by watching, rating and finishing challenges.</div>`}
       <div class="dm-acts">${_dmGo('cabinet.html', 'Open the cabinet', true)}</div></div>`;
 }
 function _dmExportCard() {

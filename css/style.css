@@ -563,9 +563,30 @@ html.mss-guest .nav-auth-only { display:none !important; }
 .dm-e2e { display:flex; align-items:center; gap:8px; padding:8px 10px; border-radius:var(--radius-sm); background:var(--card); border:1px solid var(--border); font-size:12px; color:var(--text-2); }
 .dm-e2e svg { flex:none; color:var(--olive-light); }
 /* Lists: the covers fanned on the right */
-.dm-listcard { position:relative; min-height:200px; padding-inline-end:150px; }
-.dm-list-fan { top:auto; bottom:0; height:100%; }
-.dm-list-fan .dm-top-p { width:76px; bottom:-10px; }
+/* You › your latest list: its backdrop under the dark wash, the posters fanned at the right, middle (owner, 27 Nov 2026) */
+.dm-listcard { padding-inline-end:clamp(118px, 42%, 190px); }
+.dm-listcard .dm-hero-t { overflow-wrap:normal; word-break:normal; }   /* the title wraps between words, never inside one */
+.dm-list-fan { top:50%; bottom:auto; height:clamp(110px, 40%, 150px); width:clamp(118px, 42%, 190px); translate:0 -50%; }
+.dm-list-fan .dm-top-p { width:clamp(60px, 22%, 86px); top:12px; bottom:auto; box-shadow:0 10px 22px rgba(0,0,0,.45); }
+.dm-list-fan .dm-top-p:nth-child(1) { inset-inline-end:clamp(46px, 18%, 70px); } .dm-list-fan .dm-top-p:nth-child(2) { inset-inline-end:clamp(26px, 10%, 40px); }
+.dm-list-fan .dm-top-p:nth-child(3) { inset-inline-end:clamp(6px, 3%, 10px); }
+.dm-listcard:hover .dm-top-p:nth-child(1) { transform:rotate(-15deg) translate(-8px, 2px); }
+.dm-listcard:hover .dm-top-p:nth-child(2) { transform:rotate(-3deg) translateY(-8px); }
+.dm-listcard:hover .dm-top-p:nth-child(3) { transform:rotate(11deg) translate(8px, 0); }
+/* You › Medals: the Showcase picture (softened like the Showcase), the count, the newest four on a lit shelf */
+.dm-hero-bg.is-pic { object-position:50% 35%; }
+.dm-hero-bg.is-blur-soft { filter:blur(3px) saturate(1.1); scale:1.06; }
+.dm-hero-bg.is-blur-strong { filter:blur(10px) saturate(1.1); scale:1.12; }
+.dm-medals::before { background:linear-gradient(180deg, rgba(4,19,10,.2) 0%, rgba(4,19,10,.45) 45%, rgba(4,19,10,.88) 100%); }
+.dm-medals-head { display:flex; align-items:flex-end; gap:10px; }
+.dm-medals-n { font:400 58px/.82 var(--bebas); color:#fff; }
+.dm-medals-l { display:flex; flex-direction:column; gap:2px; font:600 22px/1 var(--serif); color:#fff; }
+.dm-medals-l small { font:600 12px/1.2 'Manrope',var(--sans); color:rgba(255,255,255,.78); }
+.dm-medals .dm-shelf { position:relative; isolation:isolate; gap:12px; padding:8px 6px 12px; }
+.dm-medals .dm-shelf::before { content:''; position:absolute; inset:-6px 0 6px; z-index:-1; background:radial-gradient(ellipse 60% 70% at 50% 60%, rgba(255,255,255,.16), transparent 70%); }   /* a soft spotlight */
+.dm-medals .dm-shelf::after { content:''; position:absolute; inset-inline:0; bottom:0; height:5px; border-radius:3px; background:linear-gradient(90deg, transparent, rgba(255,255,255,.4) 20%, rgba(255,255,255,.4) 80%, transparent); }   /* the shelf */
+.dm-medals .dm-shelf-m { filter:drop-shadow(0 6px 10px rgba(0,0,0,.5)); }
+.dm-hero-sub b { font-weight:700; color:#fff; }
 /* Export: what you can make */
 .dm-ex { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:6px; }
 .dm-ex-t { display:flex; align-items:center; gap:10px; padding:7px 10px; border-radius:var(--radius-sm); border:1px solid var(--border); background:var(--card);
@@ -591,7 +612,10 @@ html.mss-guest .nav-auth-only { display:none !important; }
 .dm-hero .dm-prog { margin-top:8px; }
 .dm-hero .w-prog-track { background:rgba(255,255,255,.22); }
 .dm-hero .w-prog-fill { background:var(--p-forest-300); }
-.dm-score { display:flex; align-items:center; gap:8px; margin-top:6px; }
+.dm-score { --tv-green:var(--p-forest-300); --tv-gold:var(--p-score-top-dark); display:flex; align-items:center; margin-top:6px; }   /* your score: the title page's ring (owner, 27 Nov 2026) */
+/* Library › Last finished: a small ring in the card's bottom-right corner, beside All watched (owner, 27 Nov 2026) */
+.dm-hero .dm-score:has(.tv-ring) { position:absolute; inset-inline-end:18px; bottom:18px; margin:0; z-index:1; }
+.dm-score .tv-ring.is-s { width:56px; } .dm-score .tv-ring.is-s circle { stroke-width:9; } .dm-score .tv-ring.is-s b { font-size:20px; }
 .dm-prog { display:flex; flex-direction:column; gap:6px; }
 .dm-prog .w-prog-track { height:5px; }
 .dm-prog-l { font-size:12px; color:rgba(255,255,255,.82); }
@@ -9743,8 +9767,11 @@ a.mh-medal:focus-visible { outline:2px solid var(--mc-focus); outline-offset:2px
   .mh-fav:has(.mh-fav-ring) .mh-fav-tx { padding-inline-end:90px; }
   .mh-fav.is-r1:has(.mh-fav-ring) .mh-fav-tx { padding-inline-end:136px; }
   /* Top 3 (owner, 27 Nov 2026): #1 the full width and taller, #2 and #3 halves under it — a little shorter than the backdrop's own shape */
-  .mh-favs.is-n3 .mh-fav.is-r1 { height:min(100cqw * .43, 72vh, 560px); }
-  .mh-favs.is-n3 .mh-fav:is(.is-r2, .is-r3) { height:max(190px, (3 * var(--col) + 28px) * .48); }
+  /* …and all three fit in one screen (owner, 27 Nov 2026): the screen's height less the top bar and the widget's header (--fit),
+     #1 about 58% of it, #2 / #3 the rest */
+  .mh-favs.is-n3 { --fit:calc(100dvh - 230px); }
+  .mh-favs.is-n3 .mh-fav.is-r1 { height:max(220px, min(100cqw * .43, var(--fit) * .58, 560px)); }
+  .mh-favs.is-n3 .mh-fav:is(.is-r2, .is-r3) { height:max(170px, min((3 * var(--col) + 28px) * .48, var(--fit) * .42 - 14px)); }
   .mh-favs.is-n3 .mh-fav.is-r3 .mh-fav-title { font-size:28px; }
   .mh-favs.is-n3 .mh-fav.is-r3 .mh-fav-meta { font-size:11.5px; }
 }

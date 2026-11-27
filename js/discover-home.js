@@ -113,9 +113,14 @@ const MSSDiscoverHome = (() => {
       if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
       e.preventDefault(); const j = (F.i + (e.key === 'ArrowRight' ? 1 : -1) + F.items.length) % F.items.length; featShow(j); box.querySelectorAll('.df-dot')[j]?.focus();
     });
+    // ‹ › on its edges, shown while the pointer is over it, or for a few seconds once a finger touches it (owner, 27 Nov 2026)
+    if (F.items.length > 1 && !box.querySelector('.df-arr')) box.insertAdjacentHTML('beforeend',
+      `<button type="button" class="df-arr is-prev" aria-label="Previous title" onclick="MSSDiscoverHome.step(-1)">${icon('chevleft', 20)}</button>`
+      + `<button type="button" class="df-arr is-next" aria-label="Next title" onclick="MSSDiscoverHome.step(1)">${icon('chevright', 20)}</button>`);
     featSwipe(box);
     featShow(0, true);
   }
+  const featStep = d => { if (F.items.length > 1) featShow((F.i + d + F.items.length) % F.items.length); };
   /* Swipe: left → the next title, right → the one before.
      - touch, pen and mouse: drag across it (vertical drags still scroll the page, touch-action: pan-y); a drag that
        started on a button or link doesn't also press it, and a mouse press on one is left to it
@@ -123,9 +128,11 @@ const MSSDiscoverHome = (() => {
   function featSwipe(box) {
     const dirOf = left => (getComputedStyle(box).direction === 'rtl' ? -1 : 1) * (left ? 1 : -1);
     const step = d => featShow((F.i + d + F.items.length) % F.items.length);
-    let x0 = null, y0 = 0, id = null, swiped = false;
+    let x0 = null, y0 = 0, id = null, swiped = false, arrT = 0;
     box.addEventListener('pointerdown', e => {
       if (F.items.length < 2 || e.button > 0) return;
+      // a finger or pen on it shows the ‹ › for a few seconds after the last touch (owner, 27 Nov 2026)
+      if (e.pointerType !== 'mouse') { box.classList.add('is-touch'); clearTimeout(arrT); arrT = setTimeout(() => box.classList.remove('is-touch'), 3000); }
       if (e.pointerType === 'mouse' && e.target.closest('a, button, input, select, textarea')) return;
       x0 = e.clientX; y0 = e.clientY; id = e.pointerId; swiped = false;
     }, { passive: true });
@@ -358,5 +365,5 @@ const MSSDiscoverHome = (() => {
   }
   document.addEventListener('mss:library-changed', () => { MSSResults.refresh().then(ok => { if (ok) redrawMine(); }).catch(() => {}); });
 
-  return { init, signedIn, go: featGo, recommend, toggleMore };
+  return { init, signedIn, go: featGo, step: featStep, recommend, toggleMore };
 })();

@@ -328,6 +328,24 @@ button.dh-prog-next:hover b { text-decoration:underline; text-underline-offset:3
 .df-dot[aria-selected="true"] { width:24px; background:var(--p-forest-300); }
 .df-dot:focus-visible { outline:2px solid var(--p-forest-300); outline-offset:3px; }
 .df-skel { display:flex; flex-direction:column; gap:12px; }
+/* ‹ › on the edges, while the pointer is over the picture (or a key moves into them); on touch screens for a few seconds
+   once a finger touches it (.is-touch, discover-home.js) — hidden, they can't be tapped (owner, 27 Nov 2026) */
+.df-arr { position:absolute; top:50%; z-index:3; display:grid; place-items:center; width:44px; height:44px; padding:0; translate:0 -50%;
+  border-radius:var(--radius-sm); border:1px solid rgba(255,255,255,.22); background:rgba(0,0,0,.42); color:#fff; cursor:pointer;
+  opacity:0; transition:opacity .2s var(--ease), background-color .2s; }
+.df-arr.is-prev { inset-inline-start:14px; } .df-arr.is-next { inset-inline-end:14px; }
+.df-arr svg { width:20px; height:20px; }
+[dir="rtl"] .df-arr svg { scale:-1 1; }
+@media (hover:hover) and (pointer:fine) {
+  .df:hover .df-arr { opacity:1; }
+}
+.df-arr:focus-visible, .df.is-touch .df-arr { opacity:1; }
+.df-arr:hover { background:rgba(0,0,0,.62); border-color:rgba(255,255,255,.4); }
+.df-arr:focus-visible { outline:2px solid var(--p-forest-300); outline-offset:2px; }
+@media not ((hover:hover) and (pointer:fine)) {
+  .df-arr { visibility:hidden; transition:opacity .2s var(--ease), visibility 0s .2s; }
+  .df.is-touch .df-arr { visibility:visible; transition:opacity .2s var(--ease); }
+}
 .df-in:has(.df-skel) { position:static; }   /* so the shimmer covers the whole hero, not just the text column */
 .df-skel { position:absolute; inset:0; z-index:0; background-color:rgba(255,255,255,.04); }   /* the hero itself shimmers while it loads — no text bars (owner, 19 Nov 2026) */
 
@@ -459,7 +477,7 @@ button.dh-prog-next:hover b { text-decoration:underline; text-underline-offset:3
   .dz-prog-bar { flex:1; width:auto; }
 }
 @media (max-width:420px) { .df-btn span { display:none; } .df-btn.is-main span, .df-btn:not(:has(svg)) span { display:inline; } }
-@media (prefers-reduced-motion:reduce) { .df-bg img, .df-in, .df-dot { transition:none; } }
+@media (prefers-reduced-motion:reduce) { .df-bg img, .df-in, .df-dot, .df-arr { transition:none; } }
 /* the rails on Discover: smaller posters, about eight a row on a computer (the PDF) */
 .dz-sec .msf-rail { grid-auto-columns:clamp(140px, 10vw + 42px, 196px); }
 @media (max-width:640px) { .dz-sec .msf-rail { grid-auto-columns:136px; } }
@@ -541,4 +559,7 @@ button.dh-prog-next:hover b { text-decoration:underline; text-underline-offset:3
 .dz-wild > span { overflow:hidden; text-overflow:ellipsis; }
 .dz-wild svg { flex:none; width:11px; height:11px; }
 @media (max-width:640px) { .dz-wild { padding:3px 6px; letter-spacing:.02em; font-size:10.5px; } }
-
+/* computers: the Featured text clear of the ‹ (always, so nothing moves on hover) — after the phone rules, so a narrow window keeps it too */
+@media (hover:hover) and (pointer:fine) { .df-in { padding-inline-start:72px; max-width:674px; } }
+/* phones: the text fills the lower half, so the ‹ › sit up in the picture, clear of it */
+@media (max-width:760px) { .df-arr { top:56px; translate:none; } }

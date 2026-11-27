@@ -4422,6 +4422,15 @@ function scoreColor(score) {
   return t ? { bg: 'var(--st-fill)', text: 'var(--st-on)', tier: t } : null;   // with the .st-<key> class scoreBadge adds
 }
 
+/* The score ring (css .tv-ring): fills to score / 10 in its tier's colour (mssScoreTier) — Masterpiece gold never for a dropped
+   title; no score → an empty ring with "—". size '' · 's' · 'l'. The title view, Top Favorites, Discover's Featured, the Library menu… */
+function mssRingHTML(v, size, dropped) {
+  const has = v != null, r = 44, c = 2 * Math.PI * r, f = has ? Math.max(0, Math.min(1, v / 10)) : 0;
+  const gold = has && !dropped && mssIsGold(v), two = Number(v).toFixed(2);
+  return `<div class="tv-ring${has ? mssTierCls(v, { dropped }) : ''}${gold ? ' is-gold' : ''}${size ? ' is-' + size : ''}${has ? '' : ' is-empty'}" role="img" aria-label="${has ? `Score ${two} out of 10` : 'Not rated yet'}">
+      <svg viewBox="0 0 100 100" aria-hidden="true"><circle class="tv-ring-track" cx="50" cy="50" r="${r}"/><circle class="tv-ring-fill" cx="50" cy="50" r="${r}" stroke-dasharray="${(c * f).toFixed(2)} ${c.toFixed(2)}"/></svg>
+      <b aria-hidden="true">${has ? two : '—'}</b></div>`;
+}
 function scoreBadge(score, size) {
   const clr = scoreColor(score);
   if (!clr) return '';
