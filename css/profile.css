@@ -151,12 +151,12 @@ a.pf-poster:focus-visible { outline:2px solid var(--tv-green); outline-offset:3p
 .pf-tp.is-phone .pf-make-chip { min-height:44px; flex:1 1 calc(50% - 4px); justify-content:flex-start; }
 
 /* ── The Overview: main + side column ── */
-.pf-ov { display:grid; grid-template-columns:minmax(0, 1fr) clamp(300px, 22vw, 400px); grid-template-areas:"main side" "t5 t5" "t5p t5p" "t5m t5m"; column-gap:28px; align-items:start; }
+.pf-ov { display:grid; grid-template-columns:minmax(0, 1fr) clamp(300px, 22vw, 400px); grid-template-areas:"main side" "t5 t5" "t5m t5m" "t5p t5p"; column-gap:28px; align-items:start; }
 .pf-main { grid-area:main; min-width:0; }
 .pf-side { grid-area:side; display:flex; flex-direction:column; gap:14px; min-width:0; margin-bottom:2.25rem; }
 .pf-t5-wrap { grid-area:t5; min-width:0; }
 .pf-t5-wrap.pf-t5p-wrap { grid-area:t5p; margin-top:clamp(18px, 2.4vw, 28px); }   /* Favourite people: their own section under the titles' Top 5 */
-.pf-t5-wrap.pf-t5m-wrap { grid-area:t5m; }   /* Seasons, Episodes & Characters: under the people */
+.pf-t5-wrap.pf-t5m-wrap { grid-area:t5m; }   /* Seasons, Episodes & Characters: between the titles and the people (owner, 28 Nov 2026) */
 .pf-sec { margin-bottom:2.25rem; }
 .pf-sec-h { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px; }
 .pf-sec-t { display:flex; align-items:baseline; gap:12px; min-width:0; }
@@ -422,7 +422,7 @@ a.pf-t5-a:focus-visible { outline:2px solid var(--olive-light); outline-offset:1
 
 /* ── Tablets ── */
 @media (max-width:1100px) {
-  .pf-ov { grid-template-columns:minmax(0, 1fr); grid-template-areas:"main" "t5" "t5p" "t5m" "side"; }
+  .pf-ov { grid-template-columns:minmax(0, 1fr); grid-template-areas:"main" "t5" "t5m" "t5p" "side"; }
   .pf-side { display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); align-items:start; }
   .pf-t5-rail { grid-auto-columns:calc((100% - 14px) / 2); }
 }

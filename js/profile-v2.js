@@ -17,7 +17,7 @@
               .tabCount(key, n). Your own Overview: "Make it yours" in #pfPrompts (what's left to personalise).
    Overview   MSSProfile.overview(el, ctx)   ctx = { profile, entries, editable, openEntry(id), save(key, value), user (theirs) }
               Top Favorites (#1 widest, #2 beside it, #3–#5 under), Top 5 by category (Movies, TV Shows, Anime,
-              Cartoons), Favorite People (Actors, Actresses, Directors) and Seasons, Episodes & Characters: four side by side,
+              Cartoons), Seasons, Episodes & Characters, and Favorite People (Actors, Actresses, Directors): four side by side,
               slide for the rest; one per screen on phones) and the side column: Library, Ratings (MSSCurve), Entertainment identity.
    Editing    MSSProfile.editProfile()  (your own) — Photo · Name · Username · Quote · Bio · Banner → · Stats →
               Banner: search a title, pick one of its backdrops (the Details Page's picker), Adjust framing (the
@@ -330,7 +330,7 @@ const MSSProfile = (() => {
     fav_actors:   { title: 'Actors',    people: 'Acting',    gender: 2, one: 'actor', many: 'actors' },
     fav_actresses:{ title: 'Actresses', people: 'Acting',    gender: 1, one: 'actress', many: 'actresses', inLayout: true },
     fav_directors:{ title: 'Directors', people: 'Directing', one: 'director', many: 'directors' },
-    // Seasons, Episodes & Characters (owner, 27 Nov 2026 — testers' feedback): their own section under Favorite People (149)
+    // Seasons, Episodes & Characters (owner, 27 Nov 2026 — testers' feedback): their own section above Favorite People (149; moved up 28 Nov)
     fav_seasons:   { title: 'Seasons',    moment: 'season',    one: 'season',    many: 'seasons',    ic: 'layers' },
     fav_episodes:  { title: 'Episodes',   moment: 'episode',   one: 'episode',   many: 'episodes',   ic: 'episodes' },
     fav_characters:{ title: 'Characters', moment: 'character', one: 'character', many: 'characters', ic: 'user' },
@@ -366,8 +366,8 @@ const MSSProfile = (() => {
       <div class="pf-main">${fav || (t5 || o.editable ? '' : mssEmpty({ compact: true, art: 'watched', title: 'Nothing picked yet', text: 'No favourites on show here. Yet.' }))}</div>
       <aside class="pf-side" aria-label="Library and ratings">${libraryHTML()}${MSSCurve.html(o.entries, { user: o.editable ? null : o.user })}${identityHTML()}</aside>
       ${t5 ? `<div class="pf-t5-wrap">${t5}</div>` : ''}
-      ${t5p ? `<div class="pf-t5-wrap pf-t5p-wrap">${t5p}</div>` : ''}
       ${t5m ? `<div class="pf-t5-wrap pf-t5p-wrap pf-t5m-wrap">${t5m}</div>` : ''}
+      ${t5p ? `<div class="pf-t5-wrap pf-t5p-wrap">${t5p}</div>` : ''}
     </div>`;
     paintFavArt();
     if (typeof mssPaintLogo === 'function') o.el.querySelectorAll('.pf-fav[data-fav]').forEach(t => mssPaintLogo(t.querySelector('.pf-fav-title'), byId(t.dataset.fav)));   // the titles' name artwork
