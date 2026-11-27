@@ -533,9 +533,7 @@ const MSSHome = (() => {
      A narrow widget: the profile on a phone (#1 the full width, the rest two by two); a wide one: the profile on a computer
      (#1 with #2 beside it, the rest sharing the row under) — style.css .mh-favs, a container query on the widget's width. */
   const favGrid = (tiles, n) => `<div class="mh-fv"><div class="mh-favs is-n${n}">${tiles}</div></div>`;
-  // how many of the six columns each tile takes when wide: the profile's (#1 4, #2 2, the rest sharing the row), except
-  // Top 3 (owner, 27 Nov 2026): #1 the full width and taller, #2 and #3 half each under it
-  const favSpan = (r, n) => n === 3 ? (r === 1 ? 6 : 3) : r === 1 ? (n === 1 ? 6 : 4) : r === 2 ? 2 : Math.round(6 / Math.max(1, n - 2));
+  const favSpan = mssFavSpan;   // how many of the six columns each tile takes when wide (config.js — the profile's too)
   function favTile(e, i, n) {
     const r = i + 1, t = mssTypeOf(e.cat, isMovie(e)), sv = liveScore(e);
     const genres = (Array.isArray(e.genres) ? e.genres : []).slice(0, 2);

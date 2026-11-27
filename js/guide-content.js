@@ -322,7 +322,7 @@ const MSS_GUIDE = [
   { id: 'top-favorites', s: 'profiles', t: 'Top Favorites', shot: 'nas-favs',
     what: 'Your five all-time favourites — #1 gets the biggest spot.',
     why: 'The first thing people see on your profile and Home.',
-    how: ['On your profile tap Edit next to Top Favorites.', 'Pick from titles you’ve watched; drag to re-rank.', 'Each tile shows the title’s backdrop, on computers and phones. To move or zoom it: open the title’s Edit page › Adjust framing › Profile: Top Favorites — once under Computer and once under Phone, because the tiles are a different shape there (the phone one follows the computer one until you frame it).'],
+    how: ['On your profile tap Edit next to Top Favorites.', 'Pick from titles you’ve watched; drag to re-rank.', 'Pick 1 to 5: with one it fills the width; two sit one above the other; three are #1 across the top with #2 and #3 side by side under it, all on one screen; four or five put #2 beside #1 and the rest under.', 'Each tile shows the title’s backdrop, on computers and phones. To move or zoom it: open the title’s Edit page › Adjust framing › Profile: Top Favorites — once under Computer and once under Phone, because the tiles are a different shape there (the phone one follows the computer one until you frame it).'],
     where: [['Profile › Overview', 'profile.html']], k: 'top favorites favourites top 5 five best all time handpicked backdrop framing adjust', rel: ['top5-categories', 'set-up'] },
   { id: 'top5-categories', s: 'profiles', t: 'Top 5 by category',
     what: 'A Top 5 for Movies, TV Shows, Anime and Cartoons.',

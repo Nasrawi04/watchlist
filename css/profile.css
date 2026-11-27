@@ -182,6 +182,19 @@ a.pf-poster:focus-visible { outline:2px solid var(--tv-green); outline-offset:3p
   height:calc(190px + var(--pf-grow, 0px) * .4); padding:20px 22px; border:0; border-radius:18px; overflow:hidden; isolation:isolate; cursor:pointer; text-align:start;
   background:#121714; color:#fff; box-shadow:inset 0 0 0 1px rgba(255,255,255,.06); --score-mine:var(--p-forest-300); --score-gold:var(--p-score-top-dark); transition:translate .25s var(--ease), box-shadow .25s var(--ease); }
 .pf-fav.is-r1, .pf-fav.is-r2 { height:calc(320px + var(--pf-grow, 0px) * .6); }
+/* Fewer than four (owner, 27 Nov 2026; spans: mssFavSpan, config.js) — sized from the section's width (cqw, not aspect-ratio: Safari)
+   and the screen's height, so they fit in one screen: 1 → the full width at the backdrop's shape · 2 → both full width, one above
+   the other · 3 → #1 full width and taller, #2 and #3 halves under it (Home's Top 3) */
+.pf-sec:has(> .pf-favs.is-n1, > .pf-favs.is-n2, > .pf-favs.is-n3) { container-type:inline-size; }
+@media (min-width:701px) {
+  .pf-favs.is-n1 .pf-fav.is-r1 { height:max(260px, min(100cqw * 9 / 16, 100dvh - 280px, 620px)); }
+  .pf-favs.is-n2 .pf-fav { grid-column:1 / -1; height:max(200px, min(100cqw * .4, (100dvh - 310px) / 2, 420px)); }
+  .pf-favs.is-n2 .pf-fav.is-r2 .pf-fav-title { font-size:34px; }
+  .pf-favs.is-n3 { --fit:calc(100dvh - 300px); }
+  .pf-favs.is-n3 .pf-fav.is-r1 { height:max(220px, min(100cqw * .43, var(--fit) * .58, 560px)); }
+  .pf-favs.is-n3 .pf-fav:is(.is-r2, .is-r3) { height:max(170px, min((100cqw - 14px) / 2 * .48, var(--fit) * .42 - 14px)); }
+  .pf-favs.is-n3 .pf-fav.is-r3 .pf-fav-title { font-size:28px; }
+}
 .pf-fav.is-r1 { padding:30px 34px; }
 .pf-fav-bg { position:absolute; inset:0; z-index:-2; background-size:cover; background-position:50% 25%; opacity:0; transform-origin:50% 25%; transition:opacity .3s var(--ease), scale .4s var(--ease); }
 .pf-fav-bg.in { opacity:1; }
@@ -402,7 +415,7 @@ a.pf-t5-a:focus-visible { outline:2px solid var(--olive-light); outline-offset:1
 @media (max-width:900px) and (min-width:701px) {
   .pf-favs { grid-template-columns:repeat(2, minmax(0, 1fr)); }
   .pf-fav, .pf-fav.is-r2 { grid-column:span 1; }
-  .pf-fav.is-r1 { grid-column:1 / -1; }
+  .pf-fav.is-r1, .pf-favs.is-n2 .pf-fav.is-r2 { grid-column:1 / -1; }
 }
 
 /* ── Phones: a taller banner, photo top-left, name at the bottom; backdrop favourites (#1 full width); one Top 5 per screen ── */
@@ -414,6 +427,7 @@ a.pf-t5-a:focus-visible { outline:2px solid var(--olive-light); outline-offset:1
   .pf-fav.is-r1 { grid-column:1 / -1; height:220px; padding:16px; }   /* the backdrop only, like the others (owner, 27 Nov 2026) */
   .pf-fav.is-r2 { height:200px; padding:12px; gap:8px; }
   .pf-favs.is-n5 .pf-fav.is-r5:nth-child(odd):last-child, .pf-favs.is-n3 .pf-fav.is-r3:nth-child(odd):last-child { grid-column:span 1; }
+  .pf-favs.is-n2 .pf-fav.is-r2 { grid-column:1 / -1; height:220px; padding:16px; }   /* two: one above the other, both full width */
   .pf-fav.is-r1 .pf-fav-title { font-size:24px; }
   .pf-fav-ring { inset-inline-end:12px; bottom:12px; }
   .pf-fav-ring .tv-ring.is-s { width:46px; } .pf-fav-ring .tv-ring.is-s circle { stroke-width:9; } .pf-fav-ring .tv-ring.is-s b { font-size:17px; }
@@ -424,6 +438,8 @@ a.pf-t5-a:focus-visible { outline:2px solid var(--olive-light); outline-offset:1
   .pf-fav:not(.is-r1) .pf-fav-shade { background:linear-gradient(0deg, rgba(4,19,10,.95) 0%, rgba(4,19,10,.45) 50%, rgba(4,19,10,0) 78%); }
   .pf-fav:not(.is-r1) :is(.pf-fav-meta, .pf-fav-favs) { display:none; }
   .pf-fav:not(.is-r1) .pf-fav-title { font-size:17px; }
+  .pf-favs.is-n2 .pf-fav.is-r2 .pf-fav-title { font-size:22px; }
+  .pf-favs.is-n2 .pf-fav.is-r2 .pf-fav-meta { display:flex; }
   .pf-fav:hover { translate:none; }
   /* Top 5: a tab for each category, swipe between them */
   .pn-toggle.pf-t5-tabs { display:flex; width:100%; margin:0 0 12px; }

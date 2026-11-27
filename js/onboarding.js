@@ -506,10 +506,10 @@ const MSSOnboarding = (() => {
       async draw(box) {
         if (!D.picks.length) { box.innerHTML = head('Rate them', 'Rate your Top 5') + `<div class="ob-empty">Pick your Top 5 first — then rate them here.</div>`; return; }
         await mssLoadScript('js/title-view.js');
-        const rated = D.picks.filter(e => liveScore(e) != null).length, n = D.picks.length, rest = Math.max(1, n - 2);
+        const rated = D.picks.filter(e => liveScore(e) != null).length, n = D.picks.length;
         box.innerHTML = head('Rate them', 'Rate your Top 5', `<span class="ob-pill">${icon('check', 13)} ${rated} of ${n} rated</span>`)
           + `<div class="pf-favs is-n${n} ob-favs">${D.picks.map((e, i) => { const r = i + 1, sv = liveScore(e), t = mssTypeOf(e.cat, mssIsMovieEntry(e));
-              const span = r === 1 ? (n === 1 ? 6 : 4) : r === 2 ? 2 : Math.round(6 / rest);
+              const span = mssFavSpan(r, n);
               return `<button type="button" class="pf-fav is-r${r}" style="--span:${span}" data-rate="${esc(e.id)}" aria-label="#${r} ${esc(e.title)}${sv != null ? `, rated ${Number(sv).toFixed(2)} — rate again` : ' — rate it'}">
                 <span class="pf-fav-bg" data-bd="${esc(e.id)}" aria-hidden="true"></span><span class="pf-fav-shade" aria-hidden="true"></span>
                 ${rankB(r).replace('cg-rank-badge', 'cg-rank-badge pf-fav-rank')}

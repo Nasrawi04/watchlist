@@ -387,15 +387,15 @@ const MSSProfile = (() => {
         <button type="button" class="pf-empty-row" onclick="MSSProfile.rank('top_picks')"><span class="pf-empty-plus">${icon('plus', 16)}</span>
           <span><b>Pick your Top 5 favourites</b><small>Any movie, show, anime or cartoon you’ve watched — #1 gets the biggest spot</small></span></button></section>`;
     }
-    const n = list.length, rest = Math.max(1, n - 2);
-    const tiles = list.map((e, i) => favTile(e, i, n, rest)).join('');
+    const n = list.length;
+    const tiles = list.map((e, i) => favTile(e, i, n)).join('');
     return `<section class="pf-sec">${secHead('Handpicked', 'Top Favorites', 'top_picks')}<div class="pf-favs is-n${n}">${tiles}</div></section>`;
   }
-  function favTile(e, i, n, rest) {
+  function favTile(e, i, n) {
     const r = i + 1, movie = isMovie(e), t = mssTypeOf(e.cat, movie), sv = liveScore(e);
     const genres = (Array.isArray(e.genres) ? e.genres : []).slice(0, 2);
     const bits = [t.label, yearOf(e), ...(r <= 2 ? genres : [])].filter(Boolean);
-    const span = r === 1 ? (n === 1 ? 6 : 4) : r === 2 ? 2 : Math.round(6 / rest);
+    const span = mssFavSpan(r, n);   // 1, 2, 3 or more: its own layout (config.js)
     return `<button type="button" class="pf-fav is-r${r}" style="--span:${span}" data-fav="${esc(e.id)}" onclick="MSSProfile._open(${attrJSON(e.id)})" aria-label="#${r} ${esc(e.title)}${sv != null ? ', ' + Number(sv).toFixed(2) : ''}">
       <span class="pf-fav-bg" data-bdkey="${esc(MSSBackdrop.key(e))}" aria-hidden="true"></span><span class="pf-fav-shade" aria-hidden="true"></span>
       ${rankBadge(r).replace('cg-rank-badge', 'cg-rank-badge pf-fav-rank')}
