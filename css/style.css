@@ -9553,7 +9553,7 @@ a.mh-more:focus-visible { outline:2px solid var(--mc-focus); outline-offset:2px;
 .mh-badge i { width:7px; height:7px; border-radius:50%; background:#CFE8C3; }
 .mh-hero-t { font-family:var(--serif); font-weight:600; font-size:clamp(30px, 2.2vw + 14px, 58px); line-height:1.02; text-wrap:balance; text-shadow:0 2px 18px rgba(0,0,0,.45); overflow-wrap:anywhere; }
 .mh-up { display:flex; align-items:center; gap:12px; width:100%; max-width:460px; padding:10px; border-radius:14px; background:rgba(0,0,0,.42); border:1px solid rgba(255,255,255,.14); }
-.mh-up.is-movie { padding:10px 14px; }
+.mh-up.is-movie { width:auto; max-width:100%; justify-self:start; padding:10px 14px; }   /* a movie's type + runtime: as wide as its text */
 .mh-up-still { flex:none; width:clamp(96px, 3vw + 70px, 132px); aspect-ratio:16/9; border-radius:9px; background:rgba(255,255,255,.09) center/cover no-repeat; }
 .mh-up-t { min-width:0; display:flex; flex-direction:column; gap:3px; }
 .mh-up-t small { font:800 10.5px/1.2 var(--sans); letter-spacing:.12em; text-transform:uppercase; color:var(--olive-light); }
@@ -9579,7 +9579,8 @@ a.mh-more:focus-visible { outline:2px solid var(--mc-focus); outline-offset:2px;
 .mh-prow.msf-row, .mh-prow.msf-row.has-controls { padding:8px; grid-template-columns:minmax(0, 1fr); grid-template-areas:"row"; align-items:stretch; }
 .mh-prow .msf-row__main { grid-area:row; align-items:center; gap:var(--prow-gap); }
 .mh-prow .msf-row__poster { width:var(--prow-p); align-self:center; }
-.mh-prow .msf-row__body { align-self:center; padding-bottom:calc(44px + 8px); }
+.mh-prow { --prow-btn:36px; }                                      /* desktop: the site's standard button; phones 44px (tap size) */
+.mh-prow .msf-row__body { align-self:center; padding-bottom:calc(var(--prow-btn) + 8px); }
 .mh-prow .msf-row__score { display:none; }
 .mh-prow .msf-row__controls { grid-area:row; align-self:end; justify-self:start; flex-direction:row; margin-inline-start:calc(var(--prow-p) + var(--prow-gap)); }
 .mh-w .msf-row__art { display:none; }                            /* the home page's list rows: no backdrop strip (owner) */
@@ -9588,8 +9589,9 @@ a.mh-more:focus-visible { outline:2px solid var(--mc-focus); outline-offset:2px;
 
 .mh-prow .msf-row__badges { flex:none; }
 .mh-prow .msf-row__pl { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.mh-prow .lc-btn, .mh-prow .lc-ep { height:44px; }
-.mh-prow .lc-btn.lc-ic { width:44px; }
+.mh-prow .lc-btn, .mh-prow .lc-ep { height:var(--prow-btn); }
+.mh-prow .lc-btn { font:700 13px var(--sans); }
+.mh-prow .lc-btn.lc-ic { width:var(--prow-btn); }
 
 /* ── At a glance (→ profile): the ring with your average, four tiles; wider: your score bands too ── */
 .mh-glance { flex:1; display:grid; grid-template-columns:auto minmax(0, 1fr); align-items:center; gap:14px 18px; color:inherit; text-decoration:none; border-radius:14px; }
@@ -9705,16 +9707,16 @@ a.mh-medal:focus-visible { outline:2px solid var(--mc-focus); outline-offset:2px
 .mh-goal { flex:1; display:flex; align-items:center; gap:16px; }
 .mh-goal.is-unset { flex-direction:column; align-items:flex-start; justify-content:center; font-size:14px; color:var(--text-2); }
 .mh-goal.is-unset b { color:var(--text); }
-.mh-goal .lc-btn { height:44px; font:700 13px var(--sans); }
+.mh-goal { --goal-h:36px; }                                        /* desktop: standard size; phones 44px (tap size) */
+.mh-goal .lc-btn { height:var(--goal-h); font:700 13px var(--sans); }
 .mh-goal-t { min-width:0; display:flex; flex-direction:column; align-items:flex-start; gap:4px; }
 .mh-goal-t > b { font:400 30px/1 var(--bebas); color:var(--score-mine); }
 .mh-goal-t > span { font-size:13px; color:var(--text-2); }
-.mh-goal-t .lc-btn { height:44px; margin-top:4px; }
+.mh-goal-t .lc-btn { margin-top:4px; }
 .mh-goal-form { display:flex; flex-direction:column; gap:10px; font-size:13.5px; color:var(--text-2); }
 .mh-goal-row { display:flex; gap:8px; flex-wrap:wrap; }
-.mh-goal-row input { width:110px; height:44px; padding:0 12px; border-radius:10px; border:1px solid var(--border-input); background:var(--bg-3); color:var(--text); font:700 15px var(--sans); }
+.mh-goal-row input { width:110px; height:var(--goal-h); padding:0 12px; border-radius:10px; border:1px solid var(--border-input); background:var(--bg-3); color:var(--text); font:700 15px var(--sans); }
 .mh-goal-row input:focus { outline:2px solid var(--mc-focus); outline-offset:1px; }
-.mh-goal-row .lc-btn { height:44px; }
 
 /* ── Top Favorites: the profile's tiles and layout (css/profile.css .pf-fav; owner, 27 Nov 2026) — the backdrop full bleed, a fade
    from the bottom, the rank in the corner, details, title and score ring along the bottom; #1 the hero. How many (1 · 3 · 5) is
@@ -9875,8 +9877,10 @@ html.mh-dragging, html.mh-dragging * { cursor:grabbing !important; user-select:n
   .mh-hero-poster { width:96px; }
   .mh-hero-t { grid-column:2; font-size:clamp(26px, 6vw + 6px, 34px); }
   .mh-up, .mh-prog, .mh-hero-acts { grid-column:1 / -1; max-width:none; }
+  .mh-up.is-movie { max-width:100%; }
   .mh-hero-acts .lc-btn:not(.lc-ic) { flex:1 1 auto; }
   .mh-pick-poster { width:clamp(96px, 28vw, 120px); }
+  .mh-prow, .mh-goal { --prow-btn:44px; --goal-h:44px; }
   .mh-prow .lc-row { gap:4px; }
   .mh-bars { min-height:130px; }
   .mh-more, .mh-hero-open { min-height:44px; }
