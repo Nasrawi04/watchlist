@@ -462,7 +462,7 @@ const MSSShare = (() => {
       <div class="sf-section-label">Send to <span class="sf-section-hint">(up to 10)</span></div>
       <div class="soc-pick-search">${icon('search', 15)}<input type="text" id="recFind" placeholder="Search your friends…" autocomplete="off" aria-label="Search your friends" oninput="MSSShare._find(this.value)"></div>
       <div class="soc-picked" id="recPicked" aria-live="polite"></div>
-      <div class="soc-pick-list" id="recFriends"><div class="page-loading" style="padding:1rem"><div class="spinner"></div></div></div>
+      <div class="soc-pick-list" id="recFriends"><div class="page-loading" data-skel="share-friends"></div></div>
       <div id="recMine"></div>
       <label class="sf-section-label" for="recMsg">Message <span class="sf-section-hint">(optional)</span></label>
       <textarea class="pf-q" id="recMsg" maxlength="280" rows="2" placeholder="${isList ? 'Why you made it…' : 'Why they’ll love it…'}" oninput="document.getElementById('recMsgN').textContent=this.value.length"></textarea>
@@ -508,6 +508,10 @@ const MSSShare = (() => {
           onclick="event.stopPropagation();MSSShare._pick(${attrJSON(f.id)})">${on ? `${icon('check', 13)} Added` : 'Add'}</button>` : ''}
       </div>`; }).join('') || `<div class="soc-pick-empty">No friends match “${_socEsc(q.trim())}”.</div>`;
   }
+  // While your friends load: the list's own rows with sample names, masked (mssSkeleton) — not the page's skeleton
+  mssSkeleton.define('share-friends', () => ['Sample Friend', 'Another Name', 'Third Friend', 'Fourth One'].map((n, i) =>
+    `<div class="soc-pick-row"><span class="skel-media-box" style="width:40px;height:40px;border-radius:50%;flex:none"></span><span class="soc-pick-who"><b>${n}</b><small>@${['samplename', 'another', 'thirdfriend', 'fourth'][i]}</small></span>
+      <button type="button" class="soc-pick-btn" tabindex="-1">Add</button></div>`).join(''));
   function drawPicked() {
     const box = document.getElementById('recPicked'); if (!box) return;
     box.innerHTML = friends.filter(f => picked.has(f.id)).map(f => `<button type="button" class="soc-chip" onclick="MSSShare._pick(${attrJSON(f.id)})" aria-label="Remove ${_socEsc(f.display_name || f.username)}">
